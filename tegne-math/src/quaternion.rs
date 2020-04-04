@@ -138,30 +138,30 @@ mod test {
     use super::Vector3;
 
     #[test]
-    fn default_works() {
+    fn default() {
         assert_eq!(Quaternion::default(), Quaternion::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
-    fn axis_rotation_works() {
+    fn axis_rotation() {
         let q = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
         assert_eq!(q, Quaternion::new(0.707_106_77, 0.0, 0.0, 0.707_106_77));
     }
 
     #[test]
-    fn euler_rotation_works() {
+    fn euler_rotation() {
         let q = Quaternion::euler_rotation(90.0, 0.0, 0.0);
         assert_eq!(q, Quaternion::new(0.707_106_77, 0.0, 0.0, 0.707_106_77));
     }
 
     #[test]
-    fn look_rotation_works() {
+    fn look_rotation() {
         let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::up());
         assert_eq!(q, Quaternion::new(0.0, 0.707_106_77, 0.0, 0.707_106_77));
     }
 
     #[test]
-    fn rotate_vector_works() {
+    fn rotate_vector() {
         let q = Quaternion::axis_rotation([0.0, 1.0, 0.0], 90.0);
         let v = Vector3::new(1.0, 2.0, 3.0);
         assert_eq!(
@@ -177,7 +177,7 @@ mod test {
     }
 
     #[test]
-    fn as_matrix_works() {
+    fn as_matrix() {
         let m3 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0).as_matrix();
         let m4 = Matrix4::axis_rotation([1.0, 0.0, 0.0], 90.0);
         assert_eq!(m3.col_x, m4.col_x);
@@ -187,7 +187,7 @@ mod test {
     }
 
     #[test]
-    fn operator_works() {
+    fn operator() {
         let mut q1 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
         let r = q1 * q1;
         q1 *= q1;
