@@ -8,6 +8,8 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
+use super::Vector3;
+
 #[repr(C, align(8))]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector2 {
@@ -38,6 +40,10 @@ impl Vector2 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
         cos.acos().to_degrees()
+    }
+
+    pub fn extend(self, z: f32) -> Vector3 {
+        Vector3::new(self.x, self.y, z)
     }
 }
 
@@ -115,6 +121,7 @@ impl DivAssign<f32> for Vector2 {
 #[allow(clippy::float_cmp)]
 mod test {
     use super::Vector2;
+    use super::Vector3;
 
     #[test]
     fn default() {
@@ -154,6 +161,12 @@ mod test {
     fn unit() {
         let v = Vector2::new(3.0, 4.0);
         assert_eq!(v.unit(), Vector2::new(0.6, 0.8));
+    }
+
+    #[test]
+    fn extend() {
+        let v = Vector2::new(2.0, 5.5);
+        assert_eq!(v.extend(4.7), Vector3::new(2.0, 5.5, 4.7));
     }
 
     #[test]
