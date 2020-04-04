@@ -29,7 +29,7 @@ impl Vector4 {
         self.x * o.x + self.y * o.y + self.z * o.z + self.w * o.w
     }
 
-    pub fn shrink(&self) -> Vector3 {
+    pub fn shrink(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 }
