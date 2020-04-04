@@ -154,19 +154,19 @@ impl Matrix4 {
         )
     }
 
-    pub fn row_x(&self) -> Vector4 {
+    pub fn row_x(self) -> Vector4 {
         Vector4::new(self.col_x.x, self.col_y.x, self.col_z.x, self.col_w.x)
     }
 
-    pub fn row_y(&self) -> Vector4 {
+    pub fn row_y(self) -> Vector4 {
         Vector4::new(self.col_x.y, self.col_y.y, self.col_z.y, self.col_w.y)
     }
 
-    pub fn row_z(&self) -> Vector4 {
+    pub fn row_z(self) -> Vector4 {
         Vector4::new(self.col_x.z, self.col_y.z, self.col_z.z, self.col_w.z)
     }
 
-    pub fn row_w(&self) -> Vector4 {
+    pub fn row_w(self) -> Vector4 {
         Vector4::new(self.col_x.w, self.col_y.w, self.col_z.w, self.col_w.w)
     }
 }
