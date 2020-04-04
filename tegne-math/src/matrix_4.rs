@@ -1,4 +1,5 @@
 use std::ops::Mul;
+use std::ops::MulAssign;
 
 use super::Vector3;
 use super::Vector4;
@@ -194,6 +195,12 @@ impl Mul<Self> for Matrix4 {
     }
 }
 
+impl MulAssign<Self> for Matrix4 {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Matrix4;
@@ -312,7 +319,7 @@ mod test {
 
     #[test]
     fn mul_with_matrix() {
-        let ma = Matrix4::from_rows(
+        let mut ma = Matrix4::from_rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -325,9 +332,14 @@ mod test {
             [5.0, 6.0, 7.0, 8.0],
         );
         let r = ma * mb;
+        ma *= mb;
         assert_eq!(r.row_x(), Vector4::new(39.0, 43.0, 47.0, 51.0));
         assert_eq!(r.row_y(), Vector4::new(111.0, 115.0, 119.0, 123.0));
         assert_eq!(r.row_z(), Vector4::new(123.0, 119.0, 115.0, 111.0));
         assert_eq!(r.row_w(), Vector4::new(51.0, 47.0, 43.0, 39.0));
+        assert_eq!(ma.row_x(), Vector4::new(39.0, 43.0, 47.0, 51.0));
+        assert_eq!(ma.row_y(), Vector4::new(111.0, 115.0, 119.0, 123.0));
+        assert_eq!(ma.row_z(), Vector4::new(123.0, 119.0, 115.0, 111.0));
+        assert_eq!(ma.row_w(), Vector4::new(51.0, 47.0, 43.0, 39.0));
     }
 }
