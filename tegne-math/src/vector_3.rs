@@ -9,6 +9,7 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use super::Vector2;
+use super::Vector4;
 
 #[repr(C, align(16))]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -75,7 +76,11 @@ impl Vector3 {
         cos.acos().to_degrees()
     }
 
-    pub fn shrink(&self) -> Vector2 {
+    pub fn extend(self, w: f32) -> Vector4 {
+        Vector4::new(self.x, self.y, self.z, w)
+    }
+
+    pub fn shrink(self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 }
@@ -155,6 +160,7 @@ impl DivAssign<f32> for Vector3 {
 mod test {
     use super::Vector2;
     use super::Vector3;
+    use super::Vector4;
 
     #[test]
     fn default() {
@@ -211,6 +217,12 @@ mod test {
         let a = Vector3::new(4.0, 0.0, 0.0);
         let b = Vector3::new(0.0, 13.0, 0.0);
         assert_eq!(a.angle_between(b), 90.0);
+    }
+
+    #[test]
+    fn extend() {
+        let v = Vector3::new(2.0, 5.5, 1.0);
+        assert_eq!(v.extend(4.7), Vector4::new(2.0, 5.5, 1.0, 4.7));
     }
 
     #[test]
