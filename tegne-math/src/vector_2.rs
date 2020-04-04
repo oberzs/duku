@@ -1,8 +1,12 @@
 use std::ops::Add;
+use std::ops::AddAssign;
 use std::ops::Div;
+use std::ops::DivAssign;
 use std::ops::Mul;
+use std::ops::MulAssign;
 use std::ops::Neg;
 use std::ops::Sub;
+use std::ops::SubAssign;
 
 #[repr(C, align(8))]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -83,6 +87,30 @@ impl Div<f32> for Vector2 {
     }
 }
 
+impl AddAssign<Self> for Vector2 {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl SubAssign<Self> for Vector2 {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl MulAssign<f32> for Vector2 {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
+    }
+}
+
+impl DivAssign<f32> for Vector2 {
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs;
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::float_cmp)]
 mod test {
@@ -137,5 +165,22 @@ mod test {
         assert_eq!(v1 - v2, Vector2::new(0.0, -5.0));
         assert_eq!(v1 * 4.0, Vector2::new(8.0, 12.0));
         assert_eq!(v2 / 2.0, Vector2::new(1.0, 4.0));
+    }
+
+    #[test]
+    fn operators_assign() {
+        let v = Vector2::new(2.0, 2.0);
+        let mut add = Vector2::new(1.0, 3.0);
+        let mut sub = Vector2::new(3.0, 5.0);
+        let mut mul = Vector2::new(1.0, 3.0);
+        let mut div = Vector2::new(4.0, 6.0);
+        add += v;
+        sub -= v;
+        mul *= 2.0;
+        div /= 2.0;
+        assert_eq!(add, Vector2::new(3.0, 5.0));
+        assert_eq!(sub, Vector2::new(1.0, 3.0));
+        assert_eq!(mul, Vector2::new(2.0, 6.0));
+        assert_eq!(div, Vector2::new(2.0, 3.0));
     }
 }
