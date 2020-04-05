@@ -5,7 +5,6 @@ use ash::vk::DebugUtilsMessengerCallbackDataEXT as CallbackData;
 use ash::vk::DebugUtilsMessengerCreateInfoEXT;
 use ash::vk::DebugUtilsMessengerEXT as Messenger;
 use ash::vk::FALSE;
-use log::debug;
 use log::warn;
 use std::ffi::c_void;
 use std::ffi::CStr;
@@ -41,7 +40,6 @@ impl Validator {
 
 impl Drop for Validator {
     fn drop(&mut self) {
-        debug!("destroy validator");
         unsafe {
             self.ext.destroy_debug_utils_messenger(self.messenger, None);
         }

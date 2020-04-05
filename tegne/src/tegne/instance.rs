@@ -57,7 +57,6 @@ impl Instance {
 
 impl Drop for Instance {
     fn drop(&mut self) {
-        debug!("destroy Vulkan instance");
         unsafe { self.vk.destroy_instance(None) };
     }
 }
