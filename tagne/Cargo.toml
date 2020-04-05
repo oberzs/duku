@@ -1,0 +1,9 @@
+[package]
+name = "tagne"
+version = "0.1.0"
+authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ash = "0.30.0"
+log = "0.4.8"
