@@ -1,7 +1,7 @@
-use tagne::Tagne;
+use tegne::Tegne;
 
 fn main() {
     pretty_env_logger::init();
 
-    let _tagne = Tagne::new();
+    let _tegne = Tegne::new();
 }

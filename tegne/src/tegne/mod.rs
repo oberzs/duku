@@ -9,12 +9,12 @@ use extensions::Extensions;
 use instance::Instance;
 use validator::Validator;
 
-pub struct Tagne {
+pub struct Tegne {
     _validator: Option<Validator>,
     _instance: Instance,
 }
 
-impl Tagne {
+impl Tegne {
     pub fn new() -> Self {
         let extensions = Extensions::new();
 

@@ -59,7 +59,7 @@ name = "example"
 version = "0.1.0"
 dependencies = [
  "pretty_env_logger",
- "tagne",
+ "tegne",
 ]
 
 [[package]]
@@ -152,7 +152,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fe5bd57d1d7414c6b5ed48563a2c855d995ff777729dcd91c369ec7fea395ae"
 
 [[package]]
-name = "tagne"
+name = "tegne"
 version = "0.1.0"
 dependencies = [
  "ash",
@@ -160,7 +160,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tagne-math"
+name = "tegne-math"
 version = "0.1.0"
 
 [[package]]

@@ -1,5 +1,5 @@
 [package]
-name = "tagne"
+name = "tegne"
 version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"

@@ -1,2 +1,2 @@
 [workspace]
-members = ["tagne-math", "tagne", "example"]
+members = ["tegne-math", "tegne", "example"]
