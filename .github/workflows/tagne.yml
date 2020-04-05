@@ -1,15 +1,15 @@
-name: Math test
+name: Tagne check
 
 on:
   push:
     branches: [master]
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --release --package tagne-math
+          command: check
+          args: --package tagne
