@@ -1,5 +1,5 @@
 use tegne::Tegne;
-use tegne_utils::Window;
+use tegne::Window;
 
 fn main() {
     pretty_env_logger::init();

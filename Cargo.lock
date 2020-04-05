@@ -216,7 +216,6 @@ version = "0.1.0"
 dependencies = [
  "pretty_env_logger",
  "tegne",
- "tegne-utils",
 ]
 
 [[package]]
@@ -655,6 +654,7 @@ version = "0.1.0"
 dependencies = [
  "ash",
  "log",
+ "tegne-utils",
 ]
 
 [[package]]
