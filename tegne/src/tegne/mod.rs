@@ -22,14 +22,14 @@ impl Tegne {
         let instance = Instance::new(&extensions);
         info!("Vulkan instance created");
 
-        #[cfg(debug_assertions)]
-        debug!("create validator");
-        #[cfg(debug_assertions)]
-        let validator = Some(Validator::new(&instance));
-        #[cfg(debug_assertions)]
-        info!("validator created");
-        #[cfg(not(debug_assertions))]
-        let validator = None;
+        let validator = if cfg!(debug_assertions) {
+            debug!("create validator");
+            let val = Validator::new(&instance);
+            info!("validator created");
+            Some(val)
+        } else {
+            None
+        };
 
         Self {
             _validator: validator,

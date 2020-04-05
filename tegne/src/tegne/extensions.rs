@@ -30,10 +30,11 @@ impl Extensions {
 
         let device = vec![cstring("VK_KHR_swapchain")];
 
-        #[cfg(debug_assertions)]
-        let layers = vec![cstring("VK_LAYER_KHRONOS_validation")];
-        #[cfg(not(debug_assertions))]
-        let layers = vec![];
+        let layers = if cfg!(debug_assertions) {
+            vec![cstring("VK_LAYER_KHRONOS_validation")]
+        } else {
+            vec![]
+        };
 
         Self {
             instance,
