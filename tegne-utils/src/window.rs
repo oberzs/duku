@@ -61,15 +61,15 @@ impl Window {
     }
 
     #[cfg(target_os = "linux")]
-    pub fn xlib_window(&self) -> std::ffi::c_ulong {
+    pub fn xlib_window(&self) -> std::os::raw::c_ulong {
         use winit::platform::unix::WindowExtUnix;
-        unwrap_error(self.window.xlib_window().ok_or(""))
+        unwrap_error(self.window.xlib_window().ok_or(""), "no xlib support")
     }
 
     #[cfg(target_os = "linux")]
     pub fn xlib_display(&self) -> *mut std::ffi::c_void {
         use winit::platform::unix::WindowExtUnix;
-        unwrap_error(self.window.xlib_display().ok_or(""))
+        unwrap_error(self.window.xlib_display().ok_or(""), "no xlib support")
     }
 
     #[cfg(target_os = "macos")]
