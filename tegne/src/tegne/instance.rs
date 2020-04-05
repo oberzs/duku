@@ -5,7 +5,6 @@ use ash::vk::ApplicationInfo;
 use ash::vk::InstanceCreateInfo;
 use ash::Entry;
 use ash::Instance as VkInstance;
-use log::debug;
 
 use crate::utils::error;
 use crate::utils::unwrap_error;
