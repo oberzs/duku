@@ -10,5 +10,12 @@ log = "0.4.8"
 
 tegne-utils = { path = "../tegne-utils", version = "0.1.0", optional = true }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3.8", features = ["libloaderapi"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.20.0"
+metal = "0.18.0"
+
 [features]
 default = ["tegne-utils"]

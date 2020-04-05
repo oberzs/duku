@@ -19,13 +19,10 @@ impl Window {
         let event_loop = EventLoop::new();
 
         debug!("create window");
-        let window = match WindowBuilder::new().build(&event_loop) {
-            Ok(win) => win,
-            Err(_) => {
-                error!("cannot create window");
-                exit(1);
-            }
-        };
+        let window = unwrap_error(
+            WindowBuilder::new().build(&event_loop),
+            "cannot create window",
+        );
         info!("window created");
 
         Self { event_loop, window }
@@ -56,4 +53,47 @@ impl Window {
             }
         });
     }
+
+    #[cfg(target_os = "windows")]
+    pub fn hwnd(&self) -> *mut std::ffi::c_void {
+        use winit::platform::windows::WindowExtWindows;
+        self.window.hwnd()
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn xlib_window(&self) -> std::ffi::c_ulong {
+        use winit::platform::unix::WindowExtUnix;
+        unwrap_error(self.window.xlib_window().ok_or(""))
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn xlib_display(&self) -> *mut std::ffi::c_void {
+        use winit::platform::unix::WindowExtUnix;
+        unwrap_error(self.window.xlib_display().ok_or(""))
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn ns_window(&self) -> *mut std::ffi::c_void {
+        use winit::platform::macos::WindowExtMacOS;
+        self.window.ns_window()
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn ns_view(&self) -> *mut std::ffi::c_void {
+        use winit::platform::macos::WindowExtMacOS;
+        self.window.ns_view()
+    }
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub fn unwrap_error<T, E>(result: Result<T, E>, s: &str) -> T {
+    result.unwrap_or_else(|_| {
+        error!("{}", s);
+        exit(1);
+    })
 }
