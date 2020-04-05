@@ -30,14 +30,14 @@ impl Tegne {
         let instance = Instance::new(&extensions);
         info!("Vulkan instance created");
 
-        let validator = if cfg!(debug_assertions) {
-            debug!("create validator");
-            let val = Validator::new(&instance);
-            info!("validator created");
-            Some(val)
-        } else {
-            None
-        };
+        #[cfg(debug_assertions)]
+        debug!("create validator");
+        #[cfg(debug_assertions)]
+        let validator = Some(Validator::new(&instance));
+        #[cfg(debug_assertions)]
+        info!("validator created");
+        #[cfg(not(debug_assertions))]
+        let validator = None;
 
         debug!("create window surface");
         let window_surface = WindowSurface::new(&instance, args);
