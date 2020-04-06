@@ -11,8 +11,7 @@ use std::ffi::CStr;
 
 use super::Instance;
 use crate::utils::error;
-use crate::utils::unwrap_error;
-use crate::utils::unwrap_option;
+use crate::utils::OrError;
 
 pub struct Validator {
     messenger: Messenger,
@@ -29,10 +28,8 @@ impl Validator {
             .pfn_user_callback(Some(callback));
 
         let messenger = unsafe {
-            unwrap_error(
-                ext.create_debug_utils_messenger(&info, None),
-                "cannot create validator",
-            )
+            ext.create_debug_utils_messenger(&info, None)
+                .or_error("cannot create validator")
         };
 
         Self { ext, messenger }
@@ -54,11 +51,10 @@ extern "system" fn callback(
     _: *mut c_void,
 ) -> u32 {
     let msg = unsafe {
-        let message = unwrap_option(debug_data.as_ref(), "no debug data").p_message;
-        unwrap_error(
-            CStr::from_ptr(message).to_str(),
-            "cannot convert cstr to str",
-        )
+        let message = debug_data.as_ref().or_error("no debug data").p_message;
+        CStr::from_ptr(message)
+            .to_str()
+            .or_error("cannot convert cstr to str")
     };
 
     if severity.contains(Severity::ERROR) {

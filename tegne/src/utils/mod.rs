@@ -1,19 +1,27 @@
 use std::ffi::CString;
 use std::process::exit;
 
-pub fn cstring(s: &str) -> CString {
-    CString::new(s).expect("cannot create CString")
+pub trait OrError<T> {
+    fn or_error(self, msg: impl AsRef<str>) -> T;
 }
 
-pub fn error(s: &str) -> ! {
-    log::error!("{}", s);
+impl<T, E> OrError<T> for Result<T, E> {
+    fn or_error(self, msg: impl AsRef<str>) -> T {
+        self.unwrap_or_else(|_| error(msg))
+    }
+}
+
+impl<T> OrError<T> for Option<T> {
+    fn or_error(self, msg: impl AsRef<str>) -> T {
+        self.unwrap_or_else(|| error(msg))
+    }
+}
+
+pub fn cstring(s: impl AsRef<str>) -> CString {
+    CString::new(s.as_ref()).or_error("cannot create CString")
+}
+
+pub fn error(msg: impl AsRef<str>) -> ! {
+    log::error!("{}", msg.as_ref());
     exit(1);
-}
-
-pub fn unwrap_error<T, E>(result: Result<T, E>, s: &str) -> T {
-    result.unwrap_or_else(|_| error(s))
-}
-
-pub fn unwrap_option<T>(option: Option<T>, s: &str) -> T {
-    unwrap_error(option.ok_or(""), s)
 }

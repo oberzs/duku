@@ -7,7 +7,7 @@ use std::ffi::CString;
 
 use super::Instance;
 use crate::utils::cstring;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 #[derive(Default)]
 pub struct Extensions {
@@ -43,50 +43,46 @@ impl Extensions {
     }
 
     pub fn supports_instance(&self, entry: &Entry) -> bool {
-        let available = unwrap_error(
-            entry.enumerate_instance_extension_properties(),
-            "cannot enumerate instance extensions",
-        )
-        .iter()
-        .map(|e| {
-            let ptr = e.extension_name.as_ptr();
-            unsafe { CStr::from_ptr(ptr).to_owned() }
-        })
-        .collect::<Vec<_>>();
+        let available = entry
+            .enumerate_instance_extension_properties()
+            .or_error("cannot enumerate instance extensions")
+            .iter()
+            .map(|e| {
+                let ptr = e.extension_name.as_ptr();
+                unsafe { CStr::from_ptr(ptr).to_owned() }
+            })
+            .collect::<Vec<_>>();
 
         self.instance.iter().all(|e| available.contains(e))
     }
 
     pub fn supports_device(&self, instance: &Instance, device: PhysicalDevice) -> bool {
         let available = unsafe {
-            unwrap_error(
-                instance
-                    .vk_ref()
-                    .enumerate_device_extension_properties(device),
-                "cannot enumerate device extensions",
-            )
-            .iter()
-            .map(|e| {
-                let ptr = e.extension_name.as_ptr();
-                CStr::from_ptr(ptr).to_owned()
-            })
-            .collect::<Vec<_>>()
+            instance
+                .vk_ref()
+                .enumerate_device_extension_properties(device)
+                .or_error("cannot enumerate device extensions")
+                .iter()
+                .map(|e| {
+                    let ptr = e.extension_name.as_ptr();
+                    CStr::from_ptr(ptr).to_owned()
+                })
+                .collect::<Vec<_>>()
         };
 
         self.device.iter().all(|e| available.contains(e))
     }
 
     pub fn supports_layers(&self, entry: &Entry) -> bool {
-        let available = unwrap_error(
-            entry.enumerate_instance_layer_properties(),
-            "cannot enumerate layers",
-        )
-        .iter()
-        .map(|l| {
-            let ptr = l.layer_name.as_ptr();
-            unsafe { CStr::from_ptr(ptr).to_owned() }
-        })
-        .collect::<Vec<_>>();
+        let available = entry
+            .enumerate_instance_layer_properties()
+            .or_error("cannot enumerate layers")
+            .iter()
+            .map(|l| {
+                let ptr = l.layer_name.as_ptr();
+                unsafe { CStr::from_ptr(ptr).to_owned() }
+            })
+            .collect::<Vec<_>>();
 
         self.layers.iter().all(|l| available.contains(l))
     }

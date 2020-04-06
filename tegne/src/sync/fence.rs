@@ -5,7 +5,7 @@ use ash::vk::FenceCreateInfo;
 use std::rc::Rc;
 
 use crate::tegne::Device;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 pub struct Fence {
     vk: VkFence,
@@ -16,10 +16,10 @@ impl Fence {
     pub fn new(device: &Rc<Device>) -> Self {
         let info = FenceCreateInfo::builder().flags(FenceCreateFlags::SIGNALED);
         let vk = unsafe {
-            unwrap_error(
-                device.logical().create_fence(&info, None),
-                "cannot create fence",
-            )
+            device
+                .logical()
+                .create_fence(&info, None)
+                .or_error("cannot create fence")
         };
 
         Self {
@@ -30,21 +30,19 @@ impl Fence {
 
     pub fn wait(&self) {
         unsafe {
-            unwrap_error(
-                self.device
-                    .logical()
-                    .wait_for_fences(&[self.vk], true, u64::max_value()),
-                "cannot wait for fence",
-            );
+            self.device
+                .logical()
+                .wait_for_fences(&[self.vk], true, u64::max_value())
+                .or_error("cannot wait for fence");
         }
     }
 
     pub fn reset(&self) {
         unsafe {
-            unwrap_error(
-                self.device.logical().reset_fences(&[self.vk]),
-                "cannot reset fence",
-            );
+            self.device
+                .logical()
+                .reset_fences(&[self.vk])
+                .or_error("cannot reset fence");
         }
     }
 }

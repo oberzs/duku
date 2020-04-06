@@ -17,7 +17,7 @@ use super::Extensions;
 use super::Instance;
 use super::WindowSurface;
 use crate::utils::error;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 pub struct Device {
     logical: LogicalDevice,
@@ -55,10 +55,10 @@ impl Device {
         msaa: u8,
     ) -> Self {
         let devices = unsafe {
-            unwrap_error(
-                instance.vk_ref().enumerate_physical_devices(),
-                "cannot find a GPU",
-            )
+            instance
+                .vk_ref()
+                .enumerate_physical_devices()
+                .or_error("cannot find a GPU")
         };
 
         for device in devices.into_iter() {
@@ -188,10 +188,10 @@ fn open_device(
         .enabled_extension_names(&extensions);
 
     unsafe {
-        unwrap_error(
-            instance.vk_ref().create_device(physical, &info, None),
-            "cannot open GPU",
-        )
+        instance
+            .vk_ref()
+            .create_device(physical, &info, None)
+            .or_error("cannot open GPU")
     }
 }
 

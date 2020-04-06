@@ -7,7 +7,7 @@ use ash::vk::SurfaceKHR;
 use std::os::raw::c_void;
 
 use super::Instance;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 #[cfg(target_os = "windows")]
 pub struct WindowArgs {
@@ -52,10 +52,9 @@ impl WindowSurface {
         let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
         let loader = Win32Surface::new(instance.entry_ref(), instance.vk_ref());
         let vk = unsafe {
-            unwrap_error(
-                loader.create_win32_surface(&info, None),
-                "cannot create window surface",
-            )
+            loader
+                .create_win32_surface(&info, None)
+                .or_error("cannot create window surface")
         };
 
         Self { vk, ext }
@@ -74,10 +73,9 @@ impl WindowSurface {
         let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
         let loader = XlibSurface::new(instance.entry_ref(), instance.vk_ref());
         let vk = unsafe {
-            unwrap_error(
-                loader.create_xlib_surface(&info, None),
-                "cannot create window surface",
-            )
+            loader
+                .create_xlib_surface(&info, None)
+                .or_error("cannot create window surface")
         };
 
         Self { vk, ext }
@@ -117,10 +115,9 @@ impl WindowSurface {
         let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
         let loader = MacOSSurface::new(instance.entry_ref(), instance.vk_ref());
         let vk = unsafe {
-            unwrap_error(
-                loader.create_mac_os_surface_mvk(&info, None),
-                "cannot create window surface",
-            )
+            loader
+                .create_mac_os_surface_mvk(&info, None)
+                .or_error("cannot create window surface")
         };
 
         Self { vk, ext }
@@ -128,41 +125,33 @@ impl WindowSurface {
 
     pub fn gpu_formats(&self, device: PhysicalDevice) -> Vec<SurfaceFormatKHR> {
         unsafe {
-            unwrap_error(
-                self.ext
-                    .get_physical_device_surface_formats(device, self.vk),
-                "cannot get surface formats",
-            )
+            self.ext
+                .get_physical_device_surface_formats(device, self.vk)
+                .or_error("cannot get surface formats")
         }
     }
 
     pub fn gpu_capabilities(&self, device: PhysicalDevice) -> SurfaceCapabilitiesKHR {
         unsafe {
-            unwrap_error(
-                self.ext
-                    .get_physical_device_surface_capabilities(device, self.vk),
-                "cannot get surface capabilities",
-            )
+            self.ext
+                .get_physical_device_surface_capabilities(device, self.vk)
+                .or_error("cannot get surface capabilities")
         }
     }
 
     pub fn gpu_present_modes(&self, device: PhysicalDevice) -> Vec<PresentModeKHR> {
         unsafe {
-            unwrap_error(
-                self.ext
-                    .get_physical_device_surface_present_modes(device, self.vk),
-                "cannot get surface present modes",
-            )
+            self.ext
+                .get_physical_device_surface_present_modes(device, self.vk)
+                .or_error("cannot get surface present modes")
         }
     }
 
     pub fn supports_device(&self, device: PhysicalDevice, index: u32) -> bool {
         unsafe {
-            unwrap_error(
-                self.ext
-                    .get_physical_device_surface_support(device, index, self.vk),
-                "cannot get surface support",
-            )
+            self.ext
+                .get_physical_device_surface_support(device, index, self.vk)
+                .or_error("cannot get surface support")
         }
     }
 

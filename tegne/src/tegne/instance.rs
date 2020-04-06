@@ -7,7 +7,7 @@ use ash::Entry;
 use ash::Instance as VkInstance;
 
 use crate::utils::error;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 use super::Extensions;
 
@@ -18,7 +18,7 @@ pub struct Instance {
 
 impl Instance {
     pub fn new(exts: &Extensions) -> Self {
-        let entry = unwrap_error(Entry::new(), "cannot init Vulkan");
+        let entry = Entry::new().or_error("cannot init Vulkan");
 
         if !exts.supports_instance(&entry) {
             error("requested instance extensions not available");
@@ -39,8 +39,11 @@ impl Instance {
             .enabled_layer_names(&layers)
             .enabled_extension_names(&extensions);
 
-        let vk =
-            unsafe { unwrap_error(entry.create_instance(&info, None), "cannot create instance") };
+        let vk = unsafe {
+            entry
+                .create_instance(&info, None)
+                .or_error("cannot create instance")
+        };
 
         Self { vk, entry }
     }

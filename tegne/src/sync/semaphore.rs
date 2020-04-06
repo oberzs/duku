@@ -4,7 +4,7 @@ use ash::vk::SemaphoreCreateInfo;
 use std::rc::Rc;
 
 use crate::tegne::Device;
-use crate::utils::unwrap_error;
+use crate::utils::OrError;
 
 pub struct Semaphore {
     vk: VkSemaphore,
@@ -15,10 +15,10 @@ impl Semaphore {
     pub fn new(device: &Rc<Device>) -> Self {
         let info = SemaphoreCreateInfo::builder();
         let vk = unsafe {
-            unwrap_error(
-                device.logical().create_semaphore(&info, None),
-                "cannot create semaphore",
-            )
+            device
+                .logical()
+                .create_semaphore(&info, None)
+                .or_error("cannot create semaphore")
         };
 
         Self {
