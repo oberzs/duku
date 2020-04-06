@@ -12,6 +12,7 @@ use std::ffi::CStr;
 use super::Instance;
 use crate::utils::error;
 use crate::utils::unwrap_error;
+use crate::utils::unwrap_option;
 
 pub struct Validator {
     messenger: Messenger,
@@ -53,7 +54,7 @@ extern "system" fn callback(
     _: *mut c_void,
 ) -> u32 {
     let msg = unsafe {
-        let message = unwrap_error(debug_data.as_ref().ok_or(""), "no debug data").p_message;
+        let message = unwrap_option(debug_data.as_ref(), "no debug data").p_message;
         unwrap_error(
             CStr::from_ptr(message).to_str(),
             "cannot convert cstr to str",

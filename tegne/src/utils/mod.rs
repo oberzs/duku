@@ -13,3 +13,7 @@ pub fn error(s: &str) -> ! {
 pub fn unwrap_error<T, E>(result: Result<T, E>, s: &str) -> T {
     result.unwrap_or_else(|_| error(s))
 }
+
+pub fn unwrap_option<T>(option: Option<T>, s: &str) -> T {
+    unwrap_error(option.ok_or(""), s)
+}
