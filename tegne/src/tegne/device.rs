@@ -106,6 +106,10 @@ impl Device {
 
         error("cannot find suitable GPU");
     }
+
+    pub fn logical(&self) -> &LogicalDevice {
+        &self.logical
+    }
 }
 
 fn is_gpu_suitable(props: &DeviceProperties) -> bool {

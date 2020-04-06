@@ -6,8 +6,9 @@ mod window_surface;
 
 use log::debug;
 use log::info;
+use std::rc::Rc;
 
-use device::Device;
+pub use device::Device;
 use device::VSync;
 use extensions::Extensions;
 use instance::Instance;
@@ -19,7 +20,7 @@ use window_surface::WindowSurface;
 use tegne_utils::Window;
 
 pub struct Tegne {
-    _device: Device,
+    _device: Rc<Device>,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
     _instance: Instance,
@@ -51,7 +52,7 @@ impl Tegne {
         info!("GPU opened");
 
         Self {
-            _device: device,
+            _device: Rc::new(device),
             _window_surface: window_surface,
             _validator: validator,
             _instance: instance,

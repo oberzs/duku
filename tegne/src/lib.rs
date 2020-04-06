@@ -1,3 +1,4 @@
+mod sync;
 mod tegne;
 mod utils;
 
