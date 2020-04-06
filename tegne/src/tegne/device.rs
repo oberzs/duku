@@ -1,9 +1,11 @@
 use ash::version::DeviceV1_0;
 use ash::version::InstanceV1_0;
+use ash::vk::ColorSpaceKHR;
 use ash::vk::CommandBuffer;
 use ash::vk::DeviceCreateInfo;
 use ash::vk::DeviceQueueCreateInfo;
 use ash::vk::Fence;
+use ash::vk::Format;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::PhysicalDevice;
 use ash::vk::PhysicalDeviceFeatures;
@@ -12,6 +14,7 @@ use ash::vk::PhysicalDeviceProperties;
 use ash::vk::PresentModeKHR;
 use ash::vk::Queue;
 use ash::vk::QueueFlags;
+use ash::vk::SampleCountFlags;
 use ash::vk::SubmitInfo;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
@@ -137,6 +140,52 @@ impl Device {
             })
             .or_error("cannot find suitable memory type")
             .0 as u32
+    }
+
+    pub fn pick_sample_count(&self) -> SampleCountFlags {
+        let counts = self
+            .properties
+            .properties
+            .limits
+            .framebuffer_color_sample_counts
+            & self
+                .properties
+                .properties
+                .limits
+                .framebuffer_depth_sample_counts;
+
+        let count = match self.properties.msaa {
+            1 => SampleCountFlags::TYPE_1,
+            2 => SampleCountFlags::TYPE_2,
+            4 => SampleCountFlags::TYPE_4,
+            8 => SampleCountFlags::TYPE_8,
+            16 => SampleCountFlags::TYPE_16,
+            32 => SampleCountFlags::TYPE_32,
+            64 => SampleCountFlags::TYPE_64,
+            _ => error("invalid msaa value"),
+        };
+
+        if !counts.contains(count) {
+            error("unsupported msaa value");
+        }
+
+        count
+    }
+
+    pub fn pick_depth_format(&self) -> Format {
+        Format::D32_SFLOAT_S8_UINT
+    }
+
+    pub fn pick_rgba_format(&self) -> Format {
+        Format::R8G8B8A8_UNORM
+    }
+
+    pub fn pick_bgra_format(&self) -> Format {
+        Format::B8G8R8A8_UNORM
+    }
+
+    pub fn pick_color_space(&self) -> ColorSpaceKHR {
+        ColorSpaceKHR::SRGB_NONLINEAR
     }
 
     pub fn logical(&self) -> &LogicalDevice {

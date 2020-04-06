@@ -1,5 +1,6 @@
 mod buffer;
 mod cmd;
+mod images;
 mod sync;
 mod tegne;
 mod utils;
