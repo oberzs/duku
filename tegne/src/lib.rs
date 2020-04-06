@@ -1,3 +1,4 @@
+mod buffer;
 mod cmd;
 mod sync;
 mod tegne;

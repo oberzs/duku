@@ -1,7 +1,10 @@
 use ash::version::DeviceV1_0;
 use ash::version::InstanceV1_0;
+use ash::vk::CommandBuffer;
 use ash::vk::DeviceCreateInfo;
 use ash::vk::DeviceQueueCreateInfo;
+use ash::vk::Fence;
+use ash::vk::MemoryPropertyFlags;
 use ash::vk::PhysicalDevice;
 use ash::vk::PhysicalDeviceFeatures;
 use ash::vk::PhysicalDeviceMemoryProperties;
@@ -9,6 +12,7 @@ use ash::vk::PhysicalDeviceProperties;
 use ash::vk::PresentModeKHR;
 use ash::vk::Queue;
 use ash::vk::QueueFlags;
+use ash::vk::SubmitInfo;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
@@ -22,12 +26,12 @@ use crate::utils::OrError;
 pub struct Device {
     logical: LogicalDevice,
     _physical: PhysicalDevice,
-    _properties: DeviceProperties,
-    _graphics_queue: Queue,
+    properties: DeviceProperties,
+    graphics_queue: Queue,
     _present_queue: Queue,
 }
 
-struct DeviceProperties {
+pub struct DeviceProperties {
     pub properties: PhysicalDeviceProperties,
     pub features: PhysicalDeviceFeatures,
     pub surface_formats: Vec<SurfaceFormatKHR>,
@@ -97,8 +101,8 @@ impl Device {
                 return Self {
                     logical,
                     _physical: device,
-                    _properties: props,
-                    _graphics_queue: graphics_queue,
+                    properties: props,
+                    graphics_queue,
                     _present_queue: present_queue,
                 };
             }
@@ -107,8 +111,40 @@ impl Device {
         error("cannot find suitable GPU");
     }
 
+    pub fn submit_wait(&self, buffer: CommandBuffer) {
+        let buffers = [buffer];
+        let info = SubmitInfo::builder().command_buffers(&buffers).build();
+        let infos = [info];
+
+        unsafe {
+            self.logical
+                .queue_submit(self.graphics_queue, &infos, Fence::null())
+                .or_error("cannot submit command buffer");
+            self.logical
+                .device_wait_idle()
+                .or_error("cannot wait device idle");
+        }
+    }
+
+    pub fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
+        self.properties
+            .memory_properties
+            .memory_types
+            .iter()
+            .enumerate()
+            .find(|(i, mem_type)| {
+                (type_filter & (1 << i) as u32 != 0) && (mem_type.property_flags & props) == props
+            })
+            .or_error("cannot find suitable memory type")
+            .0 as u32
+    }
+
     pub fn logical(&self) -> &LogicalDevice {
         &self.logical
+    }
+
+    pub fn properties(&self) -> &DeviceProperties {
+        &self.properties
     }
 }
 

@@ -47,10 +47,10 @@ pub struct CommandRecorder {
 }
 
 impl CommandRecorder {
-    pub fn new(device: &Rc<Device>, queue: u32) -> Self {
+    pub fn new(device: &Rc<Device>) -> Self {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
-            .queue_family_index(queue)
+            .queue_family_index(device.properties().graphics_index)
             .build();
 
         let pool = unsafe {
