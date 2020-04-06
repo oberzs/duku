@@ -1,3 +1,4 @@
+mod device;
 mod extensions;
 mod instance;
 mod validator;
@@ -6,7 +7,8 @@ mod window_surface;
 use log::debug;
 use log::info;
 
-use crate::utils::error;
+use device::Device;
+use device::VSync;
 use extensions::Extensions;
 use instance::Instance;
 use validator::Validator;
@@ -17,6 +19,7 @@ use window_surface::WindowSurface;
 use tegne_utils::Window;
 
 pub struct Tegne {
+    _device: Device,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
     _instance: Instance,
@@ -43,7 +46,12 @@ impl Tegne {
         let window_surface = WindowSurface::new(&instance, args);
         info!("window surface created");
 
+        debug!("open GPU");
+        let device = Device::new(&instance, &window_surface, &extensions, VSync::Enabled, 0);
+        info!("GPU opened");
+
         Self {
+            _device: device,
             _window_surface: window_surface,
             _validator: validator,
             _instance: instance,

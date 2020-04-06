@@ -156,7 +156,7 @@ impl WindowSurface {
         }
     }
 
-    pub fn support(&self, device: PhysicalDevice, index: u32) -> bool {
+    pub fn supports_device(&self, device: PhysicalDevice, index: u32) -> bool {
         unsafe {
             unwrap_error(
                 self.ext

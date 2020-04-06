@@ -2,10 +2,10 @@ use ash::version::EntryV1_0;
 use ash::version::InstanceV1_0;
 use ash::vk::PhysicalDevice;
 use ash::Entry;
-use ash::Instance;
 use std::ffi::CStr;
 use std::ffi::CString;
 
+use super::Instance;
 use crate::utils::cstring;
 use crate::utils::unwrap_error;
 
@@ -60,7 +60,9 @@ impl Extensions {
     pub fn supports_device(&self, instance: &Instance, device: PhysicalDevice) -> bool {
         let available = unsafe {
             unwrap_error(
-                instance.enumerate_device_extension_properties(device),
+                instance
+                    .vk_ref()
+                    .enumerate_device_extension_properties(device),
                 "cannot enumerate device extensions",
             )
             .iter()
