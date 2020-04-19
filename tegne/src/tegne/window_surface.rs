@@ -12,18 +12,24 @@ use crate::utils::OrError;
 #[cfg(target_os = "windows")]
 pub struct WindowArgs {
     pub hwnd: *const c_void,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[cfg(target_os = "linux")]
 pub struct WindowArgs {
     pub xlib_window: std::os::raw::c_ulong,
     pub xlib_display: *mut c_void,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[cfg(target_os = "macos")]
 pub struct WindowArgs {
     pub ns_window: *mut c_void,
     pub ns_view: *mut c_void,
+    pub width: u32,
+    pub height: u32,
 }
 
 pub struct WindowSurface {

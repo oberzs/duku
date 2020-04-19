@@ -12,20 +12,26 @@ use winit::window::WindowBuilder;
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
+    width: u32,
+    height: u32,
 }
 
 impl Window {
-    pub fn new() -> Self {
+    pub fn new(width: u32, height: u32) -> Self {
         let event_loop = EventLoop::new();
 
         debug!("create window");
-        let window = unwrap_error(
-            WindowBuilder::new().build(&event_loop),
-            "cannot create window",
-        );
+        let window = WindowBuilder::new()
+            .build(&event_loop)
+            .or_error("cannot create window");
         info!("window created");
 
-        Self { event_loop, window }
+        Self {
+            event_loop,
+            window,
+            width,
+            height,
+        }
     }
 
     pub fn start_loop<F: Fn() + 'static>(self, draw: F) {
@@ -83,17 +89,25 @@ impl Window {
         use winit::platform::macos::WindowExtMacOS;
         self.window.ns_view()
     }
-}
 
-impl Default for Window {
-    fn default() -> Self {
-        Self::new()
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
     }
 }
 
-pub fn unwrap_error<T, E>(result: Result<T, E>, s: &str) -> T {
-    result.unwrap_or_else(|_| {
-        error!("{}", s);
-        exit(1);
-    })
+pub trait OrError<T> {
+    fn or_error(self, msg: impl AsRef<str>) -> T;
+}
+
+impl<T, E> OrError<T> for Result<T, E> {
+    fn or_error(self, msg: impl AsRef<str>) -> T {
+        self.unwrap_or_else(|_| {
+            error!("{}", msg.as_ref());
+            exit(1);
+        })
+    }
 }

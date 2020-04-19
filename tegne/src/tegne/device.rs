@@ -4,6 +4,7 @@ use ash::vk::ColorSpaceKHR;
 use ash::vk::CommandBuffer;
 use ash::vk::DeviceCreateInfo;
 use ash::vk::DeviceQueueCreateInfo;
+use ash::vk::Extent2D;
 use ash::vk::Fence;
 use ash::vk::Format;
 use ash::vk::MemoryPropertyFlags;
@@ -23,6 +24,7 @@ use ash::Device as LogicalDevice;
 use super::Extensions;
 use super::Instance;
 use super::WindowSurface;
+use crate::utils::clamp;
 use crate::utils::error;
 use crate::utils::OrError;
 
@@ -172,6 +174,42 @@ impl Device {
         count
     }
 
+    pub fn pick_extent(&self, width: u32, height: u32) -> Extent2D {
+        let extent = self.properties.surface_capabilities.current_extent;
+        let min_width = self.properties.surface_capabilities.min_image_extent.width;
+        let max_width = self.properties.surface_capabilities.max_image_extent.width;
+        let min_height = self.properties.surface_capabilities.min_image_extent.height;
+        let max_height = self.properties.surface_capabilities.max_image_extent.height;
+
+        if extent.width != u32::max_value() {
+            extent
+        } else {
+            let w = clamp(width, min_width, max_width);
+            let h = clamp(height, min_height, max_height);
+            Extent2D {
+                width: w,
+                height: h,
+            }
+        }
+    }
+
+    pub fn pick_present_mode(&self) -> PresentModeKHR {
+        match self.properties.vsync {
+            VSync::Enabled => PresentModeKHR::FIFO,
+            VSync::Disabled => PresentModeKHR::IMMEDIATE,
+        }
+    }
+
+    pub fn pick_image_count(&self) -> u32 {
+        let min_image_count = self.properties.surface_capabilities.min_image_count;
+        let max_image_count = self.properties.surface_capabilities.max_image_count;
+        if max_image_count > 0 && min_image_count + 1 > max_image_count {
+            max_image_count
+        } else {
+            min_image_count + 1
+        }
+    }
+
     pub fn pick_depth_format(&self) -> Format {
         Format::D32_SFLOAT_S8_UINT
     }
@@ -188,12 +226,27 @@ impl Device {
         ColorSpaceKHR::SRGB_NONLINEAR
     }
 
+    pub fn is_msaa(&self) -> bool {
+        self.pick_sample_count() != SampleCountFlags::TYPE_1
+    }
+
     pub fn logical(&self) -> &LogicalDevice {
         &self.logical
     }
 
     pub fn properties(&self) -> &DeviceProperties {
         &self.properties
+    }
+
+    pub fn are_indices_unique(&self) -> bool {
+        self.properties.graphics_index != self.properties.present_index
+    }
+
+    pub fn indices(&self) -> Vec<u32> {
+        vec![
+            self.properties.graphics_index,
+            self.properties.present_index,
+        ]
     }
 }
 

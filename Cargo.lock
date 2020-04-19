@@ -724,6 +724,7 @@ dependencies = [
  "cocoa 0.20.0",
  "log",
  "metal",
+ "tegne-math",
  "tegne-utils",
  "winapi 0.3.8",
 ]

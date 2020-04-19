@@ -25,3 +25,13 @@ pub fn error(msg: impl AsRef<str>) -> ! {
     log::error!("{}", msg.as_ref());
     exit(1);
 }
+
+pub fn clamp(n: u32, min: u32, max: u32) -> u32 {
+    if n > max {
+        max
+    } else if n < min {
+        min
+    } else {
+        n
+    }
+}

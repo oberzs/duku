@@ -4,5 +4,6 @@ mod copy;
 mod dynamic_buffer;
 mod fixed_buffer;
 
-use buffer_type::Buffer;
-use buffer_type::BufferType;
+pub use buffer_type::Buffer;
+pub use buffer_type::BufferType;
+pub use dynamic_buffer::DynamicBuffer;
