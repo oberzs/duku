@@ -195,3 +195,9 @@ impl Drop for Framebuffer {
         }
     }
 }
+
+impl PartialEq for Framebuffer {
+    fn eq(&self, other: &Self) -> bool {
+        self.shader_image.vk() == other.shader_image.vk()
+    }
+}

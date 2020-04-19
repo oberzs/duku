@@ -5,3 +5,4 @@ mod fixed_buffer;
 pub use buffer_type::Buffer;
 pub use buffer_type::BufferType;
 pub use dynamic_buffer::DynamicBuffer;
+pub use fixed_buffer::FixedBuffer;

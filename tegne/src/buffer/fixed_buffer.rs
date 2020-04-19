@@ -13,7 +13,7 @@ use crate::memory::copy;
 use crate::tegne::Device;
 
 pub struct FixedBuffer {
-    buffer: VkBuffer,
+    vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
     device: Rc<Device>,
@@ -32,14 +32,14 @@ impl FixedBuffer {
 
         copy::data_to_buffer(device, data, staging_memory, size);
 
-        let (buffer, memory) = alloc::buffer(
+        let (vk, memory) = alloc::buffer(
             device,
             BufferUsageFlags::TRANSFER_DST | buffer_type.into(),
             MemoryPropertyFlags::DEVICE_LOCAL,
             size,
         );
 
-        copy::buffer_to_buffer(device, staging_buffer, buffer, size);
+        copy::buffer_to_buffer(device, staging_buffer, vk, size);
 
         unsafe {
             device.logical().destroy_buffer(staging_buffer, None);
@@ -47,7 +47,7 @@ impl FixedBuffer {
         }
 
         Self {
-            buffer,
+            vk,
             memory,
             size: size as u32,
             device: Rc::clone(device),
@@ -60,15 +60,15 @@ impl FixedBuffer {
 }
 
 impl Buffer for FixedBuffer {
-    fn buffer(&self) -> VkBuffer {
-        self.buffer
+    fn vk_buffer(&self) -> VkBuffer {
+        self.vk
     }
 }
 
 impl Drop for FixedBuffer {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_buffer(self.buffer, None);
+            self.device.logical().destroy_buffer(self.vk, None);
             self.device.logical().free_memory(self.memory, None);
         }
     }

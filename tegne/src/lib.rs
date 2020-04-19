@@ -13,3 +13,6 @@ pub use tegne::Tegne;
 
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Window;
+
+pub use tegne_math::Vector2;
+pub use tegne_math::Vector3;

@@ -12,7 +12,7 @@ use crate::memory::copy;
 use crate::tegne::Device;
 
 pub struct DynamicBuffer {
-    buffer: VkBuffer,
+    vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
     device: Rc<Device>,
@@ -22,7 +22,7 @@ impl DynamicBuffer {
     pub fn new<T: Copy>(device: &Rc<Device>, len: usize, buffer_type: BufferType) -> Self {
         let size = mem::size_of::<T>() * len;
 
-        let (buffer, memory) = alloc::buffer(
+        let (vk, memory) = alloc::buffer(
             device,
             buffer_type.into(),
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
@@ -30,7 +30,7 @@ impl DynamicBuffer {
         );
 
         Self {
-            buffer,
+            vk,
             memory,
             size: size as u32,
             device: Rc::clone(device),
@@ -48,15 +48,15 @@ impl DynamicBuffer {
 }
 
 impl Buffer for DynamicBuffer {
-    fn buffer(&self) -> VkBuffer {
-        self.buffer
+    fn vk_buffer(&self) -> VkBuffer {
+        self.vk
     }
 }
 
 impl Drop for DynamicBuffer {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_buffer(self.buffer, None);
+            self.device.logical().destroy_buffer(self.vk, None);
             self.device.logical().free_memory(self.memory, None);
         }
     }

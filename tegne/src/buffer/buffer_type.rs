@@ -8,7 +8,7 @@ pub enum BufferType {
 }
 
 pub trait Buffer {
-    fn buffer(&self) -> VkBuffer;
+    fn vk_buffer(&self) -> VkBuffer;
 }
 
 impl Into<BufferUsageFlags> for BufferType {

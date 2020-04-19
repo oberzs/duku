@@ -171,7 +171,7 @@ impl ShaderLayout {
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
-            .buffer(buffer.buffer())
+            .buffer(buffer.vk_buffer())
             .offset(0)
             .range(buffer.size().into())
             .build();
@@ -211,7 +211,7 @@ impl ShaderLayout {
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
-            .buffer(buffer.buffer())
+            .buffer(buffer.vk_buffer())
             .offset(0)
             .range(buffer.size().into())
             .build();

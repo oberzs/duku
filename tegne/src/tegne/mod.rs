@@ -12,6 +12,10 @@ use std::rc::Rc;
 pub use crate::images::Anisotropy;
 pub use crate::images::Texture;
 use crate::images::TextureFormat;
+use crate::model::Material;
+pub use crate::model::MaterialBuilder;
+use crate::model::Mesh;
+pub use crate::model::MeshBuilder;
 use crate::shaders::ImageUniforms;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
@@ -29,7 +33,7 @@ use tegne_utils::Window;
 
 pub struct Tegne {
     image_uniforms: ImageUniforms,
-    _shader_layout: ShaderLayout,
+    shader_layout: ShaderLayout,
     _swapchain: Swapchain,
     device: Rc<Device>,
     _window_surface: WindowSurface,
@@ -72,6 +76,14 @@ impl Tegne {
             TextureFormat::RGB,
             &self.image_uniforms,
         )
+    }
+
+    pub fn create_material(&self) -> MaterialBuilder {
+        Material::builder(&self.device, &self.shader_layout)
+    }
+
+    pub fn create_mesh(&self) -> MeshBuilder {
+        Mesh::builder(&self.device)
     }
 }
 
@@ -127,7 +139,7 @@ impl TegneBuilder {
 
         Tegne {
             image_uniforms: image_uniforms,
-            _shader_layout: shader_layout,
+            shader_layout,
             _swapchain: swapchain,
             device,
             _window_surface: window_surface,
