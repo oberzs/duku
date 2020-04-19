@@ -8,4 +8,5 @@ pub use attachment::Attachment;
 pub use attachment::AttachmentType;
 pub use image::Image;
 pub use layout_change::LayoutChange;
+pub use sampler::Anisotropy;
 pub use sampler::Sampler;

@@ -15,6 +15,7 @@ use tegne_math::Vector4;
 use super::ShaderLayout;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
+use crate::images::Anisotropy;
 use crate::images::Sampler;
 use crate::tegne::Device;
 
@@ -104,7 +105,7 @@ impl MaterialUniforms {
 }
 
 impl ImageUniforms {
-    pub fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: u8) -> Self {
+    pub fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: Anisotropy) -> Self {
         let descriptor = layout.image_set();
         let sampler = Sampler::new(device, anisotropy);
 

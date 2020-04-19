@@ -9,8 +9,10 @@ use log::debug;
 use log::info;
 use std::rc::Rc;
 
+pub use crate::images::Anisotropy;
 use crate::shaders::ImageUniforms;
 use crate::shaders::ShaderLayout;
+use crate::utils::OrError;
 pub use device::Device;
 use device::VSync;
 use extensions::Extensions;
@@ -33,10 +35,23 @@ pub struct Tegne {
     _instance: Instance,
 }
 
+pub struct TegneBuilder {
+    window_args: Option<WindowArgs>,
+    anisotropy: Anisotropy,
+}
+
 impl Tegne {
-    pub fn new(args: WindowArgs, anisotropy: u8) -> Self {
-        let width = args.width;
-        let height = args.height;
+    pub fn builder() -> TegneBuilder {
+        TegneBuilder {
+            window_args: None,
+            anisotropy: Anisotropy::Disabled,
+        }
+    }
+}
+
+impl TegneBuilder {
+    pub fn build(&self) -> Tegne {
+        let window_args = self.window_args.or_error("window arguments not set");
         let extensions = Extensions::new();
 
         debug!("create Vulkan instance");
@@ -53,7 +68,7 @@ impl Tegne {
         let validator = None;
 
         debug!("create window surface");
-        let window_surface = WindowSurface::new(&instance, args);
+        let window_surface = WindowSurface::new(&instance, window_args);
         info!("window surface created");
 
         debug!("open GPU");
@@ -67,7 +82,13 @@ impl Tegne {
         info!("GPU opened");
 
         debug!("create window swapchain");
-        let swapchain = Swapchain::new(&instance, &device, &window_surface, width, height);
+        let swapchain = Swapchain::new(
+            &instance,
+            &device,
+            &window_surface,
+            window_args.width,
+            window_args.height,
+        );
         info!("window swapchain created");
 
         debug!("create shader layout");
@@ -75,10 +96,10 @@ impl Tegne {
         info!("shader layout created");
 
         debug!("create image uniforms");
-        let image_uniforms = ImageUniforms::new(&device, &shader_layout, anisotropy);
+        let image_uniforms = ImageUniforms::new(&device, &shader_layout, self.anisotropy);
         info!("image uniforms created");
 
-        Self {
+        Tegne {
             _image_uniforms: image_uniforms,
             _shader_layout: shader_layout,
             _swapchain: swapchain,
@@ -90,7 +111,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "tegne-utils")]
-    pub fn from_window(window: &Window, anisotropy: u8) -> Self {
+    pub fn with_window(&mut self, window: &Window) -> &mut Self {
         #[cfg(target_os = "windows")]
         let args = WindowArgs {
             hwnd: window.hwnd(),
@@ -114,6 +135,17 @@ impl Tegne {
             height: window.height(),
         };
 
-        Self::new(args, anisotropy)
+        self.window_args = Some(args);
+        self
+    }
+
+    pub fn with_window_args(&mut self, value: WindowArgs) -> &mut Self {
+        self.window_args = Some(value);
+        self
+    }
+
+    pub fn with_anisotropy(&mut self, value: Anisotropy) -> &mut Self {
+        self.anisotropy = value;
+        self
     }
 }

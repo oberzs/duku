@@ -10,6 +10,7 @@ use super::Instance;
 use crate::utils::OrError;
 
 #[cfg(target_os = "windows")]
+#[derive(Copy, Clone)]
 pub struct WindowArgs {
     pub hwnd: *const c_void,
     pub width: u32,
@@ -17,6 +18,7 @@ pub struct WindowArgs {
 }
 
 #[cfg(target_os = "linux")]
+#[derive(Copy, Clone)]
 pub struct WindowArgs {
     pub xlib_window: std::os::raw::c_ulong,
     pub xlib_display: *mut c_void,
@@ -25,6 +27,7 @@ pub struct WindowArgs {
 }
 
 #[cfg(target_os = "macos")]
+#[derive(Copy, Clone)]
 pub struct WindowArgs {
     pub ns_window: *mut c_void,
     pub ns_view: *mut c_void,
