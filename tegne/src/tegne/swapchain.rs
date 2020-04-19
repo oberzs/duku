@@ -6,6 +6,7 @@ use ash::vk::Semaphore;
 use ash::vk::SharingMode;
 use ash::vk::SwapchainCreateInfoKHR;
 use ash::vk::SwapchainKHR;
+use std::rc::Rc;
 
 use super::Device;
 use super::Instance;
@@ -20,7 +21,7 @@ pub struct Swapchain {
 impl Swapchain {
     pub fn new(
         instance: &Instance,
-        device: &Device,
+        device: &Rc<Device>,
         window_surface: &WindowSurface,
         width: u32,
         height: u32,

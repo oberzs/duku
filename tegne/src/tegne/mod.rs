@@ -9,6 +9,8 @@ use log::debug;
 use log::info;
 use std::rc::Rc;
 
+use crate::shaders::ImageUniforms;
+use crate::shaders::ShaderLayout;
 pub use device::Device;
 use device::VSync;
 use extensions::Extensions;
@@ -22,6 +24,8 @@ use window_surface::WindowSurface;
 use tegne_utils::Window;
 
 pub struct Tegne {
+    _image_uniforms: ImageUniforms,
+    _shader_layout: ShaderLayout,
     _swapchain: Swapchain,
     _device: Rc<Device>,
     _window_surface: WindowSurface,
@@ -30,7 +34,7 @@ pub struct Tegne {
 }
 
 impl Tegne {
-    pub fn new(args: WindowArgs) -> Self {
+    pub fn new(args: WindowArgs, anisotropy: u8) -> Self {
         let width = args.width;
         let height = args.height;
         let extensions = Extensions::new();
@@ -53,16 +57,32 @@ impl Tegne {
         info!("window surface created");
 
         debug!("open GPU");
-        let device = Device::new(&instance, &window_surface, &extensions, VSync::Enabled, 0);
+        let device = Rc::new(Device::new(
+            &instance,
+            &window_surface,
+            &extensions,
+            VSync::Enabled,
+            0,
+        ));
         info!("GPU opened");
 
         debug!("create window swapchain");
         let swapchain = Swapchain::new(&instance, &device, &window_surface, width, height);
         info!("window swapchain created");
 
+        debug!("create shader layout");
+        let shader_layout = ShaderLayout::new(&device);
+        info!("shader layout created");
+
+        debug!("create image uniforms");
+        let image_uniforms = ImageUniforms::new(&device, &shader_layout, anisotropy);
+        info!("image uniforms created");
+
         Self {
+            _image_uniforms: image_uniforms,
+            _shader_layout: shader_layout,
             _swapchain: swapchain,
-            _device: Rc::new(device),
+            _device: device,
             _window_surface: window_surface,
             _validator: validator,
             _instance: instance,
@@ -70,7 +90,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "tegne-utils")]
-    pub fn from_window(window: &Window) -> Self {
+    pub fn from_window(window: &Window, anisotropy: u8) -> Self {
         #[cfg(target_os = "windows")]
         let args = WindowArgs {
             hwnd: window.hwnd(),
@@ -94,6 +114,6 @@ impl Tegne {
             height: window.height(),
         };
 
-        Self::new(args)
+        Self::new(args, anisotropy)
     }
 }
