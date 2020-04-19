@@ -38,6 +38,7 @@ pub struct Tegne {
 pub struct TegneBuilder {
     window_args: Option<WindowArgs>,
     anisotropy: Anisotropy,
+    vsync: VSync,
 }
 
 impl Tegne {
@@ -45,6 +46,7 @@ impl Tegne {
         TegneBuilder {
             window_args: None,
             anisotropy: Anisotropy::Disabled,
+            vsync: VSync::Disabled,
         }
     }
 }
@@ -76,7 +78,7 @@ impl TegneBuilder {
             &instance,
             &window_surface,
             &extensions,
-            VSync::Enabled,
+            self.vsync,
             0,
         ));
         info!("GPU opened");
@@ -146,6 +148,11 @@ impl TegneBuilder {
 
     pub fn with_anisotropy(&mut self, value: Anisotropy) -> &mut Self {
         self.anisotropy = value;
+        self
+    }
+
+    pub fn with_vsync(&mut self) -> &mut Self {
+        self.vsync = VSync::Enabled;
         self
     }
 }
