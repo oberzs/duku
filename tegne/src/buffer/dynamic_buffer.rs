@@ -5,10 +5,10 @@ use ash::vk::MemoryPropertyFlags;
 use std::mem;
 use std::rc::Rc;
 
-use super::alloc;
-use super::copy;
 use super::Buffer;
 use super::BufferType;
+use crate::memory::alloc;
+use crate::memory::copy;
 use crate::tegne::Device;
 
 pub struct DynamicBuffer {

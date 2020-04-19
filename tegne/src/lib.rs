@@ -1,6 +1,7 @@
 mod buffer;
 mod cmd;
 mod images;
+mod memory;
 mod model;
 mod shaders;
 mod surface;

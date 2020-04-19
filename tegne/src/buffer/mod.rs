@@ -1,6 +1,4 @@
-mod alloc;
 mod buffer_type;
-mod copy;
 mod dynamic_buffer;
 mod fixed_buffer;
 

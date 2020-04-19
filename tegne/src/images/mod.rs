@@ -2,6 +2,7 @@ mod attachment;
 mod image;
 mod layout_change;
 mod sampler;
+mod texture;
 
 pub use attachment::Attachment;
 pub use attachment::AttachmentType;
