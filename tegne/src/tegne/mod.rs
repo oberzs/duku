@@ -57,25 +57,31 @@ impl Tegne {
     }
 
     pub fn create_texture_from_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
-        Texture::from_raw(
+        debug!("create rgba texture");
+        let texture = Texture::from_raw(
             &self.device,
             raw,
             width,
             height,
             TextureFormat::RGBA,
             &self.image_uniforms,
-        )
+        );
+        info!("rgba texture created");
+        texture
     }
 
     pub fn create_texture_from_rgb(&self, raw: &[u8], width: u32, height: u32) -> Texture {
-        Texture::from_raw(
+        debug!("create rgb texture");
+        let texture = Texture::from_raw(
             &self.device,
             raw,
             width,
             height,
             TextureFormat::RGB,
             &self.image_uniforms,
-        )
+        );
+        info!("rgb texture created");
+        texture
     }
 
     pub fn create_material(&self) -> MaterialBuilder {

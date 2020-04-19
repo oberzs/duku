@@ -1,3 +1,5 @@
+use log::debug;
+use log::info;
 use std::cmp::Ordering;
 use std::rc::Rc;
 use tegne_math::Vector4;
@@ -38,7 +40,7 @@ pub struct MaterialBuilder {
     albedo: TextureOption,
     albedo_tint: Vector4,
     uniforms: MaterialUniforms,
-    device: Rc<Device>,
+    _device: Rc<Device>,
 }
 
 impl Material {
@@ -61,7 +63,7 @@ impl Material {
             albedo: TextureOption::White,
             albedo_tint: Vector4::new(1.0, 1.0, 1.0, 1.0),
             uniforms: MaterialUniforms::new(device, shader_layout),
-            device: Rc::clone(device),
+            _device: Rc::clone(device),
         }
     }
 
@@ -114,15 +116,18 @@ impl PartialOrd for Material {
 
 impl MaterialBuilder {
     pub fn build(self) -> Material {
+        debug!("build material");
         self.uniforms.update(MaterialObject {
             albedo_tint: self.albedo_tint,
         });
-        Material {
+        let material = Material {
             shader: self.shader,
             albedo: self.albedo,
             albedo_tint: self.albedo_tint,
             uniforms: self.uniforms,
-        }
+        };
+        info!("material built");
+        material
     }
 
     pub fn with_passthru_shader(mut self) -> MaterialBuilder {
