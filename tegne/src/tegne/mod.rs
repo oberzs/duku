@@ -10,6 +10,8 @@ use log::info;
 use std::rc::Rc;
 
 pub use crate::images::Anisotropy;
+pub use crate::images::Texture;
+use crate::images::TextureFormat;
 use crate::shaders::ImageUniforms;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
@@ -26,10 +28,10 @@ use window_surface::WindowSurface;
 use tegne_utils::Window;
 
 pub struct Tegne {
-    _image_uniforms: ImageUniforms,
+    image_uniforms: ImageUniforms,
     _shader_layout: ShaderLayout,
     _swapchain: Swapchain,
-    _device: Rc<Device>,
+    device: Rc<Device>,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
     _instance: Instance,
@@ -48,6 +50,28 @@ impl Tegne {
             anisotropy: Anisotropy::Disabled,
             vsync: VSync::Disabled,
         }
+    }
+
+    pub fn create_texture_from_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
+        Texture::from_raw(
+            &self.device,
+            raw,
+            width,
+            height,
+            TextureFormat::RGBA,
+            &self.image_uniforms,
+        )
+    }
+
+    pub fn create_texture_from_rgb(&self, raw: &[u8], width: u32, height: u32) -> Texture {
+        Texture::from_raw(
+            &self.device,
+            raw,
+            width,
+            height,
+            TextureFormat::RGB,
+            &self.image_uniforms,
+        )
     }
 }
 
@@ -102,10 +126,10 @@ impl TegneBuilder {
         info!("image uniforms created");
 
         Tegne {
-            _image_uniforms: image_uniforms,
+            image_uniforms: image_uniforms,
             _shader_layout: shader_layout,
             _swapchain: swapchain,
-            _device: device,
+            device,
             _window_surface: window_surface,
             _validator: validator,
             _instance: instance,

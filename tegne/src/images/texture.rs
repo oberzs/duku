@@ -13,7 +13,7 @@ use crate::memory::copy;
 use crate::shaders::ImageUniforms;
 use crate::tegne::Device;
 
-pub enum Format {
+pub enum TextureFormat {
     RGB,
     RGBA,
 }
@@ -30,7 +30,7 @@ impl Texture {
             &[255, 255, 255, 255],
             1,
             1,
-            Format::RGBA,
+            TextureFormat::RGBA,
             image_uniforms,
         )
     }
@@ -40,7 +40,7 @@ impl Texture {
         data: &[u8],
         width: u32,
         height: u32,
-        format: Format,
+        format: TextureFormat,
         image_uniforms: &ImageUniforms,
     ) -> Self {
         let mip_levels = (cmp::max(width, height) as f32).log2().floor() as u32 + 1;
@@ -48,8 +48,8 @@ impl Texture {
         let size = width * height * 4;
 
         let rgba_data = match format {
-            Format::RGBA => data.to_owned(),
-            Format::RGB => {
+            TextureFormat::RGBA => data.to_owned(),
+            TextureFormat::RGB => {
                 let mut rgba = vec![];
                 rgba.reserve(data.len() + data.len() / 3);
                 for c in data.chunks(3) {

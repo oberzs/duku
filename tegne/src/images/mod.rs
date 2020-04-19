@@ -10,3 +10,5 @@ pub use image::Image;
 pub use layout_change::LayoutChange;
 pub use sampler::Anisotropy;
 pub use sampler::Sampler;
+pub use texture::Texture;
+pub use texture::TextureFormat;

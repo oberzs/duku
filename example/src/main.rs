@@ -6,7 +6,8 @@ fn main() {
 
     let window = Window::new(640, 480);
 
-    let _tegne = Tegne::builder().with_window(&window).with_vsync().build();
+    let tegne = Tegne::builder().with_window(&window).with_vsync().build();
+    let _texture = tegne.create_texture_from_rgba(&[255, 255, 255, 255], 1, 1);
 
     window.start_loop(|| {});
 }
