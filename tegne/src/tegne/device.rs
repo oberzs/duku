@@ -26,7 +26,7 @@ use std::cell::Cell;
 use super::Extensions;
 use super::Instance;
 use super::WindowSurface;
-use crate::cmd::CommandRecorder;
+use crate::commands::CommandRecorder;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::utils::clamp;

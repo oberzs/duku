@@ -26,7 +26,7 @@ use std::cmp;
 use std::rc::Rc;
 
 use super::LayoutChange;
-use crate::cmd::CommandRecorder;
+use crate::commands::CommandRecorder;
 use crate::tegne::Device;
 use crate::utils::OrError;
 

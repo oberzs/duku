@@ -5,7 +5,7 @@ use ash::vk::ImageUsageFlags;
 use std::rc::Rc;
 
 use super::RenderPass;
-use crate::cmd::CommandRecorder;
+use crate::commands::CommandRecorder;
 use crate::images::AttachmentType;
 use crate::images::Image;
 use crate::images::LayoutChange;

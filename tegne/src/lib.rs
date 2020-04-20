@@ -1,5 +1,5 @@
 mod buffer;
-mod cmd;
+mod commands;
 mod images;
 mod memory;
 mod model;

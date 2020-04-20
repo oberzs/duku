@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use super::Image;
 use super::LayoutChange;
-use crate::cmd::CommandRecorder;
+use crate::commands::CommandRecorder;
 use crate::memory::alloc;
 use crate::memory::copy;
 use crate::shaders::ImageUniforms;
