@@ -1,56 +1,36 @@
 use ash::version::DeviceV1_0;
-use ash::vk::Fence as VkFence;
+use ash::vk::Fence;
 use ash::vk::FenceCreateFlags;
 use ash::vk::FenceCreateInfo;
-use std::rc::Rc;
+use ash::Device as LogicalDevice;
 
-use crate::tegne::Device;
 use crate::utils::OrError;
 
-pub struct Fence {
-    vk: VkFence,
-    device: Rc<Device>,
-}
-
-impl Fence {
-    pub fn new(device: &Rc<Device>) -> Self {
-        let info = FenceCreateInfo::builder().flags(FenceCreateFlags::SIGNALED);
-        let vk = unsafe {
-            device
-                .logical()
-                .create_fence(&info, None)
-                .or_error("cannot create fence")
-        };
-
-        Self {
-            vk,
-            device: Rc::clone(device),
-        }
-    }
-
-    pub fn wait(&self) {
-        unsafe {
-            self.device
-                .logical()
-                .wait_for_fences(&[self.vk], true, u64::max_value())
-                .or_error("cannot wait for fence");
-        }
-    }
-
-    pub fn reset(&self) {
-        unsafe {
-            self.device
-                .logical()
-                .reset_fences(&[self.vk])
-                .or_error("cannot reset fence");
-        }
+pub fn create(logical: &LogicalDevice) -> Fence {
+    let info = FenceCreateInfo::builder().flags(FenceCreateFlags::SIGNALED);
+    unsafe {
+        logical
+            .create_fence(&info, None)
+            .or_error("cannot create fence")
     }
 }
 
-impl Drop for Fence {
-    fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_fence(self.vk, None);
-        }
+pub fn destroy(logical: &LogicalDevice, f: Fence) {
+    unsafe {
+        logical.destroy_fence(f, None);
+    }
+}
+
+pub fn wait_for(logical: &LogicalDevice, f: Fence) {
+    unsafe {
+        logical
+            .wait_for_fences(&[f], true, u64::max_value())
+            .or_error("cannot wait for fence");
+    }
+}
+
+pub fn reset(logical: &LogicalDevice, f: Fence) {
+    unsafe {
+        logical.reset_fences(&[f]).or_error("cannot reset fence");
     }
 }

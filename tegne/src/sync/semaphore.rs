@@ -1,37 +1,21 @@
 use ash::version::DeviceV1_0;
-use ash::vk::Semaphore as VkSemaphore;
+use ash::vk::Semaphore;
 use ash::vk::SemaphoreCreateInfo;
-use std::rc::Rc;
+use ash::Device as LogicalDevice;
 
-use crate::tegne::Device;
 use crate::utils::OrError;
 
-pub struct Semaphore {
-    vk: VkSemaphore,
-    device: Rc<Device>,
-}
-
-impl Semaphore {
-    pub fn new(device: &Rc<Device>) -> Self {
-        let info = SemaphoreCreateInfo::builder();
-        let vk = unsafe {
-            device
-                .logical()
-                .create_semaphore(&info, None)
-                .or_error("cannot create semaphore")
-        };
-
-        Self {
-            vk,
-            device: Rc::clone(device),
-        }
+pub fn create(logical: &LogicalDevice) -> Semaphore {
+    let info = SemaphoreCreateInfo::builder();
+    unsafe {
+        logical
+            .create_semaphore(&info, None)
+            .or_error("cannot create semaphore")
     }
 }
 
-impl Drop for Semaphore {
-    fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_semaphore(self.vk, None);
-        }
+pub fn destroy(logical: &LogicalDevice, s: Semaphore) {
+    unsafe {
+        logical.destroy_semaphore(s, None);
     }
 }

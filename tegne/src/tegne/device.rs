@@ -16,17 +16,24 @@ use ash::vk::PresentModeKHR;
 use ash::vk::Queue;
 use ash::vk::QueueFlags;
 use ash::vk::SampleCountFlags;
+use ash::vk::Semaphore;
 use ash::vk::SubmitInfo;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
+use std::cell::Cell;
 
 use super::Extensions;
 use super::Instance;
 use super::WindowSurface;
+use crate::cmd::CommandRecorder;
+use crate::sync::fence;
+use crate::sync::semaphore;
 use crate::utils::clamp;
 use crate::utils::error;
 use crate::utils::OrError;
+
+const IN_FLIGHT_FRAME_COUNT: u32 = 2;
 
 pub struct Device {
     logical: LogicalDevice,
@@ -34,6 +41,10 @@ pub struct Device {
     properties: DeviceProperties,
     graphics_queue: Queue,
     _present_queue: Queue,
+    sync_acquire_image: Vec<Semaphore>,
+    sync_release_image: Vec<Semaphore>,
+    sync_queue_submit: Vec<Fence>,
+    current_frame: Cell<u32>,
 }
 
 pub struct DeviceProperties {
@@ -103,12 +114,26 @@ impl Device {
                 let graphics_queue = unsafe { logical.get_device_queue(graphics_index, 0) };
                 let present_queue = unsafe { logical.get_device_queue(present_index, 0) };
 
+                let sync_acquire_image = (0..IN_FLIGHT_FRAME_COUNT)
+                    .map(|_| semaphore::create(&logical))
+                    .collect::<Vec<_>>();
+                let sync_release_image = (0..IN_FLIGHT_FRAME_COUNT)
+                    .map(|_| semaphore::create(&logical))
+                    .collect::<Vec<_>>();
+                let sync_queue_submit = (0..IN_FLIGHT_FRAME_COUNT)
+                    .map(|_| fence::create(&logical))
+                    .collect::<Vec<_>>();
+
                 return Self {
                     logical,
                     _physical: device,
                     properties: props,
                     graphics_queue,
                     _present_queue: present_queue,
+                    sync_acquire_image,
+                    sync_release_image,
+                    sync_queue_submit,
+                    current_frame: Cell::new(0),
                 };
             }
         }
@@ -130,6 +155,8 @@ impl Device {
                 .or_error("cannot wait device idle");
         }
     }
+
+    pub fn submit(&self, buffer: CommandBuffer) {}
 
     pub fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
         self.properties
@@ -250,6 +277,23 @@ impl Device {
     }
 }
 
+impl Drop for Device {
+    fn drop(&mut self) {
+        unsafe {
+            self.sync_acquire_image
+                .iter()
+                .for_each(|s| semaphore::destroy(&self.logical, *s));
+            self.sync_release_image
+                .iter()
+                .for_each(|s| semaphore::destroy(&self.logical, *s));
+            self.sync_queue_submit
+                .iter()
+                .for_each(|f| fence::destroy(&self.logical, *f));
+            self.logical.destroy_device(None);
+        }
+    }
+}
+
 fn is_gpu_suitable(props: &DeviceProperties) -> bool {
     let surface_support_adequate =
         !props.surface_formats.is_empty() && !props.surface_present_modes.is_empty();
@@ -330,13 +374,5 @@ fn open_device(
             .vk_ref()
             .create_device(physical, &info, None)
             .or_error("cannot open GPU")
-    }
-}
-
-impl Drop for Device {
-    fn drop(&mut self) {
-        unsafe {
-            self.logical.destroy_device(None);
-        }
     }
 }
