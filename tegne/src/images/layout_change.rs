@@ -7,7 +7,7 @@ use ash::vk::PipelineStageFlags;
 use ash::vk::QUEUE_FAMILY_IGNORED;
 
 use super::Image;
-use crate::commands::CommandRecorder;
+use crate::tegne::CommandRecorder;
 
 pub struct LayoutChange<'a> {
     recorder: &'a CommandRecorder,

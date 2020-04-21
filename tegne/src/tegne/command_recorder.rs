@@ -36,11 +36,11 @@ use std::mem;
 use std::rc::Rc;
 use std::slice;
 
+use super::Device;
 use crate::shaders::PushConstants;
 use crate::shaders::Shader;
 use crate::surface::Framebuffer;
 use crate::surface::RenderPass;
-use crate::tegne::Device;
 use crate::utils::OrError;
 
 pub struct CommandRecorder {

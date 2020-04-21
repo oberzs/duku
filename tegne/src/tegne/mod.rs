@@ -1,3 +1,4 @@
+mod command_recorder;
 mod device;
 mod extensions;
 mod instance;
@@ -19,6 +20,7 @@ pub use crate::model::MeshBuilder;
 use crate::shaders::ImageUniforms;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
+pub use command_recorder::CommandRecorder;
 pub use device::Device;
 use device::VSync;
 use extensions::Extensions;

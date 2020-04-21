@@ -6,7 +6,7 @@ use std::ffi::c_void;
 use std::ptr;
 use std::rc::Rc;
 
-use crate::commands::CommandRecorder;
+use crate::tegne::CommandRecorder;
 use crate::tegne::Device;
 use crate::utils::OrError;
 

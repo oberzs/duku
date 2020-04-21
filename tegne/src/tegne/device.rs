@@ -27,11 +27,11 @@ use std::cell::Ref;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::CommandRecorder;
 use super::Extensions;
 use super::Instance;
 use super::Swapchain;
 use super::WindowSurface;
-use crate::commands::CommandRecorder;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::utils::clamp;
