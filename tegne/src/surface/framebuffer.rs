@@ -153,7 +153,7 @@ impl Framebuffer {
         LayoutChange::new(&recorder, &shader_image)
             .to_shader_read()
             .record();
-        device.submit_wait(recorder.end());
+        device.submit_buffer(recorder.end());
 
         let shader_index = image_uniforms.image_count();
         image_uniforms.add(shader_image.view());

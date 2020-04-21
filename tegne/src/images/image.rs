@@ -92,7 +92,7 @@ impl Image {
         let recorder = CommandRecorder::new(&self.device);
         recorder.begin_one_time();
         recorder.copy_buffer_to_image(src, self.vk, region);
-        self.device.submit_wait(recorder.end());
+        self.device.submit_buffer(recorder.end());
     }
 
     pub fn generate_mipmaps(&self) {
@@ -163,7 +163,7 @@ impl Image {
             .to_shader_read()
             .record();
 
-        self.device.submit_wait(recorder.end());
+        self.device.submit_buffer(recorder.end());
     }
 
     pub fn vk(&self) -> VkImage {

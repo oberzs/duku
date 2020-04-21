@@ -2,10 +2,13 @@ use ash::extensions::khr::Swapchain as Extension;
 use ash::vk::CompositeAlphaFlagsKHR;
 use ash::vk::Image;
 use ash::vk::ImageUsageFlags;
+use ash::vk::PresentInfoKHR;
+use ash::vk::Queue;
 use ash::vk::Semaphore;
 use ash::vk::SharingMode;
 use ash::vk::SwapchainCreateInfoKHR;
 use ash::vk::SwapchainKHR;
+use std::cell::Cell;
 use std::rc::Rc;
 
 use super::Device;
@@ -16,6 +19,7 @@ use crate::utils::OrError;
 pub struct Swapchain {
     ext: Extension,
     vk: SwapchainKHR,
+    current_image: Cell<u32>,
 }
 
 impl Swapchain {
@@ -61,36 +65,45 @@ impl Swapchain {
                 .or_error("cannot create swapchain")
         };
 
-        Self { ext, vk }
-    }
-
-    pub fn images(&self) -> Vec<Image> {
-        unsafe {
-            self.ext
-                .get_swapchain_images(self.vk)
-                .or_error("cannot get swapchain images")
+        Self {
+            ext,
+            vk,
+            current_image: Cell::new(0),
         }
     }
 
     pub fn iter_images(&self) -> impl Iterator<Item = Image> {
-        self.images().into_iter()
+        unsafe {
+            self.ext
+                .get_swapchain_images(self.vk)
+                .or_error("cannot get swapchain images")
+                .into_iter()
+        }
     }
 
-    pub fn next(&self, signal: Semaphore) -> u32 {
-        unsafe {
+    pub fn next(&self, signal: Semaphore) {
+        self.current_image.set(unsafe {
             self.ext
                 .acquire_next_image(self.vk, u64::max_value(), signal, Default::default())
                 .or_error("cannot acquire next image")
                 .0
+        });
+    }
+
+    pub fn present(&self, queue: Queue, wait: Semaphore) {
+        let waits = [wait];
+        let swapchains = [self.vk];
+        let image = [self.current_image.get()];
+        let info = PresentInfoKHR::builder()
+            .wait_semaphores(&waits)
+            .swapchains(&swapchains)
+            .image_indices(&image);
+
+        unsafe {
+            self.ext
+                .queue_present(queue, &info)
+                .or_error("cannot present queue");
         }
-    }
-
-    pub fn vk(&self) -> SwapchainKHR {
-        self.vk
-    }
-
-    pub fn ext(&self) -> &Extension {
-        &self.ext
     }
 }
 

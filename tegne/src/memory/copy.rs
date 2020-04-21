@@ -27,5 +27,5 @@ pub fn buffer_to_buffer(device: &Rc<Device>, src: Buffer, dst: Buffer, size: usi
     let recorder = CommandRecorder::new(device);
     recorder.begin_one_time();
     recorder.copy_buffer(src, dst, size);
-    device.submit_wait(recorder.end());
+    device.submit_buffer(recorder.end());
 }

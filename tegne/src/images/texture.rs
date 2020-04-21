@@ -85,7 +85,7 @@ impl Texture {
             .with_mips(0, mip_levels)
             .to_write()
             .record();
-        device.submit_wait(recorder.end());
+        device.submit_buffer(recorder.end());
 
         image.copy_data_from(staging_buffer);
         image.generate_mipmaps();

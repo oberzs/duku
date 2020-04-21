@@ -12,6 +12,7 @@ use ash::vk::PhysicalDevice;
 use ash::vk::PhysicalDeviceFeatures;
 use ash::vk::PhysicalDeviceMemoryProperties;
 use ash::vk::PhysicalDeviceProperties;
+use ash::vk::PipelineStageFlags;
 use ash::vk::PresentModeKHR;
 use ash::vk::Queue;
 use ash::vk::QueueFlags;
@@ -28,6 +29,7 @@ use std::rc::Rc;
 
 use super::Extensions;
 use super::Instance;
+use super::Swapchain;
 use super::WindowSurface;
 use crate::commands::CommandRecorder;
 use crate::sync::fence;
@@ -153,12 +155,14 @@ impl Device {
     }
 
     pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
-        Ref::map(self.command_recorders.borrow(), |rs| {
+        let recorder = Ref::map(self.command_recorders.borrow(), |rs| {
             &rs[self.current_frame.get() as usize]
-        })
+        });
+        recorder.begin();
+        recorder
     }
 
-    pub fn submit_wait(&self, buffer: CommandBuffer) {
+    pub fn submit_buffer(&self, buffer: CommandBuffer) {
         let buffers = [buffer];
         let info = SubmitInfo::builder().command_buffers(&buffers).build();
         let infos = [info];
@@ -173,8 +177,32 @@ impl Device {
         }
     }
 
-    pub fn submit(&self, buffer: CommandBuffer) {
-        let wait = self.sync_acquire_image[self.current_frame.get() as usize];
+    pub fn submit(&self) {
+        let current = self.current_frame.get() as usize;
+        let wait = [self.sync_acquire_image[current]];
+        let signal = [self.sync_release_image[current]];
+        let done = self.sync_queue_submit[current];
+        let buffers = [self.command_recorders.borrow()[current].end()];
+        let stage_mask = [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+
+        let info = [SubmitInfo::builder()
+            .wait_semaphores(&wait)
+            .signal_semaphores(&signal)
+            .wait_dst_stage_mask(&stage_mask)
+            .command_buffers(&buffers)
+            .build()];
+        unsafe {
+            self.logical
+                .queue_submit(self.graphics_queue, &info, done)
+                .or_error("cannot submit draw command buffer")
+        };
+    }
+
+    pub fn present(&self, swapchain: &Swapchain) {
+        let current = self.current_frame.get() as usize;
+        let wait = self.sync_release_image[current];
+
+        swapchain.present(self.graphics_queue, wait);
     }
 
     pub fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
