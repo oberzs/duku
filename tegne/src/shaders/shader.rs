@@ -221,12 +221,10 @@ impl Shader {
 
         let pipeline_infos = [pipeline_info];
         let pipeline = unsafe {
-            *device
+            device
                 .logical()
                 .create_graphics_pipelines(PipelineCache::null(), &pipeline_infos, None)
-                .or_error("cannot create pipeline")
-                .get(0)
-                .or_error("no pipelines created")
+                .or_error("cannot create pipeline")[0]
         };
 
         unsafe {

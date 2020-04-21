@@ -154,8 +154,7 @@ impl Device {
 
     pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
         Ref::map(self.command_recorders.borrow(), |rs| {
-            rs.get(self.current_frame.get() as usize)
-                .or_error("current command recorder does not exist")
+            &rs[self.current_frame.get() as usize]
         })
     }
 
@@ -174,7 +173,9 @@ impl Device {
         }
     }
 
-    pub fn submit(&self, buffer: CommandBuffer) {}
+    pub fn submit(&self, buffer: CommandBuffer) {
+        let wait = self.sync_acquire_image[self.current_frame.get() as usize];
+    }
 
     pub fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
         self.properties

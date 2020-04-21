@@ -161,13 +161,11 @@ impl ShaderLayout {
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = *unsafe {
+        let set = unsafe {
             self.device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate world descriptor set")
-                .get(0)
-                .or_error("no descriptor sets allocated")
+                .or_error("cannot allocate world descriptor set")[0]
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
@@ -201,13 +199,11 @@ impl ShaderLayout {
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = *unsafe {
+        let set = unsafe {
             self.device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate material descriptor set")
-                .get(0)
-                .or_error("no descriptor sets allocated")
+                .or_error("cannot allocate material descriptor set")[0]
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
@@ -242,13 +238,11 @@ impl ShaderLayout {
             .set_layouts(&set_layouts)
             .build();
 
-        *unsafe {
+        unsafe {
             self.device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate image descriptor set")
-                .get(0)
-                .or_error("no descriptor sets allocated")
+                .or_error("cannot allocate image descriptor set")[0]
         }
     }
 

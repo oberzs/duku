@@ -328,11 +328,9 @@ fn create_buffer(device: &Rc<Device>, pool: CommandPool) -> CommandBuffer {
         .command_buffer_count(1);
 
     unsafe {
-        *device
+        device
             .logical()
             .allocate_command_buffers(&info)
-            .or_error("cannot allocate command buffers")
-            .get(0)
-            .or_error("no command buffers allocated")
+            .or_error("cannot allocate command buffers")[0]
     }
 }

@@ -131,18 +131,12 @@ impl ImageUniforms {
         if self.should_update.get() {
             let image_infos = (0..100)
                 .map(|i| {
-                    let mut info = DescriptorImageInfo::builder()
-                        .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL);
-                    let index = if i >= self.images.borrow().len() {
-                        0
-                    } else {
-                        i
-                    };
-                    match self.images.borrow().get(index) {
-                        Some(view) => info = info.image_view(*view),
-                        _ => (),
-                    }
-                    info.build()
+                    let has_image = i < self.images.borrow().len();
+                    let index = if has_image { i } else { 0 };
+                    DescriptorImageInfo::builder()
+                        .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                        .image_view(self.images.borrow()[index])
+                        .build()
                 })
                 .collect::<Vec<_>>();
             let sampler_info = [DescriptorImageInfo::builder()
