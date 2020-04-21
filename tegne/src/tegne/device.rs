@@ -154,12 +154,26 @@ impl Device {
         error("cannot find suitable GPU");
     }
 
-    pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
-        let recorder = Ref::map(self.command_recorders.borrow(), |rs| {
-            &rs[self.current_frame.get() as usize]
-        });
+    pub fn next_frame(&self) {
+        self.current_frame
+            .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
+        let current = self.current_frame.get() as usize;
+
+        // wait for queue
+        let wait = self.sync_queue_submit[current];
+        fence::wait_for(&self.logical, wait);
+        fence::reset(&self.logical, wait);
+
+        // reset command recorder
+        let recorder = &mut self.command_recorders.borrow_mut()[current];
+        recorder.reset();
         recorder.begin();
-        recorder
+    }
+
+    pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
+        Ref::map(self.command_recorders.borrow(), |rs| {
+            &rs[self.current_frame.get() as usize]
+        })
     }
 
     pub fn submit_buffer(&self, buffer: CommandBuffer) {
