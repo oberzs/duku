@@ -2,15 +2,18 @@ use ash::version::DeviceV1_0;
 use ash::vk::Buffer;
 use ash::vk::BufferCopy;
 use ash::vk::BufferImageCopy;
-// use ash::vk::ClearColorValue;
-// use ash::vk::ClearDepthStencilValue;
-// use ash::vk::ClearValue;
+use ash::vk::ClearColorValue;
+use ash::vk::ClearDepthStencilValue;
+use ash::vk::ClearValue;
 use ash::vk::CommandBuffer;
 use ash::vk::CommandBufferAllocateInfo;
 use ash::vk::CommandBufferBeginInfo;
 use ash::vk::CommandBufferLevel;
 use ash::vk::CommandBufferUsageFlags;
 use ash::vk::CommandPool;
+use ash::vk::CommandPoolCreateFlags;
+use ash::vk::CommandPoolCreateInfo;
+use ash::vk::CommandPoolResetFlags;
 use ash::vk::DependencyFlags;
 use ash::vk::DescriptorSet;
 use ash::vk::Extent2D;
@@ -25,18 +28,18 @@ use ash::vk::PipelineBindPoint;
 use ash::vk::PipelineLayout;
 use ash::vk::PipelineStageFlags;
 use ash::vk::Rect2D;
-// use ash::vk::RenderPass;
-// use ash::vk::RenderPassBeginInfo;
-// use ash::vk::ShaderStageFlags;
-// use ash::vk::SubpassContents;
+use ash::vk::RenderPassBeginInfo;
+use ash::vk::ShaderStageFlags;
+use ash::vk::SubpassContents;
 use ash::vk::Viewport;
-// use std::mem;
+use std::mem;
 use std::rc::Rc;
-// use std::slice;
-use ash::vk::CommandPoolCreateFlags;
-use ash::vk::CommandPoolCreateInfo;
-use ash::vk::CommandPoolResetFlags;
+use std::slice;
 
+use crate::shaders::PushConstants;
+use crate::shaders::Shader;
+use crate::surface::Framebuffer;
+use crate::surface::RenderPass;
 use crate::tegne::Device;
 use crate::utils::OrError;
 
@@ -110,40 +113,45 @@ impl CommandRecorder {
         self.buffer
     }
 
-    // pub fn begin_render_pass(&self, framebuffer: &Framebuffer, pass: RenderPass, clear: [f32; 4]) {
-    //     let clear_values = [
-    //         ClearValue {
-    //             depth_stencil: ClearDepthStencilValue {
-    //                 depth: 1.0,
-    //                 stencil: 0,
-    //             },
-    //         },
-    //         ClearValue {
-    //             color: ClearColorValue { float32: clear },
-    //         },
-    //         ClearValue {
-    //             color: ClearColorValue { float32: clear },
-    //         },
-    //     ];
-    //     let info = RenderPassBeginInfo::builder()
-    //         .render_pass(pass)
-    //         .framebuffer(framebuffer.vk())
-    //         .render_area(Rect2D {
-    //             offset: Offset2D { x: 0, y: 0 },
-    //             extent: Extent2D {
-    //                 width: framebuffer.width(),
-    //                 height: framebuffer.height(),
-    //             },
-    //         })
-    //         .clear_values(&clear_values);
-    //     unsafe {
-    //         self.device.logical().cmd_begin_render_pass(
-    //             self.buffer,
-    //             &info,
-    //             SubpassContents::INLINE,
-    //         );
-    //     }
-    // }
+    pub fn begin_render_pass(
+        &self,
+        framebuffer: &Framebuffer,
+        render_pass: &RenderPass,
+        clear: [f32; 4],
+    ) {
+        let clear_values = [
+            ClearValue {
+                depth_stencil: ClearDepthStencilValue {
+                    depth: 1.0,
+                    stencil: 0,
+                },
+            },
+            ClearValue {
+                color: ClearColorValue { float32: clear },
+            },
+            ClearValue {
+                color: ClearColorValue { float32: clear },
+            },
+        ];
+        let info = RenderPassBeginInfo::builder()
+            .render_pass(render_pass.vk())
+            .framebuffer(framebuffer.vk())
+            .render_area(Rect2D {
+                offset: Offset2D { x: 0, y: 0 },
+                extent: Extent2D {
+                    width: framebuffer.width(),
+                    height: framebuffer.height(),
+                },
+            })
+            .clear_values(&clear_values);
+        unsafe {
+            self.device.logical().cmd_begin_render_pass(
+                self.buffer,
+                &info,
+                SubpassContents::INLINE,
+            );
+        }
+    }
 
     pub fn end_render_pass(&self) {
         unsafe {
@@ -151,15 +159,15 @@ impl CommandRecorder {
         }
     }
 
-    // pub fn bind_pipeline(&self, shader: &Shader) {
-    //     unsafe {
-    //         self.device.logical().cmd_bind_pipeline(
-    //             self.buffer,
-    //             PipelineBindPoint::GRAPHICS,
-    //             shader.pipeline(),
-    //         );
-    //     }
-    // }
+    pub fn bind_pipeline(&self, shader: &Shader) {
+        unsafe {
+            self.device.logical().cmd_bind_pipeline(
+                self.buffer,
+                PipelineBindPoint::GRAPHICS,
+                shader.pipeline(),
+            );
+        }
+    }
 
     pub fn bind_descriptor(&self, set: (u32, DescriptorSet), layout: PipelineLayout) {
         let sets = [set.1];
@@ -193,22 +201,22 @@ impl CommandRecorder {
         }
     }
 
-    // pub fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
-    //     unsafe {
-    //         let data: &[u8] = slice::from_raw_parts(
-    //             &constants as *const PushConstants as *const u8,
-    //             mem::size_of::<PushConstants>(),
-    //         );
+    pub fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
+        unsafe {
+            let data: &[u8] = slice::from_raw_parts(
+                &constants as *const PushConstants as *const u8,
+                mem::size_of::<PushConstants>(),
+            );
 
-    //         self.device.logical().cmd_push_constants(
-    //             self.buffer,
-    //             layout,
-    //             ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
-    //             0,
-    //             data,
-    //         );
-    //     }
-    // }
+            self.device.logical().cmd_push_constants(
+                self.buffer,
+                layout,
+                ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
+                0,
+                data,
+            );
+        }
+    }
 
     pub fn draw(&self, count: u32) {
         unsafe {

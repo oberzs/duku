@@ -186,6 +186,18 @@ impl Framebuffer {
             device: Rc::clone(device),
         }
     }
+
+    pub fn vk(&self) -> VkFramebuffer {
+        self.vk
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
 }
 
 impl Drop for Framebuffer {
