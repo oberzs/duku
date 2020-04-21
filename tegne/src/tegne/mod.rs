@@ -116,13 +116,7 @@ impl TegneBuilder {
         info!("window surface created");
 
         debug!("open GPU");
-        let device = Rc::new(Device::new(
-            &instance,
-            &window_surface,
-            &extensions,
-            self.vsync,
-            0,
-        ));
+        let device = Device::new(&instance, &window_surface, &extensions, self.vsync, 0);
         info!("GPU opened");
 
         debug!("create window swapchain");

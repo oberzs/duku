@@ -22,6 +22,9 @@ use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
 use std::cell::Cell;
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::Extensions;
 use super::Instance;
@@ -44,6 +47,7 @@ pub struct Device {
     sync_acquire_image: Vec<Semaphore>,
     sync_release_image: Vec<Semaphore>,
     sync_queue_submit: Vec<Fence>,
+    command_recorders: RefCell<Vec<CommandRecorder>>,
     current_frame: Cell<u32>,
 }
 
@@ -73,44 +77,44 @@ impl Device {
         exts: &Extensions,
         vsync: VSync,
         msaa: u8,
-    ) -> Self {
-        let devices = unsafe {
+    ) -> Rc<Self> {
+        let gpus = unsafe {
             instance
                 .vk_ref()
                 .enumerate_physical_devices()
                 .or_error("cannot find a GPU")
         };
 
-        for device in devices.into_iter() {
+        for physical in gpus.into_iter() {
             let i = instance.vk_ref();
 
-            let (g_index, p_index) = get_queue_indices(instance, device, surface);
+            let (g_index, p_index) = get_queue_indices(instance, physical, surface);
             let has_queue_indices = g_index.is_some() && p_index.is_some();
             let graphics_index = g_index.unwrap_or_default();
             let present_index = p_index.unwrap_or_default();
 
-            let device_props = unsafe { i.get_physical_device_properties(device) };
-            let device_features = unsafe { i.get_physical_device_features(device) };
-            let mem_props = unsafe { i.get_physical_device_memory_properties(device) };
+            let device_props = unsafe { i.get_physical_device_properties(physical) };
+            let device_features = unsafe { i.get_physical_device_features(physical) };
+            let mem_props = unsafe { i.get_physical_device_memory_properties(physical) };
 
             let props = DeviceProperties {
                 properties: device_props,
                 features: device_features,
                 memory_properties: mem_props,
-                surface_formats: surface.gpu_formats(device),
-                surface_capabilities: surface.gpu_capabilities(device),
-                surface_present_modes: surface.gpu_present_modes(device),
+                surface_formats: surface.gpu_formats(physical),
+                surface_capabilities: surface.gpu_capabilities(physical),
+                surface_present_modes: surface.gpu_present_modes(physical),
                 graphics_index,
                 present_index,
                 msaa,
                 vsync,
             };
 
-            if exts.supports_device(instance, device)
+            if exts.supports_device(instance, physical)
                 && is_gpu_suitable(&props)
                 && has_queue_indices
             {
-                let logical = open_device(device, instance, &props, exts);
+                let logical = open_device(physical, instance, &props, exts);
                 let graphics_queue = unsafe { logical.get_device_queue(graphics_index, 0) };
                 let present_queue = unsafe { logical.get_device_queue(present_index, 0) };
 
@@ -124,21 +128,35 @@ impl Device {
                     .map(|_| fence::create(&logical))
                     .collect::<Vec<_>>();
 
-                return Self {
+                let device = Rc::new(Self {
                     logical,
-                    _physical: device,
+                    _physical: physical,
                     properties: props,
                     graphics_queue,
                     _present_queue: present_queue,
                     sync_acquire_image,
                     sync_release_image,
                     sync_queue_submit,
+                    command_recorders: RefCell::new(vec![]),
                     current_frame: Cell::new(0),
-                };
+                });
+
+                *device.command_recorders.borrow_mut() = (0..IN_FLIGHT_FRAME_COUNT)
+                    .map(|_| CommandRecorder::new(&device))
+                    .collect::<Vec<_>>();
+
+                return device;
             }
         }
 
         error("cannot find suitable GPU");
+    }
+
+    pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
+        Ref::map(self.command_recorders.borrow(), |rs| {
+            rs.get(self.current_frame.get() as usize)
+                .or_error("current command recorder does not exist")
+        })
     }
 
     pub fn submit_wait(&self, buffer: CommandBuffer) {
