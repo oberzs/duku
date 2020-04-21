@@ -20,7 +20,7 @@ use std::rc::Rc;
 use super::PushConstants;
 use crate::buffer::Buffer;
 use crate::buffer::DynamicBuffer;
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub struct ShaderLayout {

@@ -8,7 +8,7 @@ use ash::vk::SamplerCreateInfo;
 use ash::vk::SamplerMipmapMode;
 use std::rc::Rc;
 
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub struct Sampler {

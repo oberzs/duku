@@ -1,34 +1,25 @@
-mod command_recorder;
-mod device;
-mod extensions;
-mod instance;
-mod swapchain;
-mod validator;
-mod window_surface;
-
 use log::debug;
 use log::info;
 use std::rc::Rc;
 
-pub use crate::images::Anisotropy;
-pub use crate::images::Texture;
+use super::Device;
+use super::Extensions;
+use super::Swapchain;
+use super::VSync;
+use super::Validator;
+use super::Vulkan;
+use super::WindowArgs;
+use super::WindowSurface;
+use crate::images::Anisotropy;
+use crate::images::Texture;
 use crate::images::TextureFormat;
 use crate::model::Material;
-pub use crate::model::MaterialBuilder;
+use crate::model::MaterialBuilder;
 use crate::model::Mesh;
-pub use crate::model::MeshBuilder;
+use crate::model::MeshBuilder;
 use crate::shaders::ImageUniforms;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
-pub use command_recorder::CommandRecorder;
-pub use device::Device;
-use device::VSync;
-use extensions::Extensions;
-use instance::Instance;
-pub use swapchain::Swapchain;
-use validator::Validator;
-use window_surface::WindowArgs;
-use window_surface::WindowSurface;
 
 #[cfg(feature = "tegne-utils")]
 use tegne_utils::Window;
@@ -40,7 +31,7 @@ pub struct Tegne {
     device: Rc<Device>,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
-    _instance: Instance,
+    _vulkan: Vulkan,
 }
 
 pub struct TegneBuilder {
@@ -101,29 +92,29 @@ impl TegneBuilder {
         let extensions = Extensions::new();
 
         debug!("create Vulkan instance");
-        let instance = Instance::new(&extensions);
+        let vulkan = Vulkan::new(&extensions);
         info!("Vulkan instance created");
 
         #[cfg(debug_assertions)]
         debug!("create validator");
         #[cfg(debug_assertions)]
-        let validator = Some(Validator::new(&instance));
+        let validator = Some(Validator::new(&vulkan));
         #[cfg(debug_assertions)]
         info!("validator created");
         #[cfg(not(debug_assertions))]
         let validator = None;
 
         debug!("create window surface");
-        let window_surface = WindowSurface::new(&instance, window_args);
+        let window_surface = WindowSurface::new(&vulkan, window_args);
         info!("window surface created");
 
         debug!("open GPU");
-        let device = Device::new(&instance, &window_surface, &extensions, self.vsync, 0);
+        let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, 0);
         info!("GPU opened");
 
         debug!("create window swapchain");
         let swapchain = Swapchain::new(
-            &instance,
+            &vulkan,
             &device,
             &window_surface,
             window_args.width,
@@ -146,7 +137,7 @@ impl TegneBuilder {
             device,
             _window_surface: window_surface,
             _validator: validator,
-            _instance: instance,
+            _vulkan: vulkan,
         }
     }
 

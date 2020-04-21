@@ -5,7 +5,7 @@ use ash::Entry;
 use std::ffi::CStr;
 use std::ffi::CString;
 
-use super::Instance;
+use super::Vulkan;
 use crate::utils::cstring;
 use crate::utils::OrError;
 
@@ -56,10 +56,10 @@ impl Extensions {
         self.instance.iter().all(|e| available.contains(e))
     }
 
-    pub fn supports_device(&self, instance: &Instance, device: PhysicalDevice) -> bool {
+    pub fn supports_device(&self, vulkan: &Vulkan, device: PhysicalDevice) -> bool {
         let available = unsafe {
-            instance
-                .vk_ref()
+            vulkan
+                .instance_ref()
                 .enumerate_device_extension_properties(device)
                 .or_error("cannot enumerate device extensions")
                 .iter()

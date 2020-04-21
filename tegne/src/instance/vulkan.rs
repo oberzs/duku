@@ -4,19 +4,19 @@ use ash::vk::make_version;
 use ash::vk::ApplicationInfo;
 use ash::vk::InstanceCreateInfo;
 use ash::Entry;
-use ash::Instance as VkInstance;
+use ash::Instance;
 
 use crate::utils::error;
 use crate::utils::OrError;
 
 use super::Extensions;
 
-pub struct Instance {
-    vk: VkInstance,
+pub struct Vulkan {
+    instance: Instance,
     entry: Entry,
 }
 
-impl Instance {
+impl Vulkan {
     pub fn new(exts: &Extensions) -> Self {
         let entry = Entry::new().or_error("cannot init Vulkan");
 
@@ -39,17 +39,17 @@ impl Instance {
             .enabled_layer_names(&layers)
             .enabled_extension_names(&extensions);
 
-        let vk = unsafe {
+        let instance = unsafe {
             entry
                 .create_instance(&info, None)
                 .or_error("cannot create instance")
         };
 
-        Self { vk, entry }
+        Self { instance, entry }
     }
 
-    pub fn vk_ref(&self) -> &VkInstance {
-        &self.vk
+    pub fn instance_ref(&self) -> &Instance {
+        &self.instance
     }
 
     pub fn entry_ref(&self) -> &Entry {
@@ -57,8 +57,8 @@ impl Instance {
     }
 }
 
-impl Drop for Instance {
+impl Drop for Vulkan {
     fn drop(&mut self) {
-        unsafe { self.vk.destroy_instance(None) };
+        unsafe { self.instance.destroy_instance(None) };
     }
 }

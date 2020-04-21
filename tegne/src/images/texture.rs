@@ -7,11 +7,11 @@ use std::rc::Rc;
 
 use super::Image;
 use super::LayoutChange;
+use crate::instance::CommandRecorder;
+use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
 use crate::shaders::ImageUniforms;
-use crate::tegne::CommandRecorder;
-use crate::tegne::Device;
 
 pub enum TextureFormat {
     RGB,

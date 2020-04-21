@@ -17,7 +17,7 @@ use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
 use crate::images::Anisotropy;
 use crate::images::Sampler;
-use crate::tegne::Device;
+use crate::instance::Device;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]

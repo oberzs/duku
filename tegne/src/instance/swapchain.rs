@@ -12,7 +12,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use super::Device;
-use super::Instance;
+use super::Vulkan;
 use super::WindowSurface;
 use crate::utils::OrError;
 
@@ -24,7 +24,7 @@ pub struct Swapchain {
 
 impl Swapchain {
     pub fn new(
-        instance: &Instance,
+        vulkan: &Vulkan,
         device: &Rc<Device>,
         window_surface: &WindowSurface,
         width: u32,
@@ -59,7 +59,7 @@ impl Swapchain {
             create_info = create_info.image_sharing_mode(SharingMode::EXCLUSIVE);
         }
 
-        let ext = Extension::new(instance.vk_ref(), device.logical());
+        let ext = Extension::new(vulkan.instance_ref(), device.logical());
         let vk = unsafe {
             ext.create_swapchain(&create_info, None)
                 .or_error("cannot create swapchain")

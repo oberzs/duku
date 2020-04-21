@@ -6,7 +6,7 @@ use ash::vk::SurfaceFormatKHR;
 use ash::vk::SurfaceKHR;
 use std::os::raw::c_void;
 
-use super::Instance;
+use super::Vulkan;
 use crate::utils::OrError;
 
 #[cfg(target_os = "windows")]
@@ -42,7 +42,7 @@ pub struct WindowSurface {
 
 impl WindowSurface {
     #[cfg(target_os = "windows")]
-    pub fn new(instance: &Instance, args: WindowArgs) -> Self {
+    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::khr::Win32Surface;
         use ash::vk::StructureType;
         use ash::vk::Win32SurfaceCreateInfoKHR;
@@ -58,8 +58,8 @@ impl WindowSurface {
             hinstance,
         };
 
-        let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
-        let loader = Win32Surface::new(instance.entry_ref(), instance.vk_ref());
+        let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
+        let loader = Win32Surface::new(vulkan.entry_ref(), vulkan.instance_ref());
         let vk = unsafe {
             loader
                 .create_win32_surface(&info, None)
@@ -70,7 +70,7 @@ impl WindowSurface {
     }
 
     #[cfg(target_os = "linux")]
-    pub fn new(instance: &Instance, args: WindowArgs) -> Self {
+    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::khr::XlibSurface;
         use ash::vk::Display;
         use ash::vk::XlibSurfaceCreateInfoKHR;
@@ -79,8 +79,8 @@ impl WindowSurface {
             .window(args.xlib_window)
             .dpy(args.xlib_display as *mut Display);
 
-        let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
-        let loader = XlibSurface::new(instance.entry_ref(), instance.vk_ref());
+        let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
+        let loader = XlibSurface::new(vulkan.entry_ref(), vulkan.instance_ref());
         let vk = unsafe {
             loader
                 .create_xlib_surface(&info, None)
@@ -91,7 +91,7 @@ impl WindowSurface {
     }
 
     #[cfg(target_os = "macos")]
-    pub fn new(instance: &Instance, args: WindowArgs) -> Self {
+    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::mvk::MacOSSurface;
         use ash::vk::MacOSSurfaceCreateInfoMVK;
         use ash::vk::StructureType;
@@ -121,8 +121,8 @@ impl WindowSurface {
             p_view: args.ns_view as *const c_void,
         };
 
-        let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
-        let loader = MacOSSurface::new(instance.entry_ref(), instance.vk_ref());
+        let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
+        let loader = MacOSSurface::new(vulkan.entry_ref(), vulkan.instance_ref());
         let vk = unsafe {
             loader
                 .create_mac_os_surface_mvk(&info, None)

@@ -7,7 +7,7 @@ use ash::vk::ImageLayout;
 use ash::vk::SampleCountFlags;
 use std::rc::Rc;
 
-use crate::tegne::Device;
+use crate::instance::Device;
 
 #[derive(Hash, PartialEq, Eq)]
 pub enum AttachmentType {

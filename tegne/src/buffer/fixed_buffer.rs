@@ -8,9 +8,9 @@ use std::rc::Rc;
 
 use super::Buffer;
 use super::BufferType;
+use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
-use crate::tegne::Device;
 
 pub struct FixedBuffer {
     vk: VkBuffer,

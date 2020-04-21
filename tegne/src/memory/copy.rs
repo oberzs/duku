@@ -6,8 +6,8 @@ use std::ffi::c_void;
 use std::ptr;
 use std::rc::Rc;
 
-use crate::tegne::CommandRecorder;
-use crate::tegne::Device;
+use crate::instance::CommandRecorder;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub fn data_to_buffer<T: Copy>(device: &Rc<Device>, src: &[T], dst: DeviceMemory, size: usize) {

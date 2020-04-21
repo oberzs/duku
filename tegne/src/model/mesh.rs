@@ -11,7 +11,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
 use crate::buffer::FixedBuffer;
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::error;
 
 pub struct Mesh {

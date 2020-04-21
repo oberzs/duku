@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::images::Attachment;
 use crate::images::AttachmentType;
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub struct RenderPass {

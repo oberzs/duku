@@ -7,7 +7,7 @@ use ash::vk::MemoryAllocateInfo;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::SharingMode;
 
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub fn buffer(

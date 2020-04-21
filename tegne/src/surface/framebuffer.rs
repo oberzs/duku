@@ -8,10 +8,10 @@ use super::RenderPass;
 use crate::images::AttachmentType;
 use crate::images::Image;
 use crate::images::LayoutChange;
+use crate::instance::CommandRecorder;
+use crate::instance::Device;
+use crate::instance::Swapchain;
 use crate::shaders::ImageUniforms;
-use crate::tegne::CommandRecorder;
-use crate::tegne::Device;
-use crate::tegne::Swapchain;
 use crate::utils::OrError;
 
 pub struct Framebuffer {

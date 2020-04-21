@@ -5,12 +5,12 @@ use std::rc::Rc;
 use tegne_math::Vector4;
 
 use crate::images::Texture;
+use crate::instance::Device;
 use crate::shaders::MaterialObject;
 use crate::shaders::MaterialUniforms;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::surface::Framebuffer;
-use crate::tegne::Device;
 use crate::utils::error;
 
 #[derive(PartialEq, PartialOrd)]

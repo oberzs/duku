@@ -29,8 +29,8 @@ use std::rc::Rc;
 
 use super::CommandRecorder;
 use super::Extensions;
-use super::Instance;
 use super::Swapchain;
+use super::Vulkan;
 use super::WindowSurface;
 use crate::sync::fence;
 use crate::sync::semaphore;
@@ -74,30 +74,30 @@ pub enum VSync {
 
 impl Device {
     pub fn new(
-        instance: &Instance,
+        vulkan: &Vulkan,
         surface: &WindowSurface,
         exts: &Extensions,
         vsync: VSync,
         msaa: u8,
     ) -> Rc<Self> {
         let gpus = unsafe {
-            instance
-                .vk_ref()
+            vulkan
+                .instance_ref()
                 .enumerate_physical_devices()
                 .or_error("cannot find a GPU")
         };
 
         for physical in gpus.into_iter() {
-            let i = instance.vk_ref();
+            let instance = vulkan.instance_ref();
 
-            let (g_index, p_index) = get_queue_indices(instance, physical, surface);
+            let (g_index, p_index) = get_queue_indices(vulkan, physical, surface);
             let has_queue_indices = g_index.is_some() && p_index.is_some();
             let graphics_index = g_index.unwrap_or_default();
             let present_index = p_index.unwrap_or_default();
 
-            let device_props = unsafe { i.get_physical_device_properties(physical) };
-            let device_features = unsafe { i.get_physical_device_features(physical) };
-            let mem_props = unsafe { i.get_physical_device_memory_properties(physical) };
+            let device_props = unsafe { instance.get_physical_device_properties(physical) };
+            let device_features = unsafe { instance.get_physical_device_features(physical) };
+            let mem_props = unsafe { instance.get_physical_device_memory_properties(physical) };
 
             let props = DeviceProperties {
                 properties: device_props,
@@ -112,11 +112,11 @@ impl Device {
                 vsync,
             };
 
-            if exts.supports_device(instance, physical)
+            if exts.supports_device(vulkan, physical)
                 && is_gpu_suitable(&props)
                 && has_queue_indices
             {
-                let logical = open_device(physical, instance, &props, exts);
+                let logical = open_device(physical, vulkan, &props, exts);
                 let graphics_queue = unsafe { logical.get_device_queue(graphics_index, 0) };
                 let present_queue = unsafe { logical.get_device_queue(present_index, 0) };
 
@@ -366,7 +366,7 @@ fn is_gpu_suitable(props: &DeviceProperties) -> bool {
 }
 
 fn get_queue_indices(
-    instance: &Instance,
+    vulkan: &Vulkan,
     device: PhysicalDevice,
     surface: &WindowSurface,
 ) -> (Option<u32>, Option<u32>) {
@@ -374,8 +374,8 @@ fn get_queue_indices(
     let mut present = None;
 
     let queue_properties = unsafe {
-        instance
-            .vk_ref()
+        vulkan
+            .instance_ref()
             .get_physical_device_queue_family_properties(device)
     };
     queue_properties.iter().enumerate().for_each(|(i, props)| {
@@ -394,7 +394,7 @@ fn get_queue_indices(
 
 fn open_device(
     physical: PhysicalDevice,
-    instance: &Instance,
+    vulkan: &Vulkan,
     props: &DeviceProperties,
     exts: &Extensions,
 ) -> LogicalDevice {
@@ -431,8 +431,8 @@ fn open_device(
         .enabled_extension_names(&extensions);
 
     unsafe {
-        instance
-            .vk_ref()
+        vulkan
+            .instance_ref()
             .create_device(physical, &info, None)
             .or_error("cannot open GPU")
     }

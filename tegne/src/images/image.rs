@@ -26,8 +26,8 @@ use std::cmp;
 use std::rc::Rc;
 
 use super::LayoutChange;
-use crate::tegne::CommandRecorder;
-use crate::tegne::Device;
+use crate::instance::CommandRecorder;
+use crate::instance::Device;
 use crate::utils::OrError;
 
 pub struct Image {

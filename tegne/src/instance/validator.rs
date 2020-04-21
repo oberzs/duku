@@ -9,7 +9,7 @@ use log::warn;
 use std::ffi::c_void;
 use std::ffi::CStr;
 
-use super::Instance;
+use super::Vulkan;
 use crate::utils::error;
 use crate::utils::OrError;
 
@@ -19,8 +19,8 @@ pub struct Validator {
 }
 
 impl Validator {
-    pub fn new(instance: &Instance) -> Self {
-        let ext = Extension::new(instance.entry_ref(), instance.vk_ref());
+    pub fn new(vulkan: &Vulkan) -> Self {
+        let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
 
         let info = DebugUtilsMessengerCreateInfoEXT::builder()
             .message_severity(Severity::ERROR | Severity::WARNING)

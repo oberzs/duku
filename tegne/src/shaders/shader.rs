@@ -38,7 +38,7 @@ use std::rc::Rc;
 use super::ShaderLayout;
 use crate::model::Vertex;
 use crate::surface::RenderPass;
-use crate::tegne::Device;
+use crate::instance::Device;
 use crate::utils::cstring;
 use crate::utils::OrError;
 
