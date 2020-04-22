@@ -111,3 +111,12 @@ impl<T, E> OrError<T> for Result<T, E> {
         })
     }
 }
+
+impl<T> OrError<T> for Option<T> {
+    fn or_error(self, msg: impl AsRef<str>) -> T {
+        self.unwrap_or_else(|| {
+            error!("{}", msg.as_ref());
+            exit(1);
+        })
+    }
+}
