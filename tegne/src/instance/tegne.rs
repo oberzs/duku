@@ -14,7 +14,8 @@ use super::WindowSurface;
 use crate::images::Anisotropy;
 use crate::images::Texture;
 use crate::images::TextureFormat;
-use crate::model::builtin;
+use crate::model::create_cube;
+use crate::model::create_sphere;
 use crate::model::Material;
 use crate::model::MaterialBuilder;
 use crate::model::Mesh;
@@ -56,25 +57,25 @@ enum RenderPassType {
     DepthOffscreen,
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
 enum BuiltinShader {
     Passthru,
     Texture,
     Unshaded,
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
 enum BuiltinTexture {
     White,
 }
 
-#[derive(Hash, Eq, PartialEq)]
-enum BuiltinMesh {
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+pub enum BuiltinMesh {
     Cube,
     Sphere,
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
 enum BuiltinMaterial {
     Wireframe,
     Shadow,
@@ -137,6 +138,20 @@ impl Tegne {
             default_texture,
             &self.shader_layout,
         )
+    }
+
+    pub fn get_mesh(&self, mesh: BuiltinMesh) -> &Mesh {
+        self.builtin_meshes
+            .get(&mesh)
+            .or_error("builtins not setup")
+    }
+
+    pub fn get_cube_mesh(&self) -> &Mesh {
+        self.get_mesh(BuiltinMesh::Cube)
+    }
+
+    pub fn get_sphere_mesh(&self) -> &Mesh {
+        self.get_mesh(BuiltinMesh::Sphere)
     }
 }
 
@@ -203,7 +218,11 @@ impl TegneBuilder {
         debug!("create builtins");
         let builtin_shaders = HashMap::new();
         let builtin_textures = HashMap::new();
-        let builtin_meshes = HashMap::new();
+
+        let mut builtin_meshes = HashMap::new();
+        builtin_meshes.insert(BuiltinMesh::Cube, create_cube(&device));
+        builtin_meshes.insert(BuiltinMesh::Sphere, create_sphere(&device, 2));
+
         let builtin_materials = HashMap::new();
         info!("builtins created");
 
