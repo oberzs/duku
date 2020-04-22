@@ -3,6 +3,8 @@ name: Math test
 on:
   push:
     branches: [master]
+    paths:
+      - "tenge-math/**"
 
 jobs:
   test:
