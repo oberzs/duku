@@ -9,7 +9,7 @@ use ash::vk::QUEUE_FAMILY_IGNORED;
 use super::Image;
 use crate::instance::CommandRecorder;
 
-pub struct LayoutChange<'a> {
+pub(crate) struct LayoutChange<'a> {
     recorder: &'a CommandRecorder,
     image: &'a Image,
     old_layout: ImageLayout,
@@ -23,7 +23,7 @@ pub struct LayoutChange<'a> {
 }
 
 impl<'a> LayoutChange<'a> {
-    pub fn new(recorder: &'a CommandRecorder, image: &'a Image) -> Self {
+    pub(crate) fn new(recorder: &'a CommandRecorder, image: &'a Image) -> Self {
         Self {
             recorder,
             image,
@@ -38,69 +38,69 @@ impl<'a> LayoutChange<'a> {
         }
     }
 
-    pub fn from_read(mut self) -> Self {
+    pub(crate) fn from_read(mut self) -> Self {
         self.old_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         self.src_access = AccessFlags::TRANSFER_READ;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub fn from_write(mut self) -> Self {
+    pub(crate) fn from_write(mut self) -> Self {
         self.old_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         self.src_access = AccessFlags::TRANSFER_WRITE;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub fn from_shader_read(mut self) -> Self {
+    pub(crate) fn from_shader_read(mut self) -> Self {
         self.old_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         self.src_access = AccessFlags::SHADER_READ;
         self.src_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
-    pub fn from_color_write(mut self) -> Self {
+    pub(crate) fn from_color_write(mut self) -> Self {
         self.old_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self.src_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
-    pub fn to_read(mut self) -> Self {
+    pub(crate) fn to_read(mut self) -> Self {
         self.new_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         self.dst_access = AccessFlags::TRANSFER_READ;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub fn to_write(mut self) -> Self {
+    pub(crate) fn to_write(mut self) -> Self {
         self.new_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         self.dst_access = AccessFlags::TRANSFER_WRITE;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub fn to_shader_read(mut self) -> Self {
+    pub(crate) fn to_shader_read(mut self) -> Self {
         self.new_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         self.dst_access = AccessFlags::SHADER_READ;
         self.dst_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
-    pub fn to_color_write(mut self) -> Self {
+    pub(crate) fn to_color_write(mut self) -> Self {
         self.new_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self.dst_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
-    pub fn with_mips(mut self, base: u32, count: u32) -> Self {
+    pub(crate) fn with_mips(mut self, base: u32, count: u32) -> Self {
         self.base_mip = base;
         self.mip_count = count;
         self
     }
 
-    pub fn record(self) {
+    pub(crate) fn record(self) {
         let subresource = ImageSubresourceRange::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)

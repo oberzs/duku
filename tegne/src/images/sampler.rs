@@ -11,7 +11,7 @@ use std::rc::Rc;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub struct Sampler {
+pub(crate) struct Sampler {
     vk: VkSampler,
     device: Rc<Device>,
 }
@@ -23,7 +23,7 @@ pub enum Anisotropy {
 }
 
 impl Sampler {
-    pub fn new(device: &Rc<Device>, anisotropy: Anisotropy) -> Self {
+    pub(crate) fn new(device: &Rc<Device>, anisotropy: Anisotropy) -> Self {
         let anisotropy_value = match anisotropy {
             Anisotropy::Enabled(value) => value,
             Anisotropy::Disabled => 0.0,
@@ -59,7 +59,7 @@ impl Sampler {
         }
     }
 
-    pub fn vk(&self) -> VkSampler {
+    pub(crate) fn vk(&self) -> VkSampler {
         self.vk
     }
 }

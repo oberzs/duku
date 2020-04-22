@@ -11,7 +11,7 @@ use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
 
-pub struct DynamicBuffer {
+pub(crate) struct DynamicBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
@@ -19,7 +19,7 @@ pub struct DynamicBuffer {
 }
 
 impl DynamicBuffer {
-    pub fn new<T: Copy>(device: &Rc<Device>, len: usize, buffer_type: BufferType) -> Self {
+    pub(crate) fn new<T: Copy>(device: &Rc<Device>, len: usize, buffer_type: BufferType) -> Self {
         let size = mem::size_of::<T>() * len;
 
         let (vk, memory) = alloc::buffer(
@@ -37,12 +37,12 @@ impl DynamicBuffer {
         }
     }
 
-    pub fn update_data<T: Copy>(&self, data: &[T]) {
+    pub(crate) fn update_data<T: Copy>(&self, data: &[T]) {
         let size = mem::size_of::<T>() * data.len();
         copy::data_to_buffer(&self.device, data, self.memory, size);
     }
 
-    pub fn size(&self) -> u32 {
+    pub(crate) fn size(&self) -> u32 {
         self.size
     }
 }

@@ -40,7 +40,7 @@ use crate::utils::OrError;
 
 const IN_FLIGHT_FRAME_COUNT: u32 = 2;
 
-pub struct Device {
+pub(crate) struct Device {
     logical: LogicalDevice,
     _physical: PhysicalDevice,
     properties: DeviceProperties,
@@ -53,27 +53,27 @@ pub struct Device {
     current_frame: Cell<u32>,
 }
 
-pub struct DeviceProperties {
-    pub properties: PhysicalDeviceProperties,
-    pub features: PhysicalDeviceFeatures,
-    pub surface_formats: Vec<SurfaceFormatKHR>,
-    pub surface_present_modes: Vec<PresentModeKHR>,
-    pub surface_capabilities: SurfaceCapabilitiesKHR,
-    pub memory_properties: PhysicalDeviceMemoryProperties,
-    pub graphics_index: u32,
-    pub present_index: u32,
-    pub vsync: VSync,
-    pub msaa: u8,
+pub(crate) struct DeviceProperties {
+    pub(crate) properties: PhysicalDeviceProperties,
+    pub(crate) features: PhysicalDeviceFeatures,
+    pub(crate) surface_formats: Vec<SurfaceFormatKHR>,
+    pub(crate) surface_present_modes: Vec<PresentModeKHR>,
+    pub(crate) surface_capabilities: SurfaceCapabilitiesKHR,
+    pub(crate) memory_properties: PhysicalDeviceMemoryProperties,
+    pub(crate) graphics_index: u32,
+    pub(crate) present_index: u32,
+    pub(crate) vsync: VSync,
+    pub(crate) msaa: u8,
 }
 
 #[derive(Copy, Clone)]
-pub enum VSync {
+pub(crate) enum VSync {
     Enabled,
     Disabled,
 }
 
 impl Device {
-    pub fn new(
+    pub(crate) fn new(
         vulkan: &Vulkan,
         surface: &WindowSurface,
         exts: &Extensions,
@@ -154,7 +154,7 @@ impl Device {
         error("cannot find suitable GPU");
     }
 
-    pub fn next_frame(&self) {
+    pub(crate) fn next_frame(&self) {
         self.current_frame
             .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
         let current = self.current_frame.get() as usize;
@@ -170,13 +170,13 @@ impl Device {
         recorder.begin();
     }
 
-    pub fn record_commands(&self) -> Ref<'_, CommandRecorder> {
+    pub(crate) fn record_commands(&self) -> Ref<'_, CommandRecorder> {
         Ref::map(self.command_recorders.borrow(), |rs| {
             &rs[self.current_frame.get() as usize]
         })
     }
 
-    pub fn submit_buffer(&self, buffer: CommandBuffer) {
+    pub(crate) fn submit_buffer(&self, buffer: CommandBuffer) {
         let buffers = [buffer];
         let info = SubmitInfo::builder().command_buffers(&buffers).build();
         let infos = [info];
@@ -191,7 +191,7 @@ impl Device {
         }
     }
 
-    pub fn submit(&self) {
+    pub(crate) fn submit(&self) {
         let current = self.current_frame.get() as usize;
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
@@ -212,14 +212,14 @@ impl Device {
         };
     }
 
-    pub fn present(&self, swapchain: &Swapchain) {
+    pub(crate) fn present(&self, swapchain: &Swapchain) {
         let current = self.current_frame.get() as usize;
         let wait = self.sync_release_image[current];
 
         swapchain.present(self.graphics_queue, wait);
     }
 
-    pub fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
+    pub(crate) fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
         self.properties
             .memory_properties
             .memory_types
@@ -232,7 +232,7 @@ impl Device {
             .0 as u32
     }
 
-    pub fn pick_sample_count(&self) -> SampleCountFlags {
+    pub(crate) fn pick_sample_count(&self) -> SampleCountFlags {
         let counts = self
             .properties
             .properties
@@ -262,7 +262,7 @@ impl Device {
         count
     }
 
-    pub fn pick_extent(&self, width: u32, height: u32) -> Extent2D {
+    pub(crate) fn pick_extent(&self, width: u32, height: u32) -> Extent2D {
         let extent = self.properties.surface_capabilities.current_extent;
         let min_width = self.properties.surface_capabilities.min_image_extent.width;
         let max_width = self.properties.surface_capabilities.max_image_extent.width;
@@ -281,14 +281,14 @@ impl Device {
         }
     }
 
-    pub fn pick_present_mode(&self) -> PresentModeKHR {
+    pub(crate) fn pick_present_mode(&self) -> PresentModeKHR {
         match self.properties.vsync {
             VSync::Enabled => PresentModeKHR::FIFO,
             VSync::Disabled => PresentModeKHR::IMMEDIATE,
         }
     }
 
-    pub fn pick_image_count(&self) -> u32 {
+    pub(crate) fn pick_image_count(&self) -> u32 {
         let min_image_count = self.properties.surface_capabilities.min_image_count;
         let max_image_count = self.properties.surface_capabilities.max_image_count;
         if max_image_count > 0 && min_image_count + 1 > max_image_count {
@@ -298,39 +298,39 @@ impl Device {
         }
     }
 
-    pub fn pick_depth_format(&self) -> Format {
+    pub(crate) fn pick_depth_format(&self) -> Format {
         Format::D32_SFLOAT_S8_UINT
     }
 
-    pub fn pick_rgba_format(&self) -> Format {
+    pub(crate) fn pick_rgba_format(&self) -> Format {
         Format::R8G8B8A8_UNORM
     }
 
-    pub fn pick_bgra_format(&self) -> Format {
+    pub(crate) fn pick_bgra_format(&self) -> Format {
         Format::B8G8R8A8_UNORM
     }
 
-    pub fn pick_color_space(&self) -> ColorSpaceKHR {
+    pub(crate) fn pick_color_space(&self) -> ColorSpaceKHR {
         ColorSpaceKHR::SRGB_NONLINEAR
     }
 
-    pub fn is_msaa(&self) -> bool {
+    pub(crate) fn is_msaa(&self) -> bool {
         self.pick_sample_count() != SampleCountFlags::TYPE_1
     }
 
-    pub fn logical(&self) -> &LogicalDevice {
+    pub(crate) fn logical(&self) -> &LogicalDevice {
         &self.logical
     }
 
-    pub fn properties(&self) -> &DeviceProperties {
+    pub(crate) fn properties(&self) -> &DeviceProperties {
         &self.properties
     }
 
-    pub fn are_indices_unique(&self) -> bool {
+    pub(crate) fn are_indices_unique(&self) -> bool {
         self.properties.graphics_index != self.properties.present_index
     }
 
-    pub fn indices(&self) -> Vec<u32> {
+    pub(crate) fn indices(&self) -> Vec<u32> {
         vec![
             self.properties.graphics_index,
             self.properties.present_index,

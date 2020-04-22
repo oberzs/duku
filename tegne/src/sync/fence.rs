@@ -6,7 +6,7 @@ use ash::Device as LogicalDevice;
 
 use crate::utils::OrError;
 
-pub fn create(logical: &LogicalDevice) -> Fence {
+pub(crate) fn create(logical: &LogicalDevice) -> Fence {
     let info = FenceCreateInfo::builder().flags(FenceCreateFlags::SIGNALED);
     unsafe {
         logical
@@ -15,13 +15,13 @@ pub fn create(logical: &LogicalDevice) -> Fence {
     }
 }
 
-pub fn destroy(logical: &LogicalDevice, f: Fence) {
+pub(crate) fn destroy(logical: &LogicalDevice, f: Fence) {
     unsafe {
         logical.destroy_fence(f, None);
     }
 }
 
-pub fn wait_for(logical: &LogicalDevice, f: Fence) {
+pub(crate) fn wait_for(logical: &LogicalDevice, f: Fence) {
     unsafe {
         logical
             .wait_for_fences(&[f], true, u64::max_value())
@@ -29,7 +29,7 @@ pub fn wait_for(logical: &LogicalDevice, f: Fence) {
     }
 }
 
-pub fn reset(logical: &LogicalDevice, f: Fence) {
+pub(crate) fn reset(logical: &LogicalDevice, f: Fence) {
     unsafe {
         logical.reset_fences(&[f]).or_error("cannot reset fence");
     }

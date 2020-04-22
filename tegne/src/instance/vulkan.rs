@@ -11,13 +11,13 @@ use crate::utils::OrError;
 
 use super::Extensions;
 
-pub struct Vulkan {
+pub(crate) struct Vulkan {
     instance: Instance,
     entry: Entry,
 }
 
 impl Vulkan {
-    pub fn new(exts: &Extensions) -> Self {
+    pub(crate) fn new(exts: &Extensions) -> Self {
         let entry = Entry::new().or_error("cannot init Vulkan");
 
         if !exts.supports_instance(&entry) {
@@ -48,11 +48,11 @@ impl Vulkan {
         Self { instance, entry }
     }
 
-    pub fn instance_ref(&self) -> &Instance {
+    pub(crate) fn instance_ref(&self) -> &Instance {
         &self.instance
     }
 
-    pub fn entry_ref(&self) -> &Entry {
+    pub(crate) fn entry_ref(&self) -> &Entry {
         &self.entry
     }
 }

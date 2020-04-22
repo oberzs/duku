@@ -21,46 +21,46 @@ use crate::instance::Device;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
-pub struct Light {
-    pub position: Vector4,
-    pub color: Vector3,
+pub(crate) struct Light {
+    pub(crate) position: Vector4,
+    pub(crate) color: Vector3,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct WorldObject {
-    pub view: Matrix4,
-    pub proj: Matrix4,
-    pub light_matrix: Matrix4,
-    pub lights: [Light; 4],
-    pub view_pos: Vector3,
-    pub time: f32,
+pub(crate) struct WorldObject {
+    pub(crate) view: Matrix4,
+    pub(crate) proj: Matrix4,
+    pub(crate) light_matrix: Matrix4,
+    pub(crate) lights: [Light; 4],
+    pub(crate) view_pos: Vector3,
+    pub(crate) time: f32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct MaterialObject {
-    pub albedo_tint: Vector4,
+pub(crate) struct MaterialObject {
+    pub(crate) albedo_tint: Vector4,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct PushConstants {
-    pub model: Matrix4,
-    pub albedo_index: i32,
+pub(crate) struct PushConstants {
+    pub(crate) model: Matrix4,
+    pub(crate) albedo_index: i32,
 }
 
-pub struct WorldUniforms {
+pub(crate) struct WorldUniforms {
     descriptor: DescriptorSet,
     buffer: DynamicBuffer,
 }
 
-pub struct MaterialUniforms {
+pub(crate) struct MaterialUniforms {
     descriptor: DescriptorSet,
     buffer: DynamicBuffer,
 }
 
-pub struct ImageUniforms {
+pub(crate) struct ImageUniforms {
     descriptor: DescriptorSet,
     sampler: Sampler,
     images: RefCell<Vec<ImageView>>,
@@ -69,7 +69,7 @@ pub struct ImageUniforms {
 }
 
 impl WorldUniforms {
-    pub fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<WorldObject>(device, 1, BufferType::Uniform);
 
         let descriptor = layout.world_set(&buffer);
@@ -77,17 +77,17 @@ impl WorldUniforms {
         Self { buffer, descriptor }
     }
 
-    pub fn update(&self, data: WorldObject) {
+    pub(crate) fn update(&self, data: WorldObject) {
         self.buffer.update_data(&[data]);
     }
 
-    pub fn descriptor(&self) -> (u32, DescriptorSet) {
+    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
         (0, self.descriptor)
     }
 }
 
 impl MaterialUniforms {
-    pub fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<MaterialObject>(device, 1, BufferType::Uniform);
 
         let descriptor = layout.material_set(&buffer);
@@ -95,17 +95,17 @@ impl MaterialUniforms {
         Self { buffer, descriptor }
     }
 
-    pub fn update(&self, data: MaterialObject) {
+    pub(crate) fn update(&self, data: MaterialObject) {
         self.buffer.update_data(&[data]);
     }
 
-    pub fn descriptor(&self) -> (u32, DescriptorSet) {
+    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
         (1, self.descriptor)
     }
 }
 
 impl ImageUniforms {
-    pub fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: Anisotropy) -> Self {
+    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: Anisotropy) -> Self {
         let descriptor = layout.image_set();
         let sampler = Sampler::new(device, anisotropy);
 
@@ -118,16 +118,16 @@ impl ImageUniforms {
         }
     }
 
-    pub fn image_count(&self) -> u32 {
+    pub(crate) fn image_count(&self) -> u32 {
         self.images.borrow().len() as u32
     }
 
-    pub fn add(&self, image: ImageView) {
+    pub(crate) fn add(&self, image: ImageView) {
         self.images.borrow_mut().push(image);
         self.should_update.set(true);
     }
 
-    pub fn update_if_needed(&self) {
+    pub(crate) fn update_if_needed(&self) {
         if self.should_update.get() {
             let image_infos = (0..100)
                 .map(|i| {
@@ -168,7 +168,7 @@ impl ImageUniforms {
         }
     }
 
-    pub fn descriptor(&self) -> (u32, DescriptorSet) {
+    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
         (2, self.descriptor)
     }
 }

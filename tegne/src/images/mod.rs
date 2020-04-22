@@ -4,10 +4,10 @@ mod layout_change;
 mod sampler;
 mod texture;
 
-pub use framebuffer::Framebuffer;
-pub use image::Image;
-pub use layout_change::LayoutChange;
-pub use sampler::Anisotropy;
-pub use sampler::Sampler;
+pub(crate) use framebuffer::Framebuffer;
+pub(crate) use image::Image;
+pub(crate) use layout_change::LayoutChange;
+pub(crate) use sampler::Anisotropy;
+pub(crate) use sampler::Sampler;
 pub use texture::Texture;
-pub use texture::TextureFormat;
+pub(crate) use texture::TextureFormat;

@@ -2,7 +2,7 @@ use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
-pub struct Camera {
+pub(crate) struct Camera {
     transform: Transform,
     camera_type: CameraType,
     width: f32,
@@ -17,7 +17,7 @@ enum CameraType {
 }
 
 impl Camera {
-    pub fn perspective(width: u32, height: u32, fov: u32) -> Self {
+    pub(crate) fn perspective(width: u32, height: u32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Perspective,
@@ -28,7 +28,7 @@ impl Camera {
         }
     }
 
-    pub fn orthographic(width: u32, height: u32) -> Self {
+    pub(crate) fn orthographic(width: u32, height: u32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Orthographic,
@@ -39,7 +39,7 @@ impl Camera {
         }
     }
 
-    pub fn fake_orthographic(&mut self, enable: bool) {
+    pub(crate) fn fake_orthographic(&mut self, enable: bool) {
         if let CameraType::Orthographic = self.camera_type {
             return;
         }
@@ -52,12 +52,12 @@ impl Camera {
         }
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
+    pub(crate) fn resize(&mut self, width: u32, height: u32) {
         self.width = width as f32;
         self.height = height as f32;
     }
 
-    pub fn matrices(&self) -> (Matrix4, Matrix4) {
+    pub(crate) fn matrices(&self) -> (Matrix4, Matrix4) {
         let depth = 5000.0;
 
         let projection = match self.camera_type {
@@ -72,11 +72,11 @@ impl Camera {
         (projection, view)
     }
 
-    pub fn transform(&self) -> Transform {
+    pub(crate) fn transform(&self) -> Transform {
         self.transform
     }
 
-    pub fn transform_mut(&mut self) -> &mut Transform {
+    pub(crate) fn transform_mut(&mut self) -> &mut Transform {
         &mut self.transform
     }
 }

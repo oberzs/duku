@@ -2,7 +2,7 @@ mod buffer_type;
 mod dynamic_buffer;
 mod fixed_buffer;
 
-pub use buffer_type::Buffer;
-pub use buffer_type::BufferType;
-pub use dynamic_buffer::DynamicBuffer;
-pub use fixed_buffer::FixedBuffer;
+pub(crate) use buffer_type::Buffer;
+pub(crate) use buffer_type::BufferType;
+pub(crate) use dynamic_buffer::DynamicBuffer;
+pub(crate) use fixed_buffer::FixedBuffer;

@@ -1,13 +1,13 @@
 use ash::vk::Buffer as VkBuffer;
 use ash::vk::BufferUsageFlags;
 
-pub enum BufferType {
+pub(crate) enum BufferType {
     Vertex,
     Index,
     Uniform,
 }
 
-pub trait Buffer {
+pub(crate) trait Buffer {
     fn vk_buffer(&self) -> VkBuffer;
 }
 

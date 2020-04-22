@@ -28,7 +28,7 @@ pub struct MaterialBuilder {
 }
 
 impl Material {
-    pub fn builder(
+    pub(crate) fn builder(
         device: &Rc<Device>,
         default_shader: &Shader,
         default_albedo: &Texture,
@@ -43,19 +43,19 @@ impl Material {
         }
     }
 
-    pub fn pipeline(&self) -> Pipeline {
+    pub(crate) fn pipeline(&self) -> Pipeline {
         self.pipeline
     }
 
-    pub fn albedo_index(&self) -> u32 {
+    pub(crate) fn albedo_index(&self) -> u32 {
         self.albedo_index
     }
 
-    pub fn albedo_tint(&self) -> Vector4 {
+    pub(crate) fn albedo_tint(&self) -> Vector4 {
         self.albedo_tint
     }
 
-    pub fn uniforms(&self) -> &MaterialUniforms {
+    pub(crate) fn uniforms(&self) -> &MaterialUniforms {
         &self.uniforms
     }
 }

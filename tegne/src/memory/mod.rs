@@ -1,2 +1,2 @@
-pub mod alloc;
-pub mod copy;
+pub(crate) mod alloc;
+pub(crate) mod copy;

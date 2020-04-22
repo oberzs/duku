@@ -16,14 +16,14 @@ use super::Vulkan;
 use super::WindowSurface;
 use crate::utils::OrError;
 
-pub struct Swapchain {
+pub(crate) struct Swapchain {
     ext: Extension,
     vk: SwapchainKHR,
     current_image: Cell<u32>,
 }
 
 impl Swapchain {
-    pub fn new(
+    pub(crate) fn new(
         vulkan: &Vulkan,
         device: &Rc<Device>,
         window_surface: &WindowSurface,
@@ -72,7 +72,7 @@ impl Swapchain {
         }
     }
 
-    pub fn iter_images(&self) -> impl Iterator<Item = Image> {
+    pub(crate) fn iter_images(&self) -> impl Iterator<Item = Image> {
         unsafe {
             self.ext
                 .get_swapchain_images(self.vk)
@@ -81,7 +81,7 @@ impl Swapchain {
         }
     }
 
-    pub fn next(&self, signal: Semaphore) {
+    pub(crate) fn next(&self, signal: Semaphore) {
         self.current_image.set(unsafe {
             self.ext
                 .acquire_next_image(self.vk, u64::max_value(), signal, Default::default())
@@ -90,7 +90,7 @@ impl Swapchain {
         });
     }
 
-    pub fn present(&self, queue: Queue, wait: Semaphore) {
+    pub(crate) fn present(&self, queue: Queue, wait: Semaphore) {
         let waits = [wait];
         let swapchains = [self.vk];
         let image = [self.current_image.get()];

@@ -13,13 +13,13 @@ use super::Vulkan;
 use crate::utils::error;
 use crate::utils::OrError;
 
-pub struct Validator {
+pub(crate) struct Validator {
     messenger: Messenger,
     ext: Extension,
 }
 
 impl Validator {
-    pub fn new(vulkan: &Vulkan) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan) -> Self {
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
 
         let info = DebugUtilsMessengerCreateInfoEXT::builder()

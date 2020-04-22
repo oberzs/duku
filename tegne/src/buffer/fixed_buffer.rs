@@ -12,7 +12,7 @@ use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
 
-pub struct FixedBuffer {
+pub(crate) struct FixedBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
@@ -20,7 +20,7 @@ pub struct FixedBuffer {
 }
 
 impl FixedBuffer {
-    pub fn new<T: Copy>(device: &Rc<Device>, data: &[T], buffer_type: BufferType) -> Self {
+    pub(crate) fn new<T: Copy>(device: &Rc<Device>, data: &[T], buffer_type: BufferType) -> Self {
         let size = mem::size_of::<T>() * data.len();
 
         let (staging_buffer, staging_memory) = alloc::buffer(
@@ -54,7 +54,7 @@ impl FixedBuffer {
         }
     }
 
-    pub fn size(&self) -> u32 {
+    pub(crate) fn size(&self) -> u32 {
         self.size
     }
 }

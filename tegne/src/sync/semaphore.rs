@@ -5,7 +5,7 @@ use ash::Device as LogicalDevice;
 
 use crate::utils::OrError;
 
-pub fn create(logical: &LogicalDevice) -> Semaphore {
+pub(crate) fn create(logical: &LogicalDevice) -> Semaphore {
     let info = SemaphoreCreateInfo::builder();
     unsafe {
         logical
@@ -14,7 +14,7 @@ pub fn create(logical: &LogicalDevice) -> Semaphore {
     }
 }
 
-pub fn destroy(logical: &LogicalDevice, s: Semaphore) {
+pub(crate) fn destroy(logical: &LogicalDevice, s: Semaphore) {
     unsafe {
         logical.destroy_semaphore(s, None);
     }

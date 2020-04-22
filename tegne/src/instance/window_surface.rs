@@ -35,14 +35,14 @@ pub struct WindowArgs {
     pub height: u32,
 }
 
-pub struct WindowSurface {
+pub(crate) struct WindowSurface {
     vk: SurfaceKHR,
     ext: Extension,
 }
 
 impl WindowSurface {
     #[cfg(target_os = "windows")]
-    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::khr::Win32Surface;
         use ash::vk::StructureType;
         use ash::vk::Win32SurfaceCreateInfoKHR;
@@ -70,7 +70,7 @@ impl WindowSurface {
     }
 
     #[cfg(target_os = "linux")]
-    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::khr::XlibSurface;
         use ash::vk::Display;
         use ash::vk::XlibSurfaceCreateInfoKHR;
@@ -91,7 +91,7 @@ impl WindowSurface {
     }
 
     #[cfg(target_os = "macos")]
-    pub fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         use ash::extensions::mvk::MacOSSurface;
         use ash::vk::MacOSSurfaceCreateInfoMVK;
         use ash::vk::StructureType;
@@ -132,7 +132,7 @@ impl WindowSurface {
         Self { vk, ext }
     }
 
-    pub fn gpu_formats(&self, device: PhysicalDevice) -> Vec<SurfaceFormatKHR> {
+    pub(crate) fn gpu_formats(&self, device: PhysicalDevice) -> Vec<SurfaceFormatKHR> {
         unsafe {
             self.ext
                 .get_physical_device_surface_formats(device, self.vk)
@@ -140,7 +140,7 @@ impl WindowSurface {
         }
     }
 
-    pub fn gpu_capabilities(&self, device: PhysicalDevice) -> SurfaceCapabilitiesKHR {
+    pub(crate) fn gpu_capabilities(&self, device: PhysicalDevice) -> SurfaceCapabilitiesKHR {
         unsafe {
             self.ext
                 .get_physical_device_surface_capabilities(device, self.vk)
@@ -148,7 +148,7 @@ impl WindowSurface {
         }
     }
 
-    pub fn gpu_present_modes(&self, device: PhysicalDevice) -> Vec<PresentModeKHR> {
+    pub(crate) fn gpu_present_modes(&self, device: PhysicalDevice) -> Vec<PresentModeKHR> {
         unsafe {
             self.ext
                 .get_physical_device_surface_present_modes(device, self.vk)
@@ -156,7 +156,7 @@ impl WindowSurface {
         }
     }
 
-    pub fn supports_device(&self, device: PhysicalDevice, index: u32) -> bool {
+    pub(crate) fn supports_device(&self, device: PhysicalDevice, index: u32) -> bool {
         unsafe {
             self.ext
                 .get_physical_device_surface_support(device, index, self.vk)
@@ -164,7 +164,7 @@ impl WindowSurface {
         }
     }
 
-    pub fn vk(&self) -> SurfaceKHR {
+    pub(crate) fn vk(&self) -> SurfaceKHR {
         self.vk
     }
 }

@@ -9,8 +9,8 @@ fn main() {
     let window = Window::new(640, 480);
 
     let tegne = Tegne::builder().with_window(&window).with_vsync().build();
-    let texture = tegne.create_texture_from_rgba(&[255, 255, 255, 255], 1, 1);
-    let _material = tegne.create_material().with_albedo(texture).build();
+    let texture = tegne.create_texture_rgba(&[255, 255, 255, 255], 1, 1);
+    let _material = tegne.create_material().with_albedo(&texture).build();
 
     let vertices = &[
         Vector3::new(-0.5, -0.5, -0.5),

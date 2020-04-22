@@ -7,11 +7,11 @@ mod validator;
 mod vulkan;
 mod window_surface;
 
-pub use command_recorder::CommandRecorder;
-pub use device::Device;
+pub(crate) use command_recorder::CommandRecorder;
+pub(crate) use device::Device;
 use device::VSync;
 use extensions::Extensions;
-pub use swapchain::Swapchain;
+pub(crate) use swapchain::Swapchain;
 pub use tegne::Tegne;
 use validator::Validator;
 use vulkan::Vulkan;

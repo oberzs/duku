@@ -10,14 +10,14 @@ use crate::utils::cstring;
 use crate::utils::OrError;
 
 #[derive(Default)]
-pub struct Extensions {
+pub(crate) struct Extensions {
     instance: Vec<CString>,
     device: Vec<CString>,
     layers: Vec<CString>,
 }
 
 impl Extensions {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut instance = vec![cstring("VK_KHR_surface")];
         #[cfg(target_os = "windows")]
         instance.push(cstring("VK_KHR_win32_surface"));
@@ -42,7 +42,7 @@ impl Extensions {
         }
     }
 
-    pub fn supports_instance(&self, entry: &Entry) -> bool {
+    pub(crate) fn supports_instance(&self, entry: &Entry) -> bool {
         let available = entry
             .enumerate_instance_extension_properties()
             .or_error("cannot enumerate instance extensions")
@@ -56,7 +56,7 @@ impl Extensions {
         self.instance.iter().all(|e| available.contains(e))
     }
 
-    pub fn supports_device(&self, vulkan: &Vulkan, device: PhysicalDevice) -> bool {
+    pub(crate) fn supports_device(&self, vulkan: &Vulkan, device: PhysicalDevice) -> bool {
         let available = unsafe {
             vulkan
                 .instance_ref()
@@ -73,7 +73,7 @@ impl Extensions {
         self.device.iter().all(|e| available.contains(e))
     }
 
-    pub fn supports_layers(&self, entry: &Entry) -> bool {
+    pub(crate) fn supports_layers(&self, entry: &Entry) -> bool {
         let available = entry
             .enumerate_instance_layer_properties()
             .or_error("cannot enumerate layers")
@@ -87,15 +87,15 @@ impl Extensions {
         self.layers.iter().all(|l| available.contains(l))
     }
 
-    pub fn instance(&self) -> Vec<*const i8> {
+    pub(crate) fn instance(&self) -> Vec<*const i8> {
         self.instance.iter().map(|e| e.as_ptr()).collect()
     }
 
-    pub fn device(&self) -> Vec<*const i8> {
+    pub(crate) fn device(&self) -> Vec<*const i8> {
         self.device.iter().map(|e| e.as_ptr()).collect()
     }
 
-    pub fn layers(&self) -> Vec<*const i8> {
+    pub(crate) fn layers(&self) -> Vec<*const i8> {
         self.layers.iter().map(|l| l.as_ptr()).collect()
     }
 }

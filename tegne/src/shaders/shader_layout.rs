@@ -23,7 +23,7 @@ use crate::buffer::DynamicBuffer;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub struct ShaderLayout {
+pub(crate) struct ShaderLayout {
     pipeline_layout: PipelineLayout,
     world_layout: DescriptorSetLayout,
     material_layout: DescriptorSetLayout,
@@ -33,7 +33,7 @@ pub struct ShaderLayout {
 }
 
 impl ShaderLayout {
-    pub fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Rc<Device>) -> Self {
         // world layout
         let world_binding = DescriptorSetLayoutBinding::builder()
             .descriptor_type(DescriptorType::UNIFORM_BUFFER)
@@ -155,7 +155,7 @@ impl ShaderLayout {
         }
     }
 
-    pub fn world_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
+    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
         let set_layouts = [self.world_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
@@ -193,7 +193,7 @@ impl ShaderLayout {
         set
     }
 
-    pub fn material_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
+    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
         let set_layouts = [self.material_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
@@ -231,7 +231,7 @@ impl ShaderLayout {
         set
     }
 
-    pub fn image_set(&self) -> DescriptorSet {
+    pub(crate) fn image_set(&self) -> DescriptorSet {
         let set_layouts = [self.image_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
@@ -246,7 +246,7 @@ impl ShaderLayout {
         }
     }
 
-    pub fn pipeline(&self) -> PipelineLayout {
+    pub(crate) fn pipeline(&self) -> PipelineLayout {
         self.pipeline_layout
     }
 }

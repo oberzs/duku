@@ -10,19 +10,19 @@ use std::rc::Rc;
 use crate::instance::Device;
 
 #[derive(Hash, PartialEq, Eq)]
-pub enum AttachmentType {
+pub(crate) enum AttachmentType {
     Color,
     Depth,
     Resolve,
 }
 
-pub struct Attachment {
+pub(crate) struct Attachment {
     vk: AttachmentDescription,
     reference: AttachmentReference,
     index: u32,
 }
 
-pub struct AttachmentBuilder {
+pub(crate) struct AttachmentBuilder {
     format: Format,
     layout: ImageLayout,
     samples: SampleCountFlags,
@@ -33,7 +33,7 @@ pub struct AttachmentBuilder {
 }
 
 impl Attachment {
-    pub fn builder(device: &Rc<Device>) -> AttachmentBuilder {
+    pub(crate) fn builder(device: &Rc<Device>) -> AttachmentBuilder {
         AttachmentBuilder {
             format: Format::D32_SFLOAT_S8_UINT,
             layout: ImageLayout::UNDEFINED,
@@ -45,59 +45,59 @@ impl Attachment {
         }
     }
 
-    pub fn vk(&self) -> AttachmentDescription {
+    pub(crate) fn vk(&self) -> AttachmentDescription {
         self.vk
     }
 
-    pub fn reference(&self) -> AttachmentReference {
+    pub(crate) fn reference(&self) -> AttachmentReference {
         self.reference
     }
 
-    pub fn index(&self) -> u32 {
+    pub(crate) fn index(&self) -> u32 {
         self.index
     }
 }
 
 impl<'a> AttachmentBuilder {
-    pub fn with_bgra_color(&mut self) -> &mut Self {
+    pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
         self.format = self.device.pick_bgra_format();
         self.layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self
     }
 
-    pub fn with_depth(&mut self) -> &mut Self {
+    pub(crate) fn with_depth(&mut self) -> &mut Self {
         self.format = self.device.pick_depth_format();
         self.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self
     }
 
-    pub fn with_present_layout(&mut self) -> &mut Self {
+    pub(crate) fn with_present_layout(&mut self) -> &mut Self {
         self.with_bgra_color();
         self.layout = ImageLayout::PRESENT_SRC_KHR;
         self
     }
 
-    pub fn with_samples(&mut self) -> &mut Self {
+    pub(crate) fn with_samples(&mut self) -> &mut Self {
         self.samples = self.device.pick_sample_count();
         self
     }
 
-    pub fn with_clear(&mut self) -> &mut Self {
+    pub(crate) fn with_clear(&mut self) -> &mut Self {
         self.clear = AttachmentLoadOp::CLEAR;
         self
     }
 
-    pub fn with_store(&mut self) -> &mut Self {
+    pub(crate) fn with_store(&mut self) -> &mut Self {
         self.store = AttachmentStoreOp::STORE;
         self
     }
 
-    pub fn with_index(&mut self, index: u32) -> &mut Self {
+    pub(crate) fn with_index(&mut self, index: u32) -> &mut Self {
         self.index = index;
         self
     }
 
-    pub fn build(&self) -> Attachment {
+    pub(crate) fn build(&self) -> Attachment {
         let vk = AttachmentDescription::builder()
             .format(self.format)
             .samples(self.samples)

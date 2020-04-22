@@ -30,7 +30,7 @@ use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub struct Image {
+pub(crate) struct Image {
     width: u32,
     height: u32,
     mip_levels: u32,
@@ -41,7 +41,7 @@ pub struct Image {
     _format: Format,
 }
 
-pub struct ImageBuilder {
+pub(crate) struct ImageBuilder {
     device: Rc<Device>,
     width: u32,
     height: u32,
@@ -54,7 +54,7 @@ pub struct ImageBuilder {
 }
 
 impl Image {
-    pub fn builder(device: &Rc<Device>) -> ImageBuilder {
+    pub(crate) fn builder(device: &Rc<Device>) -> ImageBuilder {
         ImageBuilder {
             device: Rc::clone(device),
             width: 1,
@@ -68,7 +68,7 @@ impl Image {
         }
     }
 
-    pub fn copy_data_from(&self, src: Buffer) {
+    pub(crate) fn copy_data_from(&self, src: Buffer) {
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)
@@ -95,7 +95,7 @@ impl Image {
         self.device.submit_buffer(recorder.end());
     }
 
-    pub fn generate_mipmaps(&self) {
+    pub(crate) fn generate_mipmaps(&self) {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
@@ -166,63 +166,63 @@ impl Image {
         self.device.submit_buffer(recorder.end());
     }
 
-    pub fn vk(&self) -> VkImage {
+    pub(crate) fn vk(&self) -> VkImage {
         self.vk
     }
 
-    pub fn view(&self) -> ImageView {
+    pub(crate) fn view(&self) -> ImageView {
         self.view.or_error("image does not have a view")
     }
 }
 
 impl ImageBuilder {
-    pub fn with_size(&mut self, width: u32, height: u32) -> &mut Self {
+    pub(crate) fn with_size(&mut self, width: u32, height: u32) -> &mut Self {
         self.width = width;
         self.height = height;
         self
     }
 
-    pub fn with_mipmaps(&mut self) -> &mut Self {
+    pub(crate) fn with_mipmaps(&mut self) -> &mut Self {
         self.mipmaps = true;
         self
     }
 
-    pub fn with_samples(&mut self) -> &mut Self {
+    pub(crate) fn with_samples(&mut self) -> &mut Self {
         self.samples = self.device.pick_sample_count();
         self
     }
 
-    pub fn with_bgra_color(&mut self) -> &mut Self {
+    pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
         self.format = self.device.pick_bgra_format();
         self
     }
 
-    pub fn with_rgba_color(&mut self) -> &mut Self {
+    pub(crate) fn with_rgba_color(&mut self) -> &mut Self {
         self.format = self.device.pick_rgba_format();
         self
     }
 
-    pub fn with_depth(&mut self) -> &mut Self {
+    pub(crate) fn with_depth(&mut self) -> &mut Self {
         self.format = self.device.pick_depth_format();
         self
     }
 
-    pub fn with_usage(&mut self, usage: ImageUsageFlags) -> &mut Self {
+    pub(crate) fn with_usage(&mut self, usage: ImageUsageFlags) -> &mut Self {
         self.usage |= usage;
         self
     }
 
-    pub fn with_view(&mut self) -> &mut Self {
+    pub(crate) fn with_view(&mut self) -> &mut Self {
         self.view = true;
         self
     }
 
-    pub fn from_image(&mut self, image: VkImage) -> &mut Self {
+    pub(crate) fn from_image(&mut self, image: VkImage) -> &mut Self {
         self.image = Some(image);
         self
     }
 
-    pub fn build(&self) -> Image {
+    pub(crate) fn build(&self) -> Image {
         let mip_levels = if self.mipmaps {
             (cmp::max(self.width, self.height) as f32).log2().floor() as u32 + 1
         } else {

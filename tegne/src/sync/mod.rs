@@ -1,2 +1,2 @@
-pub mod fence;
-pub mod semaphore;
+pub(crate) mod fence;
+pub(crate) mod semaphore;

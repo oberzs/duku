@@ -10,7 +10,7 @@ use ash::vk::SharingMode;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub fn buffer(
+pub(crate) fn buffer(
     device: &Device,
     usage: BufferUsageFlags,
     properties: MemoryPropertyFlags,

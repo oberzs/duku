@@ -33,7 +33,7 @@ pub struct MeshBuilder {
 }
 
 impl Mesh {
-    pub fn builder(device: &Rc<Device>) -> MeshBuilder {
+    pub(crate) fn builder(device: &Rc<Device>) -> MeshBuilder {
         MeshBuilder {
             vertices: vec![],
             uvs: vec![],
@@ -62,7 +62,7 @@ impl Mesh {
         self.drawn_triangles = count;
     }
 
-    pub fn vk_vertex_buffer(&self) -> VkBuffer {
+    pub(crate) fn vk_vertex_buffer(&self) -> VkBuffer {
         if self.should_update.get() {
             let vertices = self
                 .vertices
@@ -81,7 +81,7 @@ impl Mesh {
         self.vertex_buffer.vk_buffer()
     }
 
-    pub fn vk_index_buffer(&self) -> VkBuffer {
+    pub(crate) fn vk_index_buffer(&self) -> VkBuffer {
         self.index_buffer.vk_buffer()
     }
 
@@ -89,15 +89,15 @@ impl Mesh {
         &self.vertices
     }
 
-    pub fn uvs(&self) -> &[Vector2] {
+    pub(crate) fn uvs(&self) -> &[Vector2] {
         &self.uvs
     }
 
-    pub fn normals(&self) -> &[Vector3] {
+    pub(crate) fn normals(&self) -> &[Vector3] {
         &self.normals
     }
 
-    pub fn drawn_triangles(&self) -> u32 {
+    pub(crate) fn drawn_triangles(&self) -> u32 {
         self.drawn_triangles as u32
     }
 }

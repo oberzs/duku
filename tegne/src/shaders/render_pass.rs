@@ -15,14 +15,14 @@ use super::AttachmentType;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub struct RenderPass {
+pub(crate) struct RenderPass {
     vk: VkRenderPass,
     attachments: HashMap<AttachmentType, Attachment>,
     device: Rc<Device>,
 }
 
 impl RenderPass {
-    pub fn color_offscreen(device: &Rc<Device>) -> Self {
+    pub(crate) fn color_offscreen(device: &Rc<Device>) -> Self {
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -69,7 +69,7 @@ impl RenderPass {
         Self::from_attachments(device, attachments)
     }
 
-    pub fn color_onscreen(device: &Rc<Device>) -> Self {
+    pub(crate) fn color_onscreen(device: &Rc<Device>) -> Self {
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -115,7 +115,7 @@ impl RenderPass {
         Self::from_attachments(device, attachments)
     }
 
-    pub fn depth_offscreen(device: &Rc<Device>) -> Self {
+    pub(crate) fn depth_offscreen(device: &Rc<Device>) -> Self {
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -194,11 +194,11 @@ impl RenderPass {
         }
     }
 
-    pub fn vk(&self) -> VkRenderPass {
+    pub(crate) fn vk(&self) -> VkRenderPass {
         self.vk
     }
 
-    pub fn attachments_ref(&self) -> &HashMap<AttachmentType, Attachment> {
+    pub(crate) fn attachments_ref(&self) -> &HashMap<AttachmentType, Attachment> {
         &self.attachments
     }
 }

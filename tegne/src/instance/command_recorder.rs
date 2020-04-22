@@ -43,14 +43,14 @@ use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::utils::OrError;
 
-pub struct CommandRecorder {
+pub(crate) struct CommandRecorder {
     buffer: CommandBuffer,
     pool: CommandPool,
     device: Rc<Device>,
 }
 
 impl CommandRecorder {
-    pub fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Rc<Device>) -> Self {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
             .queue_family_index(device.properties().graphics_index)
@@ -72,7 +72,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         unsafe {
             self.device
                 .logical()
@@ -82,7 +82,7 @@ impl CommandRecorder {
         self.buffer = create_buffer(&self.device, self.pool);
     }
 
-    pub fn begin(&self) {
+    pub(crate) fn begin(&self) {
         let begin_info = CommandBufferBeginInfo::builder();
         unsafe {
             self.device
@@ -92,7 +92,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn begin_one_time(&self) {
+    pub(crate) fn begin_one_time(&self) {
         let begin_info =
             CommandBufferBeginInfo::builder().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
         unsafe {
@@ -103,7 +103,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn end(&self) -> CommandBuffer {
+    pub(crate) fn end(&self) -> CommandBuffer {
         unsafe {
             self.device
                 .logical()
@@ -113,7 +113,7 @@ impl CommandRecorder {
         self.buffer
     }
 
-    pub fn begin_render_pass(
+    pub(crate) fn begin_render_pass(
         &self,
         framebuffer: &Framebuffer,
         render_pass: &RenderPass,
@@ -153,13 +153,13 @@ impl CommandRecorder {
         }
     }
 
-    pub fn end_render_pass(&self) {
+    pub(crate) fn end_render_pass(&self) {
         unsafe {
             self.device.logical().cmd_end_render_pass(self.buffer);
         }
     }
 
-    pub fn bind_pipeline(&self, shader: &Shader) {
+    pub(crate) fn bind_pipeline(&self, shader: &Shader) {
         unsafe {
             self.device.logical().cmd_bind_pipeline(
                 self.buffer,
@@ -169,7 +169,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn bind_descriptor(&self, set: (u32, DescriptorSet), layout: PipelineLayout) {
+    pub(crate) fn bind_descriptor(&self, set: (u32, DescriptorSet), layout: PipelineLayout) {
         let sets = [set.1];
         unsafe {
             self.device.logical().cmd_bind_descriptor_sets(
@@ -183,7 +183,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn bind_vertex_buffer(&self, buffer: Buffer) {
+    pub(crate) fn bind_vertex_buffer(&self, buffer: Buffer) {
         let buffers = [buffer];
         let offsets = [0];
         unsafe {
@@ -193,7 +193,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn bind_index_buffer(&self, buffer: Buffer) {
+    pub(crate) fn bind_index_buffer(&self, buffer: Buffer) {
         unsafe {
             self.device
                 .logical()
@@ -201,7 +201,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
+    pub(crate) fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
         unsafe {
             let data: &[u8] = slice::from_raw_parts(
                 &constants as *const PushConstants as *const u8,
@@ -218,7 +218,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn draw(&self, count: u32) {
+    pub(crate) fn draw(&self, count: u32) {
         unsafe {
             self.device
                 .logical()
@@ -226,7 +226,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) {
+    pub(crate) fn copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) {
         let region = BufferCopy::builder()
             .src_offset(0)
             .dst_offset(0)
@@ -240,7 +240,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn set_view(&self, width: u32, height: u32) {
+    pub(crate) fn set_view(&self, width: u32, height: u32) {
         let viewport = Viewport {
             x: 0.0,
             y: 0.0,
@@ -266,13 +266,13 @@ impl CommandRecorder {
         }
     }
 
-    pub fn set_line_width(&self, width: f32) {
+    pub(crate) fn set_line_width(&self, width: f32) {
         unsafe {
             self.device.logical().cmd_set_line_width(self.buffer, width);
         }
     }
 
-    pub fn set_pipeline_barrier(
+    pub(crate) fn set_pipeline_barrier(
         &self,
         barrier: ImageMemoryBarrier,
         src_stage: PipelineStageFlags,
@@ -292,7 +292,12 @@ impl CommandRecorder {
         }
     }
 
-    pub fn copy_buffer_to_image(&self, buffer: Buffer, image: Image, region: BufferImageCopy) {
+    pub(crate) fn copy_buffer_to_image(
+        &self,
+        buffer: Buffer,
+        image: Image,
+        region: BufferImageCopy,
+    ) {
         let regions = [region];
         unsafe {
             self.device.logical().cmd_copy_buffer_to_image(
@@ -305,7 +310,7 @@ impl CommandRecorder {
         }
     }
 
-    pub fn blit_image(&self, src: Image, dst: Image, blit: ImageBlit) {
+    pub(crate) fn blit_image(&self, src: Image, dst: Image, blit: ImageBlit) {
         let regions = [blit];
         unsafe {
             self.device.logical().cmd_blit_image(

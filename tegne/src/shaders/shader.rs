@@ -41,17 +41,17 @@ use crate::model::Vertex;
 use crate::utils::cstring;
 use crate::utils::OrError;
 
-pub enum FragmentMode {
+pub(crate) enum FragmentMode {
     Fill,
     Lines,
 }
 
-pub enum CullMode {
+pub(crate) enum CullMode {
     Back,
     Front,
 }
 
-pub enum Depth {
+pub(crate) enum Depth {
     Enabled,
     Disabled,
 }
@@ -62,7 +62,7 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn new(
+    pub(crate) fn new(
         device: &Rc<Device>,
         render_pass: &RenderPass,
         vert_source: &[u8],
@@ -237,7 +237,7 @@ impl Shader {
         }
     }
 
-    pub fn pipeline(&self) -> Pipeline {
+    pub(crate) fn pipeline(&self) -> Pipeline {
         self.pipeline
     }
 }

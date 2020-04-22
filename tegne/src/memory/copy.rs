@@ -10,7 +10,12 @@ use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-pub fn data_to_buffer<T: Copy>(device: &Rc<Device>, src: &[T], dst: DeviceMemory, size: usize) {
+pub(crate) fn data_to_buffer<T: Copy>(
+    device: &Rc<Device>,
+    src: &[T],
+    dst: DeviceMemory,
+    size: usize,
+) {
     unsafe {
         let memory = device
             .logical()
@@ -23,7 +28,7 @@ pub fn data_to_buffer<T: Copy>(device: &Rc<Device>, src: &[T], dst: DeviceMemory
     }
 }
 
-pub fn buffer_to_buffer(device: &Rc<Device>, src: Buffer, dst: Buffer, size: usize) {
+pub(crate) fn buffer_to_buffer(device: &Rc<Device>, src: Buffer, dst: Buffer, size: usize) {
     let recorder = CommandRecorder::new(device);
     recorder.begin_one_time();
     recorder.copy_buffer(src, dst, size);

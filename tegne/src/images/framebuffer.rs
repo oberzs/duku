@@ -25,7 +25,7 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
-    pub fn for_window(
+    pub(crate) fn for_window(
         device: &Rc<Device>,
         swapchain: &Swapchain,
         render_pass: &RenderPass,
@@ -82,7 +82,7 @@ impl Framebuffer {
             .collect::<Vec<_>>()
     }
 
-    pub fn new(
+    pub(crate) fn new(
         device: &Rc<Device>,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
@@ -187,19 +187,19 @@ impl Framebuffer {
         }
     }
 
-    pub fn vk(&self) -> VkFramebuffer {
+    pub(crate) fn vk(&self) -> VkFramebuffer {
         self.vk
     }
 
-    pub fn width(&self) -> u32 {
+    pub(crate) fn width(&self) -> u32 {
         self.width
     }
 
-    pub fn height(&self) -> u32 {
+    pub(crate) fn height(&self) -> u32 {
         self.height
     }
 
-    pub fn image_index(&self) -> u32 {
+    pub(crate) fn image_index(&self) -> u32 {
         self.shader_index
     }
 }

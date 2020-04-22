@@ -99,7 +99,7 @@ impl Window {
     }
 }
 
-pub trait OrError<T> {
+trait OrError<T> {
     fn or_error(self, msg: impl AsRef<str>) -> T;
 }
 

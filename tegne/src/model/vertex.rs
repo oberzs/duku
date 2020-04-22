@@ -8,14 +8,14 @@ use tegne_math::Vector3;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Vertex {
-    pub pos: Vector3,
-    pub norm: Vector3,
-    pub uv: Vector2,
+pub(crate) struct Vertex {
+    pub(crate) pos: Vector3,
+    pub(crate) norm: Vector3,
+    pub(crate) uv: Vector2,
 }
 
 impl Vertex {
-    pub fn binding_description() -> VertexInputBindingDescription {
+    pub(crate) fn binding_description() -> VertexInputBindingDescription {
         VertexInputBindingDescription::builder()
             .binding(0)
             .stride(mem::size_of::<Self>() as u32)
@@ -23,7 +23,7 @@ impl Vertex {
             .build()
     }
 
-    pub fn attribute_descriptions() -> [VertexInputAttributeDescription; 3] {
+    pub(crate) fn attribute_descriptions() -> [VertexInputAttributeDescription; 3] {
         let pos_size = mem::size_of::<Vector3>() as u32;
         let norm_size = mem::size_of::<Vector3>() as u32;
 

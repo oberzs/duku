@@ -13,7 +13,7 @@ use crate::memory::alloc;
 use crate::memory::copy;
 use crate::shaders::ImageUniforms;
 
-pub enum TextureFormat {
+pub(crate) enum TextureFormat {
     RGB,
     RGBA,
 }
@@ -24,18 +24,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn white(device: &Rc<Device>, image_uniforms: &ImageUniforms) -> Self {
-        Self::from_raw(
-            device,
-            &[255, 255, 255, 255],
-            1,
-            1,
-            TextureFormat::RGBA,
-            image_uniforms,
-        )
-    }
-
-    pub fn from_raw(
+    pub(crate) fn from_raw(
         device: &Rc<Device>,
         data: &[u8],
         width: u32,
@@ -101,7 +90,7 @@ impl Texture {
         Self { image, image_index }
     }
 
-    pub fn image_index(&self) -> u32 {
+    pub(crate) fn image_index(&self) -> u32 {
         self.image_index
     }
 }

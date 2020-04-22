@@ -7,7 +7,7 @@ use tegne_math::Vector3;
 use super::Mesh;
 use crate::instance::Device;
 
-pub fn cube(device: &Rc<Device>) -> Mesh {
+pub(crate) fn cube(device: &Rc<Device>) -> Mesh {
     let vertices = vec![
         // bottom
         Vector3::new(-0.5, -0.5, -0.5),
@@ -47,7 +47,7 @@ pub fn cube(device: &Rc<Device>) -> Mesh {
         .build()
 }
 
-pub fn sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
+pub(crate) fn sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut triangles = vec![];
 
