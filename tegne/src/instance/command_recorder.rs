@@ -37,10 +37,10 @@ use std::rc::Rc;
 use std::slice;
 
 use super::Device;
+use crate::images::Framebuffer;
 use crate::shaders::PushConstants;
+use crate::shaders::RenderPass;
 use crate::shaders::Shader;
-use crate::surface::Framebuffer;
-use crate::surface::RenderPass;
 use crate::utils::OrError;
 
 pub struct CommandRecorder {

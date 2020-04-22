@@ -105,9 +105,3 @@ impl Texture {
         self.image_index
     }
 }
-
-impl PartialEq for Texture {
-    fn eq(&self, other: &Self) -> bool {
-        self.image.vk() == other.image.vk()
-    }
-}

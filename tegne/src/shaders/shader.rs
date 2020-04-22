@@ -31,14 +31,13 @@ use ash::vk::ShaderStageFlags;
 use ash::vk::StencilOp;
 use ash::vk::StencilOpState;
 use ash::vk::Viewport;
-use std::cmp::Ordering;
 use std::io::Cursor;
 use std::rc::Rc;
 
+use super::RenderPass;
 use super::ShaderLayout;
-use crate::model::Vertex;
-use crate::surface::RenderPass;
 use crate::instance::Device;
+use crate::model::Vertex;
 use crate::utils::cstring;
 use crate::utils::OrError;
 
@@ -248,18 +247,6 @@ impl Drop for Shader {
         unsafe {
             self.device.logical().destroy_pipeline(self.pipeline, None);
         }
-    }
-}
-
-impl PartialEq for Shader {
-    fn eq(&self, other: &Self) -> bool {
-        self.pipeline == other.pipeline
-    }
-}
-
-impl PartialOrd for Shader {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.pipeline.cmp(&other.pipeline))
     }
 }
 

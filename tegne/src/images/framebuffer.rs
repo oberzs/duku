@@ -4,14 +4,14 @@ use ash::vk::FramebufferCreateInfo;
 use ash::vk::ImageUsageFlags;
 use std::rc::Rc;
 
-use super::RenderPass;
-use crate::images::AttachmentType;
-use crate::images::Image;
-use crate::images::LayoutChange;
+use super::Image;
+use super::LayoutChange;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::instance::Swapchain;
+use crate::shaders::AttachmentType;
 use crate::shaders::ImageUniforms;
+use crate::shaders::RenderPass;
 use crate::utils::OrError;
 
 pub struct Framebuffer {
@@ -197,6 +197,10 @@ impl Framebuffer {
 
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    pub fn image_index(&self) -> u32 {
+        self.shader_index
     }
 }
 

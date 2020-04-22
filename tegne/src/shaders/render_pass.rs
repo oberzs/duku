@@ -10,8 +10,8 @@ use ash::vk::SUBPASS_EXTERNAL;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::images::Attachment;
-use crate::images::AttachmentType;
+use super::Attachment;
+use super::AttachmentType;
 use crate::instance::Device;
 use crate::utils::OrError;
 
@@ -22,7 +22,7 @@ pub struct RenderPass {
 }
 
 impl RenderPass {
-    pub fn color(device: &Rc<Device>) -> Self {
+    pub fn color_offscreen(device: &Rc<Device>) -> Self {
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -69,11 +69,7 @@ impl RenderPass {
         Self::from_attachments(device, attachments)
     }
 
-    pub fn grayscale(device: &Rc<Device>) {}
-
-    pub fn depth(device: &Rc<Device>) {}
-
-    pub fn to_window(device: &Rc<Device>) -> Self {
+    pub fn color_onscreen(device: &Rc<Device>) -> Self {
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -115,6 +111,23 @@ impl RenderPass {
                     .build(),
             );
         }
+
+        Self::from_attachments(device, attachments)
+    }
+
+    pub fn depth_offscreen(device: &Rc<Device>) -> Self {
+        let mut attachments = HashMap::new();
+
+        attachments.insert(
+            AttachmentType::Depth,
+            Attachment::builder(device)
+                .with_index(0)
+                .with_depth()
+                .with_samples()
+                .with_store()
+                .with_clear()
+                .build(),
+        );
 
         Self::from_attachments(device, attachments)
     }
