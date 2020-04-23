@@ -4,8 +4,8 @@ on:
   push:
     branches: [master]
     paths:
-      - "tenge/**"
-      - "tenge-math/**"
+      - "tegne/**"
+      - "tegne-math/**"
       - "tegne-utils/**"
 
 jobs:
