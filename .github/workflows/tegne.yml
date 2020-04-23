@@ -12,8 +12,15 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Vulkan SDK
+        run: |
+          wget https://sdk.lunarg.com/sdk/download/${{env.vulkan-version}}/linux/vulkansdk-linux-${{env.vulkan-version}}.tar.gz
+          tar xf vulkansdk-linux-${{env.vulkan-version}}.tar.gz
+          sudo cp ${{env.vulkan-version}}/x86_64/bin/glslc /usr/local/bin
+      - name: Check
+        uses: actions-rs/cargo@v1
         with:
           command: check
           args: --no-default-features --manifest-path "tegne/Cargo.toml"
