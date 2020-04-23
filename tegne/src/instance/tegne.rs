@@ -127,11 +127,11 @@ impl Tegne {
         let default_shader = self
             .builtin_shaders
             .get(&BuiltinShader::Texture)
-            .or_error("builtins not setup");
+            .or_error("shader builtins not setup");
         let default_texture = self
             .builtin_textures
             .get(&BuiltinTexture::White)
-            .or_error("builtins not setup");
+            .or_error("texture builtins not setup");
         Material::builder(
             &self.device,
             default_shader,
@@ -143,7 +143,7 @@ impl Tegne {
     pub fn get_mesh(&self, mesh: BuiltinMesh) -> &Mesh {
         self.builtin_meshes
             .get(&mesh)
-            .or_error("builtins not setup")
+            .or_error("mesh builtins not setup")
     }
 
     pub fn get_cube_mesh(&self) -> &Mesh {
@@ -178,7 +178,7 @@ impl TegneBuilder {
         info!("window surface created");
 
         debug!("open GPU");
-        let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, 0);
+        let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, 1);
         info!("GPU opened");
 
         debug!("create window swapchain");

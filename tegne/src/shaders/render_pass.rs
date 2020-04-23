@@ -41,7 +41,6 @@ impl RenderPass {
                 Attachment::builder(device)
                     .with_index(1)
                     .with_store()
-                    .with_present_layout()
                     .with_bgra_color()
                     .build(),
             );
@@ -61,7 +60,7 @@ impl RenderPass {
                     .with_index(1)
                     .with_store()
                     .with_clear()
-                    .with_present_layout()
+                    .with_bgra_color()
                     .build(),
             );
         }
@@ -88,7 +87,7 @@ impl RenderPass {
                 Attachment::builder(device)
                     .with_index(1)
                     .with_store()
-                    .with_present_layout()
+                    .with_bgra_color()
                     .build(),
             );
             attachments.insert(
@@ -107,7 +106,7 @@ impl RenderPass {
                     .with_index(1)
                     .with_store()
                     .with_clear()
-                    .with_present_layout()
+                    .with_bgra_color()
                     .build(),
             );
         }
@@ -149,31 +148,29 @@ impl RenderPass {
 
         let mut subpass_builder =
             SubpassDescription::builder().pipeline_bind_point(PipelineBindPoint::GRAPHICS);
-
         let depth;
         if let Some(a) = attachments.get(&AttachmentType::Depth) {
             depth = a.reference();
             subpass_builder = subpass_builder.depth_stencil_attachment(&depth);
         }
-
         let mut color = vec![];
         if let Some(a) = attachments.get(&AttachmentType::Color) {
             color.push(a.reference());
             subpass_builder = subpass_builder.color_attachments(&color);
         }
-
         let mut resolve = vec![];
         if let Some(a) = attachments.get(&AttachmentType::Resolve) {
             resolve.push(a.reference());
             subpass_builder = subpass_builder.resolve_attachments(&resolve);
         }
-
         let subpasses = [subpass_builder.build()];
 
-        let mut vk_attachments = vec![];
-        for (_, a) in attachments.iter() {
-            vk_attachments.insert(a.index() as usize, a.vk());
-        }
+        let mut sorted_attachments = attachments.iter().map(|(_, a)| a).collect::<Vec<_>>();
+        sorted_attachments.sort_by(|a, b| a.index().cmp(&b.index()));
+        let vk_attachments = sorted_attachments
+            .iter()
+            .map(|a| a.vk())
+            .collect::<Vec<_>>();
 
         let info = RenderPassCreateInfo::builder()
             .attachments(&vk_attachments)

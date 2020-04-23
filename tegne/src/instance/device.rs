@@ -252,7 +252,7 @@ impl Device {
             16 => SampleCountFlags::TYPE_16,
             32 => SampleCountFlags::TYPE_32,
             64 => SampleCountFlags::TYPE_64,
-            _ => error("invalid msaa value"),
+            n => error(format!("invalid msaa value {}", n)),
         };
 
         if !counts.contains(count) {
