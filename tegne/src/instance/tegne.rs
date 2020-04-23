@@ -256,7 +256,7 @@ impl TegneBuilder {
         );
         let shadow_shader = Shader::new(
             &device,
-            &d_render_pass,
+            &c_render_pass,
             shadow_vert,
             shadow_frag,
             FragmentMode::Fill,
@@ -277,7 +277,14 @@ impl TegneBuilder {
         info!("builtin shaders created");
 
         debug!("create builtin textures");
-        let builtin_textures = HashMap::new();
+        let white_texture = Texture::from_raw(
+            &device,
+            &[255, 255, 255, 255],
+            1,
+            1,
+            TextureFormat::RGBA,
+            &image_uniforms,
+        );
         info!("builtin textures created");
 
         debug!("create builtin meshes");
@@ -286,7 +293,12 @@ impl TegneBuilder {
         info!("builtin meshes created");
 
         debug!("create builtin materials");
-        let builtin_materials = HashMap::new();
+        let white_material =
+            Material::builder(&device, &phong_shader, &white_texture, &shader_layout).build();
+        let wireframe_material =
+            Material::builder(&device, &wireframe_shader, &white_texture, &shader_layout).build();
+        let shadow_material =
+            Material::builder(&device, &shadow_shader, &white_texture, &shader_layout).build();
         info!("builtin materials created");
 
         let mut render_passes = HashMap::new();
@@ -303,6 +315,14 @@ impl TegneBuilder {
         let mut builtin_meshes = HashMap::new();
         builtin_meshes.insert(BuiltinMesh::Cube, cube_mesh);
         builtin_meshes.insert(BuiltinMesh::Sphere, sphere_mesh);
+
+        let mut builtin_textures = HashMap::new();
+        builtin_textures.insert(BuiltinTexture::White, white_texture);
+
+        let mut builtin_materials = HashMap::new();
+        builtin_materials.insert(BuiltinMaterial::White, white_material);
+        builtin_materials.insert(BuiltinMaterial::Wireframe, wireframe_material);
+        builtin_materials.insert(BuiltinMaterial::Shadow, shadow_material);
 
         Tegne {
             builtin_shaders,
