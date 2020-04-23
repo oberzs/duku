@@ -20,6 +20,9 @@ use crate::model::Material;
 use crate::model::MaterialBuilder;
 use crate::model::Mesh;
 use crate::model::MeshBuilder;
+use crate::shaders::CullMode;
+use crate::shaders::Depth;
+use crate::shaders::FragmentMode;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
@@ -28,6 +31,12 @@ use crate::utils::OrError;
 
 #[cfg(feature = "tegne-utils")]
 use tegne_utils::Window;
+
+macro_rules! include_shader {
+    ($path:expr) => {
+        include_bytes!(concat!(env!("OUT_DIR"), "/shaders/", $path, ".spv")).as_ref()
+    };
+}
 
 pub struct Tegne {
     builtin_shaders: HashMap<BuiltinShader, Shader>,
@@ -59,9 +68,11 @@ enum RenderPassType {
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 enum BuiltinShader {
-    Passthru,
-    Texture,
+    Phong,
     Unshaded,
+    Passthru,
+    Wireframe,
+    Shadow,
 }
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
@@ -126,7 +137,7 @@ impl Tegne {
     pub fn create_material(&self) -> MaterialBuilder {
         let default_shader = self
             .builtin_shaders
-            .get(&BuiltinShader::Texture)
+            .get(&BuiltinShader::Phong)
             .or_error("shader builtins not setup");
         let default_texture = self
             .builtin_textures
@@ -200,31 +211,98 @@ impl TegneBuilder {
         info!("image uniforms created");
 
         debug!("create render passes");
-        let mut render_passes = HashMap::new();
-        render_passes.insert(
-            RenderPassType::ColorOnscreen,
-            RenderPass::color_onscreen(&device),
-        );
-        render_passes.insert(
-            RenderPassType::ColorOffscreen,
-            RenderPass::color_offscreen(&device),
-        );
-        render_passes.insert(
-            RenderPassType::DepthOffscreen,
-            RenderPass::depth_offscreen(&device),
-        );
+        let c_render_pass = RenderPass::color_offscreen(&device);
+        let d_render_pass = RenderPass::depth_offscreen(&device);
         info!("render passes created");
 
-        debug!("create builtins");
-        let builtin_shaders = HashMap::new();
+        debug!("create builtin shaders");
+        let world_vert = include_shader!("world.vert");
+        let passthru_vert = include_shader!("passthru.vert");
+        let shadow_vert = include_shader!("shadow.vert");
+        let phong_frag = include_shader!("phong.frag");
+        let wireframe_frag = include_shader!("wireframe.frag");
+        let passthru_frag = include_shader!("passthru.frag");
+        let shadow_frag = include_shader!("shadow.frag");
+
+        let phong_shader = Shader::new(
+            &device,
+            &c_render_pass,
+            world_vert,
+            phong_frag,
+            FragmentMode::Fill,
+            CullMode::Back,
+            Depth::Enabled,
+            &shader_layout,
+        );
+        let unshaded_shader = Shader::new(
+            &device,
+            &c_render_pass,
+            world_vert,
+            passthru_frag,
+            FragmentMode::Fill,
+            CullMode::Back,
+            Depth::Enabled,
+            &shader_layout,
+        );
+        let passthru_shader = Shader::new(
+            &device,
+            &c_render_pass,
+            passthru_vert,
+            passthru_frag,
+            FragmentMode::Fill,
+            CullMode::Back,
+            Depth::Disabled,
+            &shader_layout,
+        );
+        let shadow_shader = Shader::new(
+            &device,
+            &d_render_pass,
+            shadow_vert,
+            shadow_frag,
+            FragmentMode::Fill,
+            CullMode::Back,
+            Depth::Enabled,
+            &shader_layout,
+        );
+        let wireframe_shader = Shader::new(
+            &device,
+            &c_render_pass,
+            world_vert,
+            wireframe_frag,
+            FragmentMode::Lines,
+            CullMode::Back,
+            Depth::Disabled,
+            &shader_layout,
+        );
+        info!("builtin shaders created");
+
+        debug!("create builtin textures");
         let builtin_textures = HashMap::new();
+        info!("builtin textures created");
+
+        debug!("create builtin meshes");
+        let cube_mesh = create_cube(&device);
+        let sphere_mesh = create_sphere(&device, 2);
+        info!("builtin meshes created");
+
+        debug!("create builtin materials");
+        let builtin_materials = HashMap::new();
+        info!("builtin materials created");
+
+        let mut render_passes = HashMap::new();
+        render_passes.insert(RenderPassType::ColorOffscreen, c_render_pass);
+        render_passes.insert(RenderPassType::DepthOffscreen, d_render_pass);
+
+        let mut builtin_shaders = HashMap::new();
+        builtin_shaders.insert(BuiltinShader::Phong, phong_shader);
+        builtin_shaders.insert(BuiltinShader::Unshaded, unshaded_shader);
+        builtin_shaders.insert(BuiltinShader::Passthru, passthru_shader);
+        builtin_shaders.insert(BuiltinShader::Wireframe, wireframe_shader);
+        builtin_shaders.insert(BuiltinShader::Shadow, shadow_shader);
 
         let mut builtin_meshes = HashMap::new();
-        builtin_meshes.insert(BuiltinMesh::Cube, create_cube(&device));
-        builtin_meshes.insert(BuiltinMesh::Sphere, create_sphere(&device, 2));
-
-        let builtin_materials = HashMap::new();
-        info!("builtins created");
+        builtin_meshes.insert(BuiltinMesh::Cube, cube_mesh);
+        builtin_meshes.insert(BuiltinMesh::Sphere, sphere_mesh);
 
         Tegne {
             builtin_shaders,
