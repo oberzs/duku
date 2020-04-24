@@ -20,9 +20,6 @@ use crate::model::Material;
 use crate::model::MaterialBuilder;
 use crate::model::Mesh;
 use crate::model::MeshBuilder;
-use crate::shaders::CullMode;
-use crate::shaders::Depth;
-use crate::shaders::FragmentMode;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
@@ -224,56 +221,29 @@ impl TegneBuilder {
         let passthru_frag = include_shader!("passthru.frag");
         let shadow_frag = include_shader!("shadow.frag");
 
-        let phong_shader = Shader::new(
-            &device,
-            &c_render_pass,
-            world_vert,
-            phong_frag,
-            FragmentMode::Fill,
-            CullMode::Back,
-            Depth::Enabled,
-            &shader_layout,
-        );
-        let unshaded_shader = Shader::new(
-            &device,
-            &c_render_pass,
-            world_vert,
-            passthru_frag,
-            FragmentMode::Fill,
-            CullMode::Back,
-            Depth::Enabled,
-            &shader_layout,
-        );
-        let passthru_shader = Shader::new(
-            &device,
-            &c_render_pass,
-            passthru_vert,
-            passthru_frag,
-            FragmentMode::Fill,
-            CullMode::Back,
-            Depth::Disabled,
-            &shader_layout,
-        );
-        let shadow_shader = Shader::new(
-            &device,
-            &c_render_pass,
-            shadow_vert,
-            shadow_frag,
-            FragmentMode::Fill,
-            CullMode::Back,
-            Depth::Enabled,
-            &shader_layout,
-        );
-        let wireframe_shader = Shader::new(
-            &device,
-            &c_render_pass,
-            world_vert,
-            wireframe_frag,
-            FragmentMode::Lines,
-            CullMode::Back,
-            Depth::Disabled,
-            &shader_layout,
-        );
+        let phong_shader = Shader::builder(&device, &c_render_pass, &shader_layout)
+            .with_vert_source(world_vert)
+            .with_frag_source(phong_frag)
+            .build();
+        let unshaded_shader = Shader::builder(&device, &c_render_pass, &shader_layout)
+            .with_vert_source(world_vert)
+            .with_frag_source(passthru_frag)
+            .build();
+        let passthru_shader = Shader::builder(&device, &c_render_pass, &shader_layout)
+            .with_vert_source(passthru_vert)
+            .with_frag_source(passthru_frag)
+            .with_no_depth()
+            .build();
+        let shadow_shader = Shader::builder(&device, &c_render_pass, &shader_layout)
+            .with_vert_source(shadow_vert)
+            .with_frag_source(shadow_frag)
+            .build();
+        let wireframe_shader = Shader::builder(&device, &c_render_pass, &shader_layout)
+            .with_vert_source(world_vert)
+            .with_frag_source(wireframe_frag)
+            .with_lines()
+            .with_no_depth()
+            .build();
         info!("builtin shaders created");
 
         debug!("create builtin textures");

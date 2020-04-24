@@ -17,6 +17,7 @@ use ash::vk::PipelineColorBlendStateCreateInfo;
 use ash::vk::PipelineDepthStencilStateCreateInfo;
 use ash::vk::PipelineDynamicStateCreateInfo;
 use ash::vk::PipelineInputAssemblyStateCreateInfo;
+use ash::vk::PipelineLayout;
 use ash::vk::PipelineMultisampleStateCreateInfo;
 use ash::vk::PipelineRasterizationStateCreateInfo;
 use ash::vk::PipelineShaderStageCreateInfo;
@@ -25,6 +26,7 @@ use ash::vk::PipelineViewportStateCreateInfo;
 use ash::vk::PolygonMode;
 use ash::vk::PrimitiveTopology;
 use ash::vk::Rect2D;
+use ash::vk::RenderPass as VkRenderPass;
 use ash::vk::ShaderModule;
 use ash::vk::ShaderModuleCreateInfo;
 use ash::vk::ShaderStageFlags;
@@ -41,39 +43,57 @@ use crate::model::Vertex;
 use crate::utils::cstring;
 use crate::utils::OrError;
 
-pub(crate) enum FragmentMode {
-    Fill,
-    Lines,
-}
-
-pub(crate) enum CullMode {
-    Back,
-    Front,
-}
-
-pub(crate) enum Depth {
-    Enabled,
-    Disabled,
-}
-
 pub struct Shader {
     pipeline: Pipeline,
     device: Rc<Device>,
 }
 
+pub struct ShaderBuilder {
+    vert_source: Vec<u8>,
+    frag_source: Vec<u8>,
+    polygon_mode: PolygonMode,
+    cull_mode: CullModeFlags,
+    enable_depth: bool,
+    pipeline_layout: PipelineLayout,
+    render_pass: VkRenderPass,
+    device: Rc<Device>,
+}
+
 impl Shader {
-    pub(crate) fn new(
+    pub(crate) fn builder(
         device: &Rc<Device>,
         render_pass: &RenderPass,
-        vert_source: &[u8],
-        frag_source: &[u8],
-        frag_mode: FragmentMode,
-        cull_mode: CullMode,
-        depth: Depth,
         layout: &ShaderLayout,
-    ) -> Self {
-        let vert_module = create_shader_module(device, vert_source);
-        let frag_module = create_shader_module(device, frag_source);
+    ) -> ShaderBuilder {
+        ShaderBuilder {
+            vert_source: vec![],
+            frag_source: vec![],
+            polygon_mode: PolygonMode::FILL,
+            cull_mode: CullModeFlags::BACK,
+            enable_depth: true,
+            pipeline_layout: layout.pipeline(),
+            render_pass: render_pass.vk(),
+            device: Rc::clone(device),
+        }
+    }
+
+    pub(crate) fn pipeline(&self) -> Pipeline {
+        self.pipeline
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        unsafe {
+            self.device.logical().destroy_pipeline(self.pipeline, None);
+        }
+    }
+}
+
+impl ShaderBuilder {
+    pub fn build(&self) -> Shader {
+        let vert_module = create_shader_module(&self.device, &self.vert_source);
+        let frag_module = create_shader_module(&self.device, &self.frag_source);
         let entry_point = cstring("main");
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
@@ -123,33 +143,20 @@ impl Shader {
             .scissors(&scissors)
             .build();
 
-        let mut rasterizer_state = PipelineRasterizationStateCreateInfo::builder()
+        let rasterizer_state = PipelineRasterizationStateCreateInfo::builder()
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
             .depth_bias_enable(false)
             .front_face(FrontFace::CLOCKWISE)
-            .line_width(1.0);
+            .line_width(1.0)
+            .cull_mode(self.cull_mode)
+            .polygon_mode(self.polygon_mode);
 
-        rasterizer_state = match cull_mode {
-            CullMode::Back => rasterizer_state.cull_mode(CullModeFlags::BACK),
-            CullMode::Front => rasterizer_state.cull_mode(CullModeFlags::FRONT),
-        };
-
-        rasterizer_state = match frag_mode {
-            FragmentMode::Fill => rasterizer_state.polygon_mode(PolygonMode::FILL),
-            FragmentMode::Lines => rasterizer_state.polygon_mode(PolygonMode::LINE),
-        };
-
-        let samples = device.pick_sample_count();
+        let samples = self.device.pick_sample_count();
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
             .rasterization_samples(samples);
-
-        let depth_enabled = match depth {
-            Depth::Enabled => true,
-            Depth::Disabled => false,
-        };
 
         let stencil = StencilOpState::builder()
             .fail_op(StencilOp::KEEP)
@@ -162,8 +169,8 @@ impl Shader {
             .build();
 
         let depth_stencil_state = PipelineDepthStencilStateCreateInfo::builder()
-            .depth_test_enable(depth_enabled)
-            .depth_write_enable(depth_enabled)
+            .depth_test_enable(self.enable_depth)
+            .depth_write_enable(self.enable_depth)
             .depth_compare_op(CompareOp::LESS)
             .depth_bounds_test_enable(false)
             .min_depth_bounds(0.0)
@@ -213,40 +220,57 @@ impl Shader {
             .color_blend_state(&color_blending)
             .depth_stencil_state(&depth_stencil_state)
             .dynamic_state(&dynamic_state)
-            .layout(layout.pipeline())
-            .render_pass(render_pass.vk())
+            .layout(self.pipeline_layout)
+            .render_pass(self.render_pass)
             .subpass(0)
             .build();
 
         let pipeline_infos = [pipeline_info];
         let pipeline = unsafe {
-            device
+            self.device
                 .logical()
                 .create_graphics_pipelines(PipelineCache::null(), &pipeline_infos, None)
                 .or_error("cannot create pipeline")[0]
         };
 
         unsafe {
-            device.logical().destroy_shader_module(vert_module, None);
-            device.logical().destroy_shader_module(frag_module, None);
+            self.device
+                .logical()
+                .destroy_shader_module(vert_module, None);
+            self.device
+                .logical()
+                .destroy_shader_module(frag_module, None);
         }
 
-        Self {
+        Shader {
             pipeline,
-            device: Rc::clone(device),
+            device: Rc::clone(&self.device),
         }
     }
 
-    pub(crate) fn pipeline(&self) -> Pipeline {
-        self.pipeline
+    pub fn with_vert_source(&mut self, source: &[u8]) -> &mut Self {
+        self.vert_source = source.to_owned();
+        self
     }
-}
 
-impl Drop for Shader {
-    fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_pipeline(self.pipeline, None);
-        }
+    pub fn with_frag_source(&mut self, source: &[u8]) -> &mut Self {
+        self.frag_source = source.to_owned();
+        self
+    }
+
+    pub fn with_lines(&mut self) -> &mut Self {
+        self.polygon_mode = PolygonMode::LINE;
+        self
+    }
+
+    pub fn with_no_depth(&mut self) -> &mut Self {
+        self.enable_depth = false;
+        self
+    }
+
+    pub fn with_front_culling(&mut self) -> &mut Self {
+        self.cull_mode = CullModeFlags::FRONT;
+        self
     }
 }
 
