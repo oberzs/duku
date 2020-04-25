@@ -6,6 +6,7 @@ use winit::event::Event;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
+use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
@@ -34,11 +35,9 @@ impl Window {
         }
     }
 
-    pub fn start_loop<F: Fn() + 'static>(self, draw: F) {
-        let window = self.window;
-
+    pub fn start_loop<F: Fn()>(&mut self, draw: F) {
         debug!("start event loop");
-        self.event_loop.run(move |event, _, control_flow| {
+        self.event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
 
             match event {
@@ -50,14 +49,12 @@ impl Window {
                     *control_flow = ControlFlow::Exit;
                 }
                 Event::MainEventsCleared => {
-                    window.request_redraw();
-                }
-                Event::RedrawRequested(_) => {
                     draw();
                 }
                 _ => (),
             }
         });
+        info!("window closed");
     }
 
     #[cfg(target_os = "windows")]

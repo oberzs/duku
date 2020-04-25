@@ -13,41 +13,38 @@ use crate::memory::alloc;
 use crate::memory::copy;
 use crate::shaders::ImageUniforms;
 
-pub(crate) enum TextureFormat {
-    RGB,
-    RGBA,
-}
-
 pub struct Texture {
     image: Image,
-    image_index: u32,
+    image_index: i32,
 }
 
 impl Texture {
-    pub(crate) fn from_raw(
+    pub(crate) fn from_raw_rgb(
         device: &Rc<Device>,
         data: &[u8],
         width: u32,
         height: u32,
-        format: TextureFormat,
+        image_uniforms: &ImageUniforms,
+    ) -> Self {
+        let mut rgba = vec![];
+        rgba.reserve(data.len() + data.len() / 3);
+        for c in data.chunks(3) {
+            rgba.extend(c.iter());
+            rgba.push(255);
+        }
+        Self::from_raw_rgba(device, &rgba, width, height, image_uniforms)
+    }
+
+    pub(crate) fn from_raw_rgba(
+        device: &Rc<Device>,
+        data: &[u8],
+        width: u32,
+        height: u32,
         image_uniforms: &ImageUniforms,
     ) -> Self {
         let mip_levels = (cmp::max(width, height) as f32).log2().floor() as u32 + 1;
 
         let size = width * height * 4;
-
-        let rgba_data = match format {
-            TextureFormat::RGBA => data.to_owned(),
-            TextureFormat::RGB => {
-                let mut rgba = vec![];
-                rgba.reserve(data.len() + data.len() / 3);
-                for c in data.chunks(3) {
-                    rgba.extend(c.iter());
-                    rgba.push(255);
-                }
-                rgba
-            }
-        };
 
         let (staging_buffer, staging_memory) = alloc::buffer(
             device,
@@ -56,7 +53,7 @@ impl Texture {
             size as usize,
         );
 
-        copy::data_to_buffer(&device, &rgba_data, staging_memory, size as usize);
+        copy::data_to_buffer(&device, data, staging_memory, size as usize);
 
         let image = Image::builder(device)
             .with_size(width, height)
@@ -84,13 +81,13 @@ impl Texture {
             device.logical().free_memory(staging_memory, None);
         }
 
-        let image_index = image_uniforms.image_count();
+        let image_index = image_uniforms.image_count() as i32;
         image_uniforms.add(image.view());
 
         Self { image, image_index }
     }
 
-    pub(crate) fn image_index(&self) -> u32 {
+    pub(crate) fn image_index(&self) -> i32 {
         self.image_index
     }
 }

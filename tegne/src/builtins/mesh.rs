@@ -4,10 +4,23 @@ use std::rc::Rc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
-use super::Mesh;
 use crate::instance::Device;
+use crate::model::Mesh;
 
-pub(crate) fn create_cube(device: &Rc<Device>) -> Mesh {
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+pub(crate) enum BuiltinMesh {
+    Cube,
+    Sphere,
+}
+
+pub(crate) fn builtin_meshes(device: &Rc<Device>) -> HashMap<BuiltinMesh, Mesh> {
+    let mut map = HashMap::new();
+    map.insert(BuiltinMesh::Cube, create_cube(device));
+    map.insert(BuiltinMesh::Sphere, create_sphere(device, 2));
+    map
+}
+
+fn create_cube(device: &Rc<Device>) -> Mesh {
     let vertices = vec![
         // bottom
         Vector3::new(-0.5, -0.5, -0.5),
@@ -47,7 +60,7 @@ pub(crate) fn create_cube(device: &Rc<Device>) -> Mesh {
         .build()
 }
 
-pub(crate) fn create_sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
+fn create_sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut triangles = vec![];
 

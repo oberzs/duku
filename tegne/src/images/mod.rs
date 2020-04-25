@@ -10,4 +10,3 @@ pub(crate) use layout_change::LayoutChange;
 pub(crate) use sampler::Anisotropy;
 pub(crate) use sampler::Sampler;
 pub use texture::Texture;
-pub(crate) use texture::TextureFormat;

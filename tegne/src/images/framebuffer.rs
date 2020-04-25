@@ -12,6 +12,8 @@ use crate::instance::Swapchain;
 use crate::shaders::AttachmentType;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
+use crate::shaders::ShaderLayout;
+use crate::shaders::WorldUniforms;
 use crate::utils::OrError;
 
 pub struct Framebuffer {
@@ -20,7 +22,8 @@ pub struct Framebuffer {
     height: u32,
     attachment_images: Vec<Image>,
     shader_image: Image,
-    shader_index: u32,
+    shader_index: i32,
+    world_uniforms: WorldUniforms,
     device: Rc<Device>,
 }
 
@@ -30,6 +33,7 @@ impl Framebuffer {
         swapchain: &Swapchain,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
+        shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
     ) -> Vec<Self> {
@@ -77,7 +81,15 @@ impl Framebuffer {
                     );
                 }
 
-                Self::from_images(device, images, image_uniforms, render_pass, width, height)
+                Self::from_images(
+                    device,
+                    images,
+                    image_uniforms,
+                    render_pass,
+                    shader_layout,
+                    width,
+                    height,
+                )
             })
             .collect::<Vec<_>>()
     }
@@ -86,6 +98,7 @@ impl Framebuffer {
         device: &Rc<Device>,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
+        shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
     ) -> Self {
@@ -129,7 +142,15 @@ impl Framebuffer {
             );
         }
 
-        Self::from_images(device, images, image_uniforms, render_pass, width, height)
+        Self::from_images(
+            device,
+            images,
+            image_uniforms,
+            render_pass,
+            shader_layout,
+            width,
+            height,
+        )
     }
 
     fn from_images(
@@ -137,6 +158,7 @@ impl Framebuffer {
         images: Vec<Image>,
         image_uniforms: &ImageUniforms,
         render_pass: &RenderPass,
+        shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
     ) -> Self {
@@ -155,7 +177,7 @@ impl Framebuffer {
             .record();
         device.submit_buffer(recorder.end());
 
-        let shader_index = image_uniforms.image_count();
+        let shader_index = image_uniforms.image_count() as i32;
         image_uniforms.add(shader_image.view());
 
         let extent = device.pick_extent(width, height);
@@ -176,6 +198,8 @@ impl Framebuffer {
                 .or_error("cannot create framebuffer")
         };
 
+        let world_uniforms = WorldUniforms::new(device, shader_layout);
+
         Self {
             vk,
             width,
@@ -183,6 +207,7 @@ impl Framebuffer {
             shader_image,
             shader_index,
             attachment_images: images,
+            world_uniforms,
             device: Rc::clone(device),
         }
     }
@@ -199,7 +224,7 @@ impl Framebuffer {
         self.height
     }
 
-    pub(crate) fn image_index(&self) -> u32 {
+    pub(crate) fn image_index(&self) -> i32 {
         self.shader_index
     }
 }

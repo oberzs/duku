@@ -14,14 +14,14 @@ use crate::shaders::ShaderLayout;
 
 pub struct Material {
     pipeline: Pipeline,
-    albedo_index: u32,
+    albedo_index: i32,
     albedo_tint: Vector4,
     uniforms: MaterialUniforms,
 }
 
 pub struct MaterialBuilder {
     pipeline: Pipeline,
-    albedo_index: u32,
+    albedo_index: i32,
     albedo_tint: Vector4,
     uniforms: MaterialUniforms,
     _device: Rc<Device>,
@@ -47,7 +47,7 @@ impl Material {
         self.pipeline
     }
 
-    pub(crate) fn albedo_index(&self) -> u32 {
+    pub(crate) fn albedo_index(&self) -> i32 {
         self.albedo_index
     }
 

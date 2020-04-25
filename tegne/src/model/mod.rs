@@ -1,10 +1,9 @@
-mod builtin;
+mod camera;
 mod material;
 mod mesh;
 mod vertex;
 
-pub(crate) use builtin::create_cube;
-pub(crate) use builtin::create_sphere;
+pub(crate) use camera::Camera;
 pub use material::Material;
 pub use material::MaterialBuilder;
 pub use mesh::Mesh;
