@@ -7,15 +7,19 @@ use winit::event::Event;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
-use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
-    width: u32,
-    height: u32,
+    size: (u32, u32),
+}
+
+pub struct Events {
+    pub mouse_pos: (u32, u32),
+    pub mouse_delta: (f32, f32),
+    pub size: (u32, u32),
 }
 
 impl Window {
@@ -33,31 +37,40 @@ impl Window {
         Self {
             event_loop,
             window,
-            width,
-            height,
+            size: (width, height),
         }
     }
 
-    pub fn start_loop<F: FnMut()>(&mut self, mut draw: F) {
-        debug!("start event loop");
-        self.event_loop.run_return(|event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
+    pub fn start_loop<F: Fn(&Events) + 'static>(self, draw: F) {
+        let size = self.window.inner_size();
+        let mut events = Events {
+            mouse_pos: (0, 0),
+            mouse_delta: (0.0, 0.0),
+            size: (size.width, size.height),
+        };
 
+        debug!("start event loop");
+        self.event_loop.run(move |event, _, control_flow| {
+            *control_flow = ControlFlow::Poll;
             match event {
                 Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    debug!("close window");
-                    *control_flow = ControlFlow::Exit;
-                }
+                    event: win_event, ..
+                } => match win_event {
+                    WindowEvent::CursorMoved { position: pos, .. } => {
+                        events.mouse_pos = (pos.x as u32, pos.y as u32);
+                    }
+                    WindowEvent::CloseRequested => {
+                        debug!("close window");
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    _ => (),
+                },
                 Event::MainEventsCleared => {
-                    draw();
+                    draw(&events);
                 }
                 _ => (),
             }
         });
-        info!("window closed");
     }
 
     #[cfg(target_os = "windows")]
@@ -90,12 +103,8 @@ impl Window {
         self.window.ns_view()
     }
 
-    pub fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub fn height(&self) -> u32 {
-        self.height
+    pub fn size(&self) -> (u32, u32) {
+        self.size
     }
 }
 

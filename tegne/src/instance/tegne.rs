@@ -285,27 +285,29 @@ impl TegneBuilder {
 
     #[cfg(feature = "tegne-utils")]
     pub fn with_window(&mut self, window: &Window) -> &mut Self {
+        let (width, height) = window.size();
+
         #[cfg(target_os = "windows")]
         let args = WindowArgs {
             hwnd: window.hwnd(),
-            width: window.width(),
-            height: window.height(),
+            width,
+            height,
         };
 
         #[cfg(target_os = "linux")]
         let args = WindowArgs {
             xlib_window: window.xlib_window(),
             xlib_display: window.xlib_display(),
-            width: window.width(),
-            height: window.height(),
+            width,
+            height,
         };
 
         #[cfg(target_os = "macos")]
         let args = WindowArgs {
             ns_window: window.ns_window(),
             ns_view: window.ns_view(),
-            width: window.width(),
-            height: window.height(),
+            width,
+            height,
         };
 
         self.window_args = Some(args);
