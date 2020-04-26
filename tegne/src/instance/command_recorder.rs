@@ -123,20 +123,24 @@ impl CommandRecorder {
         render_pass: &RenderPass,
         clear: [f32; 4],
     ) {
-        let clear_values = [
-            ClearValue {
-                depth_stencil: ClearDepthStencilValue {
-                    depth: 1.0,
-                    stencil: 0,
-                },
-            },
-            ClearValue {
-                color: ClearColorValue { float32: clear },
-            },
-            ClearValue {
-                color: ClearColorValue { float32: clear },
-            },
-        ];
+        let clear_values = framebuffer
+            .iter_attachments()
+            .map(|image| {
+                if image.is_depth_format() {
+                    ClearValue {
+                        depth_stencil: ClearDepthStencilValue {
+                            depth: 1.0,
+                            stencil: 0,
+                        },
+                    }
+                } else {
+                    ClearValue {
+                        color: ClearColorValue { float32: clear },
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
         let info = RenderPassBeginInfo::builder()
             .render_pass(render_pass.vk())
             .framebuffer(framebuffer.vk())

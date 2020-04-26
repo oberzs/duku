@@ -45,7 +45,7 @@ pub(crate) struct Device {
     _physical: PhysicalDevice,
     properties: DeviceProperties,
     graphics_queue: Queue,
-    _present_queue: Queue,
+    present_queue: Queue,
     sync_acquire_image: Vec<Semaphore>,
     sync_release_image: Vec<Semaphore>,
     sync_queue_submit: Vec<Fence>,
@@ -135,7 +135,7 @@ impl Device {
                     _physical: physical,
                     properties: props,
                     graphics_queue,
-                    _present_queue: present_queue,
+                    present_queue,
                     sync_acquire_image,
                     sync_release_image,
                     sync_queue_submit,
@@ -154,10 +154,12 @@ impl Device {
         error("cannot find suitable GPU");
     }
 
-    pub(crate) fn next_frame(&self) {
+    pub(crate) fn next_frame(&self, swapchain: &Swapchain) {
         self.current_frame
             .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
         let current = self.current_frame.get() as usize;
+
+        swapchain.next(self.sync_acquire_image[current]);
 
         // wait for queue
         let wait = self.sync_queue_submit[current];
@@ -217,6 +219,24 @@ impl Device {
         let wait = self.sync_release_image[current];
 
         swapchain.present(self.graphics_queue, wait);
+    }
+
+    pub(crate) fn wait_for_idle(&self) {
+        self.sync_queue_submit
+            .iter()
+            .for_each(|f| fence::wait_for(&self.logical, *f));
+
+        unsafe {
+            self.logical
+                .queue_wait_idle(self.graphics_queue)
+                .or_error("cannot wait queue idle");
+            self.logical
+                .queue_wait_idle(self.present_queue)
+                .or_error("cannot wait queue idle");
+            self.logical
+                .device_wait_idle()
+                .or_error("cannot wait device idle")
+        }
     }
 
     pub(crate) fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {

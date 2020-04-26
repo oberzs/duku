@@ -90,6 +90,10 @@ impl Swapchain {
         });
     }
 
+    pub(crate) fn current(&self) -> usize {
+        self.current_image.get() as usize
+    }
+
     pub(crate) fn present(&self, queue: Queue, wait: Semaphore) {
         let waits = [wait];
         let swapchains = [self.vk];

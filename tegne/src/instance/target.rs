@@ -12,6 +12,7 @@ use crate::shaders::PushConstants;
 
 pub struct Target<'a> {
     orders: Vec<Order>,
+    clear: [f32; 3],
     current_pipeline: Pipeline,
     current_material: (u32, DescriptorSet),
     current_albedo: i32,
@@ -33,6 +34,7 @@ impl<'a> Target<'a> {
 
         Self {
             orders: vec![],
+            clear: [0.7, 0.7, 0.7],
             current_pipeline: material.pipeline(),
             current_material: material.uniforms().descriptor(),
             current_albedo: material.albedo_index(),
@@ -62,5 +64,13 @@ impl<'a> Target<'a> {
         self.current_pipeline = material.pipeline();
         self.current_material = material.uniforms().descriptor();
         self.current_albedo = material.albedo_index();
+    }
+
+    pub fn set_clear_color(&mut self, clear: [f32; 3]) {
+        self.clear = clear;
+    }
+
+    pub(crate) fn clear(&self) -> [f32; 4] {
+        [self.clear[0], self.clear[1], self.clear[2], 1.0]
     }
 }

@@ -12,8 +12,6 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::WindowSurface;
-use crate::builtins::BuiltinMaterial;
-use crate::builtins::BuiltinMesh;
 use crate::builtins::BuiltinShader;
 use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
@@ -26,7 +24,6 @@ use crate::model::Mesh;
 use crate::model::MeshBuilder;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
-use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
 
@@ -39,7 +36,7 @@ pub struct Tegne {
     render_passes: HashMap<RenderPassType, RenderPass>,
     image_uniforms: ImageUniforms,
     shader_layout: ShaderLayout,
-    _swapchain: Swapchain,
+    swapchain: Swapchain,
     device: Rc<Device>,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
@@ -54,7 +51,7 @@ pub struct TegneBuilder {
 
 #[derive(Hash, Eq, PartialEq)]
 enum RenderPassType {
-    // ColorOnscreen,
+    ColorOnscreen,
     ColorOffscreen,
     DepthOffscreen,
 }
@@ -68,9 +65,33 @@ impl Tegne {
         }
     }
 
+    pub fn begin_draw(&self) {
+        self.image_uniforms.update_if_needed();
+        self.device.next_frame(&self.swapchain);
+    }
+
+    pub fn end_draw(&self) {
+        self.device.submit();
+        self.device.present(&self.swapchain);
+    }
+
     pub fn draw_on_window(&self, draw_callback: impl Fn(&mut Target)) {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
+
+        let clear = target.clear();
+
+        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
+        let render_pass = self
+            .render_passes
+            .get(&RenderPassType::ColorOnscreen)
+            .or_error("render passes not setup");
+
+        let recorder = self.device.record_commands();
+
+        recorder.begin_render_pass(framebuffer, render_pass, clear);
+        recorder.set_view(framebuffer.width(), framebuffer.height());
+        recorder.end_render_pass();
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
@@ -119,6 +140,12 @@ impl Tegne {
     }
 }
 
+impl Drop for Tegne {
+    fn drop(&mut self) {
+        self.device.wait_for_idle();
+    }
+}
+
 impl TegneBuilder {
     pub fn build(&self) -> Tegne {
         let window_args = self.window_args.or_error("window arguments not set");
@@ -164,17 +191,18 @@ impl TegneBuilder {
         info!("image uniforms created");
 
         debug!("create render passes");
-        let c_render_pass = RenderPass::color_offscreen(&device);
-        let d_render_pass = RenderPass::depth_offscreen(&device);
+        let coff_render_pass = RenderPass::color_offscreen(&device);
+        let con_render_pass = RenderPass::color_onscreen(&device);
+        let doff_render_pass = RenderPass::depth_offscreen(&device);
         info!("render passes created");
 
-        let builtins = Builtins::new(&device, &c_render_pass, &shader_layout, &image_uniforms);
+        let builtins = Builtins::new(&device, &con_render_pass, &shader_layout, &image_uniforms);
 
         debug!("create window framebuffers");
         let window_framebuffers = Framebuffer::for_window(
             &device,
             &swapchain,
-            &c_render_pass,
+            &con_render_pass,
             &image_uniforms,
             &shader_layout,
             window_args.width,
@@ -183,8 +211,9 @@ impl TegneBuilder {
         info!("window framebuffers created");
 
         let mut render_passes = HashMap::new();
-        render_passes.insert(RenderPassType::ColorOffscreen, c_render_pass);
-        render_passes.insert(RenderPassType::DepthOffscreen, d_render_pass);
+        render_passes.insert(RenderPassType::ColorOffscreen, coff_render_pass);
+        render_passes.insert(RenderPassType::ColorOnscreen, con_render_pass);
+        render_passes.insert(RenderPassType::DepthOffscreen, doff_render_pass);
 
         Tegne {
             builtins,
@@ -192,7 +221,7 @@ impl TegneBuilder {
             render_passes,
             image_uniforms,
             shader_layout,
-            _swapchain: swapchain,
+            swapchain,
             device,
             _window_surface: window_surface,
             _validator: validator,

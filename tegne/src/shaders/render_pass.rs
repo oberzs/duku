@@ -88,7 +88,7 @@ impl RenderPass {
                 Attachment::builder(device)
                     .with_index(1)
                     .with_store()
-                    .with_bgra_color()
+                    .with_present_layout()
                     .build(),
             );
             attachments.insert(
@@ -107,7 +107,7 @@ impl RenderPass {
                     .with_index(1)
                     .with_store()
                     .with_clear()
-                    .with_bgra_color()
+                    .with_present_layout()
                     .build(),
             );
         }

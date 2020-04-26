@@ -27,6 +27,7 @@ pub(crate) struct Attachment {
 pub(crate) struct AttachmentBuilder {
     format: Format,
     layout: ImageLayout,
+    final_layout: ImageLayout,
     samples: SampleCountFlags,
     clear: AttachmentLoadOp,
     store: AttachmentStoreOp,
@@ -39,6 +40,7 @@ impl Attachment {
         AttachmentBuilder {
             format: Format::D32_SFLOAT_S8_UINT,
             layout: ImageLayout::UNDEFINED,
+            final_layout: ImageLayout::UNDEFINED,
             samples: SampleCountFlags::TYPE_1,
             clear: AttachmentLoadOp::DONT_CARE,
             store: AttachmentStoreOp::DONT_CARE,
@@ -64,18 +66,20 @@ impl<'a> AttachmentBuilder {
     pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
         self.format = self.device().pick_bgra_format();
         self.layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+        self.final_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self
     }
 
     pub(crate) fn with_depth(&mut self) -> &mut Self {
         self.format = self.device().pick_depth_format();
         self.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        self.final_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self
     }
 
     pub(crate) fn with_present_layout(&mut self) -> &mut Self {
         self.with_bgra_color();
-        self.layout = ImageLayout::PRESENT_SRC_KHR;
+        self.final_layout = ImageLayout::PRESENT_SRC_KHR;
         self
     }
 
@@ -108,7 +112,7 @@ impl<'a> AttachmentBuilder {
             .stencil_load_op(AttachmentLoadOp::DONT_CARE)
             .stencil_store_op(AttachmentStoreOp::DONT_CARE)
             .initial_layout(ImageLayout::UNDEFINED)
-            .final_layout(self.layout)
+            .final_layout(self.final_layout)
             .build();
 
         let reference = AttachmentReference::builder()

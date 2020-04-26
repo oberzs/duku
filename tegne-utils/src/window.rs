@@ -2,6 +2,7 @@ use log::debug;
 use log::error;
 use log::info;
 use std::process::exit;
+use winit::dpi::PhysicalSize;
 use winit::event::Event;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
@@ -23,6 +24,7 @@ impl Window {
 
         debug!("create window");
         let window = WindowBuilder::new()
+            .with_inner_size(PhysicalSize::new(width, height))
             .build(&event_loop)
             .or_error("cannot create window");
         info!("window created");

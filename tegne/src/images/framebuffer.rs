@@ -229,6 +229,10 @@ impl Framebuffer {
         self.shader_index
     }
 
+    pub(crate) fn iter_attachments(&self) -> impl Iterator<Item = &Image> {
+        self.attachment_images.iter()
+    }
+
     fn device(&self) -> Rc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }

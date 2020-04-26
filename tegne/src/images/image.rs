@@ -38,8 +38,8 @@ pub(crate) struct Image {
     vk: VkImage,
     memory: Option<DeviceMemory>,
     view: Option<ImageView>,
+    format: Format,
     device: Weak<Device>,
-    _format: Format,
 }
 
 pub(crate) struct ImageBuilder {
@@ -173,6 +173,10 @@ impl Image {
 
     pub(crate) fn view(&self) -> ImageView {
         self.view.or_error("image does not have a view")
+    }
+
+    pub(crate) fn is_depth_format(&self) -> bool {
+        self.format == self.device().pick_depth_format()
     }
 
     fn device(&self) -> Rc<Device> {
@@ -334,8 +338,8 @@ impl ImageBuilder {
             vk,
             memory,
             view,
+            format: self.format,
             device: Rc::downgrade(&self.device()),
-            _format: self.format,
         }
     }
 
