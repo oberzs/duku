@@ -40,12 +40,12 @@ impl<'a> Target<'a> {
         }
     }
 
-    pub fn draw(&mut self, mesh: &Mesh, transform: Transform) {
+    pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
         self.orders.push(Order {
             pipeline: self.current_pipeline,
             material_descriptor: self.current_material,
             push_consts: PushConstants {
-                model: transform.as_matrix(),
+                model: transform.into().as_matrix(),
                 albedo_index: self.current_albedo,
             },
             vertex_buffer: mesh.vk_vertex_buffer(),
@@ -54,7 +54,7 @@ impl<'a> Target<'a> {
         });
     }
 
-    pub fn draw_cube(&mut self, transform: Transform) {
+    pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
         self.draw(self.builtins.get_mesh(BuiltinMesh::Cube), transform);
     }
 

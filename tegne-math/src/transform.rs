@@ -103,6 +103,12 @@ impl Default for Transform {
     }
 }
 
+impl From<[f32; 3]> for Transform {
+    fn from(position: [f32; 3]) -> Self {
+        Self::builder().with_position(position).build()
+    }
+}
+
 impl TransformBuilder {
     pub fn with_position(mut self, position: impl Into<Vector3>) -> Self {
         self.position = position.into();
