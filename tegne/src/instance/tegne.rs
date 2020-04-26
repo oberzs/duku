@@ -2,6 +2,7 @@ use log::debug;
 use log::info;
 use std::collections::HashMap;
 use std::rc::Rc;
+use tegne_math::Matrix4;
 
 use super::Device;
 use super::Extensions;
@@ -18,13 +19,18 @@ use crate::builtins::Builtins;
 use crate::images::Anisotropy;
 use crate::images::Framebuffer;
 use crate::images::Texture;
+use crate::model::Camera;
 use crate::model::Material;
 use crate::model::MaterialBuilder;
 use crate::model::Mesh;
 use crate::model::MeshBuilder;
 use crate::shaders::ImageUniforms;
+use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
+use crate::shaders::Shader;
+use crate::shaders::ShaderBuilder;
 use crate::shaders::ShaderLayout;
+use crate::shaders::WorldObject;
 use crate::utils::OrError;
 
 #[cfg(feature = "tegne-utils")]
@@ -66,8 +72,12 @@ impl Tegne {
     }
 
     pub fn begin_draw(&self) {
-        self.image_uniforms.update_if_needed();
         self.device.next_frame(&self.swapchain);
+        self.image_uniforms.update_if_needed();
+        self.device.record_commands().bind_descriptor(
+            self.image_uniforms.descriptor(),
+            self.shader_layout.pipeline(),
+        );
     }
 
     pub fn end_draw(&self) {
@@ -75,9 +85,11 @@ impl Tegne {
         self.device.present(&self.swapchain);
     }
 
-    pub fn draw_on_window(&self, draw_callback: impl Fn(&mut Target)) {
+    pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target)) {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
+
+        let (proj, view) = camera.matrices();
 
         let clear = target.clear();
 
@@ -87,10 +99,44 @@ impl Tegne {
             .get(&RenderPassType::ColorOnscreen)
             .or_error("render passes not setup");
 
+        let world_uniforms = framebuffer.world_uniforms();
+        world_uniforms.update(WorldObject {
+            proj,
+            view,
+            lights: target.lights(),
+            light_matrix: Matrix4::identity(),
+            view_pos: camera.transform().position,
+            time: 0.0,
+        });
+
         let recorder = self.device.record_commands();
+
+        recorder.bind_descriptor(world_uniforms.descriptor(), self.shader_layout.pipeline());
 
         recorder.begin_render_pass(framebuffer, render_pass, clear);
         recorder.set_view(framebuffer.width(), framebuffer.height());
+        recorder.set_line_width(1.0);
+
+        for mat_order in target.material_orders() {
+            recorder.bind_pipeline(mat_order.pipeline);
+            recorder.bind_descriptor(mat_order.material_descriptor, self.shader_layout.pipeline());
+
+            for order in mat_order.orders.iter() {
+                recorder.set_push_constant(
+                    PushConstants {
+                        model: order.model,
+                        albedo_index: mat_order.albedo_index,
+                    },
+                    self.shader_layout.pipeline(),
+                );
+
+                recorder.bind_vertex_buffer(order.vertex_buffer);
+                recorder.bind_index_buffer(order.index_buffer);
+
+                recorder.draw(order.index_count);
+            }
+        }
+
         recorder.end_render_pass();
     }
 
@@ -137,6 +183,14 @@ impl Tegne {
             width,
             height,
         )
+    }
+
+    pub fn create_shader(&self) -> ShaderBuilder {
+        let render_pass = self
+            .render_passes
+            .get(&RenderPassType::ColorOffscreen)
+            .or_error("render passes not setup");
+        Shader::builder(&self.device, render_pass, &self.shader_layout)
     }
 }
 

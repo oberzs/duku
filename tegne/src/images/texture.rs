@@ -14,7 +14,7 @@ use crate::memory::copy;
 use crate::shaders::ImageUniforms;
 
 pub struct Texture {
-    image: Image,
+    _image: Image,
     image_index: i32,
 }
 
@@ -84,7 +84,10 @@ impl Texture {
         let image_index = image_uniforms.image_count() as i32;
         image_uniforms.add(image.view());
 
-        Self { image, image_index }
+        Self {
+            _image: image,
+            image_index,
+        }
     }
 
     pub(crate) fn image_index(&self) -> i32 {

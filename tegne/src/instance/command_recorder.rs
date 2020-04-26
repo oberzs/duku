@@ -24,6 +24,7 @@ use ash::vk::ImageLayout;
 use ash::vk::ImageMemoryBarrier;
 use ash::vk::IndexType;
 use ash::vk::Offset2D;
+use ash::vk::Pipeline;
 use ash::vk::PipelineBindPoint;
 use ash::vk::PipelineLayout;
 use ash::vk::PipelineStageFlags;
@@ -42,7 +43,6 @@ use super::Device;
 use crate::images::Framebuffer;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
-use crate::shaders::Shader;
 use crate::utils::OrError;
 
 pub(crate) struct CommandRecorder {
@@ -167,12 +167,12 @@ impl CommandRecorder {
         }
     }
 
-    pub(crate) fn bind_pipeline(&self, shader: &Shader) {
+    pub(crate) fn bind_pipeline(&self, pipeline: Pipeline) {
         unsafe {
             self.device().logical().cmd_bind_pipeline(
                 self.buffer,
                 PipelineBindPoint::GRAPHICS,
-                shader.pipeline(),
+                pipeline,
             );
         }
     }

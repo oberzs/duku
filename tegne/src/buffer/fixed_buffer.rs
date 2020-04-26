@@ -17,7 +17,6 @@ use crate::utils::OrError;
 pub(crate) struct FixedBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
-    size: u32,
     device: Weak<Device>,
 }
 
@@ -51,13 +50,8 @@ impl FixedBuffer {
         Self {
             vk,
             memory,
-            size: size as u32,
             device: Rc::downgrade(device),
         }
-    }
-
-    pub(crate) fn size(&self) -> u32 {
-        self.size
     }
 
     fn device(&self) -> Rc<Device> {

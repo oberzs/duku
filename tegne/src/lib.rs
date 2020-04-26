@@ -9,6 +9,8 @@ mod sync;
 mod utils;
 
 pub use instance::Tegne;
+pub use model::Camera;
+pub use shaders::Shader;
 
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Window;

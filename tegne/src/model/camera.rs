@@ -2,7 +2,7 @@ use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
-pub(crate) struct Camera {
+pub struct Camera {
     transform: Transform,
     camera_type: CameraType,
     width: f32,
@@ -17,7 +17,7 @@ enum CameraType {
 }
 
 impl Camera {
-    pub(crate) fn perspective(width: u32, height: u32, fov: u32) -> Self {
+    pub fn perspective(width: u32, height: u32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Perspective,
@@ -28,7 +28,7 @@ impl Camera {
         }
     }
 
-    pub(crate) fn orthographic(width: u32, height: u32) -> Self {
+    pub fn orthographic(width: u32, height: u32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Orthographic,
@@ -39,7 +39,7 @@ impl Camera {
         }
     }
 
-    pub(crate) fn fake_orthographic(&mut self, enable: bool) {
+    pub fn fake_orthographic(&mut self, enable: bool) {
         if let CameraType::Orthographic = self.camera_type {
             return;
         }
@@ -52,7 +52,7 @@ impl Camera {
         }
     }
 
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
+    pub fn resize(&mut self, width: u32, height: u32) {
         self.width = width as f32;
         self.height = height as f32;
     }
@@ -72,11 +72,11 @@ impl Camera {
         (projection, view)
     }
 
-    pub(crate) fn transform(&self) -> Transform {
+    pub fn transform(&self) -> Transform {
         self.transform
     }
 
-    pub(crate) fn transform_mut(&mut self) -> &mut Transform {
+    pub fn transform_mut(&mut self) -> &mut Transform {
         &mut self.transform
     }
 }

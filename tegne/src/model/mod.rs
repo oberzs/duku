@@ -3,7 +3,7 @@ mod material;
 mod mesh;
 mod vertex;
 
-pub(crate) use camera::Camera;
+pub use camera::Camera;
 pub use material::Material;
 pub use material::MaterialBuilder;
 pub use mesh::Mesh;

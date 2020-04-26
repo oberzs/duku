@@ -24,6 +24,7 @@ impl Window {
 
         debug!("create window");
         let window = WindowBuilder::new()
+            .with_resizable(false)
             .with_inner_size(PhysicalSize::new(width, height))
             .build(&event_loop)
             .or_error("cannot create window");
@@ -37,7 +38,7 @@ impl Window {
         }
     }
 
-    pub fn start_loop<F: Fn()>(&mut self, draw: F) {
+    pub fn start_loop<F: FnMut()>(&mut self, mut draw: F) {
         debug!("start event loop");
         self.event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;

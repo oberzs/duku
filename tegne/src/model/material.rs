@@ -49,10 +49,6 @@ impl Material {
         self.albedo_index
     }
 
-    pub(crate) fn albedo_tint(&self) -> Vector4 {
-        self.albedo_tint
-    }
-
     pub(crate) fn uniforms(&self) -> &MaterialUniforms {
         &self.uniforms
     }

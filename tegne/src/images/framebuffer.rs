@@ -233,6 +233,10 @@ impl Framebuffer {
         self.attachment_images.iter()
     }
 
+    pub(crate) fn world_uniforms(&self) -> &WorldUniforms {
+        &self.world_uniforms
+    }
+
     fn device(&self) -> Rc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }

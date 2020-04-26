@@ -52,19 +52,19 @@ impl<'a> LayoutChange<'a> {
         self
     }
 
-    pub(crate) fn from_shader_read(mut self) -> Self {
-        self.old_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-        self.src_access = AccessFlags::SHADER_READ;
-        self.src_stage = PipelineStageFlags::FRAGMENT_SHADER;
-        self
-    }
+    // pub(crate) fn from_shader_read(mut self) -> Self {
+    //     self.old_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    //     self.src_access = AccessFlags::SHADER_READ;
+    //     self.src_stage = PipelineStageFlags::FRAGMENT_SHADER;
+    //     self
+    // }
 
-    pub(crate) fn from_color_write(mut self) -> Self {
-        self.old_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-        self.src_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
-        self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
-        self
-    }
+    // pub(crate) fn from_color_write(mut self) -> Self {
+    //     self.old_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+    //     self.src_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
+    //     self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
+    //     self
+    // }
 
     pub(crate) fn to_read(mut self) -> Self {
         self.new_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
@@ -87,12 +87,12 @@ impl<'a> LayoutChange<'a> {
         self
     }
 
-    pub(crate) fn to_color_write(mut self) -> Self {
-        self.new_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-        self.dst_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
-        self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
-        self
-    }
+    // pub(crate) fn to_color_write(mut self) -> Self {
+    //     self.new_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+    //     self.dst_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
+    //     self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
+    //     self
+    // }
 
     pub(crate) fn with_mips(mut self, base: u32, count: u32) -> Self {
         self.base_mip = base;

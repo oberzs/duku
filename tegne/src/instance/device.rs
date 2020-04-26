@@ -218,7 +218,7 @@ impl Device {
         let current = self.current_frame.get() as usize;
         let wait = self.sync_release_image[current];
 
-        swapchain.present(self.graphics_queue, wait);
+        swapchain.present(self.present_queue, wait);
     }
 
     pub(crate) fn wait_for_idle(&self) {

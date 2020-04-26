@@ -87,18 +87,6 @@ impl Mesh {
         self.index_buffer.vk_buffer()
     }
 
-    pub fn vertices(&self) -> &[Vector3] {
-        &self.vertices
-    }
-
-    pub(crate) fn uvs(&self) -> &[Vector2] {
-        &self.uvs
-    }
-
-    pub(crate) fn normals(&self) -> &[Vector3] {
-        &self.normals
-    }
-
     pub(crate) fn drawn_triangles(&self) -> u32 {
         self.drawn_triangles as u32
     }

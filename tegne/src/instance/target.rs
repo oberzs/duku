@@ -1,6 +1,7 @@
 use ash::vk::Buffer;
 use ash::vk::DescriptorSet;
 use ash::vk::Pipeline;
+use tegne_math::Matrix4;
 use tegne_math::Transform;
 
 use crate::builtins::BuiltinMaterial;
@@ -8,10 +9,10 @@ use crate::builtins::BuiltinMesh;
 use crate::builtins::Builtins;
 use crate::model::Material;
 use crate::model::Mesh;
-use crate::shaders::PushConstants;
+use crate::shaders::Light;
 
 pub struct Target<'a> {
-    orders: Vec<Order>,
+    material_orders: Vec<MaterialOrder>,
     clear: [f32; 3],
     current_pipeline: Pipeline,
     current_material: (u32, DescriptorSet),
@@ -19,10 +20,15 @@ pub struct Target<'a> {
     builtins: &'a Builtins,
 }
 
-struct Order {
+pub(crate) struct MaterialOrder {
     pub(crate) pipeline: Pipeline,
     pub(crate) material_descriptor: (u32, DescriptorSet),
-    pub(crate) push_consts: PushConstants,
+    pub(crate) albedo_index: i32,
+    pub(crate) orders: Vec<Order>,
+}
+
+pub(crate) struct Order {
+    pub(crate) model: Matrix4,
     pub(crate) vertex_buffer: Buffer,
     pub(crate) index_buffer: Buffer,
     pub(crate) index_count: u32,
@@ -33,7 +39,7 @@ impl<'a> Target<'a> {
         let material = builtins.get_material(BuiltinMaterial::White);
 
         Self {
-            orders: vec![],
+            material_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             current_pipeline: material.pipeline(),
             current_material: material.uniforms().descriptor(),
@@ -43,13 +49,8 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
-        self.orders.push(Order {
-            pipeline: self.current_pipeline,
-            material_descriptor: self.current_material,
-            push_consts: PushConstants {
-                model: transform.into().as_matrix(),
-                albedo_index: self.current_albedo,
-            },
+        self.add_order(Order {
+            model: transform.into().as_matrix(),
             vertex_buffer: mesh.vk_vertex_buffer(),
             index_buffer: mesh.vk_index_buffer(),
             index_count: mesh.drawn_triangles() * 3,
@@ -72,5 +73,31 @@ impl<'a> Target<'a> {
 
     pub(crate) fn clear(&self) -> [f32; 4] {
         [self.clear[0], self.clear[1], self.clear[2], 1.0]
+    }
+
+    pub(crate) fn material_orders(&self) -> &[MaterialOrder] {
+        &self.material_orders
+    }
+
+    pub(crate) fn lights(&self) -> [Light; 4] {
+        Default::default()
+    }
+
+    fn add_order(&mut self, order: Order) {
+        let material = self.current_material;
+
+        match self
+            .material_orders
+            .iter_mut()
+            .find(|mo| mo.material_descriptor == material)
+        {
+            Some(mo) => mo.orders.push(order),
+            None => self.material_orders.push(MaterialOrder {
+                pipeline: self.current_pipeline,
+                material_descriptor: self.current_material,
+                albedo_index: self.current_albedo,
+                orders: vec![order],
+            }),
+        }
     }
 }
