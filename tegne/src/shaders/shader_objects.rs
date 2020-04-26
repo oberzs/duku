@@ -8,6 +8,7 @@ use ash::vk::WriteDescriptorSet;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::rc::Weak;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
 use tegne_math::Vector4;
@@ -18,6 +19,7 @@ use crate::buffer::DynamicBuffer;
 use crate::images::Anisotropy;
 use crate::images::Sampler;
 use crate::instance::Device;
+use crate::utils::OrError;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
@@ -65,7 +67,7 @@ pub(crate) struct ImageUniforms {
     sampler: Sampler,
     images: RefCell<Vec<ImageView>>,
     should_update: Cell<bool>,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl WorldUniforms {
@@ -114,7 +116,7 @@ impl ImageUniforms {
             sampler,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -161,7 +163,7 @@ impl ImageUniforms {
 
             let writes = [image_write, sampler_write];
             unsafe {
-                self.device.logical().update_descriptor_sets(&writes, &[]);
+                self.device().logical().update_descriptor_sets(&writes, &[]);
             }
 
             self.should_update.set(false);
@@ -170,5 +172,9 @@ impl ImageUniforms {
 
     pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
         (2, self.descriptor)
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }

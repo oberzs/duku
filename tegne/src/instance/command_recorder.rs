@@ -32,8 +32,10 @@ use ash::vk::RenderPassBeginInfo;
 use ash::vk::ShaderStageFlags;
 use ash::vk::SubpassContents;
 use ash::vk::Viewport;
+use ash::Device as LogicalDevice;
 use std::mem;
 use std::rc::Rc;
+use std::rc::Weak;
 use std::slice;
 
 use super::Device;
@@ -46,7 +48,8 @@ use crate::utils::OrError;
 pub(crate) struct CommandRecorder {
     buffer: CommandBuffer,
     pool: CommandPool,
-    device: Rc<Device>,
+    device: Weak<Device>,
+    dropped: bool,
 }
 
 impl CommandRecorder {
@@ -68,24 +71,25 @@ impl CommandRecorder {
         Self {
             buffer,
             pool,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
+            dropped: false,
         }
     }
 
     pub(crate) fn reset(&mut self) {
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .reset_command_pool(self.pool, CommandPoolResetFlags::empty())
                 .or_error("cannot reset command pool");
         }
-        self.buffer = create_buffer(&self.device, self.pool);
+        self.buffer = create_buffer(&self.device(), self.pool);
     }
 
     pub(crate) fn begin(&self) {
         let begin_info = CommandBufferBeginInfo::builder();
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .begin_command_buffer(self.buffer, &begin_info)
                 .or_error("cannot begin command buffer");
@@ -96,7 +100,7 @@ impl CommandRecorder {
         let begin_info =
             CommandBufferBeginInfo::builder().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .begin_command_buffer(self.buffer, &begin_info)
                 .or_error("cannot begin command buffer");
@@ -105,7 +109,7 @@ impl CommandRecorder {
 
     pub(crate) fn end(&self) -> CommandBuffer {
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .end_command_buffer(self.buffer)
                 .or_error("cannot end command buffer");
@@ -145,7 +149,7 @@ impl CommandRecorder {
             })
             .clear_values(&clear_values);
         unsafe {
-            self.device.logical().cmd_begin_render_pass(
+            self.device().logical().cmd_begin_render_pass(
                 self.buffer,
                 &info,
                 SubpassContents::INLINE,
@@ -155,13 +159,13 @@ impl CommandRecorder {
 
     pub(crate) fn end_render_pass(&self) {
         unsafe {
-            self.device.logical().cmd_end_render_pass(self.buffer);
+            self.device().logical().cmd_end_render_pass(self.buffer);
         }
     }
 
     pub(crate) fn bind_pipeline(&self, shader: &Shader) {
         unsafe {
-            self.device.logical().cmd_bind_pipeline(
+            self.device().logical().cmd_bind_pipeline(
                 self.buffer,
                 PipelineBindPoint::GRAPHICS,
                 shader.pipeline(),
@@ -172,7 +176,7 @@ impl CommandRecorder {
     pub(crate) fn bind_descriptor(&self, set: (u32, DescriptorSet), layout: PipelineLayout) {
         let sets = [set.1];
         unsafe {
-            self.device.logical().cmd_bind_descriptor_sets(
+            self.device().logical().cmd_bind_descriptor_sets(
                 self.buffer,
                 PipelineBindPoint::GRAPHICS,
                 layout,
@@ -187,7 +191,7 @@ impl CommandRecorder {
         let buffers = [buffer];
         let offsets = [0];
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .cmd_bind_vertex_buffers(self.buffer, 0, &buffers, &offsets);
         }
@@ -195,9 +199,12 @@ impl CommandRecorder {
 
     pub(crate) fn bind_index_buffer(&self, buffer: Buffer) {
         unsafe {
-            self.device
-                .logical()
-                .cmd_bind_index_buffer(self.buffer, buffer, 0, IndexType::UINT32);
+            self.device().logical().cmd_bind_index_buffer(
+                self.buffer,
+                buffer,
+                0,
+                IndexType::UINT32,
+            );
         }
     }
 
@@ -208,7 +215,7 @@ impl CommandRecorder {
                 mem::size_of::<PushConstants>(),
             );
 
-            self.device.logical().cmd_push_constants(
+            self.device().logical().cmd_push_constants(
                 self.buffer,
                 layout,
                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
@@ -220,7 +227,7 @@ impl CommandRecorder {
 
     pub(crate) fn draw(&self, count: u32) {
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .cmd_draw_indexed(self.buffer, count, 1, 0, 0, 0);
         }
@@ -234,7 +241,7 @@ impl CommandRecorder {
             .build();
         let regions = [region];
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .cmd_copy_buffer(self.buffer, src, dst, &regions);
         }
@@ -257,10 +264,10 @@ impl CommandRecorder {
         let scissors = [scissor];
 
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .cmd_set_viewport(self.buffer, 0, &viewports);
-            self.device
+            self.device()
                 .logical()
                 .cmd_set_scissor(self.buffer, 0, &scissors);
         }
@@ -268,7 +275,9 @@ impl CommandRecorder {
 
     pub(crate) fn set_line_width(&self, width: f32) {
         unsafe {
-            self.device.logical().cmd_set_line_width(self.buffer, width);
+            self.device()
+                .logical()
+                .cmd_set_line_width(self.buffer, width);
         }
     }
 
@@ -280,7 +289,7 @@ impl CommandRecorder {
     ) {
         let barriers = [barrier];
         unsafe {
-            self.device.logical().cmd_pipeline_barrier(
+            self.device().logical().cmd_pipeline_barrier(
                 self.buffer,
                 src_stage,
                 dst_stage,
@@ -300,7 +309,7 @@ impl CommandRecorder {
     ) {
         let regions = [region];
         unsafe {
-            self.device.logical().cmd_copy_buffer_to_image(
+            self.device().logical().cmd_copy_buffer_to_image(
                 self.buffer,
                 buffer,
                 image,
@@ -313,7 +322,7 @@ impl CommandRecorder {
     pub(crate) fn blit_image(&self, src: Image, dst: Image, blit: ImageBlit) {
         let regions = [blit];
         unsafe {
-            self.device.logical().cmd_blit_image(
+            self.device().logical().cmd_blit_image(
                 self.buffer,
                 src,
                 ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -324,12 +333,29 @@ impl CommandRecorder {
             );
         }
     }
+
+    pub(crate) fn manual_drop(&mut self, logical: &LogicalDevice) {
+        unsafe {
+            logical.destroy_command_pool(self.pool, None);
+        }
+        self.dropped = true;
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device
+            .upgrade()
+            .or_error("(command recorder) device has been dropped")
+    }
 }
 
 impl Drop for CommandRecorder {
     fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_command_pool(self.pool, None);
+        if !self.dropped {
+            unsafe {
+                self.device()
+                    .logical()
+                    .destroy_command_pool(self.pool, None);
+            }
         }
     }
 }

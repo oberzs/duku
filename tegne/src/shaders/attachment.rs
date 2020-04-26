@@ -6,8 +6,10 @@ use ash::vk::Format;
 use ash::vk::ImageLayout;
 use ash::vk::SampleCountFlags;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use crate::instance::Device;
+use crate::utils::OrError;
 
 #[derive(Hash, PartialEq, Eq)]
 pub(crate) enum AttachmentType {
@@ -29,7 +31,7 @@ pub(crate) struct AttachmentBuilder {
     clear: AttachmentLoadOp,
     store: AttachmentStoreOp,
     index: u32,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl Attachment {
@@ -41,7 +43,7 @@ impl Attachment {
             clear: AttachmentLoadOp::DONT_CARE,
             store: AttachmentStoreOp::DONT_CARE,
             index: 0,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -60,13 +62,13 @@ impl Attachment {
 
 impl<'a> AttachmentBuilder {
     pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
-        self.format = self.device.pick_bgra_format();
+        self.format = self.device().pick_bgra_format();
         self.layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self
     }
 
     pub(crate) fn with_depth(&mut self) -> &mut Self {
-        self.format = self.device.pick_depth_format();
+        self.format = self.device().pick_depth_format();
         self.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self
     }
@@ -78,7 +80,7 @@ impl<'a> AttachmentBuilder {
     }
 
     pub(crate) fn with_samples(&mut self) -> &mut Self {
-        self.samples = self.device.pick_sample_count();
+        self.samples = self.device().pick_sample_count();
         self
     }
 
@@ -119,5 +121,9 @@ impl<'a> AttachmentBuilder {
             reference,
             index: self.index,
         }
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }

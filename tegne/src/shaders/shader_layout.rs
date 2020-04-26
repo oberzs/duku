@@ -16,6 +16,7 @@ use ash::vk::ShaderStageFlags;
 use ash::vk::WriteDescriptorSet;
 use std::mem;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::PushConstants;
 use crate::buffer::Buffer;
@@ -29,7 +30,7 @@ pub(crate) struct ShaderLayout {
     material_layout: DescriptorSetLayout,
     image_layout: DescriptorSetLayout,
     descriptor_pool: DescriptorPool,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl ShaderLayout {
@@ -151,7 +152,7 @@ impl ShaderLayout {
             material_layout,
             image_layout,
             descriptor_pool,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -162,7 +163,7 @@ impl ShaderLayout {
             .set_layouts(&set_layouts);
 
         let set = unsafe {
-            self.device
+            self.device()
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate world descriptor set")[0]
@@ -185,7 +186,7 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
@@ -200,7 +201,7 @@ impl ShaderLayout {
             .set_layouts(&set_layouts);
 
         let set = unsafe {
-            self.device
+            self.device()
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate material descriptor set")[0]
@@ -223,7 +224,7 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
@@ -239,7 +240,7 @@ impl ShaderLayout {
             .build();
 
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate image descriptor set")[0]
@@ -249,24 +250,28 @@ impl ShaderLayout {
     pub(crate) fn pipeline(&self) -> PipelineLayout {
         self.pipeline_layout
     }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
+    }
 }
 
 impl Drop for ShaderLayout {
     fn drop(&mut self) {
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .destroy_pipeline_layout(self.pipeline_layout, None);
-            self.device
+            self.device()
                 .logical()
                 .destroy_descriptor_set_layout(self.world_layout, None);
-            self.device
+            self.device()
                 .logical()
                 .destroy_descriptor_set_layout(self.material_layout, None);
-            self.device
+            self.device()
                 .logical()
                 .destroy_descriptor_set_layout(self.image_layout, None);
-            self.device
+            self.device()
                 .logical()
                 .destroy_descriptor_pool(self.descriptor_pool, None);
         }

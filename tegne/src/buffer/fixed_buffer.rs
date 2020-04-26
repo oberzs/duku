@@ -5,18 +5,20 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryPropertyFlags;
 use std::mem;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::Buffer;
 use super::BufferType;
 use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
+use crate::utils::OrError;
 
 pub(crate) struct FixedBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl FixedBuffer {
@@ -50,12 +52,16 @@ impl FixedBuffer {
             vk,
             memory,
             size: size as u32,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
     pub(crate) fn size(&self) -> u32 {
         self.size
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }
 
@@ -68,8 +74,8 @@ impl Buffer for FixedBuffer {
 impl Drop for FixedBuffer {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_buffer(self.vk, None);
-            self.device.logical().free_memory(self.memory, None);
+            self.device().logical().destroy_buffer(self.vk, None);
+            self.device().logical().free_memory(self.memory, None);
         }
     }
 }

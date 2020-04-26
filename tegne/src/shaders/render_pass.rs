@@ -9,6 +9,7 @@ use ash::vk::SubpassDescription;
 use ash::vk::SUBPASS_EXTERNAL;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::Attachment;
 use super::AttachmentType;
@@ -18,7 +19,7 @@ use crate::utils::OrError;
 pub(crate) struct RenderPass {
     vk: VkRenderPass,
     attachments: HashMap<AttachmentType, Attachment>,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl RenderPass {
@@ -187,7 +188,7 @@ impl RenderPass {
         Self {
             vk,
             attachments,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -198,12 +199,16 @@ impl RenderPass {
     pub(crate) fn attachments_ref(&self) -> &HashMap<AttachmentType, Attachment> {
         &self.attachments
     }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
+    }
 }
 
 impl Drop for RenderPass {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_render_pass(self.vk, None);
+            self.device().logical().destroy_render_pass(self.vk, None);
         }
     }
 }

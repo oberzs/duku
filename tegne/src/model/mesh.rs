@@ -3,6 +3,7 @@ use log::debug;
 use log::info;
 use std::cell::Cell;
 use std::rc::Rc;
+use std::rc::Weak;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
@@ -13,6 +14,7 @@ use crate::buffer::DynamicBuffer;
 use crate::buffer::FixedBuffer;
 use crate::instance::Device;
 use crate::utils::error;
+use crate::utils::OrError;
 
 pub struct Mesh {
     vertices: Vec<Vector3>,
@@ -29,7 +31,7 @@ pub struct MeshBuilder {
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
     triangles: Vec<u32>,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl Mesh {
@@ -39,7 +41,7 @@ impl Mesh {
             uvs: vec![],
             normals: vec![],
             triangles: vec![],
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -106,9 +108,9 @@ impl MeshBuilder {
     pub fn build(self) -> Mesh {
         debug!("build mesh");
         let vertex_buffer =
-            DynamicBuffer::new::<Vertex>(&self.device, self.vertices.len(), BufferType::Vertex);
+            DynamicBuffer::new::<Vertex>(&self.device(), self.vertices.len(), BufferType::Vertex);
         let index_buffer =
-            FixedBuffer::new::<u32>(&self.device, &self.triangles, BufferType::Index);
+            FixedBuffer::new::<u32>(&self.device(), &self.triangles, BufferType::Index);
 
         let size = if !self.vertices.is_empty() {
             self.vertices.len()
@@ -207,5 +209,9 @@ impl MeshBuilder {
         }
 
         self
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }

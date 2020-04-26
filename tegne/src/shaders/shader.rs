@@ -35,6 +35,7 @@ use ash::vk::StencilOpState;
 use ash::vk::Viewport;
 use std::io::Cursor;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::RenderPass;
 use super::ShaderLayout;
@@ -45,7 +46,7 @@ use crate::utils::OrError;
 
 pub struct Shader {
     pipeline: Pipeline,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 pub struct ShaderBuilder {
@@ -56,7 +57,7 @@ pub struct ShaderBuilder {
     enable_depth: bool,
     pipeline_layout: PipelineLayout,
     render_pass: VkRenderPass,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl Shader {
@@ -73,27 +74,33 @@ impl Shader {
             enable_depth: true,
             pipeline_layout: layout.pipeline(),
             render_pass: render_pass.vk(),
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
     pub(crate) fn pipeline(&self) -> Pipeline {
         self.pipeline
     }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
+    }
 }
 
 impl Drop for Shader {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_pipeline(self.pipeline, None);
+            self.device()
+                .logical()
+                .destroy_pipeline(self.pipeline, None);
         }
     }
 }
 
 impl ShaderBuilder {
     pub fn build(&self) -> Shader {
-        let vert_module = create_shader_module(&self.device, &self.vert_source);
-        let frag_module = create_shader_module(&self.device, &self.frag_source);
+        let vert_module = create_shader_module(&self.device(), &self.vert_source);
+        let frag_module = create_shader_module(&self.device(), &self.frag_source);
         let entry_point = cstring("main");
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
@@ -152,7 +159,7 @@ impl ShaderBuilder {
             .cull_mode(self.cull_mode)
             .polygon_mode(self.polygon_mode);
 
-        let samples = self.device.pick_sample_count();
+        let samples = self.device().pick_sample_count();
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
@@ -227,24 +234,24 @@ impl ShaderBuilder {
 
         let pipeline_infos = [pipeline_info];
         let pipeline = unsafe {
-            self.device
+            self.device()
                 .logical()
                 .create_graphics_pipelines(PipelineCache::null(), &pipeline_infos, None)
                 .or_error("cannot create pipeline")[0]
         };
 
         unsafe {
-            self.device
+            self.device()
                 .logical()
                 .destroy_shader_module(vert_module, None);
-            self.device
+            self.device()
                 .logical()
                 .destroy_shader_module(frag_module, None);
         }
 
         Shader {
             pipeline,
-            device: Rc::clone(&self.device),
+            device: Rc::downgrade(&self.device()),
         }
     }
 
@@ -271,6 +278,10 @@ impl ShaderBuilder {
     pub fn with_front_culling(&mut self) -> &mut Self {
         self.cull_mode = CullModeFlags::FRONT;
         self
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }
 

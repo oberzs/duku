@@ -350,6 +350,10 @@ impl Drop for Device {
             self.sync_queue_submit
                 .iter()
                 .for_each(|f| fence::destroy(&self.logical, *f));
+            self.command_recorders
+                .borrow_mut()
+                .iter_mut()
+                .for_each(|r| r.manual_drop(&self.logical));
             self.logical.destroy_device(None);
         }
     }

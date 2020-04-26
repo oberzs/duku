@@ -24,6 +24,7 @@ use ash::vk::SampleCountFlags;
 use ash::vk::SharingMode;
 use std::cmp;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::LayoutChange;
 use crate::instance::CommandRecorder;
@@ -37,12 +38,12 @@ pub(crate) struct Image {
     vk: VkImage,
     memory: Option<DeviceMemory>,
     view: Option<ImageView>,
-    device: Rc<Device>,
+    device: Weak<Device>,
     _format: Format,
 }
 
 pub(crate) struct ImageBuilder {
-    device: Rc<Device>,
+    device: Weak<Device>,
     width: u32,
     height: u32,
     samples: SampleCountFlags,
@@ -56,7 +57,7 @@ pub(crate) struct ImageBuilder {
 impl Image {
     pub(crate) fn builder(device: &Rc<Device>) -> ImageBuilder {
         ImageBuilder {
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
             width: 1,
             height: 1,
             samples: SampleCountFlags::TYPE_1,
@@ -89,17 +90,17 @@ impl Image {
             })
             .build();
 
-        let recorder = CommandRecorder::new(&self.device);
+        let recorder = CommandRecorder::new(&self.device());
         recorder.begin_one_time();
         recorder.copy_buffer_to_image(src, self.vk, region);
-        self.device.submit_buffer(recorder.end());
+        self.device().submit_buffer(recorder.end());
     }
 
     pub(crate) fn generate_mipmaps(&self) {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let recorder = CommandRecorder::new(&self.device);
+        let recorder = CommandRecorder::new(&self.device());
         recorder.begin_one_time();
 
         for i in 1..self.mip_levels {
@@ -163,7 +164,7 @@ impl Image {
             .to_shader_read()
             .record();
 
-        self.device.submit_buffer(recorder.end());
+        self.device().submit_buffer(recorder.end());
     }
 
     pub(crate) fn vk(&self) -> VkImage {
@@ -172,6 +173,10 @@ impl Image {
 
     pub(crate) fn view(&self) -> ImageView {
         self.view.or_error("image does not have a view")
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }
 
@@ -188,22 +193,22 @@ impl ImageBuilder {
     }
 
     pub(crate) fn with_samples(&mut self) -> &mut Self {
-        self.samples = self.device.pick_sample_count();
+        self.samples = self.device().pick_sample_count();
         self
     }
 
     pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
-        self.format = self.device.pick_bgra_format();
+        self.format = self.device().pick_bgra_format();
         self
     }
 
     pub(crate) fn with_rgba_color(&mut self) -> &mut Self {
-        self.format = self.device.pick_rgba_format();
+        self.format = self.device().pick_rgba_format();
         self
     }
 
     pub(crate) fn with_depth(&mut self) -> &mut Self {
-        self.format = self.device.pick_depth_format();
+        self.format = self.device().pick_depth_format();
         self
     }
 
@@ -250,7 +255,7 @@ impl ImageBuilder {
                     .samples(self.samples);
 
                 let vk = unsafe {
-                    self.device
+                    self.device()
                         .logical()
                         .create_image(&image_info, None)
                         .or_error("cannot create texture image")
@@ -258,9 +263,9 @@ impl ImageBuilder {
 
                 // alloc memory
                 let mem_requirements =
-                    unsafe { self.device.logical().get_image_memory_requirements(vk) };
+                    unsafe { self.device().logical().get_image_memory_requirements(vk) };
 
-                let mem_type = self.device.pick_memory_type(
+                let mem_type = self.device().pick_memory_type(
                     mem_requirements.memory_type_bits,
                     MemoryPropertyFlags::DEVICE_LOCAL,
                 );
@@ -270,7 +275,7 @@ impl ImageBuilder {
                     .memory_type_index(mem_type);
 
                 let memory = unsafe {
-                    self.device
+                    self.device()
                         .logical()
                         .allocate_memory(&alloc_info, None)
                         .or_error("cannot allocate texture memory")
@@ -278,7 +283,7 @@ impl ImageBuilder {
 
                 // bind memory
                 unsafe {
-                    self.device
+                    self.device()
                         .logical()
                         .bind_image_memory(vk, memory, 0)
                         .or_error("cannot bind texture memory");
@@ -312,7 +317,7 @@ impl ImageBuilder {
 
                 unsafe {
                     Some(
-                        self.device
+                        self.device()
                             .logical()
                             .create_image_view(&view_info, None)
                             .or_error("cannot create image view"),
@@ -329,9 +334,13 @@ impl ImageBuilder {
             vk,
             memory,
             view,
-            device: Rc::clone(&self.device),
+            device: Rc::downgrade(&self.device()),
             _format: self.format,
         }
+    }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
     }
 }
 
@@ -339,11 +348,11 @@ impl Drop for Image {
     fn drop(&mut self) {
         unsafe {
             if let Some(view) = self.view {
-                self.device.logical().destroy_image_view(view, None);
+                self.device().logical().destroy_image_view(view, None);
             }
             if let Some(memory) = self.memory {
-                self.device.logical().destroy_image(self.vk, None);
-                self.device.logical().free_memory(memory, None);
+                self.device().logical().destroy_image(self.vk, None);
+                self.device().logical().free_memory(memory, None);
             }
         }
     }

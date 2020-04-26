@@ -7,13 +7,14 @@ use ash::vk::SamplerAddressMode;
 use ash::vk::SamplerCreateInfo;
 use ash::vk::SamplerMipmapMode;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use crate::instance::Device;
 use crate::utils::OrError;
 
 pub(crate) struct Sampler {
     vk: VkSampler,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -55,19 +56,23 @@ impl Sampler {
 
         Self {
             vk,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
     pub(crate) fn vk(&self) -> VkSampler {
         self.vk
     }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
+    }
 }
 
 impl Drop for Sampler {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_sampler(self.vk, None);
+            self.device().logical().destroy_sampler(self.vk, None);
         }
     }
 }

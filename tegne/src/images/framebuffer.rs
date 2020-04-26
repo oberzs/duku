@@ -3,6 +3,7 @@ use ash::vk::Framebuffer as VkFramebuffer;
 use ash::vk::FramebufferCreateInfo;
 use ash::vk::ImageUsageFlags;
 use std::rc::Rc;
+use std::rc::Weak;
 
 use super::Image;
 use super::LayoutChange;
@@ -24,7 +25,7 @@ pub struct Framebuffer {
     shader_image: Image,
     shader_index: i32,
     world_uniforms: WorldUniforms,
-    device: Rc<Device>,
+    device: Weak<Device>,
 }
 
 impl Framebuffer {
@@ -208,7 +209,7 @@ impl Framebuffer {
             shader_index,
             attachment_images: images,
             world_uniforms,
-            device: Rc::clone(device),
+            device: Rc::downgrade(device),
         }
     }
 
@@ -227,12 +228,16 @@ impl Framebuffer {
     pub(crate) fn image_index(&self) -> i32 {
         self.shader_index
     }
+
+    fn device(&self) -> Rc<Device> {
+        self.device.upgrade().or_error("device has been dropped")
+    }
 }
 
 impl Drop for Framebuffer {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_framebuffer(self.vk, None);
+            self.device().logical().destroy_framebuffer(self.vk, None);
         }
     }
 }

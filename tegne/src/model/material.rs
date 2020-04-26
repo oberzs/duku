@@ -24,7 +24,6 @@ pub struct MaterialBuilder {
     albedo_index: i32,
     albedo_tint: Vector4,
     uniforms: MaterialUniforms,
-    _device: Rc<Device>,
 }
 
 impl Material {
@@ -39,7 +38,6 @@ impl Material {
             albedo_index: default_albedo.image_index(),
             albedo_tint: Vector4::new(1.0, 1.0, 1.0, 1.0),
             uniforms: MaterialUniforms::new(device, shader_layout),
-            _device: Rc::clone(device),
         }
     }
 
