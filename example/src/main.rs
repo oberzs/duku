@@ -30,6 +30,7 @@ fn main() {
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
+            target.add_directional_light([-0.3, -0.7, 0.5], [1.0, 1.0, 1.0]);
             target.draw_cube([0.0, 0.0, 0.0]);
         });
         tegne.end_draw();

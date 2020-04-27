@@ -3,6 +3,7 @@ use ash::vk::DescriptorSet;
 use ash::vk::Pipeline;
 use tegne_math::Matrix4;
 use tegne_math::Transform;
+use tegne_math::Vector3;
 
 use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinMesh;
@@ -14,6 +15,7 @@ use crate::shaders::Light;
 pub struct Target<'a> {
     material_orders: Vec<MaterialOrder>,
     clear: [f32; 3],
+    lights: Vec<Light>,
     current_pipeline: Pipeline,
     current_material: (u32, DescriptorSet),
     current_albedo: i32,
@@ -41,6 +43,7 @@ impl<'a> Target<'a> {
         Self {
             material_orders: vec![],
             clear: [0.7, 0.7, 0.7],
+            lights: vec![],
             current_pipeline: material.pipeline(),
             current_material: material.uniforms().descriptor(),
             current_albedo: material.albedo_index(),
@@ -59,6 +62,17 @@ impl<'a> Target<'a> {
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
         self.draw(self.builtins.get_mesh(BuiltinMesh::Cube), transform);
+    }
+
+    pub fn add_directional_light(
+        &mut self,
+        direction: impl Into<Vector3>,
+        color: impl Into<Vector3>,
+    ) {
+        self.lights.push(Light {
+            position: direction.into().extend(0.0),
+            color: color.into(),
+        });
     }
 
     pub fn set_material(&mut self, material: &Material) {
@@ -80,7 +94,9 @@ impl<'a> Target<'a> {
     }
 
     pub(crate) fn lights(&self) -> [Light; 4] {
-        Default::default()
+        let mut lights: [Light; 4] = Default::default();
+        lights[..self.lights.len()].clone_from_slice(&self.lights[..]);
+        lights
     }
 
     fn add_order(&mut self, order: Order) {
