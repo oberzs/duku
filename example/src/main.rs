@@ -1,4 +1,5 @@
 use tegne::Camera;
+use tegne::Key;
 use tegne::Tegne;
 use tegne::Vector3;
 use tegne::Window;
@@ -16,7 +17,16 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    window.start_loop(move |_| {
+    let mut counter = 0;
+
+    window.start_loop(move |events| {
+        counter += 1;
+        if events.is_key_pressed(Key::A) {
+            events.set_title("AAAAA");
+        } else {
+            events.set_title(format!("looped {} times", counter));
+        }
+
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
