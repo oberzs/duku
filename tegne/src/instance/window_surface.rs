@@ -4,6 +4,7 @@ use ash::vk::PresentModeKHR;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::vk::SurfaceKHR;
+use log::debug;
 use std::os::raw::c_void;
 
 use super::Vulkan;
@@ -43,6 +44,8 @@ pub(crate) struct WindowSurface {
 impl WindowSurface {
     #[cfg(target_os = "windows")]
     pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+        debug!("creating Windows window surface");
+
         use ash::extensions::khr::Win32Surface;
         use ash::vk::StructureType;
         use ash::vk::Win32SurfaceCreateInfoKHR;
@@ -71,6 +74,8 @@ impl WindowSurface {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+        debug!("creating Linux window surface");
+
         use ash::extensions::khr::XlibSurface;
         use ash::vk::Display;
         use ash::vk::XlibSurfaceCreateInfoKHR;
@@ -92,6 +97,8 @@ impl WindowSurface {
 
     #[cfg(target_os = "macos")]
     pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+        debug!("creating MacOS window surface");
+
         use ash::extensions::mvk::MacOSSurface;
         use ash::vk::MacOSSurfaceCreateInfoMVK;
         use ash::vk::StructureType;

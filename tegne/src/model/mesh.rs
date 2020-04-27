@@ -1,6 +1,4 @@
 use ash::vk::Buffer as VkBuffer;
-use log::debug;
-use log::info;
 use std::cell::Cell;
 use std::rc::Rc;
 use std::rc::Weak;
@@ -94,7 +92,6 @@ impl Mesh {
 
 impl MeshBuilder {
     pub fn build(self) -> Mesh {
-        debug!("build mesh");
         let vertex_buffer =
             DynamicBuffer::new::<Vertex>(&self.device(), self.vertices.len(), BufferType::Vertex);
         let index_buffer =
@@ -128,7 +125,7 @@ impl MeshBuilder {
             self.normals
         };
 
-        let mesh = Mesh {
+        Mesh {
             vertices,
             uvs,
             normals,
@@ -136,9 +133,7 @@ impl MeshBuilder {
             index_buffer,
             should_update: Cell::new(true),
             drawn_triangles: self.triangles.len() as u32 / 3,
-        };
-        info!("mesh built");
-        mesh
+        }
     }
 
     pub fn with_vertices(mut self, vertices: &[Vector3]) -> Self {

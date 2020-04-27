@@ -5,6 +5,7 @@ use ash::vk::DebugUtilsMessengerCallbackDataEXT as CallbackData;
 use ash::vk::DebugUtilsMessengerCreateInfoEXT;
 use ash::vk::DebugUtilsMessengerEXT as Messenger;
 use ash::vk::FALSE;
+use log::debug;
 use log::warn;
 use std::ffi::c_void;
 use std::ffi::CStr;
@@ -20,6 +21,8 @@ pub(crate) struct Validator {
 
 impl Validator {
     pub(crate) fn new(vulkan: &Vulkan) -> Self {
+        debug!("creating validator");
+
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
 
         let info = DebugUtilsMessengerCreateInfoEXT::builder()

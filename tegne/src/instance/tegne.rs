@@ -1,5 +1,4 @@
 use log::debug;
-use log::info;
 use std::collections::HashMap;
 use std::rc::Rc;
 use tegne_math::Matrix4;
@@ -141,25 +140,25 @@ impl Tegne {
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
-        debug!("create rgba texture");
+        debug!("creating rgba texture");
         let texture =
             Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms);
-        info!("rgba texture created");
         texture
     }
 
     pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Texture {
-        debug!("create rgb texture");
+        debug!("creating rgb texture");
         let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms);
-        info!("rgb texture created");
         texture
     }
 
     pub fn create_mesh(&self) -> MeshBuilder {
+        debug!("creating mesh");
         Mesh::builder(&self.device)
     }
 
     pub fn create_material(&self) -> MaterialBuilder {
+        debug!("creating material");
         let default_shader = self.builtins.get_shader(BuiltinShader::Phong);
         let default_texture = self.builtins.get_texture(BuiltinTexture::White);
         Material::builder(
@@ -171,6 +170,7 @@ impl Tegne {
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {
+        debug!("creating framebuffer");
         let render_pass = self
             .render_passes
             .get(&RenderPassType::ColorOffscreen)
@@ -186,6 +186,7 @@ impl Tegne {
     }
 
     pub fn create_shader(&self) -> ShaderBuilder {
+        debug!("creating shader");
         let render_pass = self
             .render_passes
             .get(&RenderPassType::ColorOffscreen)
@@ -205,28 +206,17 @@ impl TegneBuilder {
         let window_args = self.window_args.or_error("window arguments not set");
         let extensions = Extensions::new();
 
-        debug!("create Vulkan instance");
         let vulkan = Vulkan::new(&extensions);
-        info!("Vulkan instance created");
 
         #[cfg(debug_assertions)]
-        debug!("create validator");
-        #[cfg(debug_assertions)]
         let validator = Some(Validator::new(&vulkan));
-        #[cfg(debug_assertions)]
-        info!("validator created");
         #[cfg(not(debug_assertions))]
         let validator = None;
 
-        debug!("create window surface");
         let window_surface = WindowSurface::new(&vulkan, window_args);
-        info!("window surface created");
 
-        debug!("open GPU");
         let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, 1);
-        info!("GPU opened");
 
-        debug!("create window swapchain");
         let swapchain = Swapchain::new(
             &vulkan,
             &device,
@@ -234,25 +224,17 @@ impl TegneBuilder {
             window_args.width,
             window_args.height,
         );
-        info!("window swapchain created");
 
-        debug!("create shader layout");
         let shader_layout = ShaderLayout::new(&device);
-        info!("shader layout created");
 
-        debug!("create image uniforms");
         let image_uniforms = ImageUniforms::new(&device, &shader_layout, self.anisotropy);
-        info!("image uniforms created");
 
-        debug!("create render passes");
         let coff_render_pass = RenderPass::color_offscreen(&device);
         let con_render_pass = RenderPass::color_onscreen(&device);
         let doff_render_pass = RenderPass::depth_offscreen(&device);
-        info!("render passes created");
 
         let builtins = Builtins::new(&device, &con_render_pass, &shader_layout, &image_uniforms);
 
-        debug!("create window framebuffers");
         let window_framebuffers = Framebuffer::for_window(
             &device,
             &swapchain,
@@ -262,7 +244,6 @@ impl TegneBuilder {
             window_args.width,
             window_args.height,
         );
-        info!("window framebuffers created");
 
         let mut render_passes = HashMap::new();
         render_passes.insert(RenderPassType::ColorOffscreen, coff_render_pass);

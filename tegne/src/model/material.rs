@@ -1,6 +1,4 @@
 use ash::vk::Pipeline;
-use log::debug;
-use log::info;
 use std::rc::Rc;
 use tegne_math::Vector4;
 
@@ -66,7 +64,6 @@ impl PartialEq for Material {
 
 impl MaterialBuilder {
     pub fn build(self) -> Material {
-        debug!("build material");
         self.uniforms.update(MaterialObject {
             albedo_tint: self.albedo_tint,
         });
@@ -76,7 +73,6 @@ impl MaterialBuilder {
             albedo_tint: self.albedo_tint,
             uniforms: self.uniforms,
         };
-        info!("material built");
         material
     }
 

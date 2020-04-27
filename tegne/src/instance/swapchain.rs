@@ -8,6 +8,7 @@ use ash::vk::Semaphore;
 use ash::vk::SharingMode;
 use ash::vk::SwapchainCreateInfoKHR;
 use ash::vk::SwapchainKHR;
+use log::debug;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -30,6 +31,8 @@ impl Swapchain {
         width: u32,
         height: u32,
     ) -> Self {
+        debug!("creating window swapchain");
+
         let image_count = device.pick_image_count();
         let format = device.pick_bgra_format();
         let color_space = device.pick_color_space();

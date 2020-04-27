@@ -1,4 +1,3 @@
-use log::debug;
 use log::error;
 use log::info;
 use std::collections::HashSet;
@@ -39,13 +38,13 @@ impl Window {
     pub fn new(width: u32, height: u32) -> Self {
         let event_loop = EventLoop::new();
 
-        debug!("create window");
+        info!("creating window");
+        info!("using size {}x{}", width, height);
         let window = WindowBuilder::new()
             .with_resizable(false)
             .with_inner_size(PhysicalSize::new(width, height))
             .build(&event_loop)
             .or_error("cannot create window");
-        info!("window created");
 
         Self { event_loop, window }
     }
@@ -61,7 +60,7 @@ impl Window {
             window,
         };
 
-        debug!("start event loop");
+        info!("staring event loop");
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
             match event {
@@ -81,8 +80,8 @@ impl Window {
                         ..
                     } => events.keys.handle(keycode, state),
                     WindowEvent::CloseRequested => {
-                        debug!("close window");
                         *control_flow = ControlFlow::Exit;
+                        info!("closing window");
                     }
                     _ => (),
                 },

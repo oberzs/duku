@@ -2,6 +2,7 @@ use ash::version::DeviceV1_0;
 use ash::vk::Framebuffer as VkFramebuffer;
 use ash::vk::FramebufferCreateInfo;
 use ash::vk::ImageUsageFlags;
+use log::debug;
 use std::rc::Rc;
 use std::rc::Weak;
 
@@ -38,6 +39,8 @@ impl Framebuffer {
         width: u32,
         height: u32,
     ) -> Vec<Self> {
+        debug!("creating window framebuffers");
+
         let extent = device.pick_extent(width, height);
         let attachments = render_pass.attachments_ref();
 

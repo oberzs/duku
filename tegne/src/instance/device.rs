@@ -12,6 +12,7 @@ use ash::vk::PhysicalDevice;
 use ash::vk::PhysicalDeviceFeatures;
 use ash::vk::PhysicalDeviceMemoryProperties;
 use ash::vk::PhysicalDeviceProperties;
+use ash::vk::PhysicalDeviceType;
 use ash::vk::PipelineStageFlags;
 use ash::vk::PresentModeKHR;
 use ash::vk::Queue;
@@ -22,9 +23,11 @@ use ash::vk::SubmitInfo;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
+use log::info;
 use std::cell::Cell;
 use std::cell::Ref;
 use std::cell::RefCell;
+use std::ffi::CStr;
 use std::rc::Rc;
 
 use super::CommandRecorder;
@@ -80,6 +83,8 @@ impl Device {
         vsync: VSync,
         msaa: u8,
     ) -> Rc<Self> {
+        info!("looking for suitable GPU");
+
         let gpus = unsafe {
             vulkan
                 .instance_ref()
@@ -116,6 +121,25 @@ impl Device {
                 && is_gpu_suitable(&props)
                 && has_queue_indices
             {
+                let device_name = unsafe { CStr::from_ptr(device_props.device_name.as_ptr()) };
+                let device_type = match device_props.device_type {
+                    PhysicalDeviceType::DISCRETE_GPU => "(discrete)",
+                    PhysicalDeviceType::INTEGRATED_GPU => "(integrated)",
+                    PhysicalDeviceType::VIRTUAL_GPU => "(virtual)",
+                    _ => "",
+                };
+                info!("opening GPU");
+                info!("using {:?} {}", device_name, device_type);
+                info!("using driver version {}", device_props.driver_version);
+                info!(
+                    "using VSync {}",
+                    match vsync {
+                        VSync::Enabled => "enabled",
+                        VSync::Disabled => "disabled",
+                    }
+                );
+                info!("using MSAA level {}", msaa);
+
                 let logical = open_device(physical, vulkan, &props, exts);
                 let graphics_queue = unsafe { logical.get_device_queue(graphics_index, 0) };
                 let present_queue = unsafe { logical.get_device_queue(present_index, 0) };

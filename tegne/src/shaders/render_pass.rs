@@ -7,6 +7,7 @@ use ash::vk::RenderPassCreateInfo;
 use ash::vk::SubpassDependency;
 use ash::vk::SubpassDescription;
 use ash::vk::SUBPASS_EXTERNAL;
+use log::debug;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::rc::Weak;
@@ -24,6 +25,8 @@ pub(crate) struct RenderPass {
 
 impl RenderPass {
     pub(crate) fn color_offscreen(device: &Rc<Device>) -> Self {
+        debug!("creating offscreen color render pass");
+
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -70,6 +73,8 @@ impl RenderPass {
     }
 
     pub(crate) fn color_onscreen(device: &Rc<Device>) -> Self {
+        debug!("creating onscreen color render pass");
+
         let mut attachments = HashMap::new();
 
         attachments.insert(
@@ -116,6 +121,8 @@ impl RenderPass {
     }
 
     pub(crate) fn depth_offscreen(device: &Rc<Device>) -> Self {
+        debug!("creating offscreen depth render pass");
+
         let mut attachments = HashMap::new();
 
         attachments.insert(

@@ -4,7 +4,6 @@ mod shader;
 mod texture;
 
 use log::debug;
-use log::info;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -40,21 +39,17 @@ impl Builtins {
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
     ) -> Self {
-        debug!("create builtin meshes");
+        debug!("creating builtin meshes");
         let meshes = builtin_meshes(device);
-        info!("builtin meshes created");
 
-        debug!("create builtin shaders");
+        debug!("creating builtin shaders");
         let shaders = builtin_shaders(device, pass, layout);
-        info!("builtin shaders created");
 
-        debug!("create builtin textures");
+        debug!("creating builtin textures");
         let textures = builtin_textures(device, uniforms);
-        info!("builtin textures created");
 
-        debug!("create builtin materials");
+        debug!("creating builtin materials");
         let materials = builtin_materials(device, layout, &shaders, &textures);
-        info!("builtin materials created");
 
         Self {
             meshes,

@@ -1,10 +1,14 @@
 use ash::version::EntryV1_0;
 use ash::version::InstanceV1_0;
 use ash::vk::make_version;
+use ash::vk::version_major;
+use ash::vk::version_minor;
+use ash::vk::version_patch;
 use ash::vk::ApplicationInfo;
 use ash::vk::InstanceCreateInfo;
 use ash::Entry;
 use ash::Instance;
+use log::info;
 
 use crate::utils::error;
 use crate::utils::OrError;
@@ -18,7 +22,22 @@ pub(crate) struct Vulkan {
 
 impl Vulkan {
     pub(crate) fn new(exts: &Extensions) -> Self {
+        info!("initializing the Vulkan API");
+
         let entry = Entry::new().or_error("cannot init Vulkan");
+
+        match entry
+            .try_enumerate_instance_version()
+            .expect("cannot enumerate instance version")
+        {
+            Some(version) => {
+                let major = version_major(version);
+                let minor = version_minor(version);
+                let patch = version_patch(version);
+                info!("using Vulkan {}.{}.{}", major, minor, patch);
+            }
+            None => info!("using Vulkan 1.0"),
+        }
 
         if !exts.supports_instance(&entry) {
             error("requested instance extensions not available");
@@ -29,10 +48,7 @@ impl Vulkan {
 
         let layers = exts.layers();
         let extensions = exts.instance();
-        let app_info = ApplicationInfo::builder()
-            .application_version(make_version(1, 2, 0))
-            .engine_version(make_version(1, 2, 0))
-            .api_version(make_version(1, 2, 0));
+        let app_info = ApplicationInfo::builder().api_version(make_version(1, 2, 0));
 
         let info = InstanceCreateInfo::builder()
             .application_info(&app_info)

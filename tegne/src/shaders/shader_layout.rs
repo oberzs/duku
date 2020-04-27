@@ -14,6 +14,7 @@ use ash::vk::PipelineLayoutCreateInfo;
 use ash::vk::PushConstantRange;
 use ash::vk::ShaderStageFlags;
 use ash::vk::WriteDescriptorSet;
+use log::debug;
 use std::mem;
 use std::rc::Rc;
 use std::rc::Weak;
@@ -35,6 +36,8 @@ pub(crate) struct ShaderLayout {
 
 impl ShaderLayout {
     pub(crate) fn new(device: &Rc<Device>) -> Self {
+        debug!("creating shader layout");
+
         // world layout
         let world_binding = DescriptorSetLayoutBinding::builder()
             .descriptor_type(DescriptorType::UNIFORM_BUFFER)

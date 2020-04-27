@@ -5,6 +5,8 @@ use ash::vk::DescriptorType;
 use ash::vk::ImageLayout;
 use ash::vk::ImageView;
 use ash::vk::WriteDescriptorSet;
+use log::debug;
+use log::info;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -108,6 +110,15 @@ impl MaterialUniforms {
 
 impl ImageUniforms {
     pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: Anisotropy) -> Self {
+        debug!("creating image uniforms");
+        info!(
+            "using anisotropy level {}",
+            match anisotropy {
+                Anisotropy::Enabled(n) => n.to_string(),
+                Anisotropy::Disabled => "disabled".to_string(),
+            }
+        );
+
         let descriptor = layout.image_set();
         let sampler = Sampler::new(device, anisotropy);
 
