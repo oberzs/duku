@@ -1,4 +1,3 @@
-#version 450
 #include "frag.glsl"
 
 vec3 calc_dir_light(Light light, vec3 normal, vec3 view_dir);

@@ -1,4 +1,3 @@
-#version 450
 #include "frag.glsl"
 
 void main() {

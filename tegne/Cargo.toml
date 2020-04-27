@@ -8,6 +8,7 @@ edition = "2018"
 ash = "0.30.0"
 log = "0.4.8"
 tegne-math = { path = "../tegne-math", version = "0.1.0" }
+tegne-macro = { path = "../tegne-macro", version = "0.1.0" }
 
 tegne-utils = { path = "../tegne-utils", version = "0.1.0", optional = true }
 

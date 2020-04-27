@@ -1,3 +1,5 @@
+#![feature(proc_macro_hygiene)]
+
 mod buffer;
 mod builtins;
 mod images;

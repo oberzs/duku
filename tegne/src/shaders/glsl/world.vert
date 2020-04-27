@@ -1,4 +1,3 @@
-#version 450
 #include "vert.glsl"
 
 void main() {
