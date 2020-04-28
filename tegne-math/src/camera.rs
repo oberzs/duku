@@ -1,6 +1,6 @@
-use tegne_math::Matrix4;
-use tegne_math::Transform;
-use tegne_math::Vector3;
+use super::Matrix4;
+use super::Transform;
+use super::Vector3;
 
 pub struct Camera {
     transform: Transform,
@@ -57,13 +57,13 @@ impl Camera {
         self.height = height as f32;
     }
 
-    pub(crate) fn matrices(&self) -> (Matrix4, Matrix4) {
-        let depth = 5000.0;
-
+    pub fn matrices(&self) -> (Matrix4, Matrix4) {
         let projection = match self.camera_type {
-            CameraType::Orthographic => Matrix4::orthographic(self.width, self.height, -0.1, depth),
+            CameraType::Orthographic => {
+                Matrix4::orthographic(self.width, self.height, -0.1, self.depth)
+            }
             CameraType::Perspective => {
-                Matrix4::perspective(self.fov, self.width / self.height, 0.1, depth)
+                Matrix4::perspective(self.fov, self.width / self.height, 0.1, self.depth)
             }
         };
 

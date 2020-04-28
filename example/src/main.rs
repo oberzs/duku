@@ -30,7 +30,7 @@ fn main() {
     let light_speed = 0.01;
 
     window.start_loop(move |events| {
-        controller.update(camera.transform_mut(), events);
+        controller.update(&mut camera, events);
 
         let light_x = light_pos.cos();
         let light_z = light_pos.sin();

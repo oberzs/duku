@@ -1,5 +1,5 @@
+use tegne_math::Camera;
 use tegne_math::Quaternion;
-use tegne_math::Transform;
 use tegne_math::Vector3;
 
 use super::Events;
@@ -14,7 +14,7 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub fn update(&mut self, camera: &mut Transform, events: &Events) {
+    pub fn update(&mut self, camera: &mut Camera, events: &Events) {
         let move_speed = 10.0;
         let rotate_speed = 50.0;
         let mut speed_mod = 1.0;
@@ -33,31 +33,33 @@ impl Controller {
             speed_mod = 5.0;
         }
 
+        let transform = camera.transform_mut();
+
         // camera movement
         let final_move_speed = move_speed * speed_mod * events.delta_time();
 
         if events.is_key_pressed(Key::W) {
-            camera.move_forward(final_move_speed);
+            transform.move_forward(final_move_speed);
         }
 
         if events.is_key_pressed(Key::S) {
-            camera.move_backward(final_move_speed);
+            transform.move_backward(final_move_speed);
         }
 
         if events.is_key_pressed(Key::A) {
-            camera.move_left(final_move_speed);
+            transform.move_left(final_move_speed);
         }
 
         if events.is_key_pressed(Key::D) {
-            camera.move_right(final_move_speed);
+            transform.move_right(final_move_speed);
         }
 
         if events.is_key_pressed(Key::Space) {
-            camera.move_up(final_move_speed);
+            transform.move_up(final_move_speed);
         }
 
         if events.is_key_pressed(Key::LControl) {
-            camera.move_down(final_move_speed);
+            transform.move_down(final_move_speed);
         }
 
         // look direction
@@ -79,11 +81,11 @@ impl Controller {
             let pitch = Quaternion::euler_rotation(0.0, mouse_x, 0.0);
             let roll = Quaternion::euler_rotation(mouse_y, 0.0, 0.0);
 
-            camera.rotation = pitch * camera.rotation * roll;
+            transform.rotation = pitch * transform.rotation * roll;
         }
 
         if self.lockon {
-            camera.look_at(self.lockon_point, Vector3::up());
+            transform.look_at(self.lockon_point, Vector3::up());
         }
     }
 }

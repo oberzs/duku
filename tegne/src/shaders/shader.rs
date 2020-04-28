@@ -40,7 +40,7 @@ use std::rc::Weak;
 use super::RenderPass;
 use super::ShaderLayout;
 use crate::instance::Device;
-use crate::model::Vertex;
+use crate::mesh::Vertex;
 use crate::utils::cstring;
 use crate::utils::OrError;
 

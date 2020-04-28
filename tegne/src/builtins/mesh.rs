@@ -5,7 +5,7 @@ use tegne_math::Vector2;
 use tegne_math::Vector3;
 
 use crate::instance::Device;
-use crate::model::Mesh;
+use crate::mesh::Mesh;
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub(crate) enum BuiltinMesh {

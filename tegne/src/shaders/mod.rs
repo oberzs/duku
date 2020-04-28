@@ -1,4 +1,5 @@
 mod attachment;
+mod material;
 mod render_pass;
 mod shader;
 mod shader_layout;
@@ -6,6 +7,8 @@ mod shader_objects;
 
 pub(crate) use attachment::Attachment;
 pub(crate) use attachment::AttachmentType;
+pub use material::Material;
+pub use material::MaterialBuilder;
 pub(crate) use render_pass::RenderPass;
 pub use shader::Shader;
 pub use shader::ShaderBuilder;

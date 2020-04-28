@@ -1,3 +1,5 @@
+mod vertex;
+
 use ash::vk::Buffer as VkBuffer;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -5,7 +7,6 @@ use std::rc::Weak;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
-use super::Vertex;
 use crate::buffer::Buffer;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
@@ -13,6 +14,7 @@ use crate::buffer::FixedBuffer;
 use crate::instance::Device;
 use crate::utils::error;
 use crate::utils::OrError;
+pub(crate) use vertex::Vertex;
 
 pub struct Mesh {
     vertices: Vec<Vector3>,

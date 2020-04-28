@@ -1,6 +1,7 @@
 use log::debug;
 use std::collections::HashMap;
 use std::rc::Rc;
+use tegne_math::Camera;
 use tegne_math::Matrix4;
 
 use super::Device;
@@ -18,12 +19,11 @@ use crate::builtins::Builtins;
 use crate::images::Anisotropy;
 use crate::images::Framebuffer;
 use crate::images::Texture;
-use crate::model::Camera;
-use crate::model::Material;
-use crate::model::MaterialBuilder;
-use crate::model::Mesh;
-use crate::model::MeshBuilder;
+use crate::mesh::Mesh;
+use crate::mesh::MeshBuilder;
 use crate::shaders::ImageUniforms;
+use crate::shaders::Material;
+use crate::shaders::MaterialBuilder;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;

@@ -28,7 +28,7 @@ impl Transform {
         Matrix4::translation(self.position) * Matrix4::scale(self.scale) * self.rotation.as_matrix()
     }
 
-    pub fn as_matrix_for_camera(self) -> Matrix4 {
+    pub(crate) fn as_matrix_for_camera(self) -> Matrix4 {
         Matrix4::scale(self.scale)
             * self.rotation.inverse_rotation().as_matrix()
             * Matrix4::translation(-self.position)

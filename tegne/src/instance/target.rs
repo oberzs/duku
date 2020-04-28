@@ -8,9 +8,9 @@ use tegne_math::Vector3;
 use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinMesh;
 use crate::builtins::Builtins;
-use crate::model::Material;
-use crate::model::Mesh;
+use crate::mesh::Mesh;
 use crate::shaders::Light;
+use crate::shaders::Material;
 
 pub struct Target<'a> {
     material_orders: Vec<MaterialOrder>,

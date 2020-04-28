@@ -5,7 +5,7 @@ use super::BuiltinShader;
 use super::BuiltinTexture;
 use crate::images::Texture;
 use crate::instance::Device;
-use crate::model::Material;
+use crate::shaders::Material;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;

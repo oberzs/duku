@@ -9,9 +9,9 @@ use std::rc::Rc;
 
 use crate::images::Texture;
 use crate::instance::Device;
-use crate::model::Material;
-use crate::model::Mesh;
+use crate::mesh::Mesh;
 use crate::shaders::ImageUniforms;
+use crate::shaders::Material;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
