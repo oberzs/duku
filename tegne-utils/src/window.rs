@@ -14,11 +14,16 @@ use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::window::Window as WinitWindow;
-use winit::window::WindowBuilder;
+use winit::window::WindowBuilder as WinitWindowBuilder;
 
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
+}
+
+pub struct WindowBuilder {
+    size: PhysicalSize<u32>,
+    title: String,
 }
 
 pub struct Events {
@@ -37,18 +42,11 @@ struct Keys {
 }
 
 impl Window {
-    pub fn new(width: u32, height: u32) -> Self {
-        let event_loop = EventLoop::new();
-
-        info!("creating window");
-        info!("using size {}x{}", width, height);
-        let window = WindowBuilder::new()
-            .with_resizable(false)
-            .with_inner_size(PhysicalSize::new(width, height))
-            .build(&event_loop)
-            .or_error("cannot create window");
-
-        Self { event_loop, window }
+    pub fn builder() -> WindowBuilder {
+        WindowBuilder {
+            size: PhysicalSize::new(500, 500),
+            title: "Tegne window".to_string(),
+        }
     }
 
     pub fn start_loop<F: FnMut(&Events) + 'static>(self, mut draw: F) {
@@ -143,6 +141,31 @@ impl Window {
     pub fn size(&self) -> (u32, u32) {
         let size = self.window.inner_size();
         (size.width, size.height)
+    }
+}
+
+impl WindowBuilder {
+    pub fn with_size(&mut self, width: u32, height: u32) -> &mut Self {
+        self.size = PhysicalSize::new(width, height);
+        self
+    }
+
+    pub fn with_title(&mut self, title: impl AsRef<str>) -> &mut Self {
+        self.title = title.as_ref().to_string();
+        self
+    }
+
+    pub fn build(&self) -> Window {
+        let event_loop = EventLoop::new();
+
+        info!("creating window");
+        let window = WinitWindowBuilder::new()
+            .with_inner_size(self.size)
+            .with_title(self.title.clone())
+            .build(&event_loop)
+            .or_error("cannot create window");
+
+        Window { event_loop, window }
     }
 }
 

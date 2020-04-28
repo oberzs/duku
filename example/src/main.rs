@@ -1,6 +1,5 @@
 use tegne::Camera;
 use tegne::Controller;
-use tegne::Key;
 use tegne::Tegne;
 use tegne::Vector3;
 use tegne::Window;
@@ -8,7 +7,10 @@ use tegne::Window;
 fn main() {
     pretty_env_logger::init();
 
-    let window = Window::new(640, 480);
+    let window = Window::builder()
+        .with_title("Tegne example")
+        .with_size(640, 480)
+        .build();
     let tegne = Tegne::builder().with_window(&window).with_vsync().build();
 
     let mut controller = Controller::default();
@@ -20,22 +22,20 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let mut counter = 0;
+    let mut light_pos = 0.0f32;
+    let light_speed = 0.01;
 
     window.start_loop(move |events| {
-        counter += 1;
-        if events.is_key_pressed(Key::A) {
-            events.set_title("AAAAA");
-        } else {
-            events.set_title(format!("looped {} times", counter));
-        }
-
         controller.update(camera.transform_mut(), events);
+
+        let light_x = light_pos.cos();
+        let light_z = light_pos.sin();
+        light_pos += light_speed;
 
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
-            target.add_directional_light([-0.3, -0.7, 0.5], [1.0, 1.0, 1.0]);
+            target.add_directional_light([light_x, -1.0, light_z], [1.0, 1.0, 1.0]);
             target.draw_cube([0.0, 0.0, 0.0]);
         });
         tegne.end_draw();
