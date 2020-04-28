@@ -15,6 +15,8 @@ pub use model::Camera;
 pub use shaders::Shader;
 
 #[cfg(feature = "tegne-utils")]
+pub use tegne_utils::Controller;
+#[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Events;
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Key;

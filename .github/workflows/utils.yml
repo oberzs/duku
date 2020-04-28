@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - "tegne-utils/**"
+      - "tegne-math/**"
 
 jobs:
   check:

@@ -777,6 +777,7 @@ name = "tegne-utils"
 version = "0.1.0"
 dependencies = [
  "log",
+ "tegne-math",
  "winit",
 ]
 

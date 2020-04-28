@@ -1,4 +1,5 @@
 use tegne::Camera;
+use tegne::Controller;
 use tegne::Key;
 use tegne::Tegne;
 use tegne::Vector3;
@@ -7,10 +8,12 @@ use tegne::Window;
 fn main() {
     pretty_env_logger::init();
 
-    let window = Window::new(400, 400);
+    let window = Window::new(640, 480);
     let tegne = Tegne::builder().with_window(&window).with_vsync().build();
 
-    let mut camera = Camera::perspective(400, 400, 90);
+    let mut controller = Controller::default();
+
+    let mut camera = Camera::perspective(640, 480, 90);
     {
         let transform = camera.transform_mut();
         transform.move_by([1.0, 1.0, 3.0]);
@@ -26,6 +29,8 @@ fn main() {
         } else {
             events.set_title(format!("looped {} times", counter));
         }
+
+        controller.update(camera.transform_mut(), events);
 
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {

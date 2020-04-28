@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 winit = "0.22.0"
 log = "0.4.8"
+tegne-math = { path = "../tegne-math", version = "0.1.0" }

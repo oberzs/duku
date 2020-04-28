@@ -2,6 +2,7 @@ use log::error;
 use log::info;
 use std::collections::HashSet;
 use std::process::exit;
+use std::time::Instant;
 use winit::dpi::PhysicalPosition;
 use winit::dpi::PhysicalSize;
 use winit::event::DeviceEvent;
@@ -24,6 +25,7 @@ pub struct Events {
     mouse_position: (u32, u32),
     mouse_delta: (f32, f32),
     keys: Keys,
+    delta_time: f32,
     window: WinitWindow,
 }
 
@@ -57,8 +59,11 @@ impl Window {
             mouse_position: (0, 0),
             mouse_delta: (0.0, 0.0),
             keys: Keys::default(),
+            delta_time: 0.0,
             window,
         };
+
+        let mut frame_time = Instant::now();
 
         info!("staring event loop");
         event_loop.run(move |event, _, control_flow| {
@@ -96,6 +101,9 @@ impl Window {
                 Event::MainEventsCleared => {
                     draw(&events);
                     events.keys.clear_typed();
+                    events.mouse_delta = (0.0, 0.0);
+                    events.delta_time = frame_time.elapsed().as_secs_f32();
+                    frame_time = Instant::now();
                 }
                 _ => (),
             }
@@ -166,13 +174,13 @@ impl Events {
             .or_error("cannot change mouse position on iOS");
     }
 
-    pub fn set_cursor_grab(&self, grab: bool) {
+    pub fn set_mouse_grab(&self, grab: bool) {
         self.window
             .set_cursor_grab(grab)
             .or_error("cannot grab mouse on iOS");
     }
 
-    pub fn set_cursor_visible(&self, visible: bool) {
+    pub fn set_mouse_visible(&self, visible: bool) {
         self.window.set_cursor_visible(visible);
     }
 
@@ -190,6 +198,10 @@ impl Events {
 
     pub fn is_key_typed(&self, key: Key) -> bool {
         self.keys.is_typed(key)
+    }
+
+    pub fn delta_time(&self) -> f32 {
+        self.delta_time
     }
 }
 
