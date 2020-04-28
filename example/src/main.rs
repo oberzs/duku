@@ -11,7 +11,11 @@ fn main() {
         .with_title("Tegne example")
         .with_size(640, 480)
         .build();
-    let tegne = Tegne::builder().with_window(&window).with_vsync().build();
+    let tegne = Tegne::builder()
+        .with_window(&window)
+        .with_msaa(2)
+        .with_vsync()
+        .build();
 
     let mut controller = Controller::default();
 

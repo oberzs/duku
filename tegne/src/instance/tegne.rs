@@ -52,6 +52,7 @@ pub struct TegneBuilder {
     window_args: Option<WindowArgs>,
     anisotropy: Anisotropy,
     vsync: VSync,
+    msaa: u8,
 }
 
 #[derive(Hash, Eq, PartialEq)]
@@ -67,6 +68,7 @@ impl Tegne {
             window_args: None,
             anisotropy: Anisotropy::Disabled,
             vsync: VSync::Disabled,
+            msaa: 1,
         }
     }
 
@@ -215,7 +217,7 @@ impl TegneBuilder {
 
         let window_surface = WindowSurface::new(&vulkan, window_args);
 
-        let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, 1);
+        let device = Device::new(&vulkan, &window_surface, &extensions, self.vsync, self.msaa);
 
         let swapchain = Swapchain::new(
             &vulkan,
@@ -307,6 +309,11 @@ impl TegneBuilder {
 
     pub fn with_vsync(&mut self) -> &mut Self {
         self.vsync = VSync::Enabled;
+        self
+    }
+
+    pub fn with_msaa(&mut self, value: u8) -> &mut Self {
+        self.msaa = value;
         self
     }
 }
