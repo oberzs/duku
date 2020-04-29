@@ -1,11 +1,14 @@
 mod cube;
+mod floor;
 
-use cube::Cube;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::Vector3;
 use tegne::Window;
+
+use cube::Cube;
+use floor::Floor;
 
 fn main() {
     pretty_env_logger::init();
@@ -21,6 +24,7 @@ fn main() {
         .with_vsync()
         .build();
 
+    let floor = Floor::new(&tegne);
     let cube = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0);
 
     let mut controller = Controller::default();
@@ -32,20 +36,18 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let mut light_pos = 0.0f32;
-    let light_speed = 0.01;
+    let blue_light = [1.0, -1.0, 1.0];
+    let yellow_light = [-1.0, -1.0, -1.0];
 
     window.start_loop(|events| {
         controller.update(&mut camera, events);
 
-        let light_x = light_pos.cos();
-        let light_z = light_pos.sin();
-        light_pos += light_speed;
-
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
-            target.add_directional_light([light_x, -1.0, light_z], [1.0, 1.0, 1.0]);
+            target.add_directional_light(blue_light, [0.5, 0.5, 1.0]);
+            target.add_directional_light(yellow_light, [1.0, 1.0, 0.5]);
+            floor.draw(target);
             cube.draw(target);
         });
         tegne.end_draw();
