@@ -7,6 +7,7 @@ on:
       - "tegne/**"
       - "tegne-math/**"
       - "tegne-utils/**"
+      - ".github/workflows/tegne.yml"
 
 jobs:
   check:
@@ -21,6 +22,11 @@ jobs:
           wget https://sdk.lunarg.com/sdk/download/${{env.vulkan-version}}/linux/vulkansdk-linux-${{env.vulkan-version}}.tar.gz
           tar xf vulkansdk-linux-${{env.vulkan-version}}.tar.gz
           sudo cp ${{env.vulkan-version}}/x86_64/bin/glslc /usr/local/bin
+      - name: Install Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
       - name: Check
         uses: actions-rs/cargo@v1
         with:
