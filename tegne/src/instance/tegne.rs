@@ -8,7 +8,6 @@ use super::Device;
 use super::Extensions;
 use super::Swapchain;
 use super::Target;
-use super::VSync;
 use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
@@ -16,7 +15,6 @@ use super::WindowSurface;
 use crate::builtins::BuiltinShader;
 use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
-use crate::images::Anisotropy;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
@@ -50,8 +48,8 @@ pub struct Tegne {
 
 pub struct TegneBuilder {
     window_args: Option<WindowArgs>,
-    anisotropy: Anisotropy,
-    vsync: VSync,
+    anisotropy: f32,
+    vsync: bool,
     msaa: u8,
 }
 
@@ -66,8 +64,8 @@ impl Tegne {
     pub fn builder() -> TegneBuilder {
         TegneBuilder {
             window_args: None,
-            anisotropy: Anisotropy::Disabled,
-            vsync: VSync::Disabled,
+            anisotropy: 0.0,
+            vsync: false,
             msaa: 1,
         }
     }
@@ -200,6 +198,7 @@ impl Tegne {
 impl Drop for Tegne {
     fn drop(&mut self) {
         self.device.wait_for_idle();
+        println!("drop tegne");
     }
 }
 
@@ -302,13 +301,13 @@ impl TegneBuilder {
         self
     }
 
-    pub fn with_anisotropy(&mut self, value: Anisotropy) -> &mut Self {
+    pub fn with_anisotropy(&mut self, value: f32) -> &mut Self {
         self.anisotropy = value;
         self
     }
 
     pub fn with_vsync(&mut self) -> &mut Self {
-        self.vsync = VSync::Enabled;
+        self.vsync = true;
         self
     }
 

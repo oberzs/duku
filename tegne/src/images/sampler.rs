@@ -17,27 +17,16 @@ pub(crate) struct Sampler {
     device: Weak<Device>,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum Anisotropy {
-    Enabled(f32),
-    Disabled,
-}
-
 impl Sampler {
-    pub(crate) fn new(device: &Rc<Device>, anisotropy: Anisotropy) -> Self {
-        let anisotropy_value = match anisotropy {
-            Anisotropy::Enabled(value) => value,
-            Anisotropy::Disabled => 0.0,
-        };
-
+    pub(crate) fn new(device: &Rc<Device>, anisotropy: f32) -> Self {
         let info = SamplerCreateInfo::builder()
             .mag_filter(Filter::LINEAR)
             .min_filter(Filter::LINEAR)
             .address_mode_u(SamplerAddressMode::REPEAT)
             .address_mode_v(SamplerAddressMode::REPEAT)
             .address_mode_w(SamplerAddressMode::REPEAT)
-            .anisotropy_enable(anisotropy_value != 0.0)
-            .max_anisotropy(anisotropy_value)
+            .anisotropy_enable(anisotropy != 0.0)
+            .max_anisotropy(anisotropy)
             .border_color(BorderColor::INT_OPAQUE_BLACK)
             .unnormalized_coordinates(false)
             .compare_enable(false)
@@ -73,16 +62,6 @@ impl Drop for Sampler {
     fn drop(&mut self) {
         unsafe {
             self.device().logical().destroy_sampler(self.vk, None);
-        }
-    }
-}
-
-impl Anisotropy {
-    pub fn new(value: f32) -> Self {
-        if value > 0.0 && value <= 16.0 {
-            Self::Enabled(value)
-        } else {
-            Self::Disabled
         }
     }
 }

@@ -62,6 +62,7 @@ impl Buffer for DynamicBuffer {
 impl Drop for DynamicBuffer {
     fn drop(&mut self) {
         unsafe {
+            self.device().wait_for_idle();
             self.device().logical().destroy_buffer(self.vk, None);
             self.device().logical().free_memory(self.memory, None);
         }

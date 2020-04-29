@@ -64,6 +64,10 @@ impl<'a> Target<'a> {
         self.draw(self.builtins.get_mesh(BuiltinMesh::Cube), transform);
     }
 
+    pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
+        self.draw(self.builtins.get_mesh(BuiltinMesh::Sphere), transform);
+    }
+
     pub fn add_directional_light(
         &mut self,
         direction: impl Into<Vector3>,

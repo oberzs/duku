@@ -13,6 +13,7 @@ pub use winit::event::VirtualKeyCode as Key;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
+use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder as WinitWindowBuilder;
 
@@ -49,8 +50,8 @@ impl Window {
         }
     }
 
-    pub fn start_loop<F: FnMut(&Events) + 'static>(self, mut draw: F) {
-        let event_loop = self.event_loop;
+    pub fn start_loop<F: FnMut(&Events)>(self, mut draw: F) {
+        let mut event_loop = self.event_loop;
         let window = self.window;
 
         let mut events = Events {
@@ -64,7 +65,7 @@ impl Window {
         let mut frame_time = Instant::now();
 
         info!("staring event loop");
-        event_loop.run(move |event, _, control_flow| {
+        event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
             match event {
                 Event::WindowEvent {

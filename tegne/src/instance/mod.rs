@@ -10,10 +10,9 @@ mod window_surface;
 
 pub(crate) use command_recorder::CommandRecorder;
 pub(crate) use device::Device;
-use device::VSync;
 use extensions::Extensions;
 pub(crate) use swapchain::Swapchain;
-use target::Target;
+pub use target::Target;
 pub use tegne::Tegne;
 use validator::Validator;
 use vulkan::Vulkan;

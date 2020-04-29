@@ -65,14 +65,8 @@ pub(crate) struct DeviceProperties {
     pub(crate) memory_properties: PhysicalDeviceMemoryProperties,
     pub(crate) graphics_index: u32,
     pub(crate) present_index: u32,
-    pub(crate) vsync: VSync,
+    pub(crate) vsync: bool,
     pub(crate) msaa: u8,
-}
-
-#[derive(Copy, Clone)]
-pub(crate) enum VSync {
-    Enabled,
-    Disabled,
 }
 
 impl Device {
@@ -80,7 +74,7 @@ impl Device {
         vulkan: &Vulkan,
         surface: &WindowSurface,
         exts: &Extensions,
-        vsync: VSync,
+        vsync: bool,
         msaa: u8,
     ) -> Rc<Self> {
         info!("looking for suitable GPU");
@@ -134,8 +128,8 @@ impl Device {
                 info!(
                     "using VSync {}",
                     match vsync {
-                        VSync::Enabled => "enabled",
-                        VSync::Disabled => "disabled",
+                        true => "enabled",
+                        false => "disabled",
                     }
                 );
                 info!("using MSAA level {}", msaa);
@@ -327,8 +321,8 @@ impl Device {
 
     pub(crate) fn pick_present_mode(&self) -> PresentModeKHR {
         match self.properties.vsync {
-            VSync::Enabled => PresentModeKHR::FIFO,
-            VSync::Disabled => PresentModeKHR::IMMEDIATE,
+            true => PresentModeKHR::FIFO,
+            false => PresentModeKHR::IMMEDIATE,
         }
     }
 

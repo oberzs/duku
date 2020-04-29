@@ -1,3 +1,6 @@
+mod cube;
+
+use cube::Cube;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
@@ -13,9 +16,12 @@ fn main() {
         .build();
     let tegne = Tegne::builder()
         .with_window(&window)
-        .with_msaa(2)
+        .with_anisotropy(16.0)
+        .with_msaa(4)
         .with_vsync()
         .build();
+
+    let cube = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0);
 
     let mut controller = Controller::default();
 
@@ -29,7 +35,7 @@ fn main() {
     let mut light_pos = 0.0f32;
     let light_speed = 0.01;
 
-    window.start_loop(move |events| {
+    window.start_loop(|events| {
         controller.update(&mut camera, events);
 
         let light_x = light_pos.cos();
@@ -40,7 +46,7 @@ fn main() {
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
             target.add_directional_light([light_x, -1.0, light_z], [1.0, 1.0, 1.0]);
-            target.draw_cube([0.0, 0.0, 0.0]);
+            cube.draw(target);
         });
         tegne.end_draw();
     });

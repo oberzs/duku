@@ -10,7 +10,11 @@ mod shaders;
 mod sync;
 mod utils;
 
+pub use images::Texture;
+pub use instance::Target;
 pub use instance::Tegne;
+pub use mesh::Mesh;
+pub use shaders::Material;
 pub use shaders::Shader;
 
 #[cfg(feature = "tegne-utils")]
