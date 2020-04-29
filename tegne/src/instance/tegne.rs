@@ -198,7 +198,6 @@ impl Tegne {
 impl Drop for Tegne {
     fn drop(&mut self) {
         self.device.wait_for_idle();
-        println!("drop tegne");
     }
 }
 

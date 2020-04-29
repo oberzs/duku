@@ -18,6 +18,8 @@ pub use shaders::Material;
 pub use shaders::Shader;
 
 #[cfg(feature = "tegne-utils")]
+pub use tegne_utils::read_image;
+#[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Controller;
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Events;
