@@ -26,7 +26,6 @@ use std::cmp;
 use std::rc::Rc;
 use std::rc::Weak;
 
-use super::LayoutChange;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::utils::OrError;
@@ -104,7 +103,8 @@ impl Image {
         recorder.begin_one_time();
 
         for i in 1..self.mip_levels {
-            LayoutChange::new(&recorder, self)
+            recorder
+                .change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .from_write()
                 .to_read()
@@ -151,14 +151,16 @@ impl Image {
 
             recorder.blit_image(self.vk, self.vk, blit);
 
-            LayoutChange::new(&recorder, self)
+            recorder
+                .change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .from_read()
                 .to_shader_read()
                 .record();
         }
 
-        LayoutChange::new(&recorder, self)
+        recorder
+            .change_image_layout(self)
             .with_mips(self.mip_levels - 1, 1)
             .from_write()
             .to_shader_read()

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use tegne_math::Camera;
 use tegne_math::Matrix4;
+use tegne_math::Vector3;
 
 use super::Device;
 use super::Extensions;
@@ -12,6 +13,7 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::WindowSurface;
+use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinShader;
 use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
@@ -36,6 +38,7 @@ use tegne_utils::Window;
 pub struct Tegne {
     builtins: Builtins,
     window_framebuffers: Vec<Framebuffer>,
+    shadow_framebuffer: Framebuffer,
     render_passes: HashMap<RenderPassType, RenderPass>,
     image_uniforms: ImageUniforms,
     shader_layout: ShaderLayout,
@@ -54,10 +57,10 @@ pub struct TegneBuilder {
 }
 
 #[derive(Hash, Eq, PartialEq)]
-enum RenderPassType {
-    ColorOnscreen,
-    ColorOffscreen,
-    DepthOffscreen,
+pub(crate) enum RenderPassType {
+    Window,
+    Color,
+    Depth,
 }
 
 impl Tegne {
@@ -89,13 +92,22 @@ impl Tegne {
         draw_callback(&mut target);
 
         let (proj, view) = camera.matrices();
+        let light_pos = Vector3::new(5.0, 5.0, -5.0);
+        let light_matrix = Matrix4::orthographic(10.0, 10.0, 0.1, 100.0)
+            * Matrix4::look_rotation(-light_pos, Vector3::up())
+            * Matrix4::translation(-light_pos);
 
         let clear = target.clear();
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-        let render_pass = self
+        let shadow_framebuffer = &self.shadow_framebuffer;
+        let window_pass = self
             .render_passes
-            .get(&RenderPassType::ColorOnscreen)
+            .get(&RenderPassType::Window)
+            .or_error("render passes not setup");
+        let depth_pass = self
+            .render_passes
+            .get(&RenderPassType::Depth)
             .or_error("render passes not setup");
 
         let world_uniforms = framebuffer.world_uniforms();
@@ -103,7 +115,7 @@ impl Tegne {
             proj,
             view,
             lights: target.lights(),
-            light_matrix: Matrix4::identity(),
+            light_matrix,
             view_pos: camera.transform().position,
             time: 0.0,
         });
@@ -112,7 +124,40 @@ impl Tegne {
 
         recorder.bind_descriptor(world_uniforms.descriptor(), self.shader_layout.pipeline());
 
-        recorder.begin_render_pass(framebuffer, render_pass, clear);
+        // shadow mapping
+        recorder.begin_render_pass(shadow_framebuffer, depth_pass, clear);
+        recorder.set_view(shadow_framebuffer.width(), shadow_framebuffer.height());
+        recorder.set_line_width(1.0);
+
+        let shadow_material = self.builtins.get_material(BuiltinMaterial::Shadow);
+        recorder.bind_pipeline(shadow_material.pipeline());
+        recorder.bind_descriptor(
+            shadow_material.uniforms().descriptor(),
+            self.shader_layout.pipeline(),
+        );
+
+        for mat_order in target.material_orders() {
+            for order in mat_order.orders.iter() {
+                recorder.set_push_constant(
+                    PushConstants {
+                        model: order.model,
+                        albedo_index: shadow_material.albedo_index(),
+                    },
+                    self.shader_layout.pipeline(),
+                );
+
+                recorder.bind_vertex_buffer(order.vertex_buffer);
+                recorder.bind_index_buffer(order.index_buffer);
+
+                recorder.draw(order.index_count);
+            }
+        }
+
+        recorder.end_render_pass();
+        shadow_framebuffer.blit_to_shader_image(&recorder);
+
+        // normal render
+        recorder.begin_render_pass(framebuffer, window_pass, clear);
         recorder.set_view(framebuffer.width(), framebuffer.height());
         recorder.set_line_width(1.0);
 
@@ -173,7 +218,7 @@ impl Tegne {
         debug!("creating framebuffer");
         let render_pass = self
             .render_passes
-            .get(&RenderPassType::ColorOffscreen)
+            .get(&RenderPassType::Color)
             .or_error("render passes not setup");
         Framebuffer::new(
             &self.device,
@@ -189,7 +234,7 @@ impl Tegne {
         debug!("creating shader");
         let render_pass = self
             .render_passes
-            .get(&RenderPassType::ColorOffscreen)
+            .get(&RenderPassType::Color)
             .or_error("render passes not setup");
         Shader::builder(&self.device, render_pass, &self.shader_layout)
     }
@@ -229,30 +274,42 @@ impl TegneBuilder {
 
         let image_uniforms = ImageUniforms::new(&device, &shader_layout, self.anisotropy);
 
-        let coff_render_pass = RenderPass::color_offscreen(&device);
-        let con_render_pass = RenderPass::color_onscreen(&device);
-        let doff_render_pass = RenderPass::depth_offscreen(&device);
+        let mut render_passes = HashMap::new();
+        render_passes.insert(RenderPassType::Color, RenderPass::color(&device));
+        render_passes.insert(RenderPassType::Window, RenderPass::window(&device));
+        render_passes.insert(RenderPassType::Depth, RenderPass::depth(&device));
 
-        let builtins = Builtins::new(&device, &con_render_pass, &shader_layout, &image_uniforms);
+        let builtins = Builtins::new(&device, &render_passes, &shader_layout, &image_uniforms);
+
+        let window_pass = render_passes
+            .get(&RenderPassType::Window)
+            .or_error("render passes not setup");
+        let depth_pass = render_passes
+            .get(&RenderPassType::Depth)
+            .or_error("render passes not setup");
 
         let window_framebuffers = Framebuffer::for_window(
             &device,
             &swapchain,
-            &con_render_pass,
+            &window_pass,
+            &image_uniforms,
+            &shader_layout,
+            window_args.width,
+            window_args.height,
+        );
+        let shadow_framebuffer = Framebuffer::new(
+            &device,
+            &depth_pass,
             &image_uniforms,
             &shader_layout,
             window_args.width,
             window_args.height,
         );
 
-        let mut render_passes = HashMap::new();
-        render_passes.insert(RenderPassType::ColorOffscreen, coff_render_pass);
-        render_passes.insert(RenderPassType::ColorOnscreen, con_render_pass);
-        render_passes.insert(RenderPassType::DepthOffscreen, doff_render_pass);
-
         Tegne {
             builtins,
             window_framebuffers,
+            shadow_framebuffer,
             render_passes,
             image_uniforms,
             shader_layout,

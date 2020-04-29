@@ -18,7 +18,7 @@ use ash::vk::DependencyFlags;
 use ash::vk::DescriptorSet;
 use ash::vk::Extent2D;
 use ash::vk::Filter;
-use ash::vk::Image;
+use ash::vk::Image as VkImage;
 use ash::vk::ImageBlit;
 use ash::vk::ImageLayout;
 use ash::vk::ImageMemoryBarrier;
@@ -41,6 +41,8 @@ use std::slice;
 
 use super::Device;
 use crate::images::Framebuffer;
+use crate::images::Image;
+use crate::images::LayoutChange;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::utils::OrError;
@@ -308,7 +310,7 @@ impl CommandRecorder {
     pub(crate) fn copy_buffer_to_image(
         &self,
         buffer: Buffer,
-        image: Image,
+        image: VkImage,
         region: BufferImageCopy,
     ) {
         let regions = [region];
@@ -323,7 +325,7 @@ impl CommandRecorder {
         }
     }
 
-    pub(crate) fn blit_image(&self, src: Image, dst: Image, blit: ImageBlit) {
+    pub(crate) fn blit_image(&self, src: VkImage, dst: VkImage, blit: ImageBlit) {
         let regions = [blit];
         unsafe {
             self.device().logical().cmd_blit_image(
@@ -336,6 +338,10 @@ impl CommandRecorder {
                 Filter::LINEAR,
             );
         }
+    }
+
+    pub(crate) fn change_image_layout<'a>(&'a self, image: &'a Image) -> LayoutChange<'a> {
+        LayoutChange::new(self, image)
     }
 
     pub(crate) fn manual_drop(&mut self, logical: &LogicalDevice) {

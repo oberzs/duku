@@ -13,6 +13,7 @@ pub(crate) use device::Device;
 use extensions::Extensions;
 pub(crate) use swapchain::Swapchain;
 pub use target::Target;
+pub(crate) use tegne::RenderPassType;
 pub use tegne::Tegne;
 use validator::Validator;
 use vulkan::Vulkan;

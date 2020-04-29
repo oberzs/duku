@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use crate::images::Texture;
 use crate::instance::Device;
+use crate::instance::RenderPassType;
 use crate::mesh::Mesh;
 use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
@@ -35,7 +36,7 @@ pub(crate) struct Builtins {
 impl Builtins {
     pub(crate) fn new(
         device: &Rc<Device>,
-        pass: &RenderPass,
+        passes: &HashMap<RenderPassType, RenderPass>,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
     ) -> Self {
@@ -43,7 +44,7 @@ impl Builtins {
         let meshes = builtin_meshes(device);
 
         debug!("creating builtin shaders");
-        let shaders = builtin_shaders(device, pass, layout);
+        let shaders = builtin_shaders(device, passes, layout);
 
         debug!("creating builtin textures");
         let textures = builtin_textures(device, uniforms);

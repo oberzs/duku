@@ -6,7 +6,6 @@ use std::cmp;
 use std::rc::Rc;
 
 use super::Image;
-use super::LayoutChange;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::memory::alloc;
@@ -67,7 +66,8 @@ impl Texture {
 
         let recorder = CommandRecorder::new(device);
         recorder.begin_one_time();
-        LayoutChange::new(&recorder, &image)
+        recorder
+            .change_image_layout(&image)
             .with_mips(0, mip_levels)
             .to_write()
             .record();

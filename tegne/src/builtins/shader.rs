@@ -3,9 +3,11 @@ use std::rc::Rc;
 use tegne_macro::include_shader;
 
 use crate::instance::Device;
+use crate::instance::RenderPassType;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
+use crate::utils::OrError;
 
 macro_rules! include_builtin_shader {
     ($path:expr) => {
@@ -24,10 +26,17 @@ pub(crate) enum BuiltinShader {
 
 pub(crate) fn builtin_shaders(
     device: &Rc<Device>,
-    pass: &RenderPass,
+    passes: &HashMap<RenderPassType, RenderPass>,
     layout: &ShaderLayout,
 ) -> HashMap<BuiltinShader, Shader> {
     let mut map = HashMap::new();
+
+    let color_pass = passes
+        .get(&RenderPassType::Color)
+        .or_error("render passes not setup");
+    let depth_pass = passes
+        .get(&RenderPassType::Depth)
+        .or_error("render passes not setup");
 
     let world_vert = include_builtin_shader!("world.vert");
     let passthru_vert = include_builtin_shader!("passthru.vert");
@@ -39,21 +48,21 @@ pub(crate) fn builtin_shaders(
 
     map.insert(
         BuiltinShader::Phong,
-        Shader::builder(&device, &pass, &layout)
+        Shader::builder(&device, &color_pass, &layout)
             .with_vert_source(world_vert)
             .with_frag_source(phong_frag)
             .build(),
     );
     map.insert(
         BuiltinShader::Unshaded,
-        Shader::builder(&device, &pass, &layout)
+        Shader::builder(&device, &color_pass, &layout)
             .with_vert_source(world_vert)
             .with_frag_source(passthru_frag)
             .build(),
     );
     map.insert(
         BuiltinShader::Passthru,
-        Shader::builder(&device, &pass, &layout)
+        Shader::builder(&device, &color_pass, &layout)
             .with_vert_source(passthru_vert)
             .with_frag_source(passthru_frag)
             .with_no_depth()
@@ -61,14 +70,14 @@ pub(crate) fn builtin_shaders(
     );
     map.insert(
         BuiltinShader::Shadow,
-        Shader::builder(&device, &pass, &layout)
+        Shader::builder(&device, &depth_pass, &layout)
             .with_vert_source(shadow_vert)
             .with_frag_source(shadow_frag)
             .build(),
     );
     map.insert(
         BuiltinShader::Wireframe,
-        Shader::builder(&device, &pass, &layout)
+        Shader::builder(&device, &color_pass, &layout)
             .with_vert_source(world_vert)
             .with_frag_source(wireframe_frag)
             .with_lines()

@@ -1,6 +1,3 @@
-#include "frag.glsl"
+#include "frag-depth.glsl"
 
-void main() {
-    float z = POSITION.z;
-    COLOR = vec4(z, z, z, 1.0);
-}
+void main() {}

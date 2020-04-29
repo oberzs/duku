@@ -24,8 +24,8 @@ pub(crate) struct RenderPass {
 }
 
 impl RenderPass {
-    pub(crate) fn color_offscreen(device: &Rc<Device>) -> Self {
-        debug!("creating offscreen color render pass");
+    pub(crate) fn color(device: &Rc<Device>) -> Self {
+        debug!("creating color render pass");
 
         let mut attachments = HashMap::new();
 
@@ -72,8 +72,8 @@ impl RenderPass {
         Self::from_attachments(device, attachments)
     }
 
-    pub(crate) fn color_onscreen(device: &Rc<Device>) -> Self {
-        debug!("creating onscreen color render pass");
+    pub(crate) fn window(device: &Rc<Device>) -> Self {
+        debug!("creating window render pass");
 
         let mut attachments = HashMap::new();
 
@@ -120,7 +120,7 @@ impl RenderPass {
         Self::from_attachments(device, attachments)
     }
 
-    pub(crate) fn depth_offscreen(device: &Rc<Device>) -> Self {
+    pub(crate) fn depth(device: &Rc<Device>) -> Self {
         debug!("creating offscreen depth render pass");
 
         let mut attachments = HashMap::new();

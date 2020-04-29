@@ -1,13 +1,17 @@
 use ash::version::DeviceV1_0;
 use ash::vk::Framebuffer as VkFramebuffer;
 use ash::vk::FramebufferCreateInfo;
+use ash::vk::ImageAspectFlags;
+use ash::vk::ImageBlit;
+use ash::vk::ImageSubresourceLayers;
 use ash::vk::ImageUsageFlags;
+use ash::vk::Offset3D;
 use log::debug;
+use std::cell::Ref;
 use std::rc::Rc;
 use std::rc::Weak;
 
 use super::Image;
-use super::LayoutChange;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::instance::Swapchain;
@@ -117,6 +121,7 @@ impl Framebuffer {
                     .with_depth()
                     .with_view()
                     .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
+                    .with_usage(ImageUsageFlags::TRANSFER_SRC)
                     .build(),
             );
         }
@@ -166,17 +171,28 @@ impl Framebuffer {
         width: u32,
         height: u32,
     ) -> Self {
-        let shader_image = Image::builder(device)
-            .with_size(width, height)
-            .with_bgra_color()
-            .with_view()
-            .with_usage(ImageUsageFlags::TRANSFER_DST)
-            .with_usage(ImageUsageFlags::SAMPLED)
-            .build();
+        let shader_image = if images.last().or_error("no images").is_depth_format() {
+            Image::builder(device)
+                .with_size(width, height)
+                .with_depth()
+                .with_view()
+                .with_usage(ImageUsageFlags::TRANSFER_DST)
+                .with_usage(ImageUsageFlags::SAMPLED)
+                .build()
+        } else {
+            Image::builder(device)
+                .with_size(width, height)
+                .with_bgra_color()
+                .with_view()
+                .with_usage(ImageUsageFlags::TRANSFER_DST)
+                .with_usage(ImageUsageFlags::SAMPLED)
+                .build()
+        };
 
         let recorder = CommandRecorder::new(device);
         recorder.begin_one_time();
-        LayoutChange::new(&recorder, &shader_image)
+        recorder
+            .change_image_layout(&shader_image)
             .to_shader_read()
             .record();
         device.submit_buffer(recorder.end());
@@ -214,6 +230,81 @@ impl Framebuffer {
             world_uniforms,
             device: Rc::downgrade(device),
         }
+    }
+
+    pub(crate) fn blit_to_shader_image(&self, recorder: &Ref<'_, CommandRecorder>) {
+        println!("shader index: {}", self.shader_index);
+        let image = self
+            .attachment_images
+            .last()
+            .or_error("no attachment images");
+        let is_depth = image.is_depth_format();
+        let aspect_mask = match is_depth {
+            true => ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL,
+            false => ImageAspectFlags::COLOR,
+        };
+
+        if is_depth {
+            recorder
+                .change_image_layout(image)
+                .from_depth_write()
+                .to_read()
+                .record();
+        } else {
+            recorder
+                .change_image_layout(image)
+                .from_color_write()
+                .to_read()
+                .record();
+        }
+        recorder
+            .change_image_layout(&self.shader_image)
+            .from_shader_read()
+            .to_write()
+            .record();
+
+        let offsets = [
+            Offset3D::default(),
+            Offset3D {
+                x: self.width as i32,
+                y: self.height as i32,
+                z: 1,
+            },
+        ];
+        let subresource = ImageSubresourceLayers::builder()
+            .aspect_mask(aspect_mask)
+            .mip_level(0)
+            .base_array_layer(0)
+            .layer_count(1)
+            .build();
+
+        let blit = ImageBlit::builder()
+            .src_offsets(offsets)
+            .src_subresource(subresource)
+            .dst_offsets(offsets)
+            .dst_subresource(subresource)
+            .build();
+
+        recorder.blit_image(image.vk(), self.shader_image.vk(), blit);
+
+        if is_depth {
+            recorder
+                .change_image_layout(image)
+                .from_read()
+                .to_depth_write()
+                .record();
+        } else {
+            recorder
+                .change_image_layout(image)
+                .from_read()
+                .to_color_write()
+                .record();
+        }
+        recorder
+            .change_image_layout(&self.shader_image)
+            .from_write()
+            .to_shader_read()
+            .record();
     }
 
     pub(crate) fn vk(&self) -> VkFramebuffer {
