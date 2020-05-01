@@ -94,7 +94,7 @@ impl Tegne {
         let (proj, view) = camera.matrices();
         let light_pos = Vector3::new(5.0, 5.0, -5.0);
         let light_matrix = Matrix4::orthographic(10.0, 10.0, 0.1, 100.0)
-            * Matrix4::look_rotation(-light_pos, Vector3::up())
+            * Matrix4::look_rotation(-light_pos.unit(), Vector3::up())
             * Matrix4::translation(-light_pos);
 
         let clear = target.clear();

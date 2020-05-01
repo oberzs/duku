@@ -120,6 +120,7 @@ impl Framebuffer {
                     .with_size(width, height)
                     // .with_samples() // for now
                     .with_depth()
+                    .with_stencil()
                     .with_view()
                     .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
                     .with_usage(ImageUsageFlags::TRANSFER_SRC)
@@ -239,15 +240,11 @@ impl Framebuffer {
             .last()
             .or_error("no attachment images");
         let is_depth = image.is_depth_format();
-        let aspect_mask = match is_depth {
-            true => ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL,
-            false => ImageAspectFlags::COLOR,
-        };
 
         if is_depth {
             recorder
                 .change_image_layout(image)
-                // .from_depth_write() i dunno why yet
+                .from_depth_write()
                 .to_read()
                 .record();
         } else {
@@ -271,6 +268,10 @@ impl Framebuffer {
                 z: 1,
             },
         ];
+        let aspect_mask = match is_depth {
+            true => ImageAspectFlags::DEPTH,
+            false => ImageAspectFlags::COLOR,
+        };
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(aspect_mask)
             .mip_level(0)

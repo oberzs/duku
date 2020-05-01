@@ -10,5 +10,5 @@ layout(location = 2) out vec2 out_uv;
 layout(location = 3) out vec4 out_ls_position;
 
 void main() {
-    gl_Position = vec4(0.5 * in_position, 1.0);
+    gl_Position = world.light_mat * object.model_mat * vec4(0.5 * in_position, 1.0);
 }

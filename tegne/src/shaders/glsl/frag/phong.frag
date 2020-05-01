@@ -66,11 +66,13 @@ vec3 calc_point_light(Light light, vec3 normal, vec3 cam_dir, vec3 pos, float sh
 float calc_shadow(vec4 ls_position) {
     // perspective divide
     vec3 proj_coords = ls_position.xyz / ls_position.w;
-    // to [0,1]
-    proj_coords = proj_coords * 0.5 + 0.5;
-    float closest_depth = texture(shadow_map, proj_coords.xy).r;
+
+    // to [0, 1]
+    vec2 uv = proj_coords.xy * 0.5 + 0.5;
+
+    float closest_depth = texture(shadow_map, uv).r;
     float current_depth = proj_coords.z;
-    float shadow = current_depth > closest_depth ? 1.0 : 0.0;
+    float shadow = current_depth < closest_depth ? 1.0 : 0.0;
 
     return shadow;
 }

@@ -158,19 +158,14 @@ impl RenderPass {
         );
 
         let dependency = SubpassDependency::builder()
-            .src_subpass(SUBPASS_EXTERNAL)
-            .dst_subpass(0)
+            .src_subpass(0)
+            .dst_subpass(SUBPASS_EXTERNAL)
             .src_stage_mask(
                 PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS,
             )
-            .src_access_mask(AccessFlags::empty())
-            .dst_stage_mask(
-                PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS,
-            )
-            .dst_access_mask(
-                AccessFlags::DEPTH_STENCIL_ATTACHMENT_READ
-                    | AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
-            )
+            .src_access_mask(AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
+            .dst_stage_mask(PipelineStageFlags::TRANSFER)
+            .dst_access_mask(AccessFlags::TRANSFER_READ)
             .build();
 
         Self::from_attachments(device, attachments, dependency)

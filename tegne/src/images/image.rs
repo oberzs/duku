@@ -52,6 +52,7 @@ pub(crate) struct ImageBuilder {
     view: bool,
     mipmaps: bool,
     image: Option<VkImage>,
+    stencil: bool,
 }
 
 impl Image {
@@ -66,6 +67,7 @@ impl Image {
             view: false,
             mipmaps: false,
             image: None,
+            stencil: false,
         }
     }
 
@@ -234,6 +236,11 @@ impl ImageBuilder {
         self
     }
 
+    pub(crate) fn with_stencil(&mut self) -> &mut Self {
+        self.stencil = true;
+        self
+    }
+
     pub(crate) fn build(&self) -> Image {
         let mip_levels = if self.mipmaps {
             (cmp::max(self.width, self.height) as f32).log2().floor() as u32 + 1
@@ -303,11 +310,15 @@ impl ImageBuilder {
         // create view
         let view = match self.view {
             true => {
-                let aspect_flags = if self.format == self.device().pick_depth_format() {
+                let mut aspect_flags = if self.format == self.device().pick_depth_format() {
                     ImageAspectFlags::DEPTH
                 } else {
                     ImageAspectFlags::COLOR
                 };
+                if self.stencil {
+                    aspect_flags |= ImageAspectFlags::STENCIL;
+                }
+
                 let subresource = ImageSubresourceRange::builder()
                     .aspect_mask(aspect_flags)
                     .base_mip_level(0)

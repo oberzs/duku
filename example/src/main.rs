@@ -13,9 +13,11 @@ use floor::Floor;
 fn main() {
     pretty_env_logger::init();
 
+    let (width, height) = (720, 640);
+
     let window = Window::builder()
         .with_title("Tegne example")
-        .with_size(640, 480)
+        .with_size(width, height)
         .build();
     let tegne = Tegne::builder()
         .with_window(&window)
@@ -29,7 +31,7 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    let mut camera = Camera::perspective(640, 480, 90);
+    let mut camera = Camera::perspective(width, height, 90);
     {
         let transform = camera.transform_mut();
         transform.move_by([1.0, 1.0, 3.0]);
