@@ -1,4 +1,5 @@
 use ash::version::DeviceV1_0;
+use ash::vk::Filter;
 use ash::vk::Framebuffer as VkFramebuffer;
 use ash::vk::FramebufferCreateInfo;
 use ash::vk::ImageAspectFlags;
@@ -117,7 +118,7 @@ impl Framebuffer {
             images.push(
                 Image::builder(device)
                     .with_size(width, height)
-                    .with_samples()
+                    // .with_samples() // for now
                     .with_depth()
                     .with_view()
                     .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
@@ -233,7 +234,6 @@ impl Framebuffer {
     }
 
     pub(crate) fn blit_to_shader_image(&self, recorder: &Ref<'_, CommandRecorder>) {
-        println!("shader index: {}", self.shader_index);
         let image = self
             .attachment_images
             .last()
@@ -247,7 +247,7 @@ impl Framebuffer {
         if is_depth {
             recorder
                 .change_image_layout(image)
-                .from_depth_write()
+                // .from_depth_write() i dunno why yet
                 .to_read()
                 .record();
         } else {
@@ -285,7 +285,12 @@ impl Framebuffer {
             .dst_subresource(subresource)
             .build();
 
-        recorder.blit_image(image.vk(), self.shader_image.vk(), blit);
+        let filter = match is_depth {
+            true => Filter::NEAREST,
+            false => Filter::LINEAR,
+        };
+
+        recorder.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
 
         if is_depth {
             recorder

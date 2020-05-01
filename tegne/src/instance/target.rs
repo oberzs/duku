@@ -74,7 +74,7 @@ impl<'a> Target<'a> {
         color: impl Into<Vector3>,
     ) {
         self.lights.push(Light {
-            position: direction.into().extend(0.0),
+            coords: direction.into().extend(0.0),
             color: color.into(),
         });
     }

@@ -325,7 +325,7 @@ impl CommandRecorder {
         }
     }
 
-    pub(crate) fn blit_image(&self, src: VkImage, dst: VkImage, blit: ImageBlit) {
+    pub(crate) fn blit_image(&self, src: VkImage, dst: VkImage, blit: ImageBlit, filter: Filter) {
         let regions = [blit];
         unsafe {
             self.device().logical().cmd_blit_image(
@@ -335,7 +335,7 @@ impl CommandRecorder {
                 dst,
                 ImageLayout::TRANSFER_DST_OPTIMAL,
                 &regions,
-                Filter::LINEAR,
+                filter,
             );
         }
     }

@@ -69,7 +69,18 @@ impl RenderPass {
             );
         }
 
-        Self::from_attachments(device, attachments)
+        let dependency = SubpassDependency::builder()
+            .src_subpass(SUBPASS_EXTERNAL)
+            .dst_subpass(0)
+            .src_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .src_access_mask(AccessFlags::empty())
+            .dst_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .dst_access_mask(
+                AccessFlags::COLOR_ATTACHMENT_READ | AccessFlags::COLOR_ATTACHMENT_WRITE,
+            )
+            .build();
+
+        Self::from_attachments(device, attachments, dependency)
     }
 
     pub(crate) fn window(device: &Rc<Device>) -> Self {
@@ -117,7 +128,18 @@ impl RenderPass {
             );
         }
 
-        Self::from_attachments(device, attachments)
+        let dependency = SubpassDependency::builder()
+            .src_subpass(SUBPASS_EXTERNAL)
+            .dst_subpass(0)
+            .src_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .src_access_mask(AccessFlags::empty())
+            .dst_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .dst_access_mask(
+                AccessFlags::COLOR_ATTACHMENT_READ | AccessFlags::COLOR_ATTACHMENT_WRITE,
+            )
+            .build();
+
+        Self::from_attachments(device, attachments, dependency)
     }
 
     pub(crate) fn depth(device: &Rc<Device>) -> Self {
@@ -130,29 +152,36 @@ impl RenderPass {
             Attachment::builder(device)
                 .with_index(0)
                 .with_depth()
-                .with_samples()
                 .with_store()
                 .with_clear()
                 .build(),
         );
 
-        Self::from_attachments(device, attachments)
+        let dependency = SubpassDependency::builder()
+            .src_subpass(SUBPASS_EXTERNAL)
+            .dst_subpass(0)
+            .src_stage_mask(
+                PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS,
+            )
+            .src_access_mask(AccessFlags::empty())
+            .dst_stage_mask(
+                PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS,
+            )
+            .dst_access_mask(
+                AccessFlags::DEPTH_STENCIL_ATTACHMENT_READ
+                    | AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+            )
+            .build();
+
+        Self::from_attachments(device, attachments, dependency)
     }
 
     fn from_attachments(
         device: &Rc<Device>,
         attachments: HashMap<AttachmentType, Attachment>,
+        dependency: SubpassDependency,
     ) -> Self {
-        let dependencies = [SubpassDependency::builder()
-            .src_subpass(SUBPASS_EXTERNAL)
-            .dst_subpass(0)
-            .src_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-            .src_access_mask(AccessFlags::empty())
-            .dst_stage_mask(PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-            .dst_access_mask(
-                AccessFlags::COLOR_ATTACHMENT_READ | AccessFlags::COLOR_ATTACHMENT_WRITE,
-            )
-            .build()];
+        let dependencies = [dependency];
 
         let mut subpass_builder =
             SubpassDescription::builder().pipeline_bind_point(PipelineBindPoint::GRAPHICS);
@@ -197,6 +226,10 @@ impl RenderPass {
             attachments,
             device: Rc::downgrade(device),
         }
+    }
+
+    pub(crate) fn is_multisampled(&self) -> bool {
+        self.attachments.contains_key(&AttachmentType::Resolve)
     }
 
     pub(crate) fn vk(&self) -> VkRenderPass {

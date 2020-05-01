@@ -69,7 +69,8 @@ impl<'a> LayoutChange<'a> {
     pub(crate) fn from_depth_write(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self.src_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
-        self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
+        self.src_stage =
+            PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS;
         self
     }
 
@@ -104,7 +105,8 @@ impl<'a> LayoutChange<'a> {
     pub(crate) fn to_depth_write(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self.dst_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
-        self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
+        self.dst_stage =
+            PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS;
         self
     }
 

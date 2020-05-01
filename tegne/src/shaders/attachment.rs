@@ -38,7 +38,7 @@ pub(crate) struct AttachmentBuilder {
 impl Attachment {
     pub(crate) fn builder(device: &Rc<Device>) -> AttachmentBuilder {
         AttachmentBuilder {
-            format: Format::D32_SFLOAT_S8_UINT,
+            format: device.pick_depth_format(),
             layout: ImageLayout::UNDEFINED,
             final_layout: ImageLayout::UNDEFINED,
             samples: SampleCountFlags::TYPE_1,

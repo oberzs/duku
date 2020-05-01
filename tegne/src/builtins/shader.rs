@@ -38,13 +38,13 @@ pub(crate) fn builtin_shaders(
         .get(&RenderPassType::Depth)
         .or_error("render passes not setup");
 
-    let world_vert = include_builtin_shader!("world.vert");
-    let passthru_vert = include_builtin_shader!("passthru.vert");
-    let shadow_vert = include_builtin_shader!("shadow.vert");
-    let phong_frag = include_builtin_shader!("phong.frag");
-    let wireframe_frag = include_builtin_shader!("wireframe.frag");
-    let passthru_frag = include_builtin_shader!("passthru.frag");
-    let shadow_frag = include_builtin_shader!("shadow.frag");
+    let world_vert = include_builtin_shader!("vert/world.vert");
+    let passthru_vert = include_builtin_shader!("vert/passthru.vert");
+    let shadow_vert = include_builtin_shader!("vert/shadow.vert");
+    let phong_frag = include_builtin_shader!("frag/phong.frag");
+    let wireframe_frag = include_builtin_shader!("frag/wireframe.frag");
+    let passthru_frag = include_builtin_shader!("frag/passthru.frag");
+    let shadow_frag = include_builtin_shader!("frag/shadow.frag");
 
     map.insert(
         BuiltinShader::Phong,

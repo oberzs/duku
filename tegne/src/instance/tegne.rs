@@ -112,11 +112,10 @@ impl Tegne {
 
         let world_uniforms = framebuffer.world_uniforms();
         world_uniforms.update(WorldObject {
-            proj,
-            view,
+            cam_mat: proj * view,
+            cam_pos: camera.transform().position,
             lights: target.lights(),
-            light_matrix,
-            view_pos: camera.transform().position,
+            light_mat: light_matrix,
             time: 0.0,
         });
 
@@ -140,7 +139,7 @@ impl Tegne {
             for order in mat_order.orders.iter() {
                 recorder.set_push_constant(
                     PushConstants {
-                        model: order.model,
+                        model_mat: order.model,
                         albedo_index: shadow_material.albedo_index(),
                     },
                     self.shader_layout.pipeline(),
@@ -168,7 +167,7 @@ impl Tegne {
             for order in mat_order.orders.iter() {
                 recorder.set_push_constant(
                     PushConstants {
-                        model: order.model,
+                        model_mat: order.model,
                         albedo_index: mat_order.albedo_index,
                     },
                     self.shader_layout.pipeline(),

@@ -3,6 +3,7 @@ use ash::vk::Buffer;
 use ash::vk::BufferImageCopy;
 use ash::vk::DeviceMemory;
 use ash::vk::Extent3D;
+use ash::vk::Filter;
 use ash::vk::Format;
 use ash::vk::Image as VkImage;
 use ash::vk::ImageAspectFlags;
@@ -60,7 +61,7 @@ impl Image {
             width: 1,
             height: 1,
             samples: SampleCountFlags::TYPE_1,
-            format: Format::R8G8B8A8_UNORM,
+            format: device.pick_rgba_format(),
             usage: ImageUsageFlags::empty(),
             view: false,
             mipmaps: false,
@@ -149,7 +150,7 @@ impl Image {
                 .dst_subresource(dst_subresource)
                 .build();
 
-            recorder.blit_image(self.vk, self.vk, blit);
+            recorder.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
 
             recorder
                 .change_image_layout(self)
@@ -302,11 +303,10 @@ impl ImageBuilder {
         // create view
         let view = match self.view {
             true => {
-                let aspect_flags = match self.format {
-                    Format::D32_SFLOAT_S8_UINT => {
-                        ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL
-                    }
-                    _ => ImageAspectFlags::COLOR,
+                let aspect_flags = if self.format == self.device().pick_depth_format() {
+                    ImageAspectFlags::DEPTH
+                } else {
+                    ImageAspectFlags::COLOR
                 };
                 let subresource = ImageSubresourceRange::builder()
                     .aspect_mask(aspect_flags)

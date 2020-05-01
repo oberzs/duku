@@ -27,6 +27,7 @@ use ash::vk::PolygonMode;
 use ash::vk::PrimitiveTopology;
 use ash::vk::Rect2D;
 use ash::vk::RenderPass as VkRenderPass;
+use ash::vk::SampleCountFlags;
 use ash::vk::ShaderModule;
 use ash::vk::ShaderModuleCreateInfo;
 use ash::vk::ShaderStageFlags;
@@ -57,6 +58,7 @@ pub struct ShaderBuilder {
     enable_depth: bool,
     pipeline_layout: PipelineLayout,
     render_pass: VkRenderPass,
+    is_multisampled: bool,
     device: Weak<Device>,
 }
 
@@ -74,6 +76,7 @@ impl Shader {
             enable_depth: true,
             pipeline_layout: layout.pipeline(),
             render_pass: render_pass.vk(),
+            is_multisampled: render_pass.is_multisampled(),
             device: Rc::downgrade(device),
         }
     }
@@ -159,7 +162,10 @@ impl ShaderBuilder {
             .cull_mode(self.cull_mode)
             .polygon_mode(self.polygon_mode);
 
-        let samples = self.device().pick_sample_count();
+        let samples = match self.is_multisampled {
+            true => self.device().pick_sample_count(),
+            false => SampleCountFlags::TYPE_1,
+        };
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
