@@ -1,5 +1,8 @@
 use ash::version::DeviceV1_0;
 use ash::version::InstanceV1_0;
+use ash::vk::version_major;
+use ash::vk::version_minor;
+use ash::vk::version_patch;
 use ash::vk::ColorSpaceKHR;
 use ash::vk::CommandBuffer;
 use ash::vk::DeviceCreateInfo;
@@ -122,9 +125,16 @@ impl Device {
                     PhysicalDeviceType::VIRTUAL_GPU => "(virtual)",
                     _ => "",
                 };
+                let driver_major = version_major(device_props.driver_version);
+                let driver_minor = version_minor(device_props.driver_version);
+                let driver_patch = version_patch(device_props.driver_version);
+
                 info!("opening GPU");
                 info!("using {:?} {}", device_name, device_type);
-                info!("using driver version {}", device_props.driver_version);
+                info!(
+                    "using driver version {}.{}.{}",
+                    driver_major, driver_minor, driver_patch
+                );
                 info!(
                     "using VSync {}",
                     match vsync {
