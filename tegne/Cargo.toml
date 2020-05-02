@@ -4,12 +4,13 @@ version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
+[package.metadata.commands]
+assets = "python ./compile-assets.py"
+
 [dependencies]
 ash = "0.30.0"
 log = "0.4.8"
 tegne-math = { path = "../tegne-math", version = "0.1.0" }
-tegne-macro = { path = "../tegne-macro", version = "0.1.0" }
-
 tegne-utils = { path = "../tegne-utils", version = "0.1.0", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]

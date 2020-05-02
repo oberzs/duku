@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use tegne_macro::include_shader;
 
 use crate::instance::Device;
 use crate::instance::RenderPassType;
@@ -9,9 +8,9 @@ use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
 
-macro_rules! include_builtin_shader {
+macro_rules! include_shader {
     ($path:expr) => {
-        include_shader!("src/shaders/glsl/", $path)
+        include_bytes!(concat!("../../assets/shaders/spv/", $path, ".spv"))
     };
 }
 
@@ -38,13 +37,13 @@ pub(crate) fn builtin_shaders(
         .get(&RenderPassType::Depth)
         .or_error("render passes not setup");
 
-    let world_vert = include_builtin_shader!("vert/world.vert");
-    let passthru_vert = include_builtin_shader!("vert/passthru.vert");
-    let shadow_vert = include_builtin_shader!("vert/shadow.vert");
-    let phong_frag = include_builtin_shader!("frag/phong.frag");
-    let wireframe_frag = include_builtin_shader!("frag/wireframe.frag");
-    let passthru_frag = include_builtin_shader!("frag/passthru.frag");
-    let shadow_frag = include_builtin_shader!("frag/shadow.frag");
+    let world_vert = include_shader!("world.vert");
+    let passthru_vert = include_shader!("passthru.vert");
+    let shadow_vert = include_shader!("shadow.vert");
+    let phong_frag = include_shader!("phong.frag");
+    let wireframe_frag = include_shader!("wireframe.frag");
+    let passthru_frag = include_shader!("passthru.frag");
+    let shadow_frag = include_shader!("shadow.frag");
 
     map.insert(
         BuiltinShader::Phong,
