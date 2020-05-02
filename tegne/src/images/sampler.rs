@@ -18,16 +18,24 @@ pub(crate) struct Sampler {
 }
 
 impl Sampler {
-    pub(crate) fn new(device: &Rc<Device>, anisotropy: f32) -> Self {
+    pub(crate) fn repeated(device: &Rc<Device>, anisotropy: f32) -> Self {
+        Self::new(device, anisotropy, SamplerAddressMode::REPEAT)
+    }
+
+    pub(crate) fn clamped(device: &Rc<Device>, anisotropy: f32) -> Self {
+        Self::new(device, anisotropy, SamplerAddressMode::CLAMP_TO_BORDER)
+    }
+
+    fn new(device: &Rc<Device>, anisotropy: f32, address_mode: SamplerAddressMode) -> Self {
         let info = SamplerCreateInfo::builder()
             .mag_filter(Filter::LINEAR)
             .min_filter(Filter::LINEAR)
-            .address_mode_u(SamplerAddressMode::REPEAT)
-            .address_mode_v(SamplerAddressMode::REPEAT)
-            .address_mode_w(SamplerAddressMode::REPEAT)
+            .address_mode_u(address_mode)
+            .address_mode_v(address_mode)
+            .address_mode_w(address_mode)
             .anisotropy_enable(anisotropy != 0.0)
             .max_anisotropy(anisotropy)
-            .border_color(BorderColor::INT_OPAQUE_BLACK)
+            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
             .unnormalized_coordinates(false)
             .compare_enable(false)
             .compare_op(CompareOp::ALWAYS)

@@ -9,13 +9,16 @@ layout(location = 0) out vec4 out_color;
 
 vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow);
 vec3 calc_point_light(Light light, vec3 normal, vec3 cam_dir, vec3 pos, float shadow);
-float calc_shadow(vec4 ls_position);
+float calc_shadow(vec4 ls_position, vec3 normal, Light light);
 
 void main() {
     vec3 normal = normalize(in_normal);
     vec3 cam_dir = normalize(world.cam_pos - in_position);
-    float shadow = calc_shadow(in_ls_position);
 
+    // shadows
+    float shadow = calc_shadow(in_ls_position, normal, world.lights[0]);
+
+    // ligthing
     vec3 lighting = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < 4; i++) {
         Light light = world.lights[i];
@@ -27,7 +30,6 @@ void main() {
     }
 
     out_color = texture(albedo, in_uv) * material.albedo_tint * vec4(lighting, 1.0);
-    // out_color = texture(albedo, in_uv) * shadow;
 }
 
 vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {
@@ -64,16 +66,22 @@ vec3 calc_point_light(Light light, vec3 normal, vec3 cam_dir, vec3 pos, float sh
     return (ambient + (diffuse + specular) * (1.0 - shadow));
 }
 
-float calc_shadow(vec4 ls_position) {
+float calc_shadow(vec4 ls_position, vec3 normal, Light light) {
     // perspective divide
     vec3 proj_coords = ls_position.xyz / ls_position.w;
 
     // to [0, 1]
     vec2 uv = proj_coords.xy * 0.5 + 0.5;
 
+    vec3 light_dir = normalize(-light.coords.xyz);
+
     float closest_depth = texture(shadow_map, uv).r;
     float current_depth = proj_coords.z;
     float shadow = current_depth > closest_depth ? 1.0 : 0.0;
+
+    if (current_depth > 1.0) {
+        shadow = 0.0;
+    }
 
     return shadow;
 }

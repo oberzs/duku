@@ -131,6 +131,7 @@ impl Tegne {
         recorder.begin_render_pass(shadow_framebuffer, depth_pass, clear);
         recorder.set_view(shadow_framebuffer.width(), shadow_framebuffer.height());
         recorder.set_line_width(1.0);
+        recorder.set_depth_bias(0.0001, 0.0, 1.0);
 
         let shadow_material = self.builtins.get_material(BuiltinMaterial::Shadow);
         recorder.bind_pipeline(shadow_material.pipeline());
@@ -163,6 +164,7 @@ impl Tegne {
         recorder.begin_render_pass(framebuffer, window_pass, clear);
         recorder.set_view(framebuffer.width(), framebuffer.height());
         recorder.set_line_width(1.0);
+        recorder.set_depth_bias(0.0, 0.0, 1.0);
 
         for mat_order in target.material_orders() {
             recorder.bind_pipeline(mat_order.pipeline);

@@ -21,7 +21,9 @@ layout(push_constant) uniform Constants {
 } object;
 
 layout(set = 2, binding = 0) uniform texture2D textures[100];
-layout(set = 2, binding = 1) uniform sampler linear_sampler;
+layout(set = 2, binding = 1) uniform sampler samplers[2];
 
-#define albedo sampler2D(textures[object.albedo_index], linear_sampler)
-#define shadow_map sampler2D(textures[4], linear_sampler)
+#define linear_repeat_sampler samplers[0]
+#define linear_clamp_sampler samplers[1]
+#define albedo sampler2D(textures[object.albedo_index], linear_repeat_sampler)
+#define shadow_map sampler2D(textures[4], linear_clamp_sampler)

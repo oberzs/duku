@@ -64,7 +64,8 @@ pub(crate) struct MaterialUniforms {
 
 pub(crate) struct ImageUniforms {
     descriptor: DescriptorSet,
-    sampler: Sampler,
+    linear_repeat_sampler: Sampler,
+    linear_clamp_sampler: Sampler,
     images: RefCell<Vec<ImageView>>,
     should_update: Cell<bool>,
     device: Weak<Device>,
@@ -112,11 +113,13 @@ impl ImageUniforms {
         info!("using anisotropy level {}", anisotropy);
 
         let descriptor = layout.image_set();
-        let sampler = Sampler::new(device, anisotropy);
+        let linear_repeat_sampler = Sampler::repeated(device, anisotropy);
+        let linear_clamp_sampler = Sampler::clamped(device, anisotropy);
 
         Self {
             descriptor,
-            sampler,
+            linear_repeat_sampler,
+            linear_clamp_sampler,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
             device: Rc::downgrade(device),
@@ -144,10 +147,16 @@ impl ImageUniforms {
                         .build()
                 })
                 .collect::<Vec<_>>();
-            let sampler_info = [DescriptorImageInfo::builder()
-                .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
-                .sampler(self.sampler.vk())
-                .build()];
+            let sampler_info = [
+                DescriptorImageInfo::builder()
+                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .sampler(self.linear_repeat_sampler.vk())
+                    .build(),
+                DescriptorImageInfo::builder()
+                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .sampler(self.linear_clamp_sampler.vk())
+                    .build(),
+            ];
 
             let image_write = WriteDescriptorSet::builder()
                 .dst_set(self.descriptor)

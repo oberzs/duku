@@ -89,20 +89,21 @@ impl ShaderLayout {
 
         // image layout
         let max_image_count = 100;
+        let sampler_count = 2;
         let image_binding = DescriptorSetLayoutBinding::builder()
             .descriptor_type(DescriptorType::SAMPLED_IMAGE)
             .stage_flags(ShaderStageFlags::FRAGMENT)
             .descriptor_count(max_image_count)
             .binding(0)
             .build();
-        let linear_sampler_binding = DescriptorSetLayoutBinding::builder()
+        let sampler_binding = DescriptorSetLayoutBinding::builder()
             .descriptor_type(DescriptorType::SAMPLER)
             .stage_flags(ShaderStageFlags::FRAGMENT)
-            .descriptor_count(1)
+            .descriptor_count(sampler_count)
             .binding(1)
             .build();
 
-        let image_bindings = [image_binding, linear_sampler_binding];
+        let image_bindings = [image_binding, sampler_binding];
         let image_layout_info = DescriptorSetLayoutCreateInfo::builder().bindings(&image_bindings);
         let image_layout = unsafe {
             device

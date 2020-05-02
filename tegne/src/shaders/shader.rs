@@ -54,7 +54,7 @@ pub struct ShaderBuilder {
     vert_source: Vec<u8>,
     frag_source: Vec<u8>,
     polygon_mode: PolygonMode,
-    cull_mode: CullModeFlags,
+    front_face: FrontFace,
     enable_depth: bool,
     pipeline_layout: PipelineLayout,
     render_pass: VkRenderPass,
@@ -72,7 +72,7 @@ impl Shader {
             vert_source: vec![],
             frag_source: vec![],
             polygon_mode: PolygonMode::FILL,
-            cull_mode: CullModeFlags::BACK,
+            front_face: FrontFace::CLOCKWISE,
             enable_depth: true,
             pipeline_layout: layout.pipeline(),
             render_pass: render_pass.vk(),
@@ -156,10 +156,10 @@ impl ShaderBuilder {
         let rasterizer_state = PipelineRasterizationStateCreateInfo::builder()
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
-            .depth_bias_enable(false)
-            .front_face(FrontFace::CLOCKWISE)
+            .depth_bias_enable(true)
+            .front_face(self.front_face)
             .line_width(1.0)
-            .cull_mode(self.cull_mode)
+            .cull_mode(CullModeFlags::BACK)
             .polygon_mode(self.polygon_mode);
 
         let samples = match self.is_multisampled {
@@ -217,6 +217,7 @@ impl ShaderBuilder {
             DynamicState::LINE_WIDTH,
             DynamicState::SCISSOR,
             DynamicState::VIEWPORT,
+            DynamicState::DEPTH_BIAS,
         ];
         let dynamic_state = PipelineDynamicStateCreateInfo::builder()
             .dynamic_states(&dynamic_states)
@@ -282,7 +283,7 @@ impl ShaderBuilder {
     }
 
     pub fn with_front_culling(&mut self) -> &mut Self {
-        self.cull_mode = CullModeFlags::FRONT;
+        self.front_face = FrontFace::COUNTER_CLOCKWISE;
         self
     }
 
