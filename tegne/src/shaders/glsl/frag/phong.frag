@@ -27,6 +27,7 @@ void main() {
     }
 
     out_color = texture(albedo, in_uv) * material.albedo_tint * vec4(lighting, 1.0);
+    // out_color = texture(albedo, in_uv) * shadow;
 }
 
 vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {
@@ -72,7 +73,7 @@ float calc_shadow(vec4 ls_position) {
 
     float closest_depth = texture(shadow_map, uv).r;
     float current_depth = proj_coords.z;
-    float shadow = current_depth < closest_depth ? 1.0 : 0.0;
+    float shadow = current_depth > closest_depth ? 1.0 : 0.0;
 
     return shadow;
 }

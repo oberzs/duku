@@ -27,7 +27,9 @@ fn main() {
         .build();
 
     let floor = Floor::new(&tegne);
-    let cube = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0);
+    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, "yellow");
+    let cube_2 = Cube::new(&tegne, [1.0, 0.0, 1.0], 3.0, "blue1");
+    let cube_3 = Cube::new(&tegne, [-2.0, 3.0, -1.0], 1.0, "blue2");
 
     let mut controller = Controller::default();
 
@@ -38,19 +40,24 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let blue_light = [1.0, -1.0, 1.0];
-    let yellow_light = [-1.0, -1.0, -1.0];
+    let mut light_pos = 0.0f32;
+    let light_speed = 0.5;
 
     window.start_loop(|events| {
         controller.update(&mut camera, events);
 
+        let light_x = light_pos.sin();
+        let light_z = light_pos.cos();
+        light_pos += light_speed * events.delta_time();
+
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.7, 0.7, 0.7]);
-            target.add_directional_light(blue_light, [0.5, 0.5, 1.0]);
-            target.add_directional_light(yellow_light, [1.0, 1.0, 0.5]);
+            target.add_directional_light([light_x, -1.0, light_z], [1.0, 1.0, 1.0]);
             floor.draw(target);
-            cube.draw(target);
+            cube_1.draw(target);
+            cube_2.draw(target);
+            cube_3.draw(target);
         });
         tegne.end_draw();
     });

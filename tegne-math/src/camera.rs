@@ -57,7 +57,7 @@ impl Camera {
         self.height = height as f32;
     }
 
-    pub fn matrices(&self) -> (Matrix4, Matrix4) {
+    pub fn matrix(&self) -> Matrix4 {
         let projection = match self.camera_type {
             CameraType::Orthographic => {
                 Matrix4::orthographic(self.width, self.height, -0.1, self.depth)
@@ -69,7 +69,7 @@ impl Camera {
 
         let view = self.transform.as_matrix_for_camera();
 
-        (projection, view)
+        projection * view
     }
 
     pub fn transform(&self) -> Transform {

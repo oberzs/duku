@@ -91,11 +91,15 @@ impl Tegne {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let (proj, view) = camera.matrices();
-        let light_pos = Vector3::new(5.0, 5.0, -5.0);
-        let light_matrix = Matrix4::orthographic(10.0, 10.0, 0.1, 100.0)
-            * Matrix4::look_rotation(-light_pos.unit(), Vector3::up())
-            * Matrix4::translation(-light_pos);
+        let cam_mat = camera.matrix();
+
+        let light_distance = 10.0;
+        let light_dir = target.lights()[0].coords.shrink();
+        let light_mat_dir = light_dir.unit();
+        let light_mat_pos = light_mat_dir * light_distance;
+        let light_mat = Matrix4::orthographic(20.0, 20.0, 0.1, 100.0)
+            * Matrix4::look_rotation(light_mat_dir, Vector3::up())
+            * Matrix4::translation(light_mat_pos);
 
         let clear = target.clear();
 
@@ -112,10 +116,10 @@ impl Tegne {
 
         let world_uniforms = framebuffer.world_uniforms();
         world_uniforms.update(WorldObject {
-            cam_mat: proj * view,
+            cam_mat,
             cam_pos: camera.transform().position,
             lights: target.lights(),
-            light_mat: light_matrix,
+            light_mat,
             time: 0.0,
         });
 
