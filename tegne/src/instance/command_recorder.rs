@@ -344,14 +344,6 @@ impl CommandRecorder {
         LayoutChange::new(self, image)
     }
 
-    pub(crate) fn set_depth_bias(&self, bias: f32, clamp: f32, slope: f32) {
-        unsafe {
-            self.device()
-                .logical()
-                .cmd_set_depth_bias(self.buffer, bias, clamp, slope);
-        }
-    }
-
     pub(crate) fn manual_drop(&mut self, logical: &LogicalDevice) {
         unsafe {
             logical.destroy_command_pool(self.pool, None);

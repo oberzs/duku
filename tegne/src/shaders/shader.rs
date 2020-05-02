@@ -156,7 +156,7 @@ impl ShaderBuilder {
         let rasterizer_state = PipelineRasterizationStateCreateInfo::builder()
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
-            .depth_bias_enable(true)
+            .depth_bias_enable(false)
             .front_face(self.front_face)
             .line_width(1.0)
             .cull_mode(CullModeFlags::BACK)
@@ -217,7 +217,6 @@ impl ShaderBuilder {
             DynamicState::LINE_WIDTH,
             DynamicState::SCISSOR,
             DynamicState::VIEWPORT,
-            DynamicState::DEPTH_BIAS,
         ];
         let dynamic_state = PipelineDynamicStateCreateInfo::builder()
             .dynamic_states(&dynamic_states)
