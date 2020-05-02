@@ -80,7 +80,7 @@ impl Framebuffer {
                 if attachments.contains_key(&AttachmentType::Resolve) {
                     images.push(
                         Image::builder(device)
-                            .with_size(width, height)
+                            .with_size(extent.width, extent.height)
                             .with_samples()
                             .with_bgra_color()
                             .with_view()
@@ -96,8 +96,8 @@ impl Framebuffer {
                     image_uniforms,
                     render_pass,
                     shader_layout,
-                    width,
-                    height,
+                    extent.width,
+                    extent.height,
                 )
             })
             .collect::<Vec<_>>()
@@ -202,14 +202,13 @@ impl Framebuffer {
         let shader_index = image_uniforms.image_count() as i32;
         image_uniforms.add(shader_image.view());
 
-        let extent = device.pick_extent(width, height);
         let attachments = images.iter().map(|i| i.view()).collect::<Vec<_>>();
 
         let info = FramebufferCreateInfo::builder()
             .render_pass(render_pass.vk())
             .attachments(&attachments)
-            .width(extent.width)
-            .height(extent.height)
+            .width(width)
+            .height(height)
             .layers(1)
             .build();
 
