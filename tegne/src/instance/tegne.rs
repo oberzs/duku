@@ -1,5 +1,6 @@
 use log::debug;
 use std::collections::HashMap;
+use std::path::Path;
 use std::rc::Rc;
 use tegne_math::Camera;
 use tegne_math::Matrix4;
@@ -32,6 +33,8 @@ use crate::shaders::ShaderLayout;
 use crate::shaders::WorldObject;
 use crate::utils::OrError;
 
+#[cfg(feature = "tegne-utils")]
+use tegne_utils::read_image;
 #[cfg(feature = "tegne-utils")]
 use tegne_utils::Window;
 
@@ -198,6 +201,12 @@ impl Tegne {
         debug!("creating rgb texture");
         let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms);
         texture
+    }
+
+    #[cfg(feature = "tegne-utils")]
+    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Texture {
+        let (image, width, height) = read_image(path);
+        self.create_texture_rgba(&image, width, height)
     }
 
     pub fn create_mesh(&self) -> MeshBuilder {

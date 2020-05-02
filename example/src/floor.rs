@@ -1,4 +1,3 @@
-use tegne::read_image;
 use tegne::Material;
 use tegne::Mesh;
 use tegne::Target;
@@ -17,8 +16,7 @@ pub struct Floor {
 impl Floor {
     pub fn new(tegne: &Tegne) -> Self {
         let mesh = plane(tegne, 100.0);
-        let (image, width, height) = read_image("example/assets/prototype_512x512_grey2.png");
-        let texture = tegne.create_texture_rgba(&image, width, height);
+        let texture = tegne.create_texture_from_file("example/assets/prototype_512x512_grey2.png");
         let material = tegne.create_material().with_albedo(&texture).build();
 
         Self {

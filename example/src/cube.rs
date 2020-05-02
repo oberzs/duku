@@ -1,4 +1,3 @@
-use tegne::read_image;
 use tegne::Material;
 use tegne::Mesh;
 use tegne::Target;
@@ -18,11 +17,10 @@ pub struct Cube {
 impl Cube {
     pub fn new(tegne: &Tegne, pos: impl Into<Vector3>, size: f32, color: impl AsRef<str>) -> Self {
         let mesh = cube(tegne, size);
-        let (image, width, height) = read_image(format!(
+        let texture = tegne.create_texture_from_file(format!(
             "example/assets/prototype_512x512_{}.png",
             color.as_ref()
         ));
-        let texture = tegne.create_texture_rgba(&image, width, height);
         let material = tegne.create_material().with_albedo(&texture).build();
         let transform = Transform::builder().with_position(pos).build();
 
