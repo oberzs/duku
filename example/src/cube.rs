@@ -1,4 +1,3 @@
-use tegne::Material;
 use tegne::Mesh;
 use tegne::Target;
 use tegne::Tegne;
@@ -9,8 +8,7 @@ use tegne::Vector3;
 
 pub struct Cube {
     mesh: Vec<Mesh>,
-    material: Material,
-    _texture: Texture,
+    texture: Texture,
     transform: Transform,
 }
 
@@ -21,19 +19,17 @@ impl Cube {
             "example/assets/prototype_512x512_{}.png",
             color.as_ref()
         ));
-        let material = tegne.create_material().with_albedo(&texture).build();
         let transform = Transform::builder().with_position(pos).build();
 
         Self {
             mesh,
-            material,
-            _texture: texture,
+            texture,
             transform,
         }
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_material(&self.material);
+        target.set_texture(&self.texture);
         for mesh in self.mesh.iter() {
             target.draw(mesh, self.transform);
         }

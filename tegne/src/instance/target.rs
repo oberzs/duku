@@ -8,6 +8,7 @@ use tegne_math::Vector3;
 use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinMesh;
 use crate::builtins::Builtins;
+use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::shaders::Light;
 use crate::shaders::Material;
@@ -25,7 +26,6 @@ pub struct Target<'a> {
 pub(crate) struct MaterialOrder {
     pub(crate) pipeline: Pipeline,
     pub(crate) material_descriptor: (u32, DescriptorSet),
-    pub(crate) albedo_index: i32,
     pub(crate) orders: Vec<Order>,
 }
 
@@ -34,6 +34,7 @@ pub(crate) struct Order {
     pub(crate) vertex_buffer: Buffer,
     pub(crate) index_buffer: Buffer,
     pub(crate) index_count: u32,
+    pub(crate) albedo_index: i32,
 }
 
 impl<'a> Target<'a> {
@@ -57,6 +58,7 @@ impl<'a> Target<'a> {
             vertex_buffer: mesh.vk_vertex_buffer(),
             index_buffer: mesh.vk_index_buffer(),
             index_count: mesh.drawn_triangles() * 3,
+            albedo_index: self.current_albedo,
         });
     }
 
@@ -80,6 +82,17 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material(&mut self, material: &Material) {
+        self.current_pipeline = material.pipeline();
+        self.current_material = material.uniforms().descriptor();
+        self.current_albedo = material.albedo_index();
+    }
+
+    pub fn set_texture(&mut self, texture: &Texture) {
+        self.current_albedo = texture.image_index();
+    }
+
+    pub fn reset_material(&mut self) {
+        let material = self.builtins.get_material(BuiltinMaterial::White);
         self.current_pipeline = material.pipeline();
         self.current_material = material.uniforms().descriptor();
         self.current_albedo = material.albedo_index();
@@ -115,7 +128,6 @@ impl<'a> Target<'a> {
             None => self.material_orders.push(MaterialOrder {
                 pipeline: self.current_pipeline,
                 material_descriptor: self.current_material,
-                albedo_index: self.current_albedo,
                 orders: vec![order],
             }),
         }

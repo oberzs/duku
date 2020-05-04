@@ -1,3 +1,4 @@
+use image::GenericImageView;
 use log::debug;
 use std::collections::HashMap;
 use std::path::Path;
@@ -33,8 +34,6 @@ use crate::shaders::ShaderLayout;
 use crate::shaders::WorldObject;
 use crate::utils::OrError;
 
-#[cfg(feature = "tegne-utils")]
-use tegne_utils::read_image;
 #[cfg(feature = "tegne-utils")]
 use tegne_utils::Window;
 
@@ -175,7 +174,7 @@ impl Tegne {
                 recorder.set_push_constant(
                     PushConstants {
                         model_mat: order.model,
-                        albedo_index: mat_order.albedo_index,
+                        albedo_index: order.albedo_index,
                     },
                     self.shader_layout.pipeline(),
                 );
@@ -203,10 +202,12 @@ impl Tegne {
         texture
     }
 
-    #[cfg(feature = "tegne-utils")]
     pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Texture {
-        let (image, width, height) = read_image(path);
-        self.create_texture_rgba(&image, width, height)
+        let p = path.as_ref();
+        let img = image::open(p).or_error(format!("cannot open image {}", p.display()));
+        let (width, height) = img.dimensions();
+        let data = img.to_rgba().into_raw();
+        self.create_texture_rgba(&data, width, height)
     }
 
     pub fn create_mesh(&self) -> MeshBuilder {

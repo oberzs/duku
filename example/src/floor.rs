@@ -1,4 +1,3 @@
-use tegne::Material;
 use tegne::Mesh;
 use tegne::Target;
 use tegne::Tegne;
@@ -9,25 +8,19 @@ use tegne::Vector3;
 
 pub struct Floor {
     mesh: Mesh,
-    material: Material,
-    _texture: Texture,
+    texture: Texture,
 }
 
 impl Floor {
     pub fn new(tegne: &Tegne) -> Self {
         let mesh = plane(tegne, 100.0);
         let texture = tegne.create_texture_from_file("example/assets/prototype_512x512_grey2.png");
-        let material = tegne.create_material().with_albedo(&texture).build();
 
-        Self {
-            mesh,
-            material,
-            _texture: texture,
-        }
+        Self { mesh, texture }
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_material(&self.material);
+        target.set_texture(&self.texture);
         target.draw(&self.mesh, Transform::default());
     }
 }
