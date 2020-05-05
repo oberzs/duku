@@ -1,0 +1,618 @@
+{
+    "x_offset": 3,
+    "y_offset": 10,
+    "chars": [
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 18,
+            "advance": 19,
+            "range": 2,
+            "char": "a"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 24,
+            "advance": 20,
+            "range": 2,
+            "char": "b"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 15,
+            "bound_h": 18,
+            "advance": 16,
+            "range": 2,
+            "char": "c"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 24,
+            "advance": 20,
+            "range": 2,
+            "char": "d"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 18,
+            "advance": 19,
+            "range": 2,
+            "char": "e"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 14,
+            "bound_h": 24,
+            "advance": 12,
+            "range": 2,
+            "char": "f"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": -8,
+            "bound_w": 18,
+            "bound_h": 18,
+            "advance": 20,
+            "range": 2,
+            "char": "g"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 24,
+            "advance": 21,
+            "range": 2,
+            "char": "h"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 7,
+            "bound_h": 24,
+            "advance": 10,
+            "range": 2,
+            "char": "i"
+        },
+        {
+            "bound_x": -2,
+            "bound_y": -8,
+            "bound_w": 7,
+            "bound_h": 24,
+            "advance": 10,
+            "range": 2,
+            "char": "j"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 20,
+            "bound_h": 24,
+            "advance": 20,
+            "range": 2,
+            "char": "k"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 7,
+            "bound_h": 24,
+            "advance": 10,
+            "range": 2,
+            "char": "l"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 29,
+            "bound_h": 18,
+            "advance": 31,
+            "range": 2,
+            "char": "m"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 18,
+            "advance": 21,
+            "range": 2,
+            "char": "n"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 18,
+            "advance": 20,
+            "range": 2,
+            "char": "o"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": -8,
+            "bound_w": 19,
+            "bound_h": 18,
+            "advance": 20,
+            "range": 2,
+            "char": "p"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": -8,
+            "bound_w": 18,
+            "bound_h": 18,
+            "advance": 20,
+            "range": 2,
+            "char": "q"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 14,
+            "bound_h": 18,
+            "advance": 15,
+            "range": 2,
+            "char": "r"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 15,
+            "bound_h": 18,
+            "advance": 16,
+            "range": 2,
+            "char": "s"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 13,
+            "bound_h": 21,
+            "advance": 14,
+            "range": 2,
+            "char": "t"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 17,
+            "advance": 21,
+            "range": 2,
+            "char": "u"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 17,
+            "advance": 18,
+            "range": 2,
+            "char": "v"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 27,
+            "bound_h": 17,
+            "advance": 27,
+            "range": 2,
+            "char": "w"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 17,
+            "advance": 18,
+            "range": 2,
+            "char": "x"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": -8,
+            "bound_w": 18,
+            "bound_h": 17,
+            "advance": 18,
+            "range": 2,
+            "char": "y"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 15,
+            "bound_h": 17,
+            "advance": 16,
+            "range": 2,
+            "char": "z"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 22,
+            "bound_h": 23,
+            "advance": 22,
+            "range": 2,
+            "char": "A"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 20,
+            "bound_h": 23,
+            "advance": 22,
+            "range": 2,
+            "char": "B"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 23,
+            "advance": 20,
+            "range": 2,
+            "char": "C"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 22,
+            "bound_h": 23,
+            "advance": 24,
+            "range": 2,
+            "char": "D"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "E"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "F"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 23,
+            "range": 2,
+            "char": "G"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 22,
+            "bound_h": 23,
+            "advance": 24,
+            "range": 2,
+            "char": "H"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 11,
+            "bound_h": 23,
+            "advance": 12,
+            "range": 2,
+            "char": "I"
+        },
+        {
+            "bound_x": -2,
+            "bound_y": -7,
+            "bound_w": 8,
+            "bound_h": 23,
+            "advance": 11,
+            "range": 2,
+            "char": "J"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 21,
+            "range": 2,
+            "char": "K"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "L"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 27,
+            "bound_h": 23,
+            "advance": 30,
+            "range": 2,
+            "char": "M"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 23,
+            "bound_h": 23,
+            "advance": 26,
+            "range": 2,
+            "char": "N"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 24,
+            "bound_h": 23,
+            "advance": 25,
+            "range": 2,
+            "char": "O"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 19,
+            "bound_h": 23,
+            "advance": 20,
+            "range": 2,
+            "char": "P"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": -5,
+            "bound_w": 24,
+            "bound_h": 23,
+            "advance": 25,
+            "range": 2,
+            "char": "Q"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 21,
+            "range": 2,
+            "char": "R"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "S"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 23,
+            "advance": 19,
+            "range": 2,
+            "char": "T"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 24,
+            "range": 2,
+            "char": "U"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 21,
+            "range": 2,
+            "char": "V"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 31,
+            "bound_h": 23,
+            "advance": 31,
+            "range": 2,
+            "char": "W"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 21,
+            "bound_h": 23,
+            "advance": 21,
+            "range": 2,
+            "char": "X"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 20,
+            "bound_h": 23,
+            "advance": 20,
+            "range": 2,
+            "char": "Y"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 18,
+            "bound_h": 23,
+            "advance": 19,
+            "range": 2,
+            "char": "Z"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "0"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 13,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "1"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "2"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "3"
+        },
+        {
+            "bound_x": 0,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "4"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "5"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "6"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "7"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 17,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "8"
+        },
+        {
+            "bound_x": 1,
+            "bound_y": 0,
+            "bound_w": 16,
+            "bound_h": 23,
+            "advance": 18,
+            "range": 2,
+            "char": "9"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": 0,
+            "bound_w": 7,
+            "bound_h": 5,
+            "advance": 9,
+            "range": 2,
+            "char": "."
+        },
+        {
+            "bound_x": 4,
+            "bound_y": 0,
+            "bound_w": 10,
+            "bound_h": 23,
+            "advance": 13,
+            "range": 2,
+            "char": "!"
+        },
+        {
+            "bound_x": 2,
+            "bound_y": -5,
+            "bound_w": 11,
+            "bound_h": 27,
+            "advance": 12,
+            "range": 2,
+            "char": "("
+        },
+        {
+            "bound_x": 2,
+            "bound_y": -5,
+            "bound_w": 10,
+            "bound_h": 27,
+            "advance": 12,
+            "range": 2,
+            "char": ")"
+        },
+        {
+            "bound_x": 3,
+            "bound_y": -5,
+            "bound_w": 11,
+            "bound_h": 27,
+            "advance": 12,
+            "range": 2,
+            "char": "["
+        },
+        {
+            "bound_x": 2,
+            "bound_y": -5,
+            "bound_w": 9,
+            "bound_h": 27,
+            "advance": 12,
+            "range": 2,
+            "char": "]"
+        }
+    ]
+}

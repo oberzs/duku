@@ -2,6 +2,7 @@
 
 mod buffer;
 mod builtins;
+mod font;
 mod images;
 mod instance;
 mod memory;
@@ -17,8 +18,6 @@ pub use mesh::Mesh;
 pub use shaders::Material;
 pub use shaders::Shader;
 
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::read_image;
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Controller;
 #[cfg(feature = "tegne-utils")]

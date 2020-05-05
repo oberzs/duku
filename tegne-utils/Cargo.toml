@@ -8,8 +8,3 @@ edition = "2018"
 winit = "0.22.1"
 log = "0.4.8"
 tegne-math = { path = "../tegne-math", version = "0.1.0" }
-
-[dependencies.image]
-version = "0.23.4"
-default-features = false
-features = ["jpeg", "png"]

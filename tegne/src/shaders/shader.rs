@@ -35,8 +35,10 @@ use ash::vk::StencilOp;
 use ash::vk::StencilOpState;
 use ash::vk::Viewport;
 use std::io::Cursor;
+use std::io::Read;
 use std::rc::Rc;
 use std::rc::Weak;
+use tar::Archive;
 
 use super::RenderPass;
 use super::ShaderLayout;
@@ -51,8 +53,7 @@ pub struct Shader {
 }
 
 pub struct ShaderBuilder {
-    vert_source: Vec<u8>,
-    frag_source: Vec<u8>,
+    source: Vec<u8>,
     polygon_mode: PolygonMode,
     front_face: FrontFace,
     enable_depth: bool,
@@ -69,8 +70,7 @@ impl Shader {
         layout: &ShaderLayout,
     ) -> ShaderBuilder {
         ShaderBuilder {
-            vert_source: vec![],
-            frag_source: vec![],
+            source: vec![],
             polygon_mode: PolygonMode::FILL,
             front_face: FrontFace::CLOCKWISE,
             enable_depth: true,
@@ -102,8 +102,34 @@ impl Drop for Shader {
 
 impl ShaderBuilder {
     pub fn build(&self) -> Shader {
-        let vert_module = create_shader_module(&self.device(), &self.vert_source);
-        let frag_module = create_shader_module(&self.device(), &self.frag_source);
+        let mut archive: Archive<&[u8]> = Archive::new(self.source.as_ref());
+
+        let mut vert_source = vec![];
+        let mut frag_source = vec![];
+
+        for file in archive.entries().or_error("invalid shader file") {
+            let mut file = file.or_error("invalid shader file");
+
+            let path = file
+                .header()
+                .path()
+                .or_error("invalid shader file")
+                .to_str()
+                .or_error("invalid shader file")
+                .to_string();
+
+            if path == "vert.spv" {
+                file.read_to_end(&mut vert_source)
+                    .or_error("cannot read vertex shader");
+            }
+            if path == "frag.spv" {
+                file.read_to_end(&mut frag_source)
+                    .or_error("cannot read fragment shader");
+            }
+        }
+
+        let vert_module = create_shader_module(&self.device(), &vert_source);
+        let frag_module = create_shader_module(&self.device(), &frag_source);
         let entry_point = cstring("main");
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
@@ -261,13 +287,8 @@ impl ShaderBuilder {
         }
     }
 
-    pub fn with_vert_source(&mut self, source: &[u8]) -> &mut Self {
-        self.vert_source = source.to_owned();
-        self
-    }
-
-    pub fn with_frag_source(&mut self, source: &[u8]) -> &mut Self {
-        self.frag_source = source.to_owned();
+    pub fn with_source(&mut self, source: &[u8]) -> &mut Self {
+        self.source = source.to_owned();
         self
     }
 

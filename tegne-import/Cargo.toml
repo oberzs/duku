@@ -1,0 +1,18 @@
+[package]
+name = "tegne-import"
+version = "0.1.0"
+authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
+edition = "2018"
+
+[package.metadata.commands]
+release = "cargo rustc --release -- -C debuginfo=0 -o timp.exe"
+postrelease = "del ..\\timp.d ..\\timp.pdb"
+
+[dependencies]
+spritesheet-generator = "0.5.0"
+shaderc = "0.6.2"
+clap = "2.33.0"
+msdfgen = { version = "0.1.0", features = ["ttf-parser", "png"] }
+msdfgen-lib = "0.1.0"
+ttf-parser = "0.4.0"
+tar = "0.4.26"
