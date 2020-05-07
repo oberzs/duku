@@ -8,6 +8,10 @@ use serde::Serialize;
 use spiral::ManhattanIterator;
 use std::cmp;
 
+use crate::error::ErrorKind;
+use crate::error::ErrorType;
+use crate::error::Result;
+
 pub struct SDF<'font> {
     font: &'font Font<'font>,
     c: char,
@@ -52,7 +56,7 @@ impl<'font> SDF<'font> {
         self
     }
 
-    pub fn generate(&self) -> Result<(ImageBuffer<Rgba<u8>, Vec<u8>>, CharMetrics), ()> {
+    pub fn generate(&self) -> Result<(ImageBuffer<Rgba<u8>, Vec<u8>>, CharMetrics)> {
         // ttf to png
         let scale = Scale::uniform(self.font_size as f32);
         let glyph = self
@@ -61,7 +65,9 @@ impl<'font> SDF<'font> {
             .scaled(scale)
             .positioned(point(self.font_margin as f32, self.font_margin as f32));
 
-        let bounds = glyph.pixel_bounding_box().ok_or(())?;
+        let bounds = glyph
+            .pixel_bounding_box()
+            .ok_or(ErrorType::Internal(ErrorKind::NoBounds))?;
         let width = bounds.width() as u32;
         let height = bounds.height() as u32;
         let img_size = cmp::max(width, height) + self.font_margin * 2;

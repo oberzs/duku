@@ -1,3 +1,4 @@
+mod error;
 mod font;
 mod sdf;
 mod shader;
@@ -7,6 +8,7 @@ use clap::Arg;
 use std::path::Path;
 use std::path::PathBuf;
 
+use error::Result;
 use font::import_font;
 use shader::import_shader;
 
@@ -56,7 +58,7 @@ fn main() {
             }
             let def = default_out(in_path);
             let out_path = output.unwrap_or(&def);
-            import_file(in_path, out_path);
+            import_file(in_path, out_path).expect("cannot import file");
         }
         (None, Some(in_dir)) => {
             for entry in in_dir.read_dir().expect("dir is not a directory") {
@@ -66,7 +68,7 @@ fn main() {
                         let dir = output_dir.unwrap_or(Path::new("."));
                         let def = default_out(&in_path);
                         let out_path = dir.join(def);
-                        import_file(&in_path, &out_path);
+                        import_file(&in_path, &out_path).expect("cannot import file");
                     }
                 }
             }
@@ -75,24 +77,25 @@ fn main() {
     }
 }
 
-fn import_file(in_path: &Path, out_path: &Path) {
-    let path_str = in_path.to_str().expect("cannot create str");
+fn import_file(in_path: &Path, out_path: &Path) -> Result<()> {
+    let path_str = in_path.to_str().unwrap_or_default();
     if path_str.ends_with(".glsl") {
-        import_shader(in_path, out_path);
+        import_shader(in_path, out_path)?;
     }
     if path_str.ends_with(".ttf") {
-        import_font(in_path, out_path);
+        import_font(in_path, out_path)?;
     }
+    Ok(())
 }
 
 fn default_out(in_path: &Path) -> PathBuf {
     let ext = in_path
         .extension()
-        .map(|s| s.to_str().expect("cannot create str"))
+        .map(|s| s.to_str().unwrap_or("out"))
         .unwrap_or("out");
     let name = in_path
         .file_stem()
-        .map(|s| s.to_str().expect("cannot create str"))
+        .map(|s| s.to_str().unwrap_or("output"))
         .unwrap_or("output");
     PathBuf::from(format!("{}.{}", name, ext))
 }
