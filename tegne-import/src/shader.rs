@@ -1,3 +1,4 @@
+use indicatif::ProgressBar;
 use shaderc::CompilationArtifact;
 use shaderc::CompileOptions;
 use shaderc::Compiler;
@@ -11,15 +12,21 @@ use tar::Header;
 pub fn import_shader(in_path: &Path, out_path: &Path) {
     println!("Compiling {:?}", in_path);
 
+    let progress = ProgressBar::new(6);
+
     let shader_src = fs::read_to_string(in_path).expect("cannot read input file");
+    progress.inc(1);
 
     let vert_bin = compile_vert(&shader_src);
+    progress.inc(1);
     let frag_bin = compile_frag(&shader_src);
+    progress.inc(1);
 
     // compress spirv shaders
     let out_path = out_path.with_extension("shader");
     let out_file = File::create(out_path).expect("cannot create file");
     let mut archive = Builder::new(out_file);
+    progress.inc(1);
 
     let mut vert_header = Header::new_gnu();
     vert_header.set_size(vert_bin.as_binary_u8().len() as u64);
@@ -27,6 +34,7 @@ pub fn import_shader(in_path: &Path, out_path: &Path) {
     archive
         .append_data(&mut vert_header, "vert.spv", vert_bin.as_binary_u8())
         .expect("cannot add to archive");
+    progress.inc(1);
 
     let mut frag_header = Header::new_gnu();
     frag_header.set_size(frag_bin.as_binary_u8().len() as u64);
@@ -34,6 +42,9 @@ pub fn import_shader(in_path: &Path, out_path: &Path) {
     archive
         .append_data(&mut frag_header, "frag.spv", frag_bin.as_binary_u8())
         .expect("cannot add to archive");
+    progress.inc(1);
+
+    progress.finish_with_message("done");
 }
 
 fn compile_vert(src: &str) -> CompilationArtifact {

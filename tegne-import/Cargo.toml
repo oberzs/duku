@@ -9,10 +9,12 @@ release = "cargo rustc --release -- -C debuginfo=0 -o timp.exe"
 postrelease = "del ..\\timp.d ..\\timp.pdb"
 
 [dependencies]
-spritesheet-generator = "0.5.0"
 shaderc = "0.6.2"
 clap = "2.33.0"
-msdfgen = { version = "0.1.0", features = ["ttf-parser", "png"] }
-msdfgen-lib = "0.1.0"
-ttf-parser = "0.4.0"
 tar = "0.4.26"
+image = { version = "0.23.4", features = ["png"] }
+spiral = "0.1.9"
+rusttype = "0.9.1"
+serde = { version = "1.0.106", features = ["derive"] }
+serde_json = "1.0.52"
+indicatif = "0.14.0"

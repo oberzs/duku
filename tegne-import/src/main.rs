@@ -1,4 +1,5 @@
 mod font;
+mod sdf;
 mod shader;
 
 use clap::App;
