@@ -79,9 +79,10 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
 
     // create real glsl code
     let is_depth_frag = src.find("out_color").is_none();
-    let frag_glsl = match is_depth_frag {
-        true => frag_d_glsl,
-        false => frag_c_glsl,
+    let frag_glsl = if is_depth_frag {
+        frag_d_glsl
+    } else {
+        frag_c_glsl
     };
 
     let real_src = format!(

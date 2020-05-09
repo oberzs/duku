@@ -20,6 +20,11 @@ pub struct SDF<'font> {
     sdf_size: u32,
 }
 
+pub struct CharData {
+    pub image: ImageBuffer<Rgba<u8>, Vec<u8>>,
+    pub metrics: CharMetrics,
+}
+
 #[derive(Serialize)]
 pub struct CharMetrics {
     x: u32,
@@ -56,7 +61,7 @@ impl<'font> SDF<'font> {
         self
     }
 
-    pub fn generate(&self) -> Result<(ImageBuffer<Rgba<u8>, Vec<u8>>, CharMetrics)> {
+    pub fn generate(&self) -> Result<CharData> {
         // ttf to png
         let scale = Scale::uniform(self.font_size as f32);
         let glyph = self
@@ -96,7 +101,12 @@ impl<'font> SDF<'font> {
             Rgba([value, value, value, value])
         });
 
-        Ok((sdf_img, metrics))
+        let data = CharData {
+            image: sdf_img,
+            metrics,
+        };
+
+        Ok(data)
     }
 
     fn distance_to_zone(&self, img: &ImageBuffer<Rgba<u8>, Vec<u8>>, out_x: u32, out_y: u32) -> u8 {
@@ -126,9 +136,10 @@ impl<'font> SDF<'font> {
         }
 
         // outside = [0.0, 0.5], inside = [0.5, 1.0]
-        let distance = match is_inside {
-            true => 0.5 + (closest_distance / 2.0) / max_distance as f32,
-            false => 0.5 - (closest_distance / 2.0) / max_distance as f32,
+        let distance = if is_inside {
+            0.5 + (closest_distance / 2.0) / max_distance as f32
+        } else {
+            0.5 - (closest_distance / 2.0) / max_distance as f32
         };
 
         (distance * 255.0) as u8

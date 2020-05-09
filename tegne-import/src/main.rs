@@ -65,7 +65,7 @@ fn main() {
                 if let Ok(entry) = entry {
                     let in_path = entry.path();
                     if in_path.is_file() {
-                        let dir = output_dir.unwrap_or(Path::new("."));
+                        let dir = output_dir.unwrap_or_else(|| Path::new("."));
                         let def = default_out(&in_path);
                         let out_path = dir.join(def);
                         import_file(&in_path, &out_path).expect("cannot import file");
