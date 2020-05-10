@@ -12,6 +12,7 @@ pub(crate) use command_recorder::CommandRecorder;
 pub(crate) use device::Device;
 use extensions::Extensions;
 pub(crate) use swapchain::Swapchain;
+pub(crate) use target::Order;
 pub use target::Target;
 pub(crate) use tegne::RenderPassType;
 pub use tegne::Tegne;

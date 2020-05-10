@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use tegne_math::Camera;
-use tegne_math::Matrix4;
-use tegne_math::Vector3;
 
 use super::Device;
 use super::Extensions;
@@ -15,7 +13,6 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::WindowSurface;
-use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinShader;
 use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
@@ -23,24 +20,24 @@ use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::MeshBuilder;
+use crate::renderer::ForwardDrawOptions;
+use crate::renderer::ForwardRenderer;
 use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
 use crate::shaders::MaterialBuilder;
-use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::shaders::ShaderBuilder;
 use crate::shaders::ShaderLayout;
-use crate::shaders::WorldObject;
 use crate::utils::OrError;
 
 #[cfg(feature = "tegne-utils")]
 use tegne_utils::Window;
 
 pub struct Tegne {
+    forward_renderer: ForwardRenderer,
     builtins: Builtins,
     window_framebuffers: Vec<Framebuffer>,
-    shadow_framebuffer: Framebuffer,
     render_passes: HashMap<RenderPassType, RenderPass>,
     image_uniforms: ImageUniforms,
     shader_layout: ShaderLayout,
@@ -93,20 +90,7 @@ impl Tegne {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let cam_mat = camera.matrix();
-
-        let light_distance = 10.0;
-        let light_dir = target.lights()[0].coords.shrink();
-        let light_mat_dir = light_dir.unit();
-        let light_mat_pos = light_mat_dir * light_distance;
-        let light_mat = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0)
-            * Matrix4::look_rotation(light_mat_dir, Vector3::up())
-            * Matrix4::translation(light_mat_pos);
-
-        let clear = target.clear();
-
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-        let shadow_framebuffer = &self.shadow_framebuffer;
         let window_pass = self
             .render_passes
             .get(&RenderPassType::Window)
@@ -116,77 +100,15 @@ impl Tegne {
             .get(&RenderPassType::Depth)
             .or_error("render passes not setup");
 
-        let world_uniforms = framebuffer.world_uniforms();
-        world_uniforms.update(WorldObject {
-            cam_mat,
-            cam_pos: camera.transform().position,
-            lights: target.lights(),
-            light_mat,
-            time: 0.0,
+        self.forward_renderer.draw(ForwardDrawOptions {
+            framebuffer,
+            color_pass: window_pass,
+            depth_pass,
+            shader_layout: &self.shader_layout,
+            camera,
+            builtins: &self.builtins,
+            target,
         });
-
-        let recorder = self.device.record_commands();
-
-        recorder.bind_descriptor(world_uniforms.descriptor(), self.shader_layout.pipeline());
-
-        // shadow mapping
-        recorder.begin_render_pass(shadow_framebuffer, depth_pass, clear);
-        recorder.set_view(shadow_framebuffer.width(), shadow_framebuffer.height());
-        recorder.set_line_width(1.0);
-
-        let shadow_material = self.builtins.get_material(BuiltinMaterial::Shadow);
-        recorder.bind_pipeline(shadow_material.pipeline());
-        recorder.bind_descriptor(
-            shadow_material.uniforms().descriptor(),
-            self.shader_layout.pipeline(),
-        );
-
-        for mat_order in target.material_orders() {
-            for order in mat_order.orders.iter() {
-                recorder.set_push_constant(
-                    PushConstants {
-                        model_mat: order.model,
-                        albedo_index: shadow_material.albedo_index(),
-                    },
-                    self.shader_layout.pipeline(),
-                );
-
-                recorder.bind_vertex_buffer(order.vertex_buffer);
-                recorder.bind_index_buffer(order.index_buffer);
-
-                recorder.draw(order.index_count);
-            }
-        }
-
-        recorder.end_render_pass();
-        shadow_framebuffer.blit_to_shader_image(&recorder);
-
-        // normal render
-        recorder.begin_render_pass(framebuffer, window_pass, clear);
-        recorder.set_view(framebuffer.width(), framebuffer.height());
-        recorder.set_line_width(1.0);
-
-        for mat_order in target.material_orders() {
-            recorder.bind_pipeline(mat_order.pipeline);
-            recorder.bind_descriptor(mat_order.material_descriptor, self.shader_layout.pipeline());
-
-            for order in mat_order.orders.iter() {
-                recorder.set_push_constant(
-                    PushConstants {
-                        model_mat: order.model,
-                        albedo_index: order.albedo_index,
-                    },
-                    self.shader_layout.pipeline(),
-                );
-
-                recorder.bind_vertex_buffer(order.vertex_buffer);
-                recorder.bind_index_buffer(order.index_buffer);
-
-                recorder.draw(order.index_count);
-            }
-        }
-
-        recorder.end_render_pass();
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
@@ -307,19 +229,14 @@ impl TegneBuilder {
             window_args.width,
             window_args.height,
         );
-        let shadow_framebuffer = Framebuffer::depth(
-            &device,
-            &depth_pass,
-            &image_uniforms,
-            &shader_layout,
-            2048,
-            2048,
-        );
+
+        let forward_renderer =
+            ForwardRenderer::new(&device, &depth_pass, &image_uniforms, &shader_layout);
 
         Tegne {
+            forward_renderer,
             builtins,
             window_framebuffers,
-            shadow_framebuffer,
             render_passes,
             image_uniforms,
             shader_layout,
