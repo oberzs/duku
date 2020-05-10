@@ -7,6 +7,7 @@ mod images;
 mod instance;
 mod memory;
 mod mesh;
+mod renderer;
 mod shaders;
 mod sync;
 mod utils;

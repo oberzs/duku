@@ -11,13 +11,6 @@ use std::rc::Weak;
 use crate::instance::Device;
 use crate::utils::OrError;
 
-#[derive(Hash, PartialEq, Eq)]
-pub(crate) enum AttachmentType {
-    Color,
-    Depth,
-    Resolve,
-}
-
 pub(crate) struct Attachment {
     vk: AttachmentDescription,
     reference: AttachmentReference,
@@ -90,6 +83,15 @@ impl<'a> AttachmentBuilder {
 
     pub(crate) fn with_clear(&mut self) -> &mut Self {
         self.clear = AttachmentLoadOp::CLEAR;
+        self
+    }
+
+    pub(crate) fn with_clear_value(&mut self, value: bool) -> &mut Self {
+        self.clear = if value {
+            AttachmentLoadOp::CLEAR
+        } else {
+            AttachmentLoadOp::DONT_CARE
+        };
         self
     }
 

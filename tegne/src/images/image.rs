@@ -55,6 +55,12 @@ pub(crate) struct ImageBuilder {
     stencil: bool,
 }
 
+pub(crate) enum ImageFormat {
+    Rgba,
+    Bgra,
+    Depth,
+}
+
 impl Image {
     pub(crate) fn builder(device: &Rc<Device>) -> ImageBuilder {
         ImageBuilder {
@@ -218,6 +224,15 @@ impl ImageBuilder {
 
     pub(crate) fn with_depth(&mut self) -> &mut Self {
         self.format = self.device().pick_depth_format();
+        self
+    }
+
+    pub(crate) fn with_format(&mut self, format: ImageFormat) -> &mut Self {
+        self.format = match format {
+            ImageFormat::Rgba => self.device().pick_rgba_format(),
+            ImageFormat::Bgra => self.device().pick_bgra_format(),
+            ImageFormat::Depth => self.device().pick_depth_format(),
+        };
         self
     }
 

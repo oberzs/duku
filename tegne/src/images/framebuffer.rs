@@ -13,10 +13,10 @@ use std::rc::Rc;
 use std::rc::Weak;
 
 use super::Image;
+use super::ImageFormat;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::instance::Swapchain;
-use crate::shaders::AttachmentType;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
 use crate::shaders::ShaderLayout;
@@ -35,7 +35,7 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
-    pub(crate) fn for_window(
+    pub(crate) fn window(
         device: &Rc<Device>,
         swapchain: &Swapchain,
         render_pass: &RenderPass,
@@ -47,37 +47,35 @@ impl Framebuffer {
         debug!("creating window framebuffers");
 
         let extent = device.pick_extent(width, height);
-        let attachments = render_pass.attachments_ref();
 
         swapchain
             .iter_images()
             .map(|img| {
                 let mut images = vec![];
 
-                if attachments.contains_key(&AttachmentType::Depth) {
-                    images.push(
-                        Image::builder(device)
-                            .with_size(extent.width, extent.height)
-                            .with_samples()
-                            .with_depth()
-                            .with_view()
-                            .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
-                            .build(),
-                    );
-                }
+                // depth
+                images.push(
+                    Image::builder(device)
+                        .with_size(extent.width, extent.height)
+                        .with_samples()
+                        .with_depth()
+                        .with_view()
+                        .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
+                        .build(),
+                );
 
-                if attachments.contains_key(&AttachmentType::Color) {
-                    images.push(
-                        Image::builder(device)
-                            .from_image(img)
-                            .with_size(extent.width, extent.height)
-                            .with_bgra_color()
-                            .with_view()
-                            .build(),
-                    );
-                }
+                // color
+                images.push(
+                    Image::builder(device)
+                        .from_image(img)
+                        .with_size(extent.width, extent.height)
+                        .with_bgra_color()
+                        .with_view()
+                        .build(),
+                );
 
-                if attachments.contains_key(&AttachmentType::Resolve) {
+                // msaa
+                if device.is_msaa() {
                     images.push(
                         Image::builder(device)
                             .with_size(extent.width, extent.height)
@@ -103,7 +101,7 @@ impl Framebuffer {
             .collect::<Vec<_>>()
     }
 
-    pub(crate) fn new(
+    pub(crate) fn color(
         device: &Rc<Device>,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
@@ -112,35 +110,31 @@ impl Framebuffer {
         height: u32,
     ) -> Self {
         let mut images = vec![];
-        let attachments = render_pass.attachments_ref();
 
-        if attachments.contains_key(&AttachmentType::Depth) {
-            images.push(
-                Image::builder(device)
-                    .with_size(width, height)
-                    // .with_samples() // for now
-                    .with_depth()
-                    .with_stencil()
-                    .with_view()
-                    .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
-                    .with_usage(ImageUsageFlags::TRANSFER_SRC)
-                    .build(),
-            );
-        }
+        // depth
+        images.push(
+            Image::builder(device)
+                .with_size(width, height)
+                .with_samples()
+                .with_depth()
+                .with_view()
+                .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
+                .build(),
+        );
 
-        if attachments.contains_key(&AttachmentType::Color) {
-            images.push(
-                Image::builder(device)
-                    .with_size(width, height)
-                    .with_bgra_color()
-                    .with_usage(ImageUsageFlags::COLOR_ATTACHMENT)
-                    .with_usage(ImageUsageFlags::TRANSFER_SRC)
-                    .with_view()
-                    .build(),
-            );
-        }
+        // color
+        images.push(
+            Image::builder(device)
+                .with_size(width, height)
+                .with_bgra_color()
+                .with_usage(ImageUsageFlags::COLOR_ATTACHMENT)
+                .with_usage(ImageUsageFlags::TRANSFER_SRC)
+                .with_view()
+                .build(),
+        );
 
-        if attachments.contains_key(&AttachmentType::Resolve) {
+        // msaa
+        if device.is_msaa() {
             images.push(
                 Image::builder(device)
                     .with_size(width, height)
@@ -164,6 +158,39 @@ impl Framebuffer {
         )
     }
 
+    pub(crate) fn depth(
+        device: &Rc<Device>,
+        render_pass: &RenderPass,
+        image_uniforms: &ImageUniforms,
+        shader_layout: &ShaderLayout,
+        width: u32,
+        height: u32,
+    ) -> Self {
+        let mut images = vec![];
+
+        // depth
+        images.push(
+            Image::builder(device)
+                .with_size(width, height)
+                .with_depth()
+                .with_stencil()
+                .with_view()
+                .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
+                .with_usage(ImageUsageFlags::TRANSFER_SRC)
+                .build(),
+        );
+
+        Self::from_images(
+            device,
+            images,
+            image_uniforms,
+            render_pass,
+            shader_layout,
+            width,
+            height,
+        )
+    }
+
     fn from_images(
         device: &Rc<Device>,
         images: Vec<Image>,
@@ -173,23 +200,18 @@ impl Framebuffer {
         width: u32,
         height: u32,
     ) -> Self {
-        let shader_image = if images.last().or_error("no images").is_depth_format() {
-            Image::builder(device)
-                .with_size(width, height)
-                .with_depth()
-                .with_view()
-                .with_usage(ImageUsageFlags::TRANSFER_DST)
-                .with_usage(ImageUsageFlags::SAMPLED)
-                .build()
+        let format = if images.last().or_error("no images").is_depth_format() {
+            ImageFormat::Depth
         } else {
-            Image::builder(device)
-                .with_size(width, height)
-                .with_bgra_color()
-                .with_view()
-                .with_usage(ImageUsageFlags::TRANSFER_DST)
-                .with_usage(ImageUsageFlags::SAMPLED)
-                .build()
+            ImageFormat::Bgra
         };
+        let shader_image = Image::builder(device)
+            .with_size(width, height)
+            .with_format(format)
+            .with_view()
+            .with_usage(ImageUsageFlags::TRANSFER_DST)
+            .with_usage(ImageUsageFlags::SAMPLED)
+            .build();
 
         let recorder = CommandRecorder::new(device);
         recorder.begin_one_time();

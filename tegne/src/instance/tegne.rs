@@ -191,15 +191,12 @@ impl Tegne {
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
         debug!("creating rgba texture");
-        let texture =
-            Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms);
-        texture
+        Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms)
     }
 
     pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Texture {
         debug!("creating rgb texture");
-        let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms);
-        texture
+        Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms)
     }
 
     pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Texture {
@@ -233,7 +230,7 @@ impl Tegne {
             .render_passes
             .get(&RenderPassType::Color)
             .or_error("render passes not setup");
-        Framebuffer::new(
+        Framebuffer::color(
             &self.device,
             render_pass,
             &self.image_uniforms,
@@ -301,7 +298,7 @@ impl TegneBuilder {
             .get(&RenderPassType::Depth)
             .or_error("render passes not setup");
 
-        let window_framebuffers = Framebuffer::for_window(
+        let window_framebuffers = Framebuffer::window(
             &device,
             &swapchain,
             &window_pass,
@@ -310,7 +307,7 @@ impl TegneBuilder {
             window_args.width,
             window_args.height,
         );
-        let shadow_framebuffer = Framebuffer::new(
+        let shadow_framebuffer = Framebuffer::depth(
             &device,
             &depth_pass,
             &image_uniforms,

@@ -59,7 +59,7 @@ pub struct ShaderBuilder {
     enable_depth: bool,
     pipeline_layout: PipelineLayout,
     render_pass: VkRenderPass,
-    is_multisampled: bool,
+    is_msaa: bool,
     device: Weak<Device>,
 }
 
@@ -76,7 +76,7 @@ impl Shader {
             enable_depth: true,
             pipeline_layout: layout.pipeline(),
             render_pass: render_pass.vk(),
-            is_multisampled: render_pass.is_multisampled(),
+            is_msaa: render_pass.has_msaa_attachment(),
             device: Rc::downgrade(device),
         }
     }
@@ -188,7 +188,7 @@ impl ShaderBuilder {
             .cull_mode(CullModeFlags::BACK)
             .polygon_mode(self.polygon_mode);
 
-        let samples = match self.is_multisampled {
+        let samples = match self.is_msaa {
             true => self.device().pick_sample_count(),
             false => SampleCountFlags::TYPE_1,
         };

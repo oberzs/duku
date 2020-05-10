@@ -67,13 +67,12 @@ impl MaterialBuilder {
         self.uniforms.update(MaterialObject {
             albedo_tint: self.albedo_tint,
         });
-        let material = Material {
+        Material {
             pipeline: self.pipeline,
             albedo_index: self.albedo_index,
             albedo_tint: self.albedo_tint,
             uniforms: self.uniforms,
-        };
-        material
+        }
     }
 
     pub fn with_shader(mut self, shader: &Shader) -> MaterialBuilder {
