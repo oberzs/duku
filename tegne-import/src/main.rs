@@ -1,3 +1,19 @@
+//! Tegne Import is a utility for converting common file formats
+//! to formats used in Tegne (e.g. shaders and fonts)
+
+#![warn(
+    rust_2018_idioms,
+    unused,
+    future_incompatible,
+    missing_debug_implementations,
+    missing_docs,
+    single_use_lifetimes,
+    unused_qualifications,
+    trivial_casts,
+    trivial_numeric_casts,
+    box_pointers
+)]
+
 mod error;
 mod font;
 mod sdf;

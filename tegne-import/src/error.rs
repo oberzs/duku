@@ -27,7 +27,7 @@ pub enum ErrorKind {
 impl Error for ErrorType {}
 
 impl fmt::Display for ErrorType {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
             ErrorType::Io(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Image(ref err) => write!(fmt, "{:?}", err),
