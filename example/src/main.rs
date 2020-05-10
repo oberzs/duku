@@ -4,6 +4,7 @@ mod floor;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
+use tegne::Transform;
 use tegne::Vector3;
 use tegne::Window;
 
@@ -31,12 +32,17 @@ fn main() {
     let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, "blue1");
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
 
+    let text_transform = Transform::builder()
+        .with_position([5.0, 5.0, 5.0])
+        // .with_scale([20.0, 20.0, 1.0])
+        .build();
+
     let mut controller = Controller::default();
 
     let mut camera = Camera::perspective(width, height, 90);
     {
         let transform = camera.transform_mut();
-        transform.move_by([0.0, 5.0, 10.0]);
+        transform.move_by([0.0, 5.0, -10.0]);
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
@@ -51,6 +57,7 @@ fn main() {
             cube_1.draw(target);
             cube_2.draw(target);
             cube_3.draw(target);
+            target.draw_text("test text!", text_transform);
         });
         tegne.end_draw();
     });

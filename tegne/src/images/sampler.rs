@@ -17,43 +17,20 @@ pub(crate) struct Sampler {
     device: Weak<Device>,
 }
 
+pub(crate) struct SamplerBuilder {
+    anisotropy: f32,
+    address_mode: SamplerAddressMode,
+    filter: Filter,
+    device: Rc<Device>,
+}
+
 impl Sampler {
-    pub(crate) fn repeated(device: &Rc<Device>, anisotropy: f32) -> Self {
-        Self::new(device, anisotropy, SamplerAddressMode::REPEAT)
-    }
-
-    pub(crate) fn clamped(device: &Rc<Device>, anisotropy: f32) -> Self {
-        Self::new(device, anisotropy, SamplerAddressMode::CLAMP_TO_BORDER)
-    }
-
-    fn new(device: &Rc<Device>, anisotropy: f32, address_mode: SamplerAddressMode) -> Self {
-        let info = SamplerCreateInfo::builder()
-            .mag_filter(Filter::LINEAR)
-            .min_filter(Filter::LINEAR)
-            .address_mode_u(address_mode)
-            .address_mode_v(address_mode)
-            .address_mode_w(address_mode)
-            .anisotropy_enable(anisotropy != 0.0)
-            .max_anisotropy(anisotropy)
-            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
-            .unnormalized_coordinates(false)
-            .compare_enable(false)
-            .compare_op(CompareOp::ALWAYS)
-            .mipmap_mode(SamplerMipmapMode::LINEAR)
-            .mip_lod_bias(0.0)
-            .min_lod(0.0)
-            .max_lod(16.0);
-
-        let vk = unsafe {
-            device
-                .logical()
-                .create_sampler(&info, None)
-                .or_error("cannot create sampler")
-        };
-
-        Self {
-            vk,
-            device: Rc::downgrade(device),
+    pub(crate) fn builder(device: &Rc<Device>) -> SamplerBuilder {
+        SamplerBuilder {
+            anisotropy: 0.0,
+            address_mode: SamplerAddressMode::REPEAT,
+            filter: Filter::LINEAR,
+            device: Rc::clone(device),
         }
     }
 
@@ -71,5 +48,53 @@ impl Drop for Sampler {
         unsafe {
             self.device().logical().destroy_sampler(self.vk, None);
         }
+    }
+}
+
+impl SamplerBuilder {
+    pub(crate) fn build(&self) -> Sampler {
+        let info = SamplerCreateInfo::builder()
+            .mag_filter(self.filter)
+            .min_filter(self.filter)
+            .address_mode_u(self.address_mode)
+            .address_mode_v(self.address_mode)
+            .address_mode_w(self.address_mode)
+            .anisotropy_enable(self.anisotropy != 0.0)
+            .max_anisotropy(self.anisotropy)
+            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
+            .unnormalized_coordinates(false)
+            .compare_enable(false)
+            .compare_op(CompareOp::ALWAYS)
+            .mipmap_mode(SamplerMipmapMode::LINEAR)
+            .mip_lod_bias(0.0)
+            .min_lod(0.0)
+            .max_lod(16.0);
+
+        let vk = unsafe {
+            self.device
+                .logical()
+                .create_sampler(&info, None)
+                .or_error("cannot create sampler")
+        };
+
+        Sampler {
+            vk,
+            device: Rc::downgrade(&self.device),
+        }
+    }
+
+    pub(crate) fn with_anisotropy(&mut self, value: f32) -> &mut Self {
+        self.anisotropy = value;
+        self
+    }
+
+    pub(crate) fn with_clamp_mode(&mut self) -> &mut Self {
+        self.address_mode = SamplerAddressMode::CLAMP_TO_BORDER;
+        self
+    }
+
+    pub(crate) fn with_nearest_filter(&mut self) -> &mut Self {
+        self.filter = Filter::NEAREST;
+        self
     }
 }

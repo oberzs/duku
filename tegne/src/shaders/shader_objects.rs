@@ -66,6 +66,7 @@ pub(crate) struct ImageUniforms {
     descriptor: DescriptorSet,
     linear_repeat_sampler: Sampler,
     linear_clamp_sampler: Sampler,
+    nearest_repeat_sampler: Sampler,
     images: RefCell<Vec<ImageView>>,
     should_update: Cell<bool>,
     device: Weak<Device>,
@@ -113,13 +114,21 @@ impl ImageUniforms {
         info!("using anisotropy level {}", anisotropy);
 
         let descriptor = layout.image_set();
-        let linear_repeat_sampler = Sampler::repeated(device, anisotropy);
-        let linear_clamp_sampler = Sampler::clamped(device, anisotropy);
+        let linear_repeat_sampler = Sampler::builder(device).with_anisotropy(anisotropy).build();
+        let linear_clamp_sampler = Sampler::builder(device)
+            .with_anisotropy(anisotropy)
+            .with_clamp_mode()
+            .build();
+        let nearest_repeat_sampler = Sampler::builder(device)
+            .with_anisotropy(anisotropy)
+            .with_nearest_filter()
+            .build();
 
         Self {
             descriptor,
             linear_repeat_sampler,
             linear_clamp_sampler,
+            nearest_repeat_sampler,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
             device: Rc::downgrade(device),
@@ -155,6 +164,10 @@ impl ImageUniforms {
                 DescriptorImageInfo::builder()
                     .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
                     .sampler(self.linear_clamp_sampler.vk())
+                    .build(),
+                DescriptorImageInfo::builder()
+                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .sampler(self.nearest_repeat_sampler.vk())
                     .build(),
             ];
 

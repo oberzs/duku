@@ -18,6 +18,7 @@ pub struct SDF<'font> {
     font_size: u32,
     font_margin: u32,
     sdf_size: u32,
+    max_distance: u16,
 }
 
 pub struct CharData {
@@ -27,8 +28,8 @@ pub struct CharData {
 
 #[derive(Serialize)]
 pub struct CharMetrics {
-    x: u32,
-    y: u32,
+    pub x: u32,
+    pub y: u32,
     width: u32,
     height: u32,
     offset_x: u32,
@@ -43,6 +44,7 @@ impl<'font> SDF<'font> {
             font_size: 64,
             font_margin: 0,
             sdf_size: 32,
+            max_distance: 10,
         }
     }
 
@@ -58,6 +60,11 @@ impl<'font> SDF<'font> {
 
     pub fn with_sdf_size(&mut self, size: u32) -> &mut Self {
         self.sdf_size = size;
+        self
+    }
+
+    pub fn with_max_distance(&mut self, distance: u16) -> &mut Self {
+        self.max_distance = distance;
         self
     }
 
@@ -80,12 +87,12 @@ impl<'font> SDF<'font> {
         let margin_y = self.font_margin + (img_size - self.font_margin * 2 - height) / 2;
 
         let metrics = CharMetrics {
-            x: margin_x,
-            y: margin_y,
+            x: 0,
+            y: 0,
             width,
             height,
-            offset_x: 0,
-            offset_y: 0,
+            offset_x: margin_x,
+            offset_y: margin_y,
         };
 
         let mut img = DynamicImage::new_rgba8(img_size, img_size).to_rgba();
@@ -111,15 +118,14 @@ impl<'font> SDF<'font> {
 
     fn distance_to_zone(&self, img: &ImageBuffer<Rgba<u8>, Vec<u8>>, out_x: u32, out_y: u32) -> u8 {
         let threshold = 127;
-        let max_distance = 512;
 
         let mid_x = (out_x * img.width()) / self.sdf_size;
         let mid_y = (out_y * img.height()) / self.sdf_size;
 
         let is_inside = img.get_pixel(mid_x, mid_y)[0] > threshold;
 
-        let mut closest_distance = max_distance as f32;
-        for (x, y) in ManhattanIterator::new(mid_x as i32, mid_y as i32, max_distance as u16) {
+        let mut closest_distance = self.max_distance as f32;
+        for (x, y) in ManhattanIterator::new(mid_x as i32, mid_y as i32, self.max_distance) {
             if x < 0 || y < 0 || x >= img.width() as i32 || y >= img.height() as i32 {
                 continue;
             }
@@ -137,9 +143,9 @@ impl<'font> SDF<'font> {
 
         // outside = [0.0, 0.5], inside = [0.5, 1.0]
         let distance = if is_inside {
-            0.5 + (closest_distance / 2.0) / max_distance as f32
+            0.5 + (closest_distance / 2.0) / self.max_distance as f32
         } else {
-            0.5 - (closest_distance / 2.0) / max_distance as f32
+            0.5 - (closest_distance / 2.0) / self.max_distance as f32
         };
 
         (distance * 255.0) as u8

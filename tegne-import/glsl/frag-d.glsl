@@ -1,10 +1,12 @@
 layout(set = 2, binding = 0) uniform texture2D textures[100];
-layout(set = 2, binding = 1) uniform sampler samplers[2];
+layout(set = 2, binding = 1) uniform sampler samplers[3];
 
 #define linear_repeat_sampler samplers[0]
 #define linear_clamp_sampler samplers[1]
+#define nearest_repeat_sampler samplers[2]
 #define albedo sampler2D(textures[object.albedo_index], linear_repeat_sampler)
-#define shadow_map sampler2D(textures[4], linear_clamp_sampler)
+#define sharp_albedo sampler2D(textures[object.albedo_index], nearest_repeat_sampler)
+#define shadow_map sampler2D(textures[5], linear_clamp_sampler)
 
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_normal;

@@ -5,14 +5,18 @@ use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
+use crate::builtins::BuiltinFont;
 use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinMesh;
+use crate::builtins::BuiltinShader;
 use crate::builtins::Builtins;
+use crate::images::Font;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::shaders::Light;
 use crate::shaders::Material;
 
+// #[derive(Debug)]
 pub struct Target<'a> {
     material_orders: Vec<MaterialOrder>,
     clear: [f32; 3],
@@ -20,26 +24,31 @@ pub struct Target<'a> {
     current_pipeline: Pipeline,
     current_material: (u32, DescriptorSet),
     current_albedo: i32,
+    current_font: &'a Font,
     builtins: &'a Builtins,
 }
 
+#[derive(Debug)]
 pub(crate) struct MaterialOrder {
     pub(crate) pipeline: Pipeline,
     pub(crate) material_descriptor: (u32, DescriptorSet),
     pub(crate) orders: Vec<Order>,
 }
 
+#[derive(Debug)]
 pub(crate) struct Order {
     pub(crate) model: Matrix4,
     pub(crate) vertex_buffer: Buffer,
     pub(crate) index_buffer: Buffer,
     pub(crate) index_count: u32,
     pub(crate) albedo_index: i32,
+    pub(crate) has_shadows: bool,
 }
 
 impl<'a> Target<'a> {
     pub(crate) fn new(builtins: &'a Builtins) -> Self {
         let material = builtins.get_material(BuiltinMaterial::White);
+        let font = builtins.get_font(BuiltinFont::NotoSans);
 
         Self {
             material_orders: vec![],
@@ -48,6 +57,7 @@ impl<'a> Target<'a> {
             current_pipeline: material.pipeline(),
             current_material: material.uniforms().descriptor(),
             current_albedo: material.albedo_index(),
+            current_font: font,
             builtins,
         }
     }
@@ -59,6 +69,7 @@ impl<'a> Target<'a> {
             index_buffer: mesh.vk_index_buffer(),
             index_count: mesh.drawn_triangles() * 3,
             albedo_index: self.current_albedo,
+            has_shadows: true,
         });
     }
 
@@ -68,6 +79,38 @@ impl<'a> Target<'a> {
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
         self.draw(self.builtins.get_mesh(BuiltinMesh::Sphere), transform);
+    }
+
+    pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
+        let temp_pipeline = self.current_pipeline;
+        // let temp_material = self.current_material;
+
+        let shader = self.builtins.get_shader(BuiltinShader::Font);
+        self.current_pipeline = shader.pipeline();
+
+        let mut current_transform = transform.into();
+
+        for c in text.as_ref().chars() {
+            if c == ' ' {
+                current_transform.position.x += self.current_font.char_advance('s');
+                continue;
+            }
+
+            let mesh = self.current_font.char_mesh(c);
+            self.add_order(Order {
+                model: current_transform.as_matrix(),
+                vertex_buffer: mesh.vk_vertex_buffer(),
+                index_buffer: mesh.vk_index_buffer(),
+                index_count: mesh.drawn_triangles() * 3,
+                albedo_index: self.current_font.image_index(),
+                has_shadows: false,
+            });
+
+            current_transform.position.x += self.current_font.char_advance(c);
+        }
+
+        self.current_pipeline = temp_pipeline;
+        // self.current_material = temp_material;
     }
 
     pub fn add_directional_light(
@@ -118,11 +161,12 @@ impl<'a> Target<'a> {
 
     fn add_order(&mut self, order: Order) {
         let material = self.current_material;
+        let pipeline = self.current_pipeline;
 
         match self
             .material_orders
             .iter_mut()
-            .find(|mo| mo.material_descriptor == material)
+            .find(|mo| mo.material_descriptor == material && mo.pipeline == pipeline)
         {
             Some(mo) => mo.orders.push(order),
             None => self.material_orders.push(MaterialOrder {

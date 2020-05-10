@@ -1,3 +1,4 @@
+mod font;
 mod material;
 mod mesh;
 mod shader;
@@ -7,6 +8,7 @@ use log::debug;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::images::Font;
 use crate::images::Texture;
 use crate::instance::Device;
 use crate::instance::RenderPassType;
@@ -17,6 +19,8 @@ use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::utils::OrError;
+use font::builtin_fonts;
+pub(crate) use font::BuiltinFont;
 use material::builtin_materials;
 pub(crate) use material::BuiltinMaterial;
 use mesh::builtin_meshes;
@@ -31,6 +35,7 @@ pub(crate) struct Builtins {
     shaders: HashMap<BuiltinShader, Shader>,
     textures: HashMap<BuiltinTexture, Texture>,
     materials: HashMap<BuiltinMaterial, Material>,
+    fonts: HashMap<BuiltinFont, Font>,
 }
 
 impl Builtins {
@@ -52,11 +57,15 @@ impl Builtins {
         debug!("creating builtin materials");
         let materials = builtin_materials(device, layout, &shaders, &textures);
 
+        debug!("creating builtin fonts");
+        let fonts = builtin_fonts(device, uniforms);
+
         Self {
             meshes,
             shaders,
             textures,
             materials,
+            fonts,
         }
     }
 
@@ -80,5 +89,9 @@ impl Builtins {
         self.textures
             .get(&texture)
             .or_error("texture builtins not setup")
+    }
+
+    pub(crate) fn get_font(&self, font: BuiltinFont) -> &Font {
+        self.fonts.get(&font).or_error("font builtins not setup")
     }
 }

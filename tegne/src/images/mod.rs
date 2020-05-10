@@ -1,3 +1,4 @@
+mod font;
 mod framebuffer;
 mod image;
 mod layout_change;
@@ -6,6 +7,7 @@ mod texture;
 
 pub(crate) use self::image::Image;
 pub(crate) use self::image::ImageFormat;
+pub use font::Font;
 pub(crate) use framebuffer::Framebuffer;
 pub(crate) use layout_change::LayoutChange;
 pub(crate) use sampler::Sampler;

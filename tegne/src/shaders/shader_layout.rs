@@ -89,7 +89,7 @@ impl ShaderLayout {
 
         // image layout
         let max_image_count = 100;
-        let sampler_count = 2;
+        let sampler_count = 3;
         let image_binding = DescriptorSetLayoutBinding::builder()
             .descriptor_type(DescriptorType::SAMPLED_IMAGE)
             .stage_flags(ShaderStageFlags::FRAGMENT)

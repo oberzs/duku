@@ -93,7 +93,9 @@ impl ForwardRenderer {
 
         for mat_order in options.target.material_orders() {
             for order in mat_order.orders.iter() {
-                self.draw_order_with_albedo(order, &options, shadow_material.albedo_index());
+                if order.has_shadows {
+                    self.draw_order_with_albedo(order, &options, shadow_material.albedo_index());
+                }
             }
         }
 

@@ -28,9 +28,10 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     println!("Compiling {:?}", in_path);
 
     let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.?!(){}[]/";
-    let font_size = 128;
-    let font_margin = 10;
-    let sdf_size = 32;
+    let font_size = 1024;
+    let sdf_size = 256;
+    let font_margin = 50;
+    let max_distance = 50;
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
     let atlas_size = tile_count * sdf_size;
 
@@ -51,15 +52,21 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     progress.inc(1);
 
     for (i, c) in chars.chars().enumerate() {
-        let char_data = SDF::new(&font, c)
+        let mut char_data = SDF::new(&font, c)
             .with_font_size(font_size)
             .with_font_margin(font_margin)
             .with_sdf_size(sdf_size)
+            .with_max_distance(max_distance)
             .generate()?;
-        atlas_metrics.char_metrics.insert(c, char_data.metrics);
 
         let x = (i as u32 % tile_count) * sdf_size;
         let y = (i as u32 / tile_count) * sdf_size;
+
+        char_data.metrics.x = x;
+        char_data.metrics.y = y;
+
+        atlas_metrics.char_metrics.insert(c, char_data.metrics);
+
         atlas.copy_from(&char_data.image, x, y)?;
 
         progress.inc(1);

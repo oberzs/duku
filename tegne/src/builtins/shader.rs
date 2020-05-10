@@ -21,6 +21,7 @@ pub(crate) enum BuiltinShader {
     Passthru,
     Wireframe,
     Shadow,
+    Font,
 }
 
 pub(crate) fn builtin_shaders(
@@ -42,6 +43,7 @@ pub(crate) fn builtin_shaders(
     let passthru = include_shader!("passthru.shader");
     let shadow = include_shader!("shadow.shader");
     let wireframe = include_shader!("wireframe.shader");
+    let font = include_shader!("font.shader");
 
     map.insert(
         BuiltinShader::Phong,
@@ -74,6 +76,12 @@ pub(crate) fn builtin_shaders(
             .with_source(wireframe)
             .with_lines()
             .with_no_depth()
+            .build(),
+    );
+    map.insert(
+        BuiltinShader::Font,
+        Shader::builder(&device, &color_pass, &layout)
+            .with_source(font)
             .build(),
     );
 
