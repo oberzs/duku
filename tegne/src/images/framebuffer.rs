@@ -217,7 +217,7 @@ impl Framebuffer {
         recorder.begin_one_time();
         recorder
             .change_image_layout(&shader_image)
-            .to_shader_read()
+            .change_to_shader_read()
             .record();
         device.submit_buffer(recorder.end());
 
@@ -265,20 +265,20 @@ impl Framebuffer {
         if is_depth {
             recorder
                 .change_image_layout(image)
-                .from_depth_write()
-                .to_read()
+                .change_from_depth_write()
+                .change_to_read()
                 .record();
         } else {
             recorder
                 .change_image_layout(image)
-                .from_color_write()
-                .to_read()
+                .change_from_color_write()
+                .change_to_read()
                 .record();
         }
         recorder
             .change_image_layout(&self.shader_image)
-            .from_shader_read()
-            .to_write()
+            .change_from_shader_read()
+            .change_to_write()
             .record();
 
         let offsets = [
@@ -289,9 +289,10 @@ impl Framebuffer {
                 z: 1,
             },
         ];
-        let aspect_mask = match is_depth {
-            true => ImageAspectFlags::DEPTH,
-            false => ImageAspectFlags::COLOR,
+        let aspect_mask = if is_depth {
+            ImageAspectFlags::DEPTH
+        } else {
+            ImageAspectFlags::COLOR
         };
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(aspect_mask)
@@ -307,9 +308,10 @@ impl Framebuffer {
             .dst_subresource(subresource)
             .build();
 
-        let filter = match is_depth {
-            true => Filter::NEAREST,
-            false => Filter::LINEAR,
+        let filter = if is_depth {
+            Filter::NEAREST
+        } else {
+            Filter::LINEAR
         };
 
         recorder.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
@@ -317,20 +319,20 @@ impl Framebuffer {
         if is_depth {
             recorder
                 .change_image_layout(image)
-                .from_read()
-                .to_depth_write()
+                .change_from_read()
+                .change_to_depth_write()
                 .record();
         } else {
             recorder
                 .change_image_layout(image)
-                .from_read()
-                .to_color_write()
+                .change_from_read()
+                .change_to_color_write()
                 .record();
         }
         recorder
             .change_image_layout(&self.shader_image)
-            .from_write()
-            .to_shader_read()
+            .change_from_write()
+            .change_to_shader_read()
             .record();
     }
 

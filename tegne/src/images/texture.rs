@@ -69,7 +69,7 @@ impl Texture {
         recorder
             .change_image_layout(&image)
             .with_mips(0, mip_levels)
-            .to_write()
+            .change_to_write()
             .record();
         device.submit_buffer(recorder.end());
 

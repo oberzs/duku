@@ -135,13 +135,7 @@ impl Device {
                     "using driver version {}.{}.{}",
                     driver_major, driver_minor, driver_patch
                 );
-                info!(
-                    "using VSync {}",
-                    match vsync {
-                        true => "enabled",
-                        false => "disabled",
-                    }
-                );
+                info!("using VSync {}", if vsync { "enabled" } else { "disabled" });
                 info!("using MSAA level {}", msaa);
 
                 let logical = open_device(physical, vulkan, &props, exts);
@@ -330,9 +324,10 @@ impl Device {
     }
 
     pub(crate) fn pick_present_mode(&self) -> PresentModeKHR {
-        match self.properties.vsync {
-            true => PresentModeKHR::FIFO,
-            false => PresentModeKHR::IMMEDIATE,
+        if self.properties.vsync {
+            PresentModeKHR::FIFO
+        } else {
+            PresentModeKHR::IMMEDIATE
         }
     }
 

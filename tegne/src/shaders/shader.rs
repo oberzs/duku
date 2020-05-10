@@ -188,9 +188,10 @@ impl ShaderBuilder {
             .cull_mode(CullModeFlags::BACK)
             .polygon_mode(self.polygon_mode);
 
-        let samples = match self.is_msaa {
-            true => self.device().pick_sample_count(),
-            false => SampleCountFlags::TYPE_1,
+        let samples = if self.is_msaa {
+            self.device().pick_sample_count()
+        } else {
+            SampleCountFlags::TYPE_1
         };
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()

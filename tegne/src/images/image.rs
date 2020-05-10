@@ -56,7 +56,7 @@ pub(crate) struct ImageBuilder {
 }
 
 pub(crate) enum ImageFormat {
-    Rgba,
+    // Rgba,
     Bgra,
     Depth,
 }
@@ -115,8 +115,8 @@ impl Image {
             recorder
                 .change_image_layout(self)
                 .with_mips(i - 1, 1)
-                .from_write()
-                .to_read()
+                .change_from_write()
+                .change_to_read()
                 .record();
 
             let src_offsets = [
@@ -163,16 +163,16 @@ impl Image {
             recorder
                 .change_image_layout(self)
                 .with_mips(i - 1, 1)
-                .from_read()
-                .to_shader_read()
+                .change_from_read()
+                .change_to_shader_read()
                 .record();
         }
 
         recorder
             .change_image_layout(self)
             .with_mips(self.mip_levels - 1, 1)
-            .from_write()
-            .to_shader_read()
+            .change_from_write()
+            .change_to_shader_read()
             .record();
 
         self.device().submit_buffer(recorder.end());
@@ -229,7 +229,7 @@ impl ImageBuilder {
 
     pub(crate) fn with_format(&mut self, format: ImageFormat) -> &mut Self {
         self.format = match format {
-            ImageFormat::Rgba => self.device().pick_rgba_format(),
+            // ImageFormat::Rgba => self.device().pick_rgba_format(),
             ImageFormat::Bgra => self.device().pick_bgra_format(),
             ImageFormat::Depth => self.device().pick_depth_format(),
         };
@@ -323,40 +323,39 @@ impl ImageBuilder {
         };
 
         // create view
-        let view = match self.view {
-            true => {
-                let mut aspect_flags = if self.format == self.device().pick_depth_format() {
-                    ImageAspectFlags::DEPTH
-                } else {
-                    ImageAspectFlags::COLOR
-                };
-                if self.stencil {
-                    aspect_flags |= ImageAspectFlags::STENCIL;
-                }
-
-                let subresource = ImageSubresourceRange::builder()
-                    .aspect_mask(aspect_flags)
-                    .base_mip_level(0)
-                    .base_array_layer(0)
-                    .layer_count(1)
-                    .level_count(mip_levels)
-                    .build();
-                let view_info = ImageViewCreateInfo::builder()
-                    .image(vk)
-                    .view_type(ImageViewType::TYPE_2D)
-                    .format(self.format)
-                    .subresource_range(subresource);
-
-                unsafe {
-                    Some(
-                        self.device()
-                            .logical()
-                            .create_image_view(&view_info, None)
-                            .or_error("cannot create image view"),
-                    )
-                }
+        let view = if self.view {
+            let mut aspect_flags = if self.format == self.device().pick_depth_format() {
+                ImageAspectFlags::DEPTH
+            } else {
+                ImageAspectFlags::COLOR
+            };
+            if self.stencil {
+                aspect_flags |= ImageAspectFlags::STENCIL;
             }
-            _ => None,
+
+            let subresource = ImageSubresourceRange::builder()
+                .aspect_mask(aspect_flags)
+                .base_mip_level(0)
+                .base_array_layer(0)
+                .layer_count(1)
+                .level_count(mip_levels)
+                .build();
+            let view_info = ImageViewCreateInfo::builder()
+                .image(vk)
+                .view_type(ImageViewType::TYPE_2D)
+                .format(self.format)
+                .subresource_range(subresource);
+
+            unsafe {
+                Some(
+                    self.device()
+                        .logical()
+                        .create_image_view(&view_info, None)
+                        .or_error("cannot create image view"),
+                )
+            }
+        } else {
+            None
         };
 
         Image {

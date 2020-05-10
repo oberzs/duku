@@ -6,15 +6,12 @@ use ash::vk::Format;
 use ash::vk::ImageLayout;
 use ash::vk::SampleCountFlags;
 use std::rc::Rc;
-use std::rc::Weak;
 
 use crate::instance::Device;
-use crate::utils::OrError;
 
 pub(crate) struct Attachment {
     vk: AttachmentDescription,
     reference: AttachmentReference,
-    index: u32,
 }
 
 pub(crate) struct AttachmentBuilder {
@@ -25,7 +22,7 @@ pub(crate) struct AttachmentBuilder {
     clear: AttachmentLoadOp,
     store: AttachmentStoreOp,
     index: u32,
-    device: Weak<Device>,
+    device: Rc<Device>,
 }
 
 impl Attachment {
@@ -38,7 +35,7 @@ impl Attachment {
             clear: AttachmentLoadOp::DONT_CARE,
             store: AttachmentStoreOp::DONT_CARE,
             index: 0,
-            device: Rc::downgrade(device),
+            device: Rc::clone(device),
         }
     }
 
@@ -49,22 +46,18 @@ impl Attachment {
     pub(crate) fn reference(&self) -> AttachmentReference {
         self.reference
     }
-
-    pub(crate) fn index(&self) -> u32 {
-        self.index
-    }
 }
 
 impl<'a> AttachmentBuilder {
     pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
-        self.format = self.device().pick_bgra_format();
+        self.format = self.device.pick_bgra_format();
         self.layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self.final_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self
     }
 
     pub(crate) fn with_depth(&mut self) -> &mut Self {
-        self.format = self.device().pick_depth_format();
+        self.format = self.device.pick_depth_format();
         self.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self.final_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self
@@ -77,7 +70,7 @@ impl<'a> AttachmentBuilder {
     }
 
     pub(crate) fn with_samples(&mut self) -> &mut Self {
-        self.samples = self.device().pick_sample_count();
+        self.samples = self.device.pick_sample_count();
         self
     }
 
@@ -122,14 +115,6 @@ impl<'a> AttachmentBuilder {
             .layout(self.layout)
             .build();
 
-        Attachment {
-            vk,
-            reference,
-            index: self.index,
-        }
-    }
-
-    fn device(&self) -> Rc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
+        Attachment { vk, reference }
     }
 }

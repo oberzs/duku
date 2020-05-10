@@ -38,35 +38,35 @@ impl<'a> LayoutChange<'a> {
         }
     }
 
-    pub(crate) fn from_read(&mut self) -> &mut Self {
+    pub(crate) fn change_from_read(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         self.src_access = AccessFlags::TRANSFER_READ;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub(crate) fn from_write(&mut self) -> &mut Self {
+    pub(crate) fn change_from_write(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         self.src_access = AccessFlags::TRANSFER_WRITE;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub(crate) fn from_shader_read(&mut self) -> &mut Self {
+    pub(crate) fn change_from_shader_read(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         self.src_access = AccessFlags::SHADER_READ;
         self.src_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
-    pub(crate) fn from_color_write(&mut self) -> &mut Self {
+    pub(crate) fn change_from_color_write(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self.src_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
-    pub(crate) fn from_depth_write(&mut self) -> &mut Self {
+    pub(crate) fn change_from_depth_write(&mut self) -> &mut Self {
         self.old_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self.src_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
         self.src_stage =
@@ -74,35 +74,35 @@ impl<'a> LayoutChange<'a> {
         self
     }
 
-    pub(crate) fn to_read(&mut self) -> &mut Self {
+    pub(crate) fn change_to_read(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
         self.dst_access = AccessFlags::TRANSFER_READ;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub(crate) fn to_write(&mut self) -> &mut Self {
+    pub(crate) fn change_to_write(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
         self.dst_access = AccessFlags::TRANSFER_WRITE;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
-    pub(crate) fn to_shader_read(&mut self) -> &mut Self {
+    pub(crate) fn change_to_shader_read(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         self.dst_access = AccessFlags::SHADER_READ;
         self.dst_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
-    pub(crate) fn to_color_write(&mut self) -> &mut Self {
+    pub(crate) fn change_to_color_write(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         self.dst_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
-    pub(crate) fn to_depth_write(&mut self) -> &mut Self {
+    pub(crate) fn change_to_depth_write(&mut self) -> &mut Self {
         self.new_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         self.dst_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
         self.dst_stage =
@@ -117,9 +117,10 @@ impl<'a> LayoutChange<'a> {
     }
 
     pub(crate) fn record(&self) {
-        let aspect_mask = match self.image.is_depth_format() {
-            true => ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL,
-            false => ImageAspectFlags::COLOR,
+        let aspect_mask = if self.image.is_depth_format() {
+            ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL
+        } else {
+            ImageAspectFlags::COLOR
         };
 
         let subresource = ImageSubresourceRange::builder()
