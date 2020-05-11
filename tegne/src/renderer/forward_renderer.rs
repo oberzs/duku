@@ -115,6 +115,17 @@ impl ForwardRenderer {
             }
         }
 
+        // wireframe render
+        let wireframe_material = options.builtins.get_material(BuiltinMaterial::Wireframe);
+        self.bind_material(
+            wireframe_material.pipeline(),
+            wireframe_material.uniforms().descriptor(),
+            &options,
+        );
+        for order in options.target.wireframe_orders() {
+            self.draw_order(order, &options);
+        }
+
         recorder.end_render_pass();
     }
 

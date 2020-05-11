@@ -19,12 +19,14 @@ use crate::shaders::Material;
 // #[derive(Debug)]
 pub struct Target<'a> {
     material_orders: Vec<MaterialOrder>,
+    wireframe_orders: Vec<Order>,
     clear: [f32; 3],
     lights: Vec<Light>,
     current_pipeline: Pipeline,
     current_material: (u32, DescriptorSet),
     current_albedo: i32,
     current_font: &'a Font,
+    draw_wireframes: bool,
     builtins: &'a Builtins,
 }
 
@@ -35,7 +37,7 @@ pub(crate) struct MaterialOrder {
     pub(crate) orders: Vec<Order>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) struct Order {
     pub(crate) model: Matrix4,
     pub(crate) vertex_buffer: Buffer,
@@ -52,12 +54,14 @@ impl<'a> Target<'a> {
 
         Self {
             material_orders: vec![],
+            wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             lights: vec![],
             current_pipeline: material.pipeline(),
             current_material: material.uniforms().descriptor(),
             current_albedo: material.albedo_index(),
             current_font: font,
+            draw_wireframes: false,
             builtins,
         }
     }
@@ -83,7 +87,6 @@ impl<'a> Target<'a> {
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_pipeline = self.current_pipeline;
-        // let temp_material = self.current_material;
 
         let shader = self.builtins.get_shader(BuiltinShader::Font);
         self.current_pipeline = shader.pipeline();
@@ -110,7 +113,6 @@ impl<'a> Target<'a> {
         }
 
         self.current_pipeline = temp_pipeline;
-        // self.current_material = temp_material;
     }
 
     pub fn add_directional_light(
@@ -145,12 +147,20 @@ impl<'a> Target<'a> {
         self.clear = clear;
     }
 
+    pub fn set_draw_wireframes(&mut self, draw: bool) {
+        self.draw_wireframes = draw;
+    }
+
     pub(crate) fn clear(&self) -> [f32; 4] {
         [self.clear[0], self.clear[1], self.clear[2], 1.0]
     }
 
     pub(crate) fn material_orders(&self) -> &[MaterialOrder] {
         &self.material_orders
+    }
+
+    pub(crate) fn wireframe_orders(&self) -> &[Order] {
+        &self.wireframe_orders
     }
 
     pub(crate) fn lights(&self) -> [Light; 4] {
@@ -174,6 +184,10 @@ impl<'a> Target<'a> {
                 material_descriptor: self.current_material,
                 orders: vec![order],
             }),
+        }
+
+        if self.draw_wireframes {
+            self.wireframe_orders.push(order);
         }
     }
 }
