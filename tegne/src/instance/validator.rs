@@ -20,6 +20,7 @@ pub(crate) struct Validator {
 }
 
 impl Validator {
+    #[allow(dead_code)]
     pub(crate) fn new(vulkan: &Vulkan) -> Self {
         debug!("creating validator");
 
@@ -47,6 +48,7 @@ impl Drop for Validator {
     }
 }
 
+#[allow(dead_code)]
 extern "system" fn callback(
     severity: Severity,
     _: MessageType,

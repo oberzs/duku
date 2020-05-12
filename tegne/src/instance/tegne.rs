@@ -88,7 +88,7 @@ impl Tegne {
         self.device.present(&self.swapchain);
     }
 
-    pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target)) {
+    pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 

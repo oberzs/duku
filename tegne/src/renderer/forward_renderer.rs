@@ -56,7 +56,7 @@ impl ForwardRenderer {
         }
     }
 
-    pub fn draw(&self, options: ForwardDrawOptions) {
+    pub fn draw(&self, options: ForwardDrawOptions<'_>) {
         let cam_mat = options.camera.matrix();
 
         let light_distance = 10.0;
@@ -142,7 +142,7 @@ impl ForwardRenderer {
         &self,
         framebuffer: &Framebuffer,
         object: WorldObject,
-        options: &ForwardDrawOptions,
+        options: &ForwardDrawOptions<'_>,
     ) {
         let device = self.device();
         let recorder = device.record_commands();
@@ -158,7 +158,7 @@ impl ForwardRenderer {
         &self,
         pipeline: Pipeline,
         descriptor: (u32, DescriptorSet),
-        options: &ForwardDrawOptions,
+        options: &ForwardDrawOptions<'_>,
     ) {
         let device = self.device();
         let recorder = device.record_commands();
@@ -167,14 +167,14 @@ impl ForwardRenderer {
         recorder.bind_descriptor(descriptor, options.shader_layout.pipeline());
     }
 
-    fn draw_order(&self, order: &Order, options: &ForwardDrawOptions) {
+    fn draw_order(&self, order: &Order, options: &ForwardDrawOptions<'_>) {
         self.draw_order_with_albedo(order, options, order.albedo_index);
     }
 
     fn draw_order_with_albedo(
         &self,
         order: &Order,
-        options: &ForwardDrawOptions,
+        options: &ForwardDrawOptions<'_>,
         albedo_index: i32,
     ) {
         let device = self.device();

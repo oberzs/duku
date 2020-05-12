@@ -21,7 +21,6 @@ use crate::sdf::SdfOptions;
 struct AtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
-    margin: u32,
     char_metrics: HashMap<char, CharMetrics>,
 }
 
@@ -44,13 +43,9 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     let font =
         Font::try_from_bytes(&font_data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
 
-    let rescale = options.sdf_size as f32 / (options.font_size + options.font_margin * 2) as f32;
-    let rescaled_margin = options.font_margin as f32 * rescale;
-
     let mut atlas_metrics = AtlasMetrics {
         sdf_size: options.sdf_size,
         atlas_size,
-        margin: rescaled_margin.round() as u32,
         char_metrics: HashMap::new(),
     };
 

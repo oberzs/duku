@@ -216,10 +216,9 @@ impl CommandRecorder {
 
     pub(crate) fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
         unsafe {
-            let data: &[u8] = slice::from_raw_parts(
-                &constants as *const PushConstants as *const u8,
-                mem::size_of::<PushConstants>(),
-            );
+            let constant_ptr: *const PushConstants = &constants;
+            let data: &[u8] =
+                slice::from_raw_parts(constant_ptr as *const u8, mem::size_of::<PushConstants>());
 
             self.device().logical().cmd_push_constants(
                 self.buffer,

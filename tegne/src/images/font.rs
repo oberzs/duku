@@ -32,7 +32,6 @@ struct CharData {
 struct JsonAtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
-    margin: u32,
     char_metrics: HashMap<char, JsonCharMetrics>,
 }
 
@@ -122,7 +121,6 @@ impl FontBuilder<'_> {
         for (c, metrics) in atlas.char_metrics {
             // uv relative
             let size_norm = atlas.sdf_size as f32 / atlas.atlas_size as f32;
-            let width_norm = metrics.advance as f32 / atlas.atlas_size as f32;
             let u_min = metrics.x as f32 / atlas.atlas_size as f32;
             let v_min = metrics.y as f32 / atlas.atlas_size as f32;
             let u_max = u_min + size_norm;
@@ -130,7 +128,6 @@ impl FontBuilder<'_> {
 
             // vertex relative
             let advance = metrics.advance as f32 / atlas.sdf_size as f32;
-            let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
             let vertices = vec![
                 Vector3::new(0.0, 0.0, 0.0),

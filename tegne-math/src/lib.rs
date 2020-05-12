@@ -1,3 +1,16 @@
+#![feature(proc_macro_hygiene)]
+#![warn(
+    rust_2018_idioms,
+    unused,
+    future_incompatible,
+    // missing_docs,
+    single_use_lifetimes,
+    unused_qualifications,
+    trivial_casts,
+    trivial_numeric_casts,
+    box_pointers
+)]
+
 mod camera;
 mod matrix_4;
 mod quaternion;

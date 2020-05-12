@@ -90,12 +90,11 @@ impl Window {
                 },
                 Event::DeviceEvent {
                     event: dev_event, ..
-                } => match dev_event {
-                    DeviceEvent::MouseMotion { delta, .. } => {
+                } => {
+                    if let DeviceEvent::MouseMotion { delta, .. } = dev_event {
                         events.mouse_delta = (delta.0 as f32, delta.1 as f32);
                     }
-                    _ => (),
-                },
+                }
                 Event::MainEventsCleared => {
                     draw(&events);
                     events.keys.clear_typed();

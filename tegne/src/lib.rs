@@ -3,7 +3,6 @@
     rust_2018_idioms,
     unused,
     future_incompatible,
-    missing_debug_implementations,
     // missing_docs,
     single_use_lifetimes,
     unused_qualifications,

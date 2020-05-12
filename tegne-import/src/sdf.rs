@@ -59,7 +59,6 @@ pub fn generate_sdf(font: &Font<'_>, c: char, options: SdfOptions) -> Result<Cha
     let min_y = (bounds.max.y + (ascent - bounds.height())) as u32;
 
     let rescale = options.sdf_size as f32 / image_size as f32;
-    let rescaled_margin = options.font_margin as f32 * rescale;
     let rescaled_advance = h_metrics.advance_width * rescale;
 
     let metrics = CharMetrics {

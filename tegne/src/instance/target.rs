@@ -16,7 +16,6 @@ use crate::mesh::Mesh;
 use crate::shaders::Light;
 use crate::shaders::Material;
 
-// #[derive(Debug)]
 pub struct Target<'a> {
     material_orders: Vec<MaterialOrder>,
     wireframe_orders: Vec<Order>,
@@ -30,14 +29,13 @@ pub struct Target<'a> {
     builtins: &'a Builtins,
 }
 
-#[derive(Debug)]
 pub(crate) struct MaterialOrder {
     pub(crate) pipeline: Pipeline,
     pub(crate) material_descriptor: (u32, DescriptorSet),
     pub(crate) orders: Vec<Order>,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub(crate) struct Order {
     pub(crate) model: Matrix4,
     pub(crate) vertex_buffer: Buffer,

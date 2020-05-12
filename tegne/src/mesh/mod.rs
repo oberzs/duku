@@ -88,7 +88,7 @@ impl Mesh {
     }
 
     pub(crate) fn drawn_triangles(&self) -> u32 {
-        self.drawn_triangles as u32
+        self.drawn_triangles
     }
 }
 

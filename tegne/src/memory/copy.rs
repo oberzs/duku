@@ -22,7 +22,8 @@ pub(crate) fn data_to_buffer<T: Copy>(
             .map_memory(dst, 0, (size as u32).into(), MemoryMapFlags::empty())
             .or_error("cannot map memory");
 
-        ptr::copy_nonoverlapping(src as *const [T] as *const c_void, memory, size);
+        let src_ptr: *const [T] = src;
+        ptr::copy_nonoverlapping(src_ptr as *const c_void, memory, size);
 
         device.logical().unmap_memory(dst);
     }
