@@ -86,16 +86,15 @@ impl ForwardRenderer {
         self.bind_world(&self.shadow_framebuffer, world_object, &options);
 
         let shadow_material = options.builtins.get_material(BuiltinMaterial::Shadow);
-        self.bind_material(
-            shadow_material.pipeline(),
-            shadow_material.uniforms().descriptor(),
-            &options,
-        );
+        self.bind_shader(shadow_material.pipeline());
+        self.bind_material(shadow_material.uniforms().descriptor(), &options);
 
-        for mat_order in options.target.material_orders() {
-            for order in mat_order.orders.iter() {
-                if order.has_shadows {
-                    self.draw_order_with_albedo(order, &options, shadow_material.albedo_index());
+        for s_order in options.target.orders_by_shader() {
+            for m_order in s_order.orders_by_material() {
+                for order in m_order.orders() {
+                    if order.has_shadows {
+                        self.draw_order(order, &options);
+                    }
                 }
             }
         }
@@ -108,21 +107,20 @@ impl ForwardRenderer {
         self.setup_pass(options.framebuffer);
         self.bind_world(options.framebuffer, world_object, &options);
 
-        for mat_order in options.target.material_orders() {
-            self.bind_material(mat_order.pipeline, mat_order.material_descriptor, &options);
-
-            for order in mat_order.orders.iter() {
-                self.draw_order(order, &options);
+        for s_order in options.target.orders_by_shader() {
+            self.bind_shader(s_order.shader());
+            for m_order in s_order.orders_by_material() {
+                self.bind_material(m_order.material(), &options);
+                for order in m_order.orders() {
+                    self.draw_order(order, &options);
+                }
             }
         }
 
         // wireframe render
         let wireframe_material = options.builtins.get_material(BuiltinMaterial::Wireframe);
-        self.bind_material(
-            wireframe_material.pipeline(),
-            wireframe_material.uniforms().descriptor(),
-            &options,
-        );
+        self.bind_shader(wireframe_material.pipeline());
+        self.bind_material(wireframe_material.uniforms().descriptor(), &options);
         for order in options.target.wireframe_orders() {
             self.draw_order(order, &options);
         }
@@ -154,36 +152,28 @@ impl ForwardRenderer {
         );
     }
 
-    fn bind_material(
-        &self,
-        pipeline: Pipeline,
-        descriptor: Descriptor,
-        options: &ForwardDrawOptions<'_>,
-    ) {
+    fn bind_shader(&self, shader: Pipeline) {
         let device = self.device();
         let recorder = device.record_commands();
 
-        recorder.bind_pipeline(pipeline);
+        recorder.bind_pipeline(shader);
+    }
+
+    fn bind_material(&self, descriptor: Descriptor, options: &ForwardDrawOptions<'_>) {
+        let device = self.device();
+        let recorder = device.record_commands();
+
         recorder.bind_descriptor(descriptor, options.shader_layout.pipeline());
     }
 
-    fn draw_order(&self, order: &Order, options: &ForwardDrawOptions<'_>) {
-        self.draw_order_with_albedo(order, options, order.albedo_index);
-    }
-
-    fn draw_order_with_albedo(
-        &self,
-        order: &Order,
-        options: &ForwardDrawOptions<'_>,
-        albedo_index: i32,
-    ) {
+    fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) {
         let device = self.device();
         let recorder = device.record_commands();
 
         recorder.set_push_constant(
             PushConstants {
                 model_mat: order.model,
-                albedo_index,
+                albedo_index: order.albedo_index,
             },
             options.shader_layout.pipeline(),
         );

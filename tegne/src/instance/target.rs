@@ -17,11 +17,11 @@ use crate::shaders::Light;
 use crate::shaders::Material;
 
 pub struct Target<'a> {
-    material_orders: Vec<MaterialOrder>,
+    orders_by_shader: Vec<OrdersByShader>,
     wireframe_orders: Vec<Order>,
     clear: [f32; 3],
     lights: Vec<Light>,
-    current_pipeline: Pipeline,
+    current_shader: Pipeline,
     current_material: Descriptor,
     current_albedo: i32,
     current_font: &'a Font,
@@ -29,14 +29,14 @@ pub struct Target<'a> {
     builtins: &'a Builtins,
 }
 
-// pub(crate) struct OrdersByMaterial {
-//     pub(crate) material:
-// }
+pub(crate) struct OrdersByShader {
+    shader: Pipeline,
+    orders_by_material: Vec<OrdersByMaterial>,
+}
 
-pub(crate) struct MaterialOrder {
-    pub(crate) pipeline: Pipeline,
-    pub(crate) material_descriptor: Descriptor,
-    pub(crate) orders: Vec<Order>,
+pub(crate) struct OrdersByMaterial {
+    material: Descriptor,
+    orders: Vec<Order>,
 }
 
 #[derive(Copy, Clone)]
@@ -55,11 +55,11 @@ impl<'a> Target<'a> {
         let font = builtins.get_font(BuiltinFont::NotoSans);
 
         Self {
-            material_orders: vec![],
+            orders_by_shader: vec![],
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             lights: vec![],
-            current_pipeline: material.pipeline(),
+            current_shader: material.pipeline(),
             current_material: material.uniforms().descriptor(),
             current_albedo: material.albedo_index(),
             current_font: font,
@@ -88,10 +88,10 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let temp_pipeline = self.current_pipeline;
+        let temp_shader = self.current_shader;
 
         let shader = self.builtins.get_shader(BuiltinShader::Font);
-        self.current_pipeline = shader.pipeline();
+        self.current_shader = shader.pipeline();
 
         let mut current_transform = transform.into();
 
@@ -114,7 +114,7 @@ impl<'a> Target<'a> {
             current_transform.position.x += self.current_font.char_advance(c);
         }
 
-        self.current_pipeline = temp_pipeline;
+        self.current_shader = temp_shader;
     }
 
     pub fn add_directional_light(
@@ -129,7 +129,7 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material(&mut self, material: &Material) {
-        self.current_pipeline = material.pipeline();
+        self.current_shader = material.pipeline();
         self.current_material = material.uniforms().descriptor();
         self.current_albedo = material.albedo_index();
     }
@@ -140,7 +140,7 @@ impl<'a> Target<'a> {
 
     pub fn reset_material(&mut self) {
         let material = self.builtins.get_material(BuiltinMaterial::White);
-        self.current_pipeline = material.pipeline();
+        self.current_shader = material.pipeline();
         self.current_material = material.uniforms().descriptor();
         self.current_albedo = material.albedo_index();
     }
@@ -157,12 +157,12 @@ impl<'a> Target<'a> {
         [self.clear[0], self.clear[1], self.clear[2], 1.0]
     }
 
-    pub(crate) fn material_orders(&self) -> &[MaterialOrder] {
-        &self.material_orders
+    pub(crate) fn orders_by_shader(&self) -> impl Iterator<Item = &OrdersByShader> {
+        self.orders_by_shader.iter()
     }
 
-    pub(crate) fn wireframe_orders(&self) -> &[Order] {
-        &self.wireframe_orders
+    pub(crate) fn wireframe_orders(&self) -> impl Iterator<Item = Order> + '_ {
+        self.wireframe_orders.iter().cloned()
     }
 
     pub(crate) fn lights(&self) -> [Light; 4] {
@@ -173,23 +173,55 @@ impl<'a> Target<'a> {
 
     fn add_order(&mut self, order: Order) {
         let material = self.current_material;
-        let pipeline = self.current_pipeline;
+        let shader = self.current_shader;
 
         match self
-            .material_orders
+            .orders_by_shader
             .iter_mut()
-            .find(|mo| mo.material_descriptor == material && mo.pipeline == pipeline)
+            .find(|so| so.shader == shader)
         {
-            Some(mo) => mo.orders.push(order),
-            None => self.material_orders.push(MaterialOrder {
-                pipeline: self.current_pipeline,
-                material_descriptor: self.current_material,
-                orders: vec![order],
+            Some(so) => match so
+                .orders_by_material
+                .iter_mut()
+                .find(|mo| mo.material == material)
+            {
+                Some(mo) => mo.orders.push(order),
+                None => so.orders_by_material.push(OrdersByMaterial {
+                    material,
+                    orders: vec![order],
+                }),
+            },
+            None => self.orders_by_shader.push(OrdersByShader {
+                shader,
+                orders_by_material: vec![OrdersByMaterial {
+                    material,
+                    orders: vec![order],
+                }],
             }),
         }
 
         if self.draw_wireframes {
             self.wireframe_orders.push(order);
         }
+    }
+}
+
+impl OrdersByShader {
+    pub(crate) fn shader(&self) -> Pipeline {
+        self.shader
+    }
+
+    pub(crate) fn orders_by_material(&self) -> impl Iterator<Item = &OrdersByMaterial> {
+        self.orders_by_material.iter()
+    }
+}
+
+impl OrdersByMaterial {
+    pub(crate) fn material(&self) -> Descriptor {
+        self.material
+    }
+
+    pub(crate) fn orders(&self) -> impl Iterator<Item = Order> + '_ {
+        self.orders.iter().cloned()
     }
 }
