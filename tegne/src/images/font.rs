@@ -1,4 +1,3 @@
-use image::GenericImageView;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::Read;
@@ -33,7 +32,7 @@ struct CharData {
 struct JsonAtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
-    char_count: u32,
+    margin: u32,
     char_metrics: HashMap<char, JsonCharMetrics>,
 }
 
@@ -41,10 +40,7 @@ struct JsonAtlasMetrics {
 struct JsonCharMetrics {
     x: u32,
     y: u32,
-    width: u32,
-    height: u32,
-    offset_x: u32,
-    offset_y: u32,
+    advance: u32,
 }
 
 impl Font {
@@ -60,18 +56,22 @@ impl Font {
     }
 
     pub fn char_mesh(&self, c: char) -> &Mesh {
-        &self
-            .char_data
-            .get(&c)
-            .expect("char data does not exist")
-            .mesh
+        match self.char_data.get(&c) {
+            Some(data) => &data.mesh,
+            None => &self.char_data.get(&'?').expect("'?' char not loaded").mesh,
+        }
     }
 
     pub fn char_advance(&self, c: char) -> f32 {
-        self.char_data
-            .get(&c)
-            .expect("char data does not exist")
-            .advance
+        match self.char_data.get(&c) {
+            Some(data) => data.advance,
+            None => {
+                self.char_data
+                    .get(&'?')
+                    .expect("'?' char not loaded")
+                    .advance
+            }
+        }
     }
 
     pub(crate) fn image_index(&self) -> i32 {
@@ -119,13 +119,18 @@ impl FontBuilder<'_> {
         );
 
         let mut char_data = HashMap::new();
-        let atlas_size = atlas.atlas_size as f32;
         for (c, metrics) in atlas.char_metrics {
-            let size_norm = atlas.sdf_size as f32 / atlas_size;
-            let u_min = metrics.x as f32 / atlas_size;
-            let v_min = metrics.y as f32 / atlas_size;
+            // uv relative
+            let size_norm = atlas.sdf_size as f32 / atlas.atlas_size as f32;
+            let width_norm = metrics.advance as f32 / atlas.atlas_size as f32;
+            let u_min = metrics.x as f32 / atlas.atlas_size as f32;
+            let v_min = metrics.y as f32 / atlas.atlas_size as f32;
             let u_max = u_min + size_norm;
             let v_max = v_min + size_norm;
+
+            // vertex relative
+            let advance = metrics.advance as f32 / atlas.sdf_size as f32;
+            let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
             let vertices = vec![
                 Vector3::new(0.0, 0.0, 0.0),
@@ -150,7 +155,7 @@ impl FontBuilder<'_> {
                 .with_smooth_normals()
                 .build();
 
-            let data = CharData { mesh, advance: 1.0 };
+            let data = CharData { mesh, advance };
 
             char_data.insert(c, data);
         }

@@ -31,6 +31,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) camera: &'a Camera,
     pub(crate) builtins: &'a Builtins,
     pub(crate) target: Target<'a>,
+    pub(crate) time: f32,
 }
 
 impl ForwardRenderer {
@@ -71,7 +72,7 @@ impl ForwardRenderer {
             cam_pos: options.camera.transform().position,
             lights: options.target.lights(),
             light_mat,
-            time: 0.0,
+            time: options.time,
         };
 
         let clear = options.target.clear();

@@ -13,27 +13,30 @@ use tar::Header;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
+use crate::sdf::generate_sdf;
 use crate::sdf::CharMetrics;
-use crate::sdf::SDF;
+use crate::sdf::SdfOptions;
 
 #[derive(Serialize)]
 struct AtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
-    char_count: u32,
+    margin: u32,
     char_metrics: HashMap<char, CharMetrics>,
 }
 
 pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
-    println!("Compiling {:?}", in_path);
+    println!("Converting {:?}", in_path);
 
-    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.?!(){}[]/";
-    let font_size = 1024;
-    let sdf_size = 256;
-    let font_margin = 50;
-    let max_distance = 50;
+    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,?!:-_+=@#(){}[]/";
+    let options = SdfOptions {
+        font_size: 1024,
+        font_margin: 50,
+        sdf_size: 256,
+    };
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
-    let atlas_size = tile_count * sdf_size;
+    let tile_size = options.sdf_size;
+    let atlas_size = tile_count * tile_size;
 
     let progress = ProgressBar::new(4 + chars.len() as u64);
 
@@ -41,26 +44,25 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     let font =
         Font::try_from_bytes(&font_data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
 
-    let mut atlas = DynamicImage::new_rgba8(atlas_size, atlas_size).to_rgba();
+    let rescale = options.sdf_size as f32 / (options.font_size + options.font_margin * 2) as f32;
+    let rescaled_margin = options.font_margin as f32 * rescale;
+
     let mut atlas_metrics = AtlasMetrics {
-        sdf_size,
+        sdf_size: options.sdf_size,
         atlas_size,
-        char_count: chars.len() as u32,
+        margin: rescaled_margin.round() as u32,
         char_metrics: HashMap::new(),
     };
+
+    let mut atlas = DynamicImage::new_rgba8(atlas_size, atlas_size).to_rgba();
 
     progress.inc(1);
 
     for (i, c) in chars.chars().enumerate() {
-        let mut char_data = SDF::new(&font, c)
-            .with_font_size(font_size)
-            .with_font_margin(font_margin)
-            .with_sdf_size(sdf_size)
-            .with_max_distance(max_distance)
-            .generate()?;
+        let mut char_data = generate_sdf(&font, c, options)?;
 
-        let x = (i as u32 % tile_count) * sdf_size;
-        let y = (i as u32 / tile_count) * sdf_size;
+        let x = (i as u32 % tile_count) * tile_size;
+        let y = (i as u32 / tile_count) * tile_size;
 
         char_data.metrics.x = x;
         char_data.metrics.y = y;
@@ -71,6 +73,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
 
         progress.inc(1);
     }
+
     let img_raw = atlas.into_raw();
     let json = serde_json::to_string_pretty(&atlas_metrics)?.into_bytes();
 

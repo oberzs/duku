@@ -55,8 +55,7 @@ fn main() {
             cube_2.draw(target);
             cube_3.draw(target);
 
-            target.set_draw_wireframes(true);
-            target.draw_text("test text!", text_transform);
+            target.draw_text("Test ABC. yes. no.", text_transform);
         });
         tegne.end_draw();
     });

@@ -3,6 +3,7 @@ use log::debug;
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
+use std::time::Instant;
 use tegne_math::Camera;
 
 use super::Device;
@@ -35,6 +36,7 @@ use crate::utils::OrError;
 use tegne_utils::Window;
 
 pub struct Tegne {
+    start_time: Instant,
     forward_renderer: ForwardRenderer,
     builtins: Builtins,
     window_framebuffers: Vec<Framebuffer>,
@@ -108,6 +110,7 @@ impl Tegne {
             camera,
             builtins: &self.builtins,
             target,
+            time: self.start_time.elapsed().as_secs_f32(),
         });
     }
 
@@ -234,6 +237,7 @@ impl TegneBuilder {
             ForwardRenderer::new(&device, &depth_pass, &image_uniforms, &shader_layout);
 
         Tegne {
+            start_time: Instant::now(),
             forward_renderer,
             builtins,
             window_framebuffers,

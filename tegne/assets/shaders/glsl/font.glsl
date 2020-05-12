@@ -16,6 +16,10 @@ void fragment() {
     float dist = 1.0 - texture(albedo, in_uv).a;
     float alpha = 1.0 - smoothstep(width, width + edge, dist);
 
+    if (alpha < 0.01) {
+        discard;
+    }
+
     out_color = vec4(0.0, 0.0, 0.0, alpha);
 }
 #endif

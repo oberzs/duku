@@ -43,6 +43,8 @@ pub(crate) struct WorldObject {
 #[repr(C)]
 pub(crate) struct MaterialObject {
     pub(crate) albedo_tint: Vector4,
+    // pub(crate) border_tint: Vector3,
+    // pub(crate) font_params: Vector3,
 }
 
 #[derive(Copy, Clone)]

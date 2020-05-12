@@ -14,7 +14,7 @@ use crate::error::ErrorType;
 use crate::error::Result;
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
-    println!("Compiling {:?}", in_path);
+    println!("Converting {:?}", in_path);
 
     let progress = ProgressBar::new(6);
 

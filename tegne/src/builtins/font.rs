@@ -16,7 +16,7 @@ pub(crate) fn builtin_fonts(
 ) -> HashMap<BuiltinFont, Font> {
     let mut map = HashMap::new();
 
-    let noto_sans = include_bytes!("../../assets/fonts/NotoSans-Bold.font");
+    let noto_sans = include_bytes!("../../assets/fonts/RobotoMono-Regular.font");
 
     map.insert(
         BuiltinFont::NotoSans,
