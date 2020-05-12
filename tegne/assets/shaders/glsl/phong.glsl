@@ -31,7 +31,7 @@ void fragment() {
         }
     }
 
-    out_color = texture(albedo, in_uv) * material.albedo_tint * vec4(lighting, 1.0);
+    out_color = texture(albedo, in_uv) * vec4(material.albedo_tint, 1.0) * vec4(lighting, 1.0);
 }
 
 vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {

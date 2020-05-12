@@ -11,7 +11,7 @@ use std::ops::SubAssign;
 use super::Vector2;
 use super::Vector4;
 
-#[repr(C, align(16))]
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector3 {
     pub x: f32,

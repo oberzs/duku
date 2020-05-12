@@ -10,7 +10,7 @@ use std::ops::SubAssign;
 
 use super::Vector3;
 
-#[repr(C, align(8))]
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector2 {
     pub x: f32,

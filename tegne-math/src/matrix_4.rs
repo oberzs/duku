@@ -4,7 +4,7 @@ use std::ops::MulAssign;
 use super::Vector3;
 use super::Vector4;
 
-#[repr(C, align(16))]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Matrix4 {
     pub col_x: Vector4,

@@ -10,8 +10,8 @@ void vertex() {
 
 #ifdef FRAGMENT
 void fragment() {
-    float width = 0.5;
-    float edge = 0.1;
+    float width = material.font_width;
+    float edge = material.font_edge;
 
     float dist = 1.0 - texture(albedo, in_uv).a;
     float alpha = 1.0 - smoothstep(width, width + edge, dist);
@@ -20,6 +20,6 @@ void fragment() {
         discard;
     }
 
-    out_color = vec4(0.0, 0.0, 0.0, alpha);
+    out_color = vec4(material.albedo_tint, alpha);
 }
 #endif

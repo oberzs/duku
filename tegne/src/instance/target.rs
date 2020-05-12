@@ -128,7 +128,7 @@ impl<'a> Target<'a> {
     ) {
         self.lights.push(Light {
             coords: direction.into().extend(0.0),
-            color: color.into(),
+            color: color.into().extend(1.0),
         });
     }
 

@@ -5,15 +5,21 @@ struct Light {
 
 layout(set = 0, binding = 0) uniform WorldObject {
     mat4 cam_mat;
-    vec3 cam_pos;
     mat4 light_mat;
     Light lights[4];
-    int shadow_index;
+    vec3 cam_pos;
     float time;
+    int shadow_index;
 } world;
 
 layout(set = 1, binding = 0) uniform MaterialObject {
-    vec4 albedo_tint;
+    vec3 albedo_tint;
+    float font_width;
+    vec3 font_border_tint;
+    float font_edge;
+    vec2 font_border_offset;
+    float font_border_width;
+    float font_border_edge;
 } material;
 
 layout(push_constant) uniform Constants {

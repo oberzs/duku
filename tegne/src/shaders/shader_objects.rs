@@ -12,6 +12,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
 use tegne_math::Matrix4;
+use tegne_math::Vector2;
 use tegne_math::Vector3;
 use tegne_math::Vector4;
 
@@ -26,26 +27,30 @@ use crate::utils::OrError;
 #[repr(C)]
 pub(crate) struct Light {
     pub(crate) coords: Vector4,
-    pub(crate) color: Vector3,
+    pub(crate) color: Vector4,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct WorldObject {
     pub(crate) cam_mat: Matrix4,
-    pub(crate) cam_pos: Vector3,
     pub(crate) light_mat: Matrix4,
     pub(crate) lights: [Light; 4],
-    pub(crate) shadow_index: i32,
+    pub(crate) cam_pos: Vector3,
     pub(crate) time: f32,
+    pub(crate) shadow_index: i32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct MaterialObject {
-    pub(crate) albedo_tint: Vector4,
-    // pub(crate) border_tint: Vector3,
-    // pub(crate) font_params: Vector3,
+    pub(crate) albedo_tint: Vector3,
+    pub(crate) font_width: f32,
+    pub(crate) font_border_tint: Vector3,
+    pub(crate) font_edge: f32,
+    pub(crate) font_border_offset: Vector2,
+    pub(crate) font_border_width: f32,
+    pub(crate) font_border_edge: f32,
 }
 
 #[derive(Copy, Clone)]
