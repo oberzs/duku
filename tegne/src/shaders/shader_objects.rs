@@ -51,6 +51,10 @@ pub(crate) struct MaterialObject {
     pub(crate) font_border_offset: Vector2,
     pub(crate) font_border_width: f32,
     pub(crate) font_border_edge: f32,
+    pub(crate) arg_1: Vector4,
+    pub(crate) arg_2: Vector4,
+    pub(crate) arg_3: Vector4,
+    pub(crate) arg_4: Vector4,
 }
 
 #[derive(Copy, Clone)]

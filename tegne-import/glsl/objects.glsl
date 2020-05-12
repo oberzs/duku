@@ -20,6 +20,10 @@ layout(set = 1, binding = 0) uniform MaterialObject {
     vec2 font_border_offset;
     float font_border_width;
     float font_border_edge;
+    vec4 arg_1;
+    vec4 arg_2;
+    vec4 arg_3;
+    vec4 arg_4;
 } material;
 
 layout(push_constant) uniform Constants {

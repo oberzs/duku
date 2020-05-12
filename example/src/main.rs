@@ -5,7 +5,6 @@ use std::time::Instant;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
-use tegne::Transform;
 use tegne::Vector3;
 use tegne::Window;
 
@@ -33,7 +32,6 @@ fn main() {
     let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, "blue1");
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
 
-    let text_transform = Transform::builder().with_position([5.0, 5.0, 5.0]).build();
     let mut color_value = 1.0;
     let mut text_material = tegne.create_material().build();
 
@@ -64,7 +62,7 @@ fn main() {
             cube_3.draw(target);
 
             target.set_material(&text_material);
-            target.draw_text("Test ABC. yes. no.", text_transform);
+            target.draw_text("Test ABC. yes. no.", [5.0, 5.0, 5.0]);
         });
         tegne.end_draw();
     });
