@@ -1,4 +1,3 @@
-use ash::vk::DescriptorSet;
 use ash::vk::Pipeline;
 use std::rc::Rc;
 use std::rc::Weak;
@@ -12,6 +11,7 @@ use crate::images::Framebuffer;
 use crate::instance::Device;
 use crate::instance::Order;
 use crate::instance::Target;
+use crate::shaders::Descriptor;
 use crate::shaders::ImageUniforms;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
@@ -157,7 +157,7 @@ impl ForwardRenderer {
     fn bind_material(
         &self,
         pipeline: Pipeline,
-        descriptor: (u32, DescriptorSet),
+        descriptor: Descriptor,
         options: &ForwardDrawOptions<'_>,
     ) {
         let device = self.device();

@@ -15,7 +15,6 @@ use ash::vk::CommandPoolCreateFlags;
 use ash::vk::CommandPoolCreateInfo;
 use ash::vk::CommandPoolResetFlags;
 use ash::vk::DependencyFlags;
-use ash::vk::DescriptorSet;
 use ash::vk::Extent2D;
 use ash::vk::Filter;
 use ash::vk::Image as VkImage;
@@ -43,6 +42,7 @@ use super::Device;
 use crate::images::Framebuffer;
 use crate::images::Image;
 use crate::images::LayoutChange;
+use crate::shaders::Descriptor;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::utils::OrError;
@@ -179,14 +179,14 @@ impl CommandRecorder {
         }
     }
 
-    pub(crate) fn bind_descriptor(&self, set: (u32, DescriptorSet), layout: PipelineLayout) {
-        let sets = [set.1];
+    pub(crate) fn bind_descriptor(&self, descriptor: Descriptor, layout: PipelineLayout) {
+        let sets = [descriptor.1];
         unsafe {
             self.device().logical().cmd_bind_descriptor_sets(
                 self.buffer,
                 PipelineBindPoint::GRAPHICS,
                 layout,
-                set.0,
+                descriptor.0,
                 &sets,
                 &[],
             );

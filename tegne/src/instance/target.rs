@@ -1,5 +1,4 @@
 use ash::vk::Buffer;
-use ash::vk::DescriptorSet;
 use ash::vk::Pipeline;
 use tegne_math::Matrix4;
 use tegne_math::Transform;
@@ -13,6 +12,7 @@ use crate::builtins::Builtins;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::mesh::Mesh;
+use crate::shaders::Descriptor;
 use crate::shaders::Light;
 use crate::shaders::Material;
 
@@ -22,16 +22,20 @@ pub struct Target<'a> {
     clear: [f32; 3],
     lights: Vec<Light>,
     current_pipeline: Pipeline,
-    current_material: (u32, DescriptorSet),
+    current_material: Descriptor,
     current_albedo: i32,
     current_font: &'a Font,
     draw_wireframes: bool,
     builtins: &'a Builtins,
 }
 
+// pub(crate) struct OrdersByMaterial {
+//     pub(crate) material:
+// }
+
 pub(crate) struct MaterialOrder {
     pub(crate) pipeline: Pipeline,
-    pub(crate) material_descriptor: (u32, DescriptorSet),
+    pub(crate) material_descriptor: Descriptor,
     pub(crate) orders: Vec<Order>,
 }
 

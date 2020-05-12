@@ -55,17 +55,17 @@ pub(crate) struct PushConstants {
 }
 
 pub(crate) struct WorldUniforms {
-    descriptor: DescriptorSet,
+    descriptor: Descriptor,
     buffer: DynamicBuffer,
 }
 
 pub(crate) struct MaterialUniforms {
-    descriptor: DescriptorSet,
+    descriptor: Descriptor,
     buffer: DynamicBuffer,
 }
 
 pub(crate) struct ImageUniforms {
-    descriptor: DescriptorSet,
+    descriptor: Descriptor,
     linear_repeat_sampler: Sampler,
     linear_clamp_sampler: Sampler,
     nearest_repeat_sampler: Sampler,
@@ -74,11 +74,15 @@ pub(crate) struct ImageUniforms {
     device: Weak<Device>,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub(crate) struct Descriptor(pub u32, pub DescriptorSet);
+
 impl WorldUniforms {
     pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<WorldObject>(device, 1, BufferType::Uniform);
 
-        let descriptor = layout.world_set(&buffer);
+        let descriptor_set = layout.world_set(&buffer);
+        let descriptor = Descriptor(0, descriptor_set);
 
         Self { buffer, descriptor }
     }
@@ -87,8 +91,8 @@ impl WorldUniforms {
         self.buffer.update_data(&[data]);
     }
 
-    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
-        (0, self.descriptor)
+    pub(crate) fn descriptor(&self) -> Descriptor {
+        self.descriptor
     }
 }
 
@@ -96,7 +100,8 @@ impl MaterialUniforms {
     pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<MaterialObject>(device, 1, BufferType::Uniform);
 
-        let descriptor = layout.material_set(&buffer);
+        let descriptor_set = layout.material_set(&buffer);
+        let descriptor = Descriptor(1, descriptor_set);
 
         Self { buffer, descriptor }
     }
@@ -105,8 +110,8 @@ impl MaterialUniforms {
         self.buffer.update_data(&[data]);
     }
 
-    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
-        (1, self.descriptor)
+    pub(crate) fn descriptor(&self) -> Descriptor {
+        self.descriptor
     }
 }
 
@@ -115,7 +120,8 @@ impl ImageUniforms {
         debug!("creating image uniforms");
         info!("using anisotropy level {}", anisotropy);
 
-        let descriptor = layout.image_set();
+        let descriptor_set = layout.image_set();
+        let descriptor = Descriptor(2, descriptor_set);
         let linear_repeat_sampler = Sampler::builder(device).with_anisotropy(anisotropy).build();
         let linear_clamp_sampler = Sampler::builder(device)
             .with_anisotropy(anisotropy)
@@ -174,14 +180,14 @@ impl ImageUniforms {
             ];
 
             let image_write = WriteDescriptorSet::builder()
-                .dst_set(self.descriptor)
+                .dst_set(self.descriptor.1)
                 .dst_binding(0)
                 .dst_array_element(0)
                 .descriptor_type(DescriptorType::SAMPLED_IMAGE)
                 .image_info(&image_infos)
                 .build();
             let sampler_write = WriteDescriptorSet::builder()
-                .dst_set(self.descriptor)
+                .dst_set(self.descriptor.1)
                 .dst_binding(1)
                 .dst_array_element(0)
                 .descriptor_type(DescriptorType::SAMPLER)
@@ -197,8 +203,8 @@ impl ImageUniforms {
         }
     }
 
-    pub(crate) fn descriptor(&self) -> (u32, DescriptorSet) {
-        (2, self.descriptor)
+    pub(crate) fn descriptor(&self) -> Descriptor {
+        self.descriptor
     }
 
     fn device(&self) -> Rc<Device> {

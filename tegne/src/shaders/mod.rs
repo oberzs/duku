@@ -12,6 +12,7 @@ pub(crate) use render_pass::RenderPass;
 pub use shader::Shader;
 pub use shader::ShaderBuilder;
 pub(crate) use shader_layout::ShaderLayout;
+pub(crate) use shader_objects::Descriptor;
 pub(crate) use shader_objects::ImageUniforms;
 pub(crate) use shader_objects::Light;
 pub(crate) use shader_objects::MaterialObject;
