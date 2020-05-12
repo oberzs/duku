@@ -14,8 +14,6 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::WindowSurface;
-use crate::builtins::BuiltinShader;
-use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
 use crate::images::Framebuffer;
 use crate::images::Texture;
@@ -139,14 +137,7 @@ impl Tegne {
 
     pub fn create_material(&self) -> MaterialBuilder {
         debug!("creating material");
-        let default_shader = self.builtins.get_shader(BuiltinShader::Phong);
-        let default_texture = self.builtins.get_texture(BuiltinTexture::White);
-        Material::builder(
-            &self.device,
-            default_shader,
-            default_texture,
-            &self.shader_layout,
-        )
+        Material::builder(&self.device, &self.shader_layout)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {

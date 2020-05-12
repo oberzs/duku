@@ -55,7 +55,7 @@ impl Builtins {
         let textures = builtin_textures(device, uniforms);
 
         debug!("creating builtin materials");
-        let materials = builtin_materials(device, layout, &shaders, &textures);
+        let materials = builtin_materials(device, layout);
 
         debug!("creating builtin fonts");
         let fonts = builtin_fonts(device, uniforms);

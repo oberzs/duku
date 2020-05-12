@@ -36,6 +36,7 @@ pub(crate) struct WorldObject {
     pub(crate) cam_pos: Vector3,
     pub(crate) light_mat: Matrix4,
     pub(crate) lights: [Light; 4],
+    pub(crate) shadow_index: i32,
     pub(crate) time: f32,
 }
 

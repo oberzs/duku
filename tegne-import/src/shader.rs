@@ -73,21 +73,20 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
 }
 
 fn compile_frag(src: &str) -> Result<CompilationArtifact> {
-    let frag_c_glsl = include_str!("../glsl/frag.glsl");
-    let frag_d_glsl = include_str!("../glsl/frag-d.glsl");
+    let frag_glsl = include_str!("../glsl/frag.glsl");
     let objects_glsl = include_str!("../glsl/objects.glsl");
 
     // create real glsl code
     let is_depth_frag = src.find("out_color").is_none();
-    let frag_glsl = if is_depth_frag {
-        frag_d_glsl
+    let out_color = if is_depth_frag {
+        ""
     } else {
-        frag_c_glsl
+        "layout(location = 0) out vec4 out_color;"
     };
 
     let real_src = format!(
-        "#version 450\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
-        objects_glsl, frag_glsl, src
+        "#version 450\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
+        objects_glsl, frag_glsl, out_color, src
     );
 
     // compile glsl to spirv

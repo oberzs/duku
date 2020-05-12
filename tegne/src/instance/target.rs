@@ -8,6 +8,7 @@ use crate::builtins::BuiltinFont;
 use crate::builtins::BuiltinMaterial;
 use crate::builtins::BuiltinMesh;
 use crate::builtins::BuiltinShader;
+use crate::builtins::BuiltinTexture;
 use crate::builtins::Builtins;
 use crate::images::Font;
 use crate::images::Texture;
@@ -52,6 +53,8 @@ pub(crate) struct Order {
 impl<'a> Target<'a> {
     pub(crate) fn new(builtins: &'a Builtins) -> Self {
         let material = builtins.get_material(BuiltinMaterial::White);
+        let shader = builtins.get_shader(BuiltinShader::Phong);
+        let texture = builtins.get_texture(BuiltinTexture::White);
         let font = builtins.get_font(BuiltinFont::NotoSans);
 
         Self {
@@ -59,9 +62,9 @@ impl<'a> Target<'a> {
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             lights: vec![],
-            current_shader: material.pipeline(),
-            current_material: material.uniforms().descriptor(),
-            current_albedo: material.albedo_index(),
+            current_shader: shader.pipeline(),
+            current_material: material.descriptor(),
+            current_albedo: texture.image_index(),
             current_font: font,
             draw_wireframes: false,
             builtins,
@@ -97,7 +100,8 @@ impl<'a> Target<'a> {
 
         for c in text.as_ref().chars() {
             if c == ' ' {
-                current_transform.position.x += self.current_font.char_advance('s');
+                let space_advance = self.current_font.char_advance('_');
+                current_transform.position.x += space_advance;
                 continue;
             }
 
@@ -129,20 +133,16 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material(&mut self, material: &Material) {
-        self.current_shader = material.pipeline();
-        self.current_material = material.uniforms().descriptor();
-        self.current_albedo = material.albedo_index();
+        self.current_material = material.descriptor();
     }
 
     pub fn set_texture(&mut self, texture: &Texture) {
         self.current_albedo = texture.image_index();
     }
 
-    pub fn reset_material(&mut self) {
+    pub fn set_material_white(&mut self) {
         let material = self.builtins.get_material(BuiltinMaterial::White);
-        self.current_shader = material.pipeline();
-        self.current_material = material.uniforms().descriptor();
-        self.current_albedo = material.albedo_index();
+        self.current_material = material.descriptor();
     }
 
     pub fn set_clear_color(&mut self, clear: [f32; 3]) {

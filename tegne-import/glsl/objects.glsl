@@ -8,6 +8,7 @@ layout(set = 0, binding = 0) uniform WorldObject {
     vec3 cam_pos;
     mat4 light_mat;
     Light lights[4];
+    int shadow_index;
     float time;
 } world;
 

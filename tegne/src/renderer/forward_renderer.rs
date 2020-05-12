@@ -5,7 +5,7 @@ use tegne_math::Camera;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
 
-use crate::builtins::BuiltinMaterial;
+use crate::builtins::BuiltinShader;
 use crate::builtins::Builtins;
 use crate::images::Framebuffer;
 use crate::instance::Device;
@@ -72,6 +72,7 @@ impl ForwardRenderer {
             cam_pos: options.camera.transform().position,
             lights: options.target.lights(),
             light_mat,
+            shadow_index: self.shadow_framebuffer.image_index(),
             time: options.time,
         };
 
@@ -85,12 +86,12 @@ impl ForwardRenderer {
         self.setup_pass(&self.shadow_framebuffer);
         self.bind_world(&self.shadow_framebuffer, world_object, &options);
 
-        let shadow_material = options.builtins.get_material(BuiltinMaterial::Shadow);
-        self.bind_shader(shadow_material.pipeline());
-        self.bind_material(shadow_material.uniforms().descriptor(), &options);
+        let shadow_shader = options.builtins.get_shader(BuiltinShader::Shadow);
+        self.bind_shader(shadow_shader.pipeline());
 
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
+                self.bind_material(m_order.material(), &options);
                 for order in m_order.orders() {
                     if order.has_shadows {
                         self.draw_order(order, &options);
@@ -118,9 +119,8 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        let wireframe_material = options.builtins.get_material(BuiltinMaterial::Wireframe);
-        self.bind_shader(wireframe_material.pipeline());
-        self.bind_material(wireframe_material.uniforms().descriptor(), &options);
+        let wireframe_shader = options.builtins.get_shader(BuiltinShader::Wireframe);
+        self.bind_shader(wireframe_shader.pipeline());
         for order in options.target.wireframe_orders() {
             self.draw_order(order, &options);
         }
