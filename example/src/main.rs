@@ -37,7 +37,7 @@ fn main() {
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
 
     let mut color_value = 1.0;
-    let mut text_material = tegne.create_material(Default::default());
+    let text_material = tegne.create_material(Default::default());
 
     let mut controller = Controller::default();
 
@@ -54,7 +54,9 @@ fn main() {
         controller.update(&mut camera, events);
 
         color_value = start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5;
-        text_material.set_albedo_tint([0.0, color_value, 1.0 - color_value]);
+        tegne
+            .get_material(text_material)
+            .set_albedo_tint([0.0, color_value, 1.0 - color_value]);
 
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
@@ -65,7 +67,7 @@ fn main() {
             cube_2.draw(target);
             cube_3.draw(target);
 
-            target.set_material(&text_material);
+            target.set_material(text_material);
             target.draw_text("Test ABC. yes. no.", [5.0, 5.0, 5.0]);
         });
         tegne.end_draw();

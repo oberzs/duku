@@ -1,5 +1,6 @@
 use image::GenericImageView;
 use log::debug;
+use std::cell::RefMut;
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
@@ -18,6 +19,7 @@ use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::objects::Id;
 use crate::objects::Objects;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
@@ -208,17 +210,20 @@ impl Tegne {
         });
     }
 
-    pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Texture {
+    pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
         debug!("creating rgba texture");
-        Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms)
+        let texture =
+            Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms);
+        self.objects.add_texture(texture)
     }
 
-    pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Texture {
+    pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
         debug!("creating rgb texture");
-        Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms)
+        let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms);
+        self.objects.add_texture(texture)
     }
 
-    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Texture {
+    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Id<Texture> {
         let p = path.as_ref();
         let img = image::open(p).or_error(format!("cannot open image {}", p.display()));
         let (width, height) = img.dimensions();
@@ -226,14 +231,20 @@ impl Tegne {
         self.create_texture_rgba(&data, width, height)
     }
 
-    pub fn create_mesh(&self, options: MeshOptions<'_>) -> Mesh {
+    pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
         debug!("creating mesh");
-        Mesh::new(&self.device, options)
+        let mesh = Mesh::new(&self.device, options);
+        self.objects.add_mesh(mesh)
     }
 
-    pub fn create_material(&self, options: MaterialOptions) -> Material {
+    pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
         debug!("creating material");
-        Material::new(&self.device, &self.shader_layout, options)
+        let material = Material::new(&self.device, &self.shader_layout, options);
+        self.objects.add_material(material)
+    }
+
+    pub fn get_material(&self, material: Id<Material>) -> RefMut<'_, Material> {
+        self.objects.material(material)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {
@@ -252,19 +263,20 @@ impl Tegne {
         )
     }
 
-    pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Shader {
+    pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
         debug!("creating shader");
         let render_pass = self
             .render_passes
             .get(&RenderPassType::Color)
             .or_error("render passes not setup");
-        Shader::new(
+        let shader = Shader::new(
             &self.device,
             render_pass,
             &self.shader_layout,
             source,
             options,
-        )
+        );
+        self.objects.add_shader(shader)
     }
 }
 

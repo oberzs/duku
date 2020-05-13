@@ -12,6 +12,7 @@ use crate::objects::BuiltinMaterial;
 use crate::objects::BuiltinMesh;
 use crate::objects::BuiltinShader;
 use crate::objects::BuiltinTexture;
+use crate::objects::Id;
 use crate::objects::Objects;
 use crate::shaders::Descriptor;
 use crate::shaders::Light;
@@ -71,23 +72,40 @@ impl<'a> Target<'a> {
         }
     }
 
-    pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
+    pub fn draw(&mut self, mesh: Id<Mesh>, transform: impl Into<Transform>) {
+        let m = self.objects.mesh(mesh);
         self.add_order(Order {
             model: transform.into().as_matrix(),
-            vertex_buffer: mesh.vk_vertex_buffer(),
-            index_buffer: mesh.vk_index_buffer(),
-            index_count: mesh.drawn_triangles() * 3,
+            vertex_buffer: m.vk_vertex_buffer(),
+            index_buffer: m.vk_index_buffer(),
+            index_count: m.drawn_triangles() * 3,
             albedo_index: self.current_albedo,
             has_shadows: true,
         });
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.objects.builtins().mesh(BuiltinMesh::Cube), transform);
+        let m = self.objects.builtins().mesh(BuiltinMesh::Cube);
+        self.add_order(Order {
+            model: transform.into().as_matrix(),
+            vertex_buffer: m.vk_vertex_buffer(),
+            index_buffer: m.vk_index_buffer(),
+            index_count: m.drawn_triangles() * 3,
+            albedo_index: self.current_albedo,
+            has_shadows: true,
+        });
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.objects.builtins().mesh(BuiltinMesh::Sphere), transform);
+        let m = self.objects.builtins().mesh(BuiltinMesh::Sphere);
+        self.add_order(Order {
+            model: transform.into().as_matrix(),
+            vertex_buffer: m.vk_vertex_buffer(),
+            index_buffer: m.vk_index_buffer(),
+            index_count: m.drawn_triangles() * 3,
+            albedo_index: self.current_albedo,
+            has_shadows: true,
+        });
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
@@ -132,12 +150,12 @@ impl<'a> Target<'a> {
         });
     }
 
-    pub fn set_material(&mut self, material: &Material) {
-        self.current_material = material.descriptor();
+    pub fn set_material(&mut self, material: Id<Material>) {
+        self.current_material = self.objects.material(material).descriptor();
     }
 
-    pub fn set_texture(&mut self, texture: &Texture) {
-        self.current_albedo = texture.image_index();
+    pub fn set_texture(&mut self, texture: Id<Texture>) {
+        self.current_albedo = self.objects.texture(texture).image_index();
     }
 
     pub fn set_material_white(&mut self) {

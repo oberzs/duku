@@ -1,3 +1,4 @@
+use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
@@ -8,8 +9,8 @@ use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Cube {
-    mesh: Vec<Mesh>,
-    texture: Texture,
+    mesh: Vec<Id<Mesh>>,
+    texture: Id<Texture>,
     transform: Transform,
 }
 
@@ -30,14 +31,14 @@ impl Cube {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_texture(&self.texture);
+        target.set_texture(self.texture);
         for mesh in self.mesh.iter() {
-            target.draw(mesh, self.transform);
+            target.draw(*mesh, self.transform);
         }
     }
 }
 
-fn cube(tegne: &Tegne, size: f32) -> Vec<Mesh> {
+fn cube(tegne: &Tegne, size: f32) -> Vec<Id<Mesh>> {
     let top = rectangle(
         tegne,
         [0.0, size, 0.0],
@@ -89,7 +90,7 @@ fn cube(tegne: &Tegne, size: f32) -> Vec<Mesh> {
     vec![top, bottom, front, back, left, right]
 }
 
-fn rectangle<V: Into<Vector3>>(tegne: &Tegne, p1: V, p2: V, p3: V, p4: V) -> Mesh {
+fn rectangle<V: Into<Vector3>>(tegne: &Tegne, p1: V, p2: V, p3: V, p4: V) -> Id<Mesh> {
     let vertices = &[p1.into(), p2.into(), p3.into(), p4.into()];
     let uvs = &[
         Vector2::new(0.0, 0.0),

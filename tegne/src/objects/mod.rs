@@ -44,6 +44,8 @@ pub(crate) struct Objects {
     max_material_id: Cell<u32>,
     meshes: RefCell<HashMap<Id<Mesh>, Mesh>>,
     max_mesh_id: Cell<u32>,
+    shaders: RefCell<HashMap<Id<Shader>, Shader>>,
+    max_shader_id: Cell<u32>,
 }
 
 pub(crate) struct Builtins {
@@ -74,6 +76,8 @@ impl Objects {
             max_material_id: Cell::new(0),
             meshes: RefCell::new(HashMap::new()),
             max_mesh_id: Cell::new(0),
+            shaders: RefCell::new(HashMap::new()),
+            max_shader_id: Cell::new(0),
         }
     }
 
@@ -122,6 +126,26 @@ impl Objects {
     pub(crate) fn mesh(&self, id: Id<Mesh>) -> RefMut<'_, Mesh> {
         RefMut::map(self.meshes.borrow_mut(), |ts| {
             ts.get_mut(&id).expect("mesh does not exist")
+        })
+    }
+
+    pub(crate) fn add_shader(&self, shader: Shader) -> Id<Shader> {
+        let max_id = self.max_shader_id.get();
+        let id = Id(max_id, PhantomData);
+
+        self.shaders.borrow_mut().insert(id, shader);
+        self.max_shader_id.set(max_id + 1);
+
+        id
+    }
+
+    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) {
+        self.shaders.borrow_mut().insert(id, shader);
+    }
+
+    pub(crate) fn shader(&self, id: Id<Shader>) -> RefMut<'_, Shader> {
+        RefMut::map(self.shaders.borrow_mut(), |ts| {
+            ts.get_mut(&id).expect("shader does not exist")
         })
     }
 

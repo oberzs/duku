@@ -1,3 +1,4 @@
+use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
@@ -8,8 +9,8 @@ use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Floor {
-    mesh: Mesh,
-    texture: Texture,
+    mesh: Id<Mesh>,
+    texture: Id<Texture>,
 }
 
 impl Floor {
@@ -21,12 +22,12 @@ impl Floor {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_texture(&self.texture);
-        target.draw(&self.mesh, Transform::default());
+        target.set_texture(self.texture);
+        target.draw(self.mesh, Transform::default());
     }
 }
 
-fn plane(tegne: &Tegne, size: f32) -> Mesh {
+fn plane(tegne: &Tegne, size: f32) -> Id<Mesh> {
     let half_size = size / 2.0;
     let vertices = &[
         Vector3::new(-half_size, 0.0, half_size),
