@@ -9,21 +9,7 @@ pub struct Transform {
     pub rotation: Quaternion,
 }
 
-pub struct TransformBuilder {
-    position: Vector3,
-    scale: Vector3,
-    rotation: Quaternion,
-}
-
 impl Transform {
-    pub fn builder() -> TransformBuilder {
-        TransformBuilder {
-            position: Vector3::default(),
-            scale: Vector3::new(1.0, 1.0, 1.0),
-            rotation: Quaternion::default(),
-        }
-    }
-
     pub fn as_matrix(self) -> Matrix4 {
         Matrix4::translation(self.position) * Matrix4::scale(self.scale) * self.rotation.as_matrix()
     }
@@ -105,31 +91,18 @@ impl Default for Transform {
 
 impl From<[f32; 3]> for Transform {
     fn from(position: [f32; 3]) -> Self {
-        Self::builder().with_position(position).build()
+        Self {
+            position: Vector3::new(position[0], position[1], position[2]),
+            ..Default::default()
+        }
     }
 }
 
-impl TransformBuilder {
-    pub fn with_position(mut self, position: impl Into<Vector3>) -> Self {
-        self.position = position.into();
-        self
-    }
-
-    pub fn with_scale(mut self, scale: impl Into<Vector3>) -> Self {
-        self.scale = scale.into();
-        self
-    }
-
-    pub fn with_rotation(mut self, rotation: Quaternion) -> Self {
-        self.rotation = rotation;
-        self
-    }
-
-    pub fn build(self) -> Transform {
-        Transform {
-            position: self.position,
-            scale: self.scale,
-            rotation: self.rotation,
+impl From<Vector3> for Transform {
+    fn from(position: Vector3) -> Self {
+        Self {
+            position,
+            ..Default::default()
         }
     }
 }
@@ -150,48 +123,22 @@ mod test {
     }
 
     #[test]
-    fn builder() {
-        let t = Transform::builder().build();
-        assert_eq!(t.position, Vector3::new(0.0, 0.0, 0.0));
-        assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
-        assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
-    }
-
-    #[test]
-    fn builder_with_position() {
-        let t = Transform::builder().with_position([1.0, 2.0, 3.0]).build();
+    fn from_position() {
+        let t = Transform::from([1.0, 2.0, 3.0]);
         assert_eq!(t.position, Vector3::new(1.0, 2.0, 3.0));
         assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
         assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
-    fn builder_with_scale() {
-        let t = Transform::builder().with_scale([2.0, 3.0, 4.0]).build();
-        assert_eq!(t.position, Vector3::new(0.0, 0.0, 0.0));
-        assert_eq!(t.scale, Vector3::new(2.0, 3.0, 4.0));
-        assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
-    }
-
-    #[test]
-    fn builder_with_rotation() {
-        let t = Transform::builder()
-            .with_rotation(Quaternion::euler_rotation(0.0, 60.0, 90.0))
-            .build();
-        assert_eq!(t.position, Vector3::new(0.0, 0.0, 0.0));
-        assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
-        assert_eq!(t.rotation, Quaternion::euler_rotation(0.0, 60.0, 90.0));
-    }
-
-    #[test]
     fn as_matrix() {
-        let t = Transform::builder().with_position([1.0, 2.0, 3.0]).build();
+        let t = Transform::from([1.0, 2.0, 3.0]);
         assert_eq!(t.as_matrix(), Matrix4::translation([1.0, 2.0, 3.0]));
     }
 
     #[test]
     fn as_matrix_for_camera() {
-        let t = Transform::builder().with_position([1.0, 2.0, 3.0]).build();
+        let t = Transform::from([1.0, 2.0, 3.0]);
         assert_eq!(
             t.as_matrix_for_camera(),
             Matrix4::from_rows(
@@ -205,7 +152,7 @@ mod test {
 
     #[test]
     fn direction() {
-        let t = Transform::builder().with_position([1.0, 0.0, 0.0]).build();
+        let t = Transform::from([1.0, 0.0, 0.0]);
         assert_eq!(t.up(), Vector3::new(0.0, 1.0, 0.0));
         assert_eq!(t.right(), Vector3::new(1.0, 0.0, 0.0));
         assert_eq!(t.forward(), Vector3::new(0.0, 0.0, 1.0));
@@ -215,9 +162,6 @@ mod test {
     fn move_by() {
         let mut t = Transform::default();
         t.move_by([1.0, 2.0, 3.0]);
-        assert_eq!(
-            t,
-            Transform::builder().with_position([1.0, 2.0, 3.0]).build()
-        );
+        assert_eq!(t, Transform::from([1.0, 2.0, 3.0]));
     }
 }

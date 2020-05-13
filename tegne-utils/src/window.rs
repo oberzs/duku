@@ -14,16 +14,17 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
-use winit::window::WindowBuilder as WinitWindowBuilder;
+use winit::window::WindowBuilder;
 
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
 }
 
-pub struct WindowBuilder {
-    size: PhysicalSize<u32>,
-    title: String,
+pub struct WindowOptions<'title> {
+    pub width: u32,
+    pub height: u32,
+    pub title: &'title str,
 }
 
 pub struct Events {
@@ -42,11 +43,18 @@ struct Keys {
 }
 
 impl Window {
-    pub fn builder() -> WindowBuilder {
-        WindowBuilder {
-            size: PhysicalSize::new(500, 500),
-            title: "Tegne window".to_string(),
-        }
+    pub fn new(options: WindowOptions<'_>) -> Self {
+        let event_loop = EventLoop::new();
+        let size = PhysicalSize::new(options.width, options.height);
+
+        info!("creating window");
+        let window = WindowBuilder::new()
+            .with_inner_size(size)
+            .with_title(options.title)
+            .build(&event_loop)
+            .or_error("cannot create window");
+
+        Self { event_loop, window }
     }
 
     pub fn start_loop<F: FnMut(&Events)>(self, mut draw: F) {
@@ -143,28 +151,13 @@ impl Window {
     }
 }
 
-impl WindowBuilder {
-    pub fn with_size(&mut self, width: u32, height: u32) -> &mut Self {
-        self.size = PhysicalSize::new(width, height);
-        self
-    }
-
-    pub fn with_title(&mut self, title: impl AsRef<str>) -> &mut Self {
-        self.title = title.as_ref().to_string();
-        self
-    }
-
-    pub fn build(&self) -> Window {
-        let event_loop = EventLoop::new();
-
-        info!("creating window");
-        let window = WinitWindowBuilder::new()
-            .with_inner_size(self.size)
-            .with_title(self.title.clone())
-            .build(&event_loop)
-            .or_error("cannot create window");
-
-        Window { event_loop, window }
+impl Default for WindowOptions<'_> {
+    fn default() -> Self {
+        Self {
+            width: 500,
+            height: 500,
+            title: "Tegne window",
+        }
     }
 }
 

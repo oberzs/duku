@@ -19,7 +19,6 @@ use ash::vk::Extent2D;
 use ash::vk::Filter;
 use ash::vk::Image as VkImage;
 use ash::vk::ImageBlit;
-use ash::vk::ImageLayout;
 use ash::vk::ImageMemoryBarrier;
 use ash::vk::IndexType;
 use ash::vk::Offset2D;
@@ -41,6 +40,7 @@ use std::slice;
 use super::Device;
 use crate::images::Framebuffer;
 use crate::images::Image;
+use crate::images::ImageLayout;
 use crate::images::LayoutChange;
 use crate::shaders::Descriptor;
 use crate::shaders::PushConstants;
@@ -318,7 +318,7 @@ impl CommandRecorder {
                 self.buffer,
                 buffer,
                 image,
-                ImageLayout::TRANSFER_DST_OPTIMAL,
+                ImageLayout::TransferDst.flag(),
                 &regions,
             );
         }
@@ -330,9 +330,9 @@ impl CommandRecorder {
             self.device().logical().cmd_blit_image(
                 self.buffer,
                 src,
-                ImageLayout::TRANSFER_SRC_OPTIMAL,
+                ImageLayout::TransferSrc.flag(),
                 dst,
-                ImageLayout::TRANSFER_DST_OPTIMAL,
+                ImageLayout::TransferDst.flag(),
                 &regions,
                 filter,
             );

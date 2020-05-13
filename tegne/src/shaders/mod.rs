@@ -6,11 +6,12 @@ mod shader_layout;
 mod shader_objects;
 
 pub(crate) use attachment::Attachment;
+pub(crate) use attachment::AttachmentOptions;
 pub use material::Material;
-pub use material::MaterialBuilder;
+pub use material::MaterialOptions;
 pub(crate) use render_pass::RenderPass;
 pub use shader::Shader;
-pub use shader::ShaderBuilder;
+pub use shader::ShaderOptions;
 pub(crate) use shader_layout::ShaderLayout;
 pub(crate) use shader_objects::Descriptor;
 pub(crate) use shader_objects::ImageUniforms;

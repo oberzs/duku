@@ -9,18 +9,13 @@ use tegne_math::Vector3;
 use super::Texture;
 use crate::instance::Device;
 use crate::mesh::Mesh;
+use crate::mesh::MeshOptions;
 use crate::shaders::ImageUniforms;
 use crate::utils::OrError;
 
 pub struct Font {
     texture: Texture,
     char_data: HashMap<char, CharData>,
-}
-
-pub struct FontBuilder<'uni> {
-    source: Vec<u8>,
-    image_uniforms: &'uni ImageUniforms,
-    device: Rc<Device>,
 }
 
 struct CharData {
@@ -43,44 +38,8 @@ struct JsonCharMetrics {
 }
 
 impl Font {
-    pub(crate) fn builder<'uni>(
-        device: &Rc<Device>,
-        image_uniforms: &'uni ImageUniforms,
-    ) -> FontBuilder<'uni> {
-        FontBuilder {
-            source: vec![],
-            image_uniforms,
-            device: Rc::clone(device),
-        }
-    }
-
-    pub fn char_mesh(&self, c: char) -> &Mesh {
-        match self.char_data.get(&c) {
-            Some(data) => &data.mesh,
-            None => &self.char_data.get(&'?').expect("'?' char not loaded").mesh,
-        }
-    }
-
-    pub fn char_advance(&self, c: char) -> f32 {
-        match self.char_data.get(&c) {
-            Some(data) => data.advance,
-            None => {
-                self.char_data
-                    .get(&'?')
-                    .expect("'?' char not loaded")
-                    .advance
-            }
-        }
-    }
-
-    pub(crate) fn image_index(&self) -> i32 {
-        self.texture.image_index()
-    }
-}
-
-impl FontBuilder<'_> {
-    pub fn build(&self) -> Font {
-        let mut archive: Archive<&[u8]> = Archive::new(self.source.as_ref());
+    pub(crate) fn new(device: &Rc<Device>, image_uniforms: &ImageUniforms, source: &[u8]) -> Self {
+        let mut archive: Archive<&[u8]> = Archive::new(source);
 
         let mut atlas_source = vec![];
         let mut image_source = vec![];
@@ -110,11 +69,11 @@ impl FontBuilder<'_> {
             serde_json::from_slice(&atlas_source).or_error("invalid font atlas format");
 
         let texture = Texture::from_raw_rgba(
-            &self.device,
+            device,
             &image_source,
             atlas.atlas_size,
             atlas.atlas_size,
-            self.image_uniforms,
+            image_uniforms,
         );
 
         let mut char_data = HashMap::new();
@@ -129,28 +88,31 @@ impl FontBuilder<'_> {
             // vertex relative
             let advance = metrics.advance as f32 / atlas.sdf_size as f32;
 
-            let vertices = vec![
+            let vertices = &[
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(1.0, 0.0, 0.0),
                 Vector3::new(0.0, 1.0, 0.0),
                 Vector3::new(1.0, 1.0, 0.0),
             ];
 
-            let uvs = vec![
+            let uvs = &[
                 Vector2::new(u_min, v_max),
                 Vector2::new(u_max, v_max),
                 Vector2::new(u_min, v_min),
                 Vector2::new(u_max, v_min),
             ];
 
-            let triangles = vec![0, 2, 3, 0, 3, 1];
+            let triangles = &[0, 2, 3, 0, 3, 1];
 
-            let mesh = Mesh::builder(&self.device)
-                .with_vertices(&vertices)
-                .with_triangles(&triangles)
-                .with_uvs(&uvs)
-                .with_smooth_normals()
-                .build();
+            let mesh = Mesh::new(
+                device,
+                MeshOptions {
+                    vertices,
+                    triangles,
+                    uvs,
+                    ..Default::default()
+                },
+            );
 
             let data = CharData { mesh, advance };
 
@@ -160,8 +122,26 @@ impl FontBuilder<'_> {
         Font { texture, char_data }
     }
 
-    pub fn with_source(&mut self, source: &[u8]) -> &mut Self {
-        self.source = source.to_vec();
-        self
+    pub(crate) fn char_mesh(&self, c: char) -> &Mesh {
+        match self.char_data.get(&c) {
+            Some(data) => &data.mesh,
+            None => &self.char_data.get(&'?').expect("'?' char not loaded").mesh,
+        }
+    }
+
+    pub(crate) fn char_advance(&self, c: char) -> f32 {
+        match self.char_data.get(&c) {
+            Some(data) => data.advance,
+            None => {
+                self.char_data
+                    .get(&'?')
+                    .expect("'?' char not loaded")
+                    .advance
+            }
+        }
+    }
+
+    pub(crate) fn image_index(&self) -> i32 {
+        self.texture.image_index()
     }
 }

@@ -19,3 +19,4 @@ pub use controller::Controller;
 pub use window::Events;
 pub use window::Key;
 pub use window::Window;
+pub use window::WindowOptions;

@@ -1,7 +1,7 @@
 use ash::extensions::khr::Swapchain as Extension;
+use ash::vk::ColorSpaceKHR;
 use ash::vk::CompositeAlphaFlagsKHR;
 use ash::vk::Image;
-use ash::vk::ImageUsageFlags;
 use ash::vk::PresentInfoKHR;
 use ash::vk::Queue;
 use ash::vk::Semaphore;
@@ -15,6 +15,8 @@ use std::rc::Rc;
 use super::Device;
 use super::Vulkan;
 use super::WindowSurface;
+use crate::images::ImageFormat;
+use crate::images::ImageUsage;
 use crate::utils::OrError;
 
 pub(crate) struct Swapchain {
@@ -34,19 +36,17 @@ impl Swapchain {
         debug!("creating window swapchain");
 
         let image_count = device.pick_image_count();
-        let format = device.pick_bgra_format();
-        let color_space = device.pick_color_space();
         let extent = device.pick_extent(width, height);
         let present_mode = device.pick_present_mode();
         let transform = device.properties().surface_capabilities.current_transform;
 
         let mut create_info = SwapchainCreateInfoKHR::builder()
             .surface(window_surface.vk())
-            .image_format(format)
-            .image_color_space(color_space)
+            .image_format(ImageFormat::Bgra.flag())
+            .image_color_space(ColorSpaceKHR::SRGB_NONLINEAR)
             .image_extent(extent)
             .image_array_layers(1)
-            .image_usage(ImageUsageFlags::COLOR_ATTACHMENT)
+            .image_usage(ImageUsage::Color.flag())
             .pre_transform(transform)
             .min_image_count(image_count)
             .composite_alpha(CompositeAlphaFlagsKHR::OPAQUE)

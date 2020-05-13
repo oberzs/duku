@@ -18,7 +18,7 @@ pub(crate) fn builtin_materials(
 
     map.insert(
         BuiltinMaterial::White,
-        Material::builder(&device, layout).build(),
+        Material::new(device, layout, Default::default()),
     );
 
     map

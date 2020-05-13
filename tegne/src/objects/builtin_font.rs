@@ -20,9 +20,7 @@ pub(crate) fn builtin_fonts(
 
     map.insert(
         BuiltinFont::NotoSans,
-        Font::builder(device, uniforms)
-            .with_source(noto_sans)
-            .build(),
+        Font::new(device, uniforms, noto_sans),
     );
 
     map

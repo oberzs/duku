@@ -17,20 +17,54 @@ pub(crate) struct Sampler {
     device: Weak<Device>,
 }
 
-pub(crate) struct SamplerBuilder {
-    anisotropy: f32,
-    address_mode: SamplerAddressMode,
-    filter: Filter,
-    device: Rc<Device>,
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct SamplerOptions {
+    pub(crate) anisotropy: f32,
+    pub(crate) address: SamplerAddress,
+    pub(crate) filter: SamplerFilter,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum SamplerFilter {
+    Linear,
+    Nearest,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum SamplerAddress {
+    Repeat,
+    Clamp,
 }
 
 impl Sampler {
-    pub(crate) fn builder(device: &Rc<Device>) -> SamplerBuilder {
-        SamplerBuilder {
-            anisotropy: 0.0,
-            address_mode: SamplerAddressMode::REPEAT,
-            filter: Filter::LINEAR,
-            device: Rc::clone(device),
+    pub(crate) fn new(device: &Rc<Device>, options: SamplerOptions) -> Self {
+        let info = SamplerCreateInfo::builder()
+            .mag_filter(options.filter.flag())
+            .min_filter(options.filter.flag())
+            .address_mode_u(options.address.flag())
+            .address_mode_v(options.address.flag())
+            .address_mode_w(options.address.flag())
+            .anisotropy_enable(options.anisotropy != 0.0)
+            .max_anisotropy(options.anisotropy)
+            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
+            .unnormalized_coordinates(false)
+            .compare_enable(false)
+            .compare_op(CompareOp::ALWAYS)
+            .mipmap_mode(SamplerMipmapMode::LINEAR)
+            .mip_lod_bias(0.0)
+            .min_lod(0.0)
+            .max_lod(16.0);
+
+        let vk = unsafe {
+            device
+                .logical()
+                .create_sampler(&info, None)
+                .or_error("cannot create sampler")
+        };
+
+        Self {
+            vk,
+            device: Rc::downgrade(device),
         }
     }
 
@@ -51,50 +85,30 @@ impl Drop for Sampler {
     }
 }
 
-impl SamplerBuilder {
-    pub(crate) fn build(&self) -> Sampler {
-        let info = SamplerCreateInfo::builder()
-            .mag_filter(self.filter)
-            .min_filter(self.filter)
-            .address_mode_u(self.address_mode)
-            .address_mode_v(self.address_mode)
-            .address_mode_w(self.address_mode)
-            .anisotropy_enable(self.anisotropy != 0.0)
-            .max_anisotropy(self.anisotropy)
-            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
-            .unnormalized_coordinates(false)
-            .compare_enable(false)
-            .compare_op(CompareOp::ALWAYS)
-            .mipmap_mode(SamplerMipmapMode::LINEAR)
-            .mip_lod_bias(0.0)
-            .min_lod(0.0)
-            .max_lod(16.0);
-
-        let vk = unsafe {
-            self.device
-                .logical()
-                .create_sampler(&info, None)
-                .or_error("cannot create sampler")
-        };
-
-        Sampler {
-            vk,
-            device: Rc::downgrade(&self.device),
+impl Default for SamplerOptions {
+    fn default() -> Self {
+        Self {
+            anisotropy: 0.0,
+            address: SamplerAddress::Repeat,
+            filter: SamplerFilter::Linear,
         }
     }
+}
 
-    pub(crate) fn with_anisotropy(&mut self, value: f32) -> &mut Self {
-        self.anisotropy = value;
-        self
+impl SamplerAddress {
+    pub(crate) fn flag(&self) -> SamplerAddressMode {
+        match *self {
+            Self::Clamp => SamplerAddressMode::CLAMP_TO_BORDER,
+            Self::Repeat => SamplerAddressMode::REPEAT,
+        }
     }
+}
 
-    pub(crate) fn with_clamp_mode(&mut self) -> &mut Self {
-        self.address_mode = SamplerAddressMode::CLAMP_TO_BORDER;
-        self
-    }
-
-    pub(crate) fn with_nearest_filter(&mut self) -> &mut Self {
-        self.filter = Filter::NEAREST;
-        self
+impl SamplerFilter {
+    pub(crate) fn flag(&self) -> Filter {
+        match *self {
+            Self::Linear => Filter::LINEAR,
+            Self::Nearest => Filter::NEAREST,
+        }
     }
 }

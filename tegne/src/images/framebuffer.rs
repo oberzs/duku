@@ -5,7 +5,6 @@ use ash::vk::FramebufferCreateInfo;
 use ash::vk::ImageAspectFlags;
 use ash::vk::ImageBlit;
 use ash::vk::ImageSubresourceLayers;
-use ash::vk::ImageUsageFlags;
 use ash::vk::Offset3D;
 use log::debug;
 use std::cell::Ref;
@@ -14,6 +13,8 @@ use std::rc::Weak;
 
 use super::Image;
 use super::ImageFormat;
+use super::ImageOptions;
+use super::ImageUsage;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::instance::Swapchain;
@@ -54,38 +55,46 @@ impl Framebuffer {
                 let mut images = vec![];
 
                 // depth
-                images.push(
-                    Image::builder(device)
-                        .with_size(extent.width, extent.height)
-                        .with_samples()
-                        .with_depth()
-                        .with_view()
-                        .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
-                        .build(),
-                );
+                images.push(Image::new(
+                    device,
+                    ImageOptions {
+                        width: extent.width,
+                        height: extent.height,
+                        format: ImageFormat::Depth,
+                        usage: &[ImageUsage::Depth],
+                        has_view: true,
+                        has_samples: true,
+                        ..Default::default()
+                    },
+                ));
 
                 // color
-                images.push(
-                    Image::builder(device)
-                        .from_image(img)
-                        .with_size(extent.width, extent.height)
-                        .with_bgra_color()
-                        .with_view()
-                        .build(),
-                );
+                images.push(Image::new(
+                    device,
+                    ImageOptions {
+                        image: Some(img),
+                        width: extent.width,
+                        height: extent.height,
+                        format: ImageFormat::Bgra,
+                        has_view: true,
+                        ..Default::default()
+                    },
+                ));
 
                 // msaa
                 if device.is_msaa() {
-                    images.push(
-                        Image::builder(device)
-                            .with_size(extent.width, extent.height)
-                            .with_samples()
-                            .with_bgra_color()
-                            .with_view()
-                            .with_usage(ImageUsageFlags::TRANSIENT_ATTACHMENT)
-                            .with_usage(ImageUsageFlags::COLOR_ATTACHMENT)
-                            .build(),
-                    );
+                    images.push(Image::new(
+                        device,
+                        ImageOptions {
+                            width: extent.width,
+                            height: extent.height,
+                            format: ImageFormat::Bgra,
+                            usage: &[ImageUsage::Color, ImageUsage::Transient],
+                            has_view: true,
+                            has_samples: true,
+                            ..Default::default()
+                        },
+                    ));
                 }
 
                 Self::from_images(
@@ -112,39 +121,46 @@ impl Framebuffer {
         let mut images = vec![];
 
         // depth
-        images.push(
-            Image::builder(device)
-                .with_size(width, height)
-                .with_samples()
-                .with_depth()
-                .with_view()
-                .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
-                .build(),
-        );
+        images.push(Image::new(
+            device,
+            ImageOptions {
+                width,
+                height,
+                format: ImageFormat::Depth,
+                usage: &[ImageUsage::Depth],
+                has_view: true,
+                has_samples: true,
+                ..Default::default()
+            },
+        ));
 
         // color
-        images.push(
-            Image::builder(device)
-                .with_size(width, height)
-                .with_bgra_color()
-                .with_usage(ImageUsageFlags::COLOR_ATTACHMENT)
-                .with_usage(ImageUsageFlags::TRANSFER_SRC)
-                .with_view()
-                .build(),
-        );
+        images.push(Image::new(
+            device,
+            ImageOptions {
+                width,
+                height,
+                format: ImageFormat::Bgra,
+                usage: &[ImageUsage::Color, ImageUsage::TransferSrc],
+                has_view: true,
+                ..Default::default()
+            },
+        ));
 
         // msaa
         if device.is_msaa() {
-            images.push(
-                Image::builder(device)
-                    .with_size(width, height)
-                    .with_samples()
-                    .with_bgra_color()
-                    .with_view()
-                    .with_usage(ImageUsageFlags::TRANSIENT_ATTACHMENT)
-                    .with_usage(ImageUsageFlags::COLOR_ATTACHMENT)
-                    .build(),
-            );
+            images.push(Image::new(
+                device,
+                ImageOptions {
+                    width,
+                    height,
+                    format: ImageFormat::Bgra,
+                    usage: &[ImageUsage::Color, ImageUsage::Transient],
+                    has_view: true,
+                    has_samples: true,
+                    ..Default::default()
+                },
+            ));
         }
 
         Self::from_images(
@@ -169,16 +185,18 @@ impl Framebuffer {
         let mut images = vec![];
 
         // depth
-        images.push(
-            Image::builder(device)
-                .with_size(width, height)
-                .with_depth()
-                .with_stencil()
-                .with_view()
-                .with_usage(ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT)
-                .with_usage(ImageUsageFlags::TRANSFER_SRC)
-                .build(),
-        );
+        images.push(Image::new(
+            device,
+            ImageOptions {
+                width,
+                height,
+                format: ImageFormat::Depth,
+                usage: &[ImageUsage::Depth, ImageUsage::TransferSrc],
+                has_stencil: true,
+                has_view: true,
+                ..Default::default()
+            },
+        ));
 
         Self::from_images(
             device,
@@ -205,13 +223,17 @@ impl Framebuffer {
         } else {
             ImageFormat::Bgra
         };
-        let shader_image = Image::builder(device)
-            .with_size(width, height)
-            .with_format(format)
-            .with_view()
-            .with_usage(ImageUsageFlags::TRANSFER_DST)
-            .with_usage(ImageUsageFlags::SAMPLED)
-            .build();
+        let shader_image = Image::new(
+            device,
+            ImageOptions {
+                width,
+                height,
+                format,
+                usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
+                has_view: true,
+                ..Default::default()
+            },
+        );
 
         let recorder = CommandRecorder::new(device);
         recorder.begin_one_time();

@@ -1,4 +1,5 @@
 use tegne::Mesh;
+use tegne::MeshOptions;
 use tegne::Target;
 use tegne::Tegne;
 use tegne::Texture;
@@ -27,25 +28,24 @@ impl Floor {
 
 fn plane(tegne: &Tegne, size: f32) -> Mesh {
     let half_size = size / 2.0;
-    let vertices = vec![
+    let vertices = &[
         Vector3::new(-half_size, 0.0, half_size),
         Vector3::new(half_size, 0.0, half_size),
         Vector3::new(half_size, 0.0, -half_size),
         Vector3::new(-half_size, 0.0, -half_size),
     ];
-    let uvs = vec![
+    let uvs = &[
         Vector2::new(0.0, 0.0),
         Vector2::new(size, 0.0),
         Vector2::new(size, size),
         Vector2::new(0.0, size),
     ];
-    let triangles = vec![0, 1, 2, 0, 2, 3];
+    let triangles = &[0, 1, 2, 0, 2, 3];
 
-    tegne
-        .create_mesh()
-        .with_vertices(&vertices)
-        .with_uvs(&uvs)
-        .with_triangles(&triangles)
-        .with_smooth_normals()
-        .build()
+    tegne.create_mesh(MeshOptions {
+        vertices,
+        triangles,
+        uvs,
+        ..Default::default()
+    })
 }

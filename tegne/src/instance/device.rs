@@ -3,13 +3,11 @@ use ash::version::InstanceV1_0;
 use ash::vk::version_major;
 use ash::vk::version_minor;
 use ash::vk::version_patch;
-use ash::vk::ColorSpaceKHR;
 use ash::vk::CommandBuffer;
 use ash::vk::DeviceCreateInfo;
 use ash::vk::DeviceQueueCreateInfo;
 use ash::vk::Extent2D;
 use ash::vk::Fence;
-use ash::vk::Format;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::PhysicalDevice;
 use ash::vk::PhysicalDeviceFeatures;
@@ -71,6 +69,9 @@ pub(crate) struct DeviceProperties {
     pub(crate) vsync: bool,
     pub(crate) msaa: u8,
 }
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct Samples(pub(crate) u8);
 
 impl Device {
     pub(crate) fn new(
@@ -274,7 +275,7 @@ impl Device {
             .0 as u32
     }
 
-    pub(crate) fn pick_sample_count(&self) -> SampleCountFlags {
+    pub(crate) fn pick_samples(&self) -> Samples {
         let counts = self
             .properties
             .properties
@@ -286,22 +287,13 @@ impl Device {
                 .limits
                 .framebuffer_depth_sample_counts;
 
-        let count = match self.properties.msaa {
-            1 => SampleCountFlags::TYPE_1,
-            2 => SampleCountFlags::TYPE_2,
-            4 => SampleCountFlags::TYPE_4,
-            8 => SampleCountFlags::TYPE_8,
-            16 => SampleCountFlags::TYPE_16,
-            32 => SampleCountFlags::TYPE_32,
-            64 => SampleCountFlags::TYPE_64,
-            n => error(format!("invalid msaa value {}", n)),
-        };
+        let samples = Samples(self.properties.msaa);
 
-        if !counts.contains(count) {
-            error("unsupported msaa value");
+        if !counts.contains(samples.flag()) {
+            error(format!("unsupported msaa value {}", self.properties.msaa));
         }
 
-        count
+        samples
     }
 
     pub(crate) fn pick_extent(&self, width: u32, height: u32) -> Extent2D {
@@ -341,24 +333,8 @@ impl Device {
         }
     }
 
-    pub(crate) fn pick_depth_format(&self) -> Format {
-        Format::D32_SFLOAT_S8_UINT
-    }
-
-    pub(crate) fn pick_rgba_format(&self) -> Format {
-        Format::R8G8B8A8_UNORM
-    }
-
-    pub(crate) fn pick_bgra_format(&self) -> Format {
-        Format::B8G8R8A8_UNORM
-    }
-
-    pub(crate) fn pick_color_space(&self) -> ColorSpaceKHR {
-        ColorSpaceKHR::SRGB_NONLINEAR
-    }
-
     pub(crate) fn is_msaa(&self) -> bool {
-        self.pick_sample_count() != SampleCountFlags::TYPE_1
+        self.pick_samples() != Samples(1)
     }
 
     pub(crate) fn logical(&self) -> &LogicalDevice {
@@ -398,6 +374,21 @@ impl Drop for Device {
                 .iter_mut()
                 .for_each(|r| r.manual_drop(&self.logical));
             self.logical.destroy_device(None);
+        }
+    }
+}
+
+impl Samples {
+    pub(crate) fn flag(&self) -> SampleCountFlags {
+        match self.0 {
+            1 => SampleCountFlags::TYPE_1,
+            2 => SampleCountFlags::TYPE_2,
+            4 => SampleCountFlags::TYPE_4,
+            8 => SampleCountFlags::TYPE_8,
+            16 => SampleCountFlags::TYPE_16,
+            32 => SampleCountFlags::TYPE_32,
+            64 => SampleCountFlags::TYPE_64,
+            n => error(format!("invalid sample count {}", n)),
         }
     }
 }

@@ -1,11 +1,13 @@
 use ash::version::DeviceV1_0;
 use ash::vk::BufferUsageFlags;
-use ash::vk::ImageUsageFlags;
 use ash::vk::MemoryPropertyFlags;
 use std::cmp;
 use std::rc::Rc;
 
 use super::Image;
+use super::ImageFormat;
+use super::ImageOptions;
+use super::ImageUsage;
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::memory::alloc;
@@ -54,15 +56,22 @@ impl Texture {
 
         copy::data_to_buffer(&device, data, staging_memory, size as usize);
 
-        let image = Image::builder(device)
-            .with_size(width, height)
-            .with_mipmaps()
-            .with_rgba_color()
-            .with_view()
-            .with_usage(ImageUsageFlags::TRANSFER_SRC)
-            .with_usage(ImageUsageFlags::TRANSFER_DST)
-            .with_usage(ImageUsageFlags::SAMPLED)
-            .build();
+        let image = Image::new(
+            device,
+            ImageOptions {
+                width,
+                height,
+                format: ImageFormat::Rgba,
+                usage: &[
+                    ImageUsage::Sampled,
+                    ImageUsage::TransferSrc,
+                    ImageUsage::TransferDst,
+                ],
+                has_view: true,
+                has_mipmaps: true,
+                ..Default::default()
+            },
+        );
 
         let recorder = CommandRecorder::new(device);
         recorder.begin_one_time();

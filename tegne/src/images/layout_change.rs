@@ -1,12 +1,12 @@
 use ash::vk::AccessFlags;
 use ash::vk::ImageAspectFlags;
-use ash::vk::ImageLayout;
 use ash::vk::ImageMemoryBarrier;
 use ash::vk::ImageSubresourceRange;
 use ash::vk::PipelineStageFlags;
 use ash::vk::QUEUE_FAMILY_IGNORED;
 
 use super::Image;
+use super::ImageLayout;
 use crate::instance::CommandRecorder;
 
 pub(crate) struct LayoutChange<'a> {
@@ -27,8 +27,8 @@ impl<'a> LayoutChange<'a> {
         Self {
             recorder,
             image,
-            old_layout: ImageLayout::UNDEFINED,
-            new_layout: ImageLayout::UNDEFINED,
+            old_layout: ImageLayout::Undefined,
+            new_layout: ImageLayout::Undefined,
             src_access: AccessFlags::default(),
             dst_access: AccessFlags::default(),
             src_stage: PipelineStageFlags::TOP_OF_PIPE,
@@ -39,35 +39,35 @@ impl<'a> LayoutChange<'a> {
     }
 
     pub(crate) fn change_from_read(&mut self) -> &mut Self {
-        self.old_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
+        self.old_layout = ImageLayout::TransferSrc;
         self.src_access = AccessFlags::TRANSFER_READ;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
     pub(crate) fn change_from_write(&mut self) -> &mut Self {
-        self.old_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
+        self.old_layout = ImageLayout::TransferDst;
         self.src_access = AccessFlags::TRANSFER_WRITE;
         self.src_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
     pub(crate) fn change_from_shader_read(&mut self) -> &mut Self {
-        self.old_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+        self.old_layout = ImageLayout::Shader;
         self.src_access = AccessFlags::SHADER_READ;
         self.src_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
     pub(crate) fn change_from_color_write(&mut self) -> &mut Self {
-        self.old_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+        self.old_layout = ImageLayout::Color;
         self.src_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.src_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
     pub(crate) fn change_from_depth_write(&mut self) -> &mut Self {
-        self.old_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        self.old_layout = ImageLayout::Depth;
         self.src_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
         self.src_stage =
             PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS;
@@ -75,35 +75,35 @@ impl<'a> LayoutChange<'a> {
     }
 
     pub(crate) fn change_to_read(&mut self) -> &mut Self {
-        self.new_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
+        self.new_layout = ImageLayout::TransferSrc;
         self.dst_access = AccessFlags::TRANSFER_READ;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
     pub(crate) fn change_to_write(&mut self) -> &mut Self {
-        self.new_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
+        self.new_layout = ImageLayout::TransferDst;
         self.dst_access = AccessFlags::TRANSFER_WRITE;
         self.dst_stage = PipelineStageFlags::TRANSFER;
         self
     }
 
     pub(crate) fn change_to_shader_read(&mut self) -> &mut Self {
-        self.new_layout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+        self.new_layout = ImageLayout::Shader;
         self.dst_access = AccessFlags::SHADER_READ;
         self.dst_stage = PipelineStageFlags::FRAGMENT_SHADER;
         self
     }
 
     pub(crate) fn change_to_color_write(&mut self) -> &mut Self {
-        self.new_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+        self.new_layout = ImageLayout::Color;
         self.dst_access = AccessFlags::COLOR_ATTACHMENT_WRITE;
         self.dst_stage = PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
         self
     }
 
     pub(crate) fn change_to_depth_write(&mut self) -> &mut Self {
-        self.new_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        self.new_layout = ImageLayout::Depth;
         self.dst_access = AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
         self.dst_stage =
             PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS;
@@ -135,8 +135,8 @@ impl<'a> LayoutChange<'a> {
             .dst_queue_family_index(QUEUE_FAMILY_IGNORED)
             .subresource_range(subresource)
             .image(self.image.vk())
-            .old_layout(self.old_layout)
-            .new_layout(self.new_layout)
+            .old_layout(self.old_layout.flag())
+            .new_layout(self.new_layout.flag())
             .src_access_mask(self.src_access)
             .dst_access_mask(self.dst_access)
             .build();

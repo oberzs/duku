@@ -6,6 +6,7 @@ use crate::instance::RenderPassType;
 use crate::shaders::RenderPass;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
+use crate::shaders::ShaderOptions;
 use crate::utils::OrError;
 
 macro_rules! include_shader {
@@ -47,42 +48,46 @@ pub(crate) fn builtin_shaders(
 
     map.insert(
         BuiltinShader::Phong,
-        Shader::builder(&device, &color_pass, &layout)
-            .with_source(phong)
-            .build(),
+        Shader::new(device, color_pass, layout, phong, Default::default()),
     );
     map.insert(
         BuiltinShader::Unshaded,
-        Shader::builder(&device, &color_pass, &layout)
-            .with_source(unshaded)
-            .build(),
-    );
-    map.insert(
-        BuiltinShader::Passthru,
-        Shader::builder(&device, &color_pass, &layout)
-            .with_source(passthru)
-            .with_no_depth()
-            .build(),
+        Shader::new(device, color_pass, layout, unshaded, Default::default()),
     );
     map.insert(
         BuiltinShader::Shadow,
-        Shader::builder(&device, &depth_pass, &layout)
-            .with_source(shadow)
-            .build(),
-    );
-    map.insert(
-        BuiltinShader::Wireframe,
-        Shader::builder(&device, &color_pass, &layout)
-            .with_source(wireframe)
-            .with_lines()
-            .with_no_depth()
-            .build(),
+        Shader::new(device, depth_pass, layout, shadow, Default::default()),
     );
     map.insert(
         BuiltinShader::Font,
-        Shader::builder(&device, &color_pass, &layout)
-            .with_source(font)
-            .build(),
+        Shader::new(device, color_pass, layout, font, Default::default()),
+    );
+    map.insert(
+        BuiltinShader::Passthru,
+        Shader::new(
+            device,
+            color_pass,
+            layout,
+            passthru,
+            ShaderOptions {
+                has_depth_test: false,
+                ..Default::default()
+            },
+        ),
+    );
+    map.insert(
+        BuiltinShader::Wireframe,
+        Shader::new(
+            device,
+            color_pass,
+            layout,
+            wireframe,
+            ShaderOptions {
+                has_lines: true,
+                has_depth_test: false,
+                ..Default::default()
+            },
+        ),
     );
 
     map

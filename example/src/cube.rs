@@ -1,4 +1,5 @@
 use tegne::Mesh;
+use tegne::MeshOptions;
 use tegne::Target;
 use tegne::Tegne;
 use tegne::Texture;
@@ -19,7 +20,7 @@ impl Cube {
             "example/assets/prototype_512x512_{}.png",
             color.as_ref()
         ));
-        let transform = Transform::builder().with_position(pos).build();
+        let transform = Transform::from(pos.into());
 
         Self {
             mesh,
@@ -89,20 +90,19 @@ fn cube(tegne: &Tegne, size: f32) -> Vec<Mesh> {
 }
 
 fn rectangle<V: Into<Vector3>>(tegne: &Tegne, p1: V, p2: V, p3: V, p4: V) -> Mesh {
-    let vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
-    let uvs = vec![
+    let vertices = &[p1.into(), p2.into(), p3.into(), p4.into()];
+    let uvs = &[
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = vec![0, 2, 1, 0, 3, 2];
+    let triangles = &[0, 2, 1, 0, 3, 2];
 
-    tegne
-        .create_mesh()
-        .with_vertices(&vertices)
-        .with_uvs(&uvs)
-        .with_triangles(&triangles)
-        .with_smooth_normals()
-        .build()
+    tegne.create_mesh(MeshOptions {
+        vertices,
+        triangles,
+        uvs,
+        ..Default::default()
+    })
 }

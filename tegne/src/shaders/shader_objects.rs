@@ -2,7 +2,6 @@ use ash::version::DeviceV1_0;
 use ash::vk::DescriptorImageInfo;
 use ash::vk::DescriptorSet;
 use ash::vk::DescriptorType;
-use ash::vk::ImageLayout;
 use ash::vk::ImageView;
 use ash::vk::WriteDescriptorSet;
 use log::debug;
@@ -19,7 +18,11 @@ use tegne_math::Vector4;
 use super::ShaderLayout;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
+use crate::images::ImageLayout;
 use crate::images::Sampler;
+use crate::images::SamplerAddress;
+use crate::images::SamplerFilter;
+use crate::images::SamplerOptions;
 use crate::instance::Device;
 use crate::utils::OrError;
 
@@ -132,15 +135,29 @@ impl ImageUniforms {
 
         let descriptor_set = layout.image_set();
         let descriptor = Descriptor(2, descriptor_set);
-        let linear_repeat_sampler = Sampler::builder(device).with_anisotropy(anisotropy).build();
-        let linear_clamp_sampler = Sampler::builder(device)
-            .with_anisotropy(anisotropy)
-            .with_clamp_mode()
-            .build();
-        let nearest_repeat_sampler = Sampler::builder(device)
-            .with_anisotropy(anisotropy)
-            .with_nearest_filter()
-            .build();
+        let linear_repeat_sampler = Sampler::new(
+            device,
+            SamplerOptions {
+                anisotropy,
+                ..Default::default()
+            },
+        );
+        let linear_clamp_sampler = Sampler::new(
+            device,
+            SamplerOptions {
+                anisotropy,
+                address: SamplerAddress::Clamp,
+                ..Default::default()
+            },
+        );
+        let nearest_repeat_sampler = Sampler::new(
+            device,
+            SamplerOptions {
+                anisotropy,
+                filter: SamplerFilter::Nearest,
+                ..Default::default()
+            },
+        );
 
         Self {
             descriptor,
@@ -169,22 +186,22 @@ impl ImageUniforms {
                     let has_image = i < self.images.borrow().len();
                     let index = if has_image { i } else { 0 };
                     DescriptorImageInfo::builder()
-                        .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                        .image_layout(ImageLayout::Shader.flag())
                         .image_view(self.images.borrow()[index])
                         .build()
                 })
                 .collect::<Vec<_>>();
             let sampler_info = [
                 DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .image_layout(ImageLayout::Shader.flag())
                     .sampler(self.linear_repeat_sampler.vk())
                     .build(),
                 DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .image_layout(ImageLayout::Shader.flag())
                     .sampler(self.linear_clamp_sampler.vk())
                     .build(),
                 DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+                    .image_layout(ImageLayout::Shader.flag())
                     .sampler(self.nearest_repeat_sampler.vk())
                     .build(),
             ];

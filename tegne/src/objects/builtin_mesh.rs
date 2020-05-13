@@ -6,6 +6,7 @@ use tegne_math::Vector3;
 
 use crate::instance::Device;
 use crate::mesh::Mesh;
+use crate::mesh::MeshOptions;
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub(crate) enum BuiltinMesh {
@@ -21,7 +22,7 @@ pub(crate) fn builtin_meshes(device: &Rc<Device>) -> HashMap<BuiltinMesh, Mesh> 
 }
 
 fn create_cube(device: &Rc<Device>) -> Mesh {
-    let vertices = vec![
+    let vertices = &[
         // bottom
         Vector3::new(-0.5, -0.5, -0.5),
         Vector3::new(0.5, -0.5, -0.5),
@@ -33,7 +34,7 @@ fn create_cube(device: &Rc<Device>) -> Mesh {
         Vector3::new(0.5, 0.5, 0.5),
         Vector3::new(-0.5, 0.5, 0.5),
     ];
-    let uvs = vec![
+    let uvs = &[
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
@@ -43,7 +44,7 @@ fn create_cube(device: &Rc<Device>) -> Mesh {
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
     ];
-    let triangles = vec![
+    let triangles = &[
         0, 1, 2, 0, 2, 3, // bottom
         4, 7, 6, 4, 6, 5, // top
         4, 5, 1, 4, 1, 0, // front
@@ -52,12 +53,15 @@ fn create_cube(device: &Rc<Device>) -> Mesh {
         7, 4, 0, 7, 0, 3, // left
     ];
 
-    Mesh::builder(device)
-        .with_vertices(&vertices)
-        .with_triangles(&triangles)
-        .with_uvs(&uvs)
-        .with_smooth_normals()
-        .build()
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices,
+            triangles,
+            uvs,
+            ..Default::default()
+        },
+    )
 }
 
 fn create_sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
@@ -132,12 +136,15 @@ fn create_sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
         uvs.push(Vector2::new(u, v));
     }
 
-    Mesh::builder(device)
-        .with_vertices(&vertices)
-        .with_triangles(&triangles)
-        .with_uvs(&uvs)
-        .with_smooth_normals()
-        .build()
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices: &vertices,
+            triangles: &triangles,
+            uvs: &uvs,
+            ..Default::default()
+        },
+    )
 }
 
 fn get_middle_point(

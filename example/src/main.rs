@@ -5,8 +5,10 @@ use std::time::Instant;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
+use tegne::TegneOptions;
 use tegne::Vector3;
 use tegne::Window;
+use tegne::WindowOptions;
 
 use cube::Cube;
 use floor::Floor;
@@ -16,24 +18,26 @@ fn main() {
 
     let (width, height) = (720, 640);
 
-    let window = Window::builder()
-        .with_title("Tegne example")
-        .with_size(width, height)
-        .build();
-    let tegne = Tegne::builder()
-        .with_window(&window)
-        .with_anisotropy(16.0)
-        .with_msaa(4)
-        .with_vsync()
-        .build();
-
+    let window = Window::new(WindowOptions {
+        title: "Tegne example",
+        width,
+        height,
+    });
+    let tegne = Tegne::from_window(
+        &window,
+        TegneOptions {
+            anisotropy: 16.0,
+            msaa: 4,
+            vsync: true,
+        },
+    );
     let floor = Floor::new(&tegne);
     let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, "yellow");
     let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, "blue1");
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
 
     let mut color_value = 1.0;
-    let mut text_material = tegne.create_material().build();
+    let mut text_material = tegne.create_material(Default::default());
 
     let mut controller = Controller::default();
 

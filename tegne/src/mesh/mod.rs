@@ -3,7 +3,6 @@ mod vertex;
 use ash::vk::Buffer as VkBuffer;
 use std::cell::Cell;
 use std::rc::Rc;
-use std::rc::Weak;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
@@ -13,7 +12,6 @@ use crate::buffer::DynamicBuffer;
 use crate::buffer::FixedBuffer;
 use crate::instance::Device;
 use crate::utils::error;
-use crate::utils::OrError;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {
@@ -26,22 +24,71 @@ pub struct Mesh {
     drawn_triangles: u32,
 }
 
-pub struct MeshBuilder {
-    vertices: Vec<Vector3>,
-    uvs: Vec<Vector2>,
-    normals: Vec<Vector3>,
-    triangles: Vec<u32>,
-    device: Weak<Device>,
+#[derive(Default, Debug, Copy, Clone)]
+pub struct MeshOptions<'slice> {
+    pub vertices: &'slice [Vector3],
+    pub uvs: &'slice [Vector2],
+    pub normals: &'slice [Vector3],
+    pub triangles: &'slice [u32],
 }
 
 impl Mesh {
-    pub(crate) fn builder(device: &Rc<Device>) -> MeshBuilder {
-        MeshBuilder {
-            vertices: vec![],
-            uvs: vec![],
-            normals: vec![],
-            triangles: vec![],
-            device: Rc::downgrade(device),
+    pub(crate) fn new(device: &Rc<Device>, options: MeshOptions<'_>) -> Self {
+        if options.vertices.is_empty() {
+            error("no vertices in mesh");
+        }
+        if options.triangles.is_empty() {
+            error("no triangles in mesh");
+        }
+
+        let vertex_count = options.vertices.len();
+        let index_count = options.triangles.len();
+
+        if options.uvs.len() > vertex_count {
+            error("too many uvs");
+        }
+        if options.normals.len() > vertex_count {
+            error("too many normals");
+        }
+
+        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex);
+        let index_buffer = FixedBuffer::new::<u32>(device, options.triangles, BufferType::Index);
+
+        let vertices = options.vertices.to_vec();
+
+        let mut uvs = vec![Vector2::default(); vertex_count];
+        uvs[..options.uvs.len()].clone_from_slice(options.uvs);
+
+        let mut normals = vec![Vector3::default(); vertex_count];
+        normals[..options.normals.len()].clone_from_slice(options.normals);
+
+        // calculate smooth normals
+        if options.normals.is_empty() {
+            for tri in options.triangles.chunks(3) {
+                let a = tri[0] as usize;
+                let b = tri[1] as usize;
+                let c = tri[2] as usize;
+                let vtx_a = vertices[a];
+                let vtx_b = vertices[b];
+                let vtx_c = vertices[c];
+                let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
+                normals[a] += normal;
+                normals[b] += normal;
+                normals[c] += normal;
+            }
+            for norm in normals.iter_mut() {
+                *norm = norm.unit();
+            }
+        }
+
+        Self {
+            vertices,
+            uvs,
+            normals,
+            vertex_buffer,
+            index_buffer,
+            should_update: Cell::new(true),
+            drawn_triangles: index_count as u32 / 3,
         }
     }
 
@@ -89,114 +136,5 @@ impl Mesh {
 
     pub(crate) fn drawn_triangles(&self) -> u32 {
         self.drawn_triangles
-    }
-}
-
-impl MeshBuilder {
-    pub fn build(self) -> Mesh {
-        let vertex_buffer =
-            DynamicBuffer::new::<Vertex>(&self.device(), self.vertices.len(), BufferType::Vertex);
-        let index_buffer =
-            FixedBuffer::new::<u32>(&self.device(), &self.triangles, BufferType::Index);
-
-        let size = if !self.vertices.is_empty() {
-            self.vertices.len()
-        } else if !self.uvs.is_empty() {
-            self.uvs.len()
-        } else if !self.normals.is_empty() {
-            self.normals.len()
-        } else {
-            0
-        };
-
-        let vertices = if self.vertices.is_empty() {
-            vec![Vector3::default(); size]
-        } else {
-            self.vertices
-        };
-
-        let uvs = if self.uvs.is_empty() {
-            vec![Vector2::default(); size]
-        } else {
-            self.uvs
-        };
-
-        let normals = if self.normals.is_empty() {
-            vec![Vector3::default(); size]
-        } else {
-            self.normals
-        };
-
-        Mesh {
-            vertices,
-            uvs,
-            normals,
-            vertex_buffer,
-            index_buffer,
-            should_update: Cell::new(true),
-            drawn_triangles: self.triangles.len() as u32 / 3,
-        }
-    }
-
-    pub fn with_vertices(mut self, vertices: &[Vector3]) -> Self {
-        if (!self.uvs.is_empty() && self.uvs.len() != vertices.len())
-            || !self.normals.is_empty() && self.normals.len() != vertices.len()
-        {
-            error("wrong amount of vertices");
-        }
-        self.vertices = vertices.to_owned();
-        self
-    }
-
-    pub fn with_uvs(mut self, uvs: &[Vector2]) -> Self {
-        if (!self.vertices.is_empty() && self.vertices.len() != uvs.len())
-            || !self.normals.is_empty() && self.normals.len() != uvs.len()
-        {
-            error("wrong amount of uvs");
-        }
-        self.uvs = uvs.to_owned();
-        self
-    }
-
-    pub fn with_normals(mut self, normals: &[Vector3]) -> Self {
-        if (!self.uvs.is_empty() && self.uvs.len() > normals.len())
-            || !self.vertices.is_empty() && self.vertices.len() > normals.len()
-        {
-            error("wrong amount of normals");
-        }
-        self.normals = normals.to_owned();
-        self
-    }
-
-    pub fn with_triangles(mut self, triangles: &[u32]) -> Self {
-        self.triangles = triangles.to_owned();
-        self
-    }
-
-    pub fn with_smooth_normals(mut self) -> Self {
-        self.normals = vec![Vector3::default(); self.vertices.len()];
-
-        for tri in self.triangles.chunks(3) {
-            let a = tri[0] as usize;
-            let b = tri[1] as usize;
-            let c = tri[2] as usize;
-            let vtx_a = self.vertices[a];
-            let vtx_b = self.vertices[b];
-            let vtx_c = self.vertices[c];
-            let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
-            self.normals[a] += normal;
-            self.normals[b] += normal;
-            self.normals[c] += normal;
-        }
-
-        for norm in self.normals.iter_mut() {
-            *norm = norm.unit();
-        }
-
-        self
-    }
-
-    fn device(&self) -> Rc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
     }
 }

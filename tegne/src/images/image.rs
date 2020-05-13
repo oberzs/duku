@@ -9,7 +9,7 @@ use ash::vk::Image as VkImage;
 use ash::vk::ImageAspectFlags;
 use ash::vk::ImageBlit;
 use ash::vk::ImageCreateInfo;
-use ash::vk::ImageLayout;
+use ash::vk::ImageLayout as VkImageLayout;
 use ash::vk::ImageSubresourceLayers;
 use ash::vk::ImageSubresourceRange;
 use ash::vk::ImageTiling;
@@ -21,7 +21,6 @@ use ash::vk::ImageViewType;
 use ash::vk::MemoryAllocateInfo;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::Offset3D;
-use ash::vk::SampleCountFlags;
 use ash::vk::SharingMode;
 use std::cmp;
 use std::rc::Rc;
@@ -29,6 +28,7 @@ use std::rc::Weak;
 
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
+use crate::instance::Samples;
 use crate::utils::OrError;
 
 pub(crate) struct Image {
@@ -38,42 +38,171 @@ pub(crate) struct Image {
     vk: VkImage,
     memory: Option<DeviceMemory>,
     view: Option<ImageView>,
-    format: Format,
+    format: ImageFormat,
     device: Weak<Device>,
 }
 
-pub(crate) struct ImageBuilder {
-    device: Weak<Device>,
-    width: u32,
-    height: u32,
-    samples: SampleCountFlags,
-    format: Format,
-    usage: ImageUsageFlags,
-    view: bool,
-    mipmaps: bool,
-    image: Option<VkImage>,
-    stencil: bool,
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct ImageOptions<'usage> {
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) format: ImageFormat,
+    pub(crate) usage: &'usage [ImageUsage],
+    pub(crate) image: Option<VkImage>,
+    pub(crate) has_view: bool,
+    pub(crate) has_mipmaps: bool,
+    pub(crate) has_stencil: bool,
+    pub(crate) has_samples: bool,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum ImageFormat {
-    // Rgba,
+    Rgba,
     Bgra,
     Depth,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum ImageUsage {
+    Depth,
+    Color,
+    Transient,
+    TransferSrc,
+    TransferDst,
+    Sampled,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum ImageLayout {
+    Undefined,
+    Depth,
+    Color,
+    Shader,
+    Present,
+    TransferSrc,
+    TransferDst,
+}
+
 impl Image {
-    pub(crate) fn builder(device: &Rc<Device>) -> ImageBuilder {
-        ImageBuilder {
+    pub(crate) fn new(device: &Rc<Device>, options: ImageOptions<'_>) -> Self {
+        let mip_levels = if options.has_mipmaps {
+            (cmp::max(options.width, options.height) as f32)
+                .log2()
+                .floor() as u32
+                + 1
+        } else {
+            1
+        };
+        let samples = if options.has_samples {
+            device.pick_samples()
+        } else {
+            Samples(1)
+        };
+
+        let (vk, memory) = match options.image {
+            Some(image) => (image, None),
+            None => {
+                // create image
+                let image_info = ImageCreateInfo::builder()
+                    .image_type(ImageType::TYPE_2D)
+                    .extent(Extent3D {
+                        width: options.width,
+                        height: options.height,
+                        depth: 1,
+                    })
+                    .mip_levels(mip_levels)
+                    .array_layers(1)
+                    .format(options.format.flag())
+                    .tiling(ImageTiling::OPTIMAL)
+                    .initial_layout(ImageLayout::Undefined.flag())
+                    .usage(ImageUsage::combine(options.usage))
+                    .sharing_mode(SharingMode::EXCLUSIVE)
+                    .samples(samples.flag());
+
+                let vk = unsafe {
+                    device
+                        .logical()
+                        .create_image(&image_info, None)
+                        .or_error("cannot create texture image")
+                };
+
+                // alloc memory
+                let mem_requirements =
+                    unsafe { device.logical().get_image_memory_requirements(vk) };
+
+                let mem_type = device.pick_memory_type(
+                    mem_requirements.memory_type_bits,
+                    MemoryPropertyFlags::DEVICE_LOCAL,
+                );
+
+                let alloc_info = MemoryAllocateInfo::builder()
+                    .allocation_size(mem_requirements.size)
+                    .memory_type_index(mem_type);
+
+                let memory = unsafe {
+                    device
+                        .logical()
+                        .allocate_memory(&alloc_info, None)
+                        .or_error("cannot allocate texture memory")
+                };
+
+                // bind memory
+                unsafe {
+                    device
+                        .logical()
+                        .bind_image_memory(vk, memory, 0)
+                        .or_error("cannot bind texture memory");
+                }
+
+                (vk, Some(memory))
+            }
+        };
+
+        // create view
+        let view = if options.has_view {
+            let mut aspect_flags = if options.format == ImageFormat::Depth {
+                ImageAspectFlags::DEPTH
+            } else {
+                ImageAspectFlags::COLOR
+            };
+            if options.has_stencil {
+                aspect_flags |= ImageAspectFlags::STENCIL;
+            }
+
+            let subresource = ImageSubresourceRange::builder()
+                .aspect_mask(aspect_flags)
+                .base_mip_level(0)
+                .base_array_layer(0)
+                .layer_count(1)
+                .level_count(mip_levels)
+                .build();
+            let view_info = ImageViewCreateInfo::builder()
+                .image(vk)
+                .view_type(ImageViewType::TYPE_2D)
+                .format(options.format.flag())
+                .subresource_range(subresource);
+
+            unsafe {
+                Some(
+                    device
+                        .logical()
+                        .create_image_view(&view_info, None)
+                        .or_error("cannot create image view"),
+                )
+            }
+        } else {
+            None
+        };
+
+        Self {
+            width: options.width,
+            height: options.height,
+            mip_levels,
+            vk,
+            memory,
+            view,
+            format: options.format,
             device: Rc::downgrade(device),
-            width: 1,
-            height: 1,
-            samples: SampleCountFlags::TYPE_1,
-            format: device.pick_rgba_format(),
-            usage: ImageUsageFlags::empty(),
-            view: false,
-            mipmaps: false,
-            image: None,
-            stencil: false,
         }
     }
 
@@ -187,187 +316,7 @@ impl Image {
     }
 
     pub(crate) fn is_depth_format(&self) -> bool {
-        self.format == self.device().pick_depth_format()
-    }
-
-    fn device(&self) -> Rc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
-}
-
-impl ImageBuilder {
-    pub(crate) fn with_size(&mut self, width: u32, height: u32) -> &mut Self {
-        self.width = width;
-        self.height = height;
-        self
-    }
-
-    pub(crate) fn with_mipmaps(&mut self) -> &mut Self {
-        self.mipmaps = true;
-        self
-    }
-
-    pub(crate) fn with_samples(&mut self) -> &mut Self {
-        self.samples = self.device().pick_sample_count();
-        self
-    }
-
-    pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
-        self.format = self.device().pick_bgra_format();
-        self
-    }
-
-    pub(crate) fn with_rgba_color(&mut self) -> &mut Self {
-        self.format = self.device().pick_rgba_format();
-        self
-    }
-
-    pub(crate) fn with_depth(&mut self) -> &mut Self {
-        self.format = self.device().pick_depth_format();
-        self
-    }
-
-    pub(crate) fn with_format(&mut self, format: ImageFormat) -> &mut Self {
-        self.format = match format {
-            // ImageFormat::Rgba => self.device().pick_rgba_format(),
-            ImageFormat::Bgra => self.device().pick_bgra_format(),
-            ImageFormat::Depth => self.device().pick_depth_format(),
-        };
-        self
-    }
-
-    pub(crate) fn with_usage(&mut self, usage: ImageUsageFlags) -> &mut Self {
-        self.usage |= usage;
-        self
-    }
-
-    pub(crate) fn with_view(&mut self) -> &mut Self {
-        self.view = true;
-        self
-    }
-
-    pub(crate) fn from_image(&mut self, image: VkImage) -> &mut Self {
-        self.image = Some(image);
-        self
-    }
-
-    pub(crate) fn with_stencil(&mut self) -> &mut Self {
-        self.stencil = true;
-        self
-    }
-
-    pub(crate) fn build(&self) -> Image {
-        let mip_levels = if self.mipmaps {
-            (cmp::max(self.width, self.height) as f32).log2().floor() as u32 + 1
-        } else {
-            1
-        };
-
-        let (vk, memory) = match self.image {
-            Some(image) => (image, None),
-            None => {
-                // create image
-                let image_info = ImageCreateInfo::builder()
-                    .image_type(ImageType::TYPE_2D)
-                    .extent(Extent3D {
-                        width: self.width,
-                        height: self.height,
-                        depth: 1,
-                    })
-                    .mip_levels(mip_levels)
-                    .array_layers(1)
-                    .format(self.format)
-                    .tiling(ImageTiling::OPTIMAL)
-                    .initial_layout(ImageLayout::UNDEFINED)
-                    .usage(self.usage)
-                    .sharing_mode(SharingMode::EXCLUSIVE)
-                    .samples(self.samples);
-
-                let vk = unsafe {
-                    self.device()
-                        .logical()
-                        .create_image(&image_info, None)
-                        .or_error("cannot create texture image")
-                };
-
-                // alloc memory
-                let mem_requirements =
-                    unsafe { self.device().logical().get_image_memory_requirements(vk) };
-
-                let mem_type = self.device().pick_memory_type(
-                    mem_requirements.memory_type_bits,
-                    MemoryPropertyFlags::DEVICE_LOCAL,
-                );
-
-                let alloc_info = MemoryAllocateInfo::builder()
-                    .allocation_size(mem_requirements.size)
-                    .memory_type_index(mem_type);
-
-                let memory = unsafe {
-                    self.device()
-                        .logical()
-                        .allocate_memory(&alloc_info, None)
-                        .or_error("cannot allocate texture memory")
-                };
-
-                // bind memory
-                unsafe {
-                    self.device()
-                        .logical()
-                        .bind_image_memory(vk, memory, 0)
-                        .or_error("cannot bind texture memory");
-                }
-
-                (vk, Some(memory))
-            }
-        };
-
-        // create view
-        let view = if self.view {
-            let mut aspect_flags = if self.format == self.device().pick_depth_format() {
-                ImageAspectFlags::DEPTH
-            } else {
-                ImageAspectFlags::COLOR
-            };
-            if self.stencil {
-                aspect_flags |= ImageAspectFlags::STENCIL;
-            }
-
-            let subresource = ImageSubresourceRange::builder()
-                .aspect_mask(aspect_flags)
-                .base_mip_level(0)
-                .base_array_layer(0)
-                .layer_count(1)
-                .level_count(mip_levels)
-                .build();
-            let view_info = ImageViewCreateInfo::builder()
-                .image(vk)
-                .view_type(ImageViewType::TYPE_2D)
-                .format(self.format)
-                .subresource_range(subresource);
-
-            unsafe {
-                Some(
-                    self.device()
-                        .logical()
-                        .create_image_view(&view_info, None)
-                        .or_error("cannot create image view"),
-                )
-            }
-        } else {
-            None
-        };
-
-        Image {
-            width: self.width,
-            height: self.height,
-            mip_levels,
-            vk,
-            memory,
-            view,
-            format: self.format,
-            device: Rc::downgrade(&self.device()),
-        }
+        self.format == ImageFormat::Depth
     }
 
     fn device(&self) -> Rc<Device> {
@@ -385,6 +334,65 @@ impl Drop for Image {
                 self.device().logical().destroy_image(self.vk, None);
                 self.device().logical().free_memory(memory, None);
             }
+        }
+    }
+}
+
+impl Default for ImageOptions<'_> {
+    fn default() -> Self {
+        Self {
+            width: 1,
+            height: 1,
+            format: ImageFormat::Rgba,
+            usage: &[],
+            image: None,
+            has_view: false,
+            has_mipmaps: false,
+            has_stencil: false,
+            has_samples: false,
+        }
+    }
+}
+
+impl ImageUsage {
+    pub(crate) fn combine(usages: &[Self]) -> ImageUsageFlags {
+        usages
+            .iter()
+            .fold(ImageUsageFlags::empty(), |acc, usage| acc | usage.flag())
+    }
+
+    pub(crate) fn flag(&self) -> ImageUsageFlags {
+        match *self {
+            Self::Color => ImageUsageFlags::COLOR_ATTACHMENT,
+            Self::Depth => ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
+            Self::Transient => ImageUsageFlags::TRANSIENT_ATTACHMENT,
+            Self::TransferSrc => ImageUsageFlags::TRANSFER_SRC,
+            Self::TransferDst => ImageUsageFlags::TRANSFER_DST,
+            Self::Sampled => ImageUsageFlags::SAMPLED,
+        }
+    }
+}
+
+impl ImageFormat {
+    pub(crate) fn flag(&self) -> Format {
+        match *self {
+            Self::Rgba => Format::R8G8B8A8_UNORM,
+            Self::Bgra => Format::B8G8R8A8_UNORM,
+            Self::Depth => Format::D32_SFLOAT_S8_UINT,
+        }
+    }
+}
+
+impl ImageLayout {
+    pub(crate) fn flag(&self) -> VkImageLayout {
+        match *self {
+            Self::Undefined => VkImageLayout::UNDEFINED,
+            Self::Color => VkImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+            Self::Depth => VkImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            Self::Shader => VkImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            Self::Present => VkImageLayout::PRESENT_SRC_KHR,
+            Self::TransferSrc => VkImageLayout::TRANSFER_SRC_OPTIMAL,
+            Self::TransferDst => VkImageLayout::TRANSFER_DST_OPTIMAL,
         }
     }
 }

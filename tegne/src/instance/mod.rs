@@ -10,12 +10,14 @@ mod window_surface;
 
 pub(crate) use command_recorder::CommandRecorder;
 pub(crate) use device::Device;
+pub(crate) use device::Samples;
 use extensions::Extensions;
 pub(crate) use swapchain::Swapchain;
 pub(crate) use target::Order;
 pub use target::Target;
 pub(crate) use tegne::RenderPassType;
 pub use tegne::Tegne;
+pub use tegne::TegneOptions;
 use validator::Validator;
 use vulkan::Vulkan;
 use window_surface::WindowArgs;

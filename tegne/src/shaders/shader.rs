@@ -17,7 +17,6 @@ use ash::vk::PipelineColorBlendStateCreateInfo;
 use ash::vk::PipelineDepthStencilStateCreateInfo;
 use ash::vk::PipelineDynamicStateCreateInfo;
 use ash::vk::PipelineInputAssemblyStateCreateInfo;
-use ash::vk::PipelineLayout;
 use ash::vk::PipelineMultisampleStateCreateInfo;
 use ash::vk::PipelineRasterizationStateCreateInfo;
 use ash::vk::PipelineShaderStageCreateInfo;
@@ -26,8 +25,6 @@ use ash::vk::PipelineViewportStateCreateInfo;
 use ash::vk::PolygonMode;
 use ash::vk::PrimitiveTopology;
 use ash::vk::Rect2D;
-use ash::vk::RenderPass as VkRenderPass;
-use ash::vk::SampleCountFlags;
 use ash::vk::ShaderModule;
 use ash::vk::ShaderModuleCreateInfo;
 use ash::vk::ShaderStageFlags;
@@ -43,6 +40,7 @@ use tar::Archive;
 use super::RenderPass;
 use super::ShaderLayout;
 use crate::instance::Device;
+use crate::instance::Samples;
 use crate::mesh::Vertex;
 use crate::utils::cstring;
 use crate::utils::OrError;
@@ -52,57 +50,34 @@ pub struct Shader {
     device: Weak<Device>,
 }
 
-pub struct ShaderBuilder {
-    source: Vec<u8>,
-    polygon_mode: PolygonMode,
-    front_face: FrontFace,
-    enable_depth: bool,
-    pipeline_layout: PipelineLayout,
-    render_pass: VkRenderPass,
-    is_msaa: bool,
-    device: Weak<Device>,
+#[derive(Debug, Copy, Clone)]
+pub struct ShaderOptions {
+    pub has_depth_test: bool,
+    pub has_lines: bool,
+    pub has_front_cull: bool,
 }
 
 impl Shader {
-    pub(crate) fn builder(
+    pub(crate) fn new(
         device: &Rc<Device>,
-        render_pass: &RenderPass,
+        pass: &RenderPass,
         layout: &ShaderLayout,
-    ) -> ShaderBuilder {
-        ShaderBuilder {
-            source: vec![],
-            polygon_mode: PolygonMode::FILL,
-            front_face: FrontFace::CLOCKWISE,
-            enable_depth: true,
-            pipeline_layout: layout.pipeline(),
-            render_pass: render_pass.vk(),
-            is_msaa: render_pass.has_msaa_attachment(),
-            device: Rc::downgrade(device),
-        }
-    }
+        source: &[u8],
+        options: ShaderOptions,
+    ) -> Self {
+        let polygon_mode = if options.has_lines {
+            PolygonMode::LINE
+        } else {
+            PolygonMode::FILL
+        };
 
-    pub(crate) fn pipeline(&self) -> Pipeline {
-        self.pipeline
-    }
+        let front_face = if options.has_front_cull {
+            FrontFace::COUNTER_CLOCKWISE
+        } else {
+            FrontFace::CLOCKWISE
+        };
 
-    fn device(&self) -> Rc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
-}
-
-impl Drop for Shader {
-    fn drop(&mut self) {
-        unsafe {
-            self.device()
-                .logical()
-                .destroy_pipeline(self.pipeline, None);
-        }
-    }
-}
-
-impl ShaderBuilder {
-    pub fn build(&self) -> Shader {
-        let mut archive: Archive<&[u8]> = Archive::new(self.source.as_ref());
+        let mut archive: Archive<&[u8]> = Archive::new(source);
 
         let mut vert_source = vec![];
         let mut frag_source = vec![];
@@ -128,8 +103,8 @@ impl ShaderBuilder {
             }
         }
 
-        let vert_module = create_shader_module(&self.device(), &vert_source);
-        let frag_module = create_shader_module(&self.device(), &frag_source);
+        let vert_module = create_shader_module(device, &vert_source);
+        let frag_module = create_shader_module(device, &frag_source);
         let entry_point = cstring("main");
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
@@ -183,20 +158,20 @@ impl ShaderBuilder {
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
             .depth_bias_enable(false)
-            .front_face(self.front_face)
+            .front_face(front_face)
             .line_width(1.0)
             .cull_mode(CullModeFlags::BACK)
-            .polygon_mode(self.polygon_mode);
+            .polygon_mode(polygon_mode);
 
-        let samples = if self.is_msaa {
-            self.device().pick_sample_count()
+        let samples = if pass.has_msaa_attachment() {
+            device.pick_samples()
         } else {
-            SampleCountFlags::TYPE_1
+            Samples(1)
         };
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
-            .rasterization_samples(samples);
+            .rasterization_samples(samples.flag());
 
         let stencil = StencilOpState::builder()
             .fail_op(StencilOp::KEEP)
@@ -209,8 +184,8 @@ impl ShaderBuilder {
             .build();
 
         let depth_stencil_state = PipelineDepthStencilStateCreateInfo::builder()
-            .depth_test_enable(self.enable_depth)
-            .depth_write_enable(self.enable_depth)
+            .depth_test_enable(options.has_depth_test)
+            .depth_write_enable(options.has_depth_test)
             .depth_compare_op(CompareOp::LESS)
             .depth_bounds_test_enable(false)
             .min_depth_bounds(0.0)
@@ -260,56 +235,56 @@ impl ShaderBuilder {
             .color_blend_state(&color_blending)
             .depth_stencil_state(&depth_stencil_state)
             .dynamic_state(&dynamic_state)
-            .layout(self.pipeline_layout)
-            .render_pass(self.render_pass)
+            .layout(layout.pipeline())
+            .render_pass(pass.vk())
             .subpass(0)
             .build();
 
         let pipeline_infos = [pipeline_info];
         let pipeline = unsafe {
-            self.device()
+            device
                 .logical()
                 .create_graphics_pipelines(PipelineCache::null(), &pipeline_infos, None)
                 .or_error("cannot create pipeline")[0]
         };
 
         unsafe {
-            self.device()
-                .logical()
-                .destroy_shader_module(vert_module, None);
-            self.device()
-                .logical()
-                .destroy_shader_module(frag_module, None);
+            device.logical().destroy_shader_module(vert_module, None);
+            device.logical().destroy_shader_module(frag_module, None);
         }
 
-        Shader {
+        Self {
             pipeline,
-            device: Rc::downgrade(&self.device()),
+            device: Rc::downgrade(device),
         }
     }
 
-    pub fn with_source(&mut self, source: &[u8]) -> &mut Self {
-        self.source = source.to_owned();
-        self
-    }
-
-    pub fn with_lines(&mut self) -> &mut Self {
-        self.polygon_mode = PolygonMode::LINE;
-        self
-    }
-
-    pub fn with_no_depth(&mut self) -> &mut Self {
-        self.enable_depth = false;
-        self
-    }
-
-    pub fn with_front_culling(&mut self) -> &mut Self {
-        self.front_face = FrontFace::COUNTER_CLOCKWISE;
-        self
+    pub(crate) fn pipeline(&self) -> Pipeline {
+        self.pipeline
     }
 
     fn device(&self) -> Rc<Device> {
         self.device.upgrade().or_error("device has been dropped")
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        unsafe {
+            self.device()
+                .logical()
+                .destroy_pipeline(self.pipeline, None);
+        }
+    }
+}
+
+impl Default for ShaderOptions {
+    fn default() -> Self {
+        Self {
+            has_depth_test: true,
+            has_lines: false,
+            has_front_cull: false,
+        }
     }
 }
 

@@ -2,41 +2,77 @@ use ash::vk::AttachmentDescription;
 use ash::vk::AttachmentLoadOp;
 use ash::vk::AttachmentReference;
 use ash::vk::AttachmentStoreOp;
-use ash::vk::Format;
-use ash::vk::ImageLayout;
-use ash::vk::SampleCountFlags;
 use std::rc::Rc;
 
+use crate::images::ImageFormat;
+use crate::images::ImageLayout;
 use crate::instance::Device;
+use crate::instance::Samples;
 
 pub(crate) struct Attachment {
     vk: AttachmentDescription,
     reference: AttachmentReference,
 }
 
-pub(crate) struct AttachmentBuilder {
-    format: Format,
-    layout: ImageLayout,
-    final_layout: ImageLayout,
-    samples: SampleCountFlags,
-    clear: AttachmentLoadOp,
-    store: AttachmentStoreOp,
-    index: u32,
-    device: Rc<Device>,
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct AttachmentOptions {
+    pub(crate) index: u32,
+    pub(crate) layout: ImageLayout,
+    pub(crate) has_samples: bool,
+    pub(crate) has_clear: bool,
+    pub(crate) has_store: bool,
 }
 
 impl Attachment {
-    pub(crate) fn builder(device: &Rc<Device>) -> AttachmentBuilder {
-        AttachmentBuilder {
-            format: device.pick_depth_format(),
-            layout: ImageLayout::UNDEFINED,
-            final_layout: ImageLayout::UNDEFINED,
-            samples: SampleCountFlags::TYPE_1,
-            clear: AttachmentLoadOp::DONT_CARE,
-            store: AttachmentStoreOp::DONT_CARE,
-            index: 0,
-            device: Rc::clone(device),
-        }
+    pub(crate) fn new(device: &Rc<Device>, options: AttachmentOptions) -> Self {
+        let format = match options.layout {
+            ImageLayout::Color => ImageFormat::Bgra,
+            ImageLayout::Depth => ImageFormat::Depth,
+            ImageLayout::Present => ImageFormat::Bgra,
+            _ => ImageFormat::Bgra,
+        };
+
+        let layout = if options.layout == ImageLayout::Present {
+            ImageLayout::Color
+        } else {
+            options.layout
+        };
+
+        let clear = if options.has_clear {
+            AttachmentLoadOp::CLEAR
+        } else {
+            AttachmentLoadOp::DONT_CARE
+        };
+
+        let store = if options.has_store {
+            AttachmentStoreOp::STORE
+        } else {
+            AttachmentStoreOp::DONT_CARE
+        };
+
+        let samples = if options.has_samples {
+            device.pick_samples()
+        } else {
+            Samples(1)
+        };
+
+        let vk = AttachmentDescription::builder()
+            .format(format.flag())
+            .samples(samples.flag())
+            .load_op(clear)
+            .store_op(store)
+            .stencil_load_op(AttachmentLoadOp::DONT_CARE)
+            .stencil_store_op(AttachmentStoreOp::DONT_CARE)
+            .initial_layout(ImageLayout::Undefined.flag())
+            .final_layout(options.layout.flag())
+            .build();
+
+        let reference = AttachmentReference::builder()
+            .attachment(options.index)
+            .layout(layout.flag())
+            .build();
+
+        Self { vk, reference }
     }
 
     pub(crate) fn vk(&self) -> AttachmentDescription {
@@ -48,73 +84,14 @@ impl Attachment {
     }
 }
 
-impl<'a> AttachmentBuilder {
-    pub(crate) fn with_bgra_color(&mut self) -> &mut Self {
-        self.format = self.device.pick_bgra_format();
-        self.layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-        self.final_layout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-        self
-    }
-
-    pub(crate) fn with_depth(&mut self) -> &mut Self {
-        self.format = self.device.pick_depth_format();
-        self.layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        self.final_layout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        self
-    }
-
-    pub(crate) fn with_present_layout(&mut self) -> &mut Self {
-        self.with_bgra_color();
-        self.final_layout = ImageLayout::PRESENT_SRC_KHR;
-        self
-    }
-
-    pub(crate) fn with_samples(&mut self) -> &mut Self {
-        self.samples = self.device.pick_sample_count();
-        self
-    }
-
-    pub(crate) fn with_clear(&mut self) -> &mut Self {
-        self.clear = AttachmentLoadOp::CLEAR;
-        self
-    }
-
-    pub(crate) fn with_clear_value(&mut self, value: bool) -> &mut Self {
-        self.clear = if value {
-            AttachmentLoadOp::CLEAR
-        } else {
-            AttachmentLoadOp::DONT_CARE
-        };
-        self
-    }
-
-    pub(crate) fn with_store(&mut self) -> &mut Self {
-        self.store = AttachmentStoreOp::STORE;
-        self
-    }
-
-    pub(crate) fn with_index(&mut self, index: u32) -> &mut Self {
-        self.index = index;
-        self
-    }
-
-    pub(crate) fn build(&self) -> Attachment {
-        let vk = AttachmentDescription::builder()
-            .format(self.format)
-            .samples(self.samples)
-            .load_op(self.clear)
-            .store_op(self.store)
-            .stencil_load_op(AttachmentLoadOp::DONT_CARE)
-            .stencil_store_op(AttachmentStoreOp::DONT_CARE)
-            .initial_layout(ImageLayout::UNDEFINED)
-            .final_layout(self.final_layout)
-            .build();
-
-        let reference = AttachmentReference::builder()
-            .attachment(self.index)
-            .layout(self.layout)
-            .build();
-
-        Attachment { vk, reference }
+impl Default for AttachmentOptions {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            layout: ImageLayout::Undefined,
+            has_samples: false,
+            has_clear: false,
+            has_store: false,
+        }
     }
 }
