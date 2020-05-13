@@ -5,12 +5,12 @@ use tegne_math::Camera;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
 
-use crate::builtins::BuiltinShader;
-use crate::builtins::Builtins;
 use crate::images::Framebuffer;
 use crate::instance::Device;
 use crate::instance::Order;
 use crate::instance::Target;
+use crate::objects::BuiltinShader;
+use crate::objects::Objects;
 use crate::shaders::Descriptor;
 use crate::shaders::ImageUniforms;
 use crate::shaders::PushConstants;
@@ -29,7 +29,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) color_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
-    pub(crate) builtins: &'a Builtins,
+    pub(crate) objects: &'a Objects,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
 }
@@ -86,7 +86,7 @@ impl ForwardRenderer {
         self.setup_pass(&self.shadow_framebuffer);
         self.bind_world(&self.shadow_framebuffer, world_object, &options);
 
-        let shadow_shader = options.builtins.get_shader(BuiltinShader::Shadow);
+        let shadow_shader = options.objects.builtins().shader(BuiltinShader::Shadow);
         self.bind_shader(shadow_shader.pipeline());
 
         for s_order in options.target.orders_by_shader() {
@@ -119,7 +119,7 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        let wireframe_shader = options.builtins.get_shader(BuiltinShader::Wireframe);
+        let wireframe_shader = options.objects.builtins().shader(BuiltinShader::Wireframe);
         self.bind_shader(wireframe_shader.pipeline());
         for order in options.target.wireframe_orders() {
             self.draw_order(order, &options);

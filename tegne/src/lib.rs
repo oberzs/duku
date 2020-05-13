@@ -12,11 +12,11 @@
 )]
 
 mod buffer;
-mod builtins;
 mod images;
 mod instance;
 mod memory;
 mod mesh;
+mod objects;
 mod renderer;
 mod shaders;
 mod sync;
@@ -26,6 +26,7 @@ pub use images::Texture;
 pub use instance::Target;
 pub use instance::Tegne;
 pub use mesh::Mesh;
+pub use objects::Id;
 pub use shaders::Material;
 pub use shaders::Shader;
 

@@ -14,11 +14,11 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::WindowSurface;
-use crate::builtins::Builtins;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::MeshBuilder;
+use crate::objects::Objects;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::shaders::ImageUniforms;
@@ -36,7 +36,7 @@ use tegne_utils::Window;
 pub struct Tegne {
     start_time: Instant,
     forward_renderer: ForwardRenderer,
-    builtins: Builtins,
+    objects: Objects,
     window_framebuffers: Vec<Framebuffer>,
     render_passes: HashMap<RenderPassType, RenderPass>,
     image_uniforms: ImageUniforms,
@@ -87,7 +87,7 @@ impl Tegne {
     }
 
     pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
-        let mut target = Target::new(&self.builtins);
+        let mut target = Target::new(&self.objects);
         draw_callback(&mut target);
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
@@ -106,7 +106,7 @@ impl Tegne {
             depth_pass,
             shader_layout: &self.shader_layout,
             camera,
-            builtins: &self.builtins,
+            objects: &self.objects,
             target,
             time: self.start_time.elapsed().as_secs_f32(),
         });
@@ -205,7 +205,7 @@ impl TegneBuilder {
         render_passes.insert(RenderPassType::Window, RenderPass::window(&device));
         render_passes.insert(RenderPassType::Depth, RenderPass::depth(&device));
 
-        let builtins = Builtins::new(&device, &render_passes, &shader_layout, &image_uniforms);
+        let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms);
 
         let window_pass = render_passes
             .get(&RenderPassType::Window)
@@ -230,7 +230,7 @@ impl TegneBuilder {
         Tegne {
             start_time: Instant::now(),
             forward_renderer,
-            builtins,
+            objects,
             window_framebuffers,
             render_passes,
             image_uniforms,

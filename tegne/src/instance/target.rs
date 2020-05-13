@@ -4,15 +4,15 @@ use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
-use crate::builtins::BuiltinFont;
-use crate::builtins::BuiltinMaterial;
-use crate::builtins::BuiltinMesh;
-use crate::builtins::BuiltinShader;
-use crate::builtins::BuiltinTexture;
-use crate::builtins::Builtins;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::mesh::Mesh;
+use crate::objects::BuiltinFont;
+use crate::objects::BuiltinMaterial;
+use crate::objects::BuiltinMesh;
+use crate::objects::BuiltinShader;
+use crate::objects::BuiltinTexture;
+use crate::objects::Objects;
 use crate::shaders::Descriptor;
 use crate::shaders::Light;
 use crate::shaders::Material;
@@ -27,7 +27,7 @@ pub struct Target<'a> {
     current_albedo: i32,
     current_font: &'a Font,
     draw_wireframes: bool,
-    builtins: &'a Builtins,
+    objects: &'a Objects,
 }
 
 pub(crate) struct OrdersByShader {
@@ -51,11 +51,11 @@ pub(crate) struct Order {
 }
 
 impl<'a> Target<'a> {
-    pub(crate) fn new(builtins: &'a Builtins) -> Self {
-        let material = builtins.get_material(BuiltinMaterial::White);
-        let shader = builtins.get_shader(BuiltinShader::Phong);
-        let texture = builtins.get_texture(BuiltinTexture::White);
-        let font = builtins.get_font(BuiltinFont::NotoSans);
+    pub(crate) fn new(objects: &'a Objects) -> Self {
+        let material = objects.builtins().material(BuiltinMaterial::White);
+        let shader = objects.builtins().shader(BuiltinShader::Phong);
+        let texture = objects.builtins().texture(BuiltinTexture::White);
+        let font = objects.builtins().font(BuiltinFont::NotoSans);
 
         Self {
             orders_by_shader: vec![],
@@ -67,7 +67,7 @@ impl<'a> Target<'a> {
             current_albedo: texture.image_index(),
             current_font: font,
             draw_wireframes: false,
-            builtins,
+            objects,
         }
     }
 
@@ -83,17 +83,17 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.builtins.get_mesh(BuiltinMesh::Cube), transform);
+        self.draw(self.objects.builtins().mesh(BuiltinMesh::Cube), transform);
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.builtins.get_mesh(BuiltinMesh::Sphere), transform);
+        self.draw(self.objects.builtins().mesh(BuiltinMesh::Sphere), transform);
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
 
-        let shader = self.builtins.get_shader(BuiltinShader::Font);
+        let shader = self.objects.builtins().shader(BuiltinShader::Font);
         self.current_shader = shader.pipeline();
 
         let mut current_transform = transform.into();
@@ -141,7 +141,7 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material_white(&mut self) {
-        let material = self.builtins.get_material(BuiltinMaterial::White);
+        let material = self.objects.builtins().material(BuiltinMaterial::White);
         self.current_material = material.descriptor();
     }
 
