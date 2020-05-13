@@ -18,3 +18,4 @@ rusttype = "0.9.1"
 serde = { version = "1.0.106", features = ["derive"] }
 serde_json = "1.0.52"
 indicatif = "0.14.0"
+notify = "4.0.15"

@@ -21,8 +21,14 @@ mod shader;
 
 use clap::App;
 use clap::Arg;
+use notify::DebouncedEvent;
+use notify::RecommendedWatcher;
+use notify::RecursiveMode;
+use notify::Watcher;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 use error::Result;
 use font::import_font;
@@ -60,12 +66,19 @@ fn main() {
                 .takes_value(true)
                 .help("Output directory"),
         )
+        .arg(
+            Arg::with_name("watch")
+                .long("watch")
+                .short("w")
+                .help("Watch for file changes"),
+        )
         .get_matches();
 
     let input = opts.value_of("in").map(|p| Path::new(p));
     let dir = opts.value_of("dir").map(|p| Path::new(p));
     let output = opts.value_of("out").map(|p| Path::new(p));
     let output_dir = opts.value_of("out-dir").map(|p| Path::new(p));
+    let watch = opts.is_present("watch");
 
     match (input, dir) {
         (Some(in_path), None) => {
@@ -90,6 +103,28 @@ fn main() {
             }
         }
         (_, _) => {}
+    }
+
+    // watch for changes
+    if watch {
+        let path = input.or(dir).expect("no path given");
+        let (tx, rx) = channel();
+
+        let mut watcher: RecommendedWatcher =
+            Watcher::new(tx, Duration::from_secs(1)).expect("cannot watch system");
+        watcher
+            .watch(path, RecursiveMode::NonRecursive)
+            .expect("cannot watch path");
+        let dir = output_dir.unwrap_or_else(|| Path::new("."));
+
+        loop {
+            let event = rx.recv().unwrap();
+            if let DebouncedEvent::NoticeWrite(file_path) = event {
+                let def = default_out(&file_path);
+                let out_path = dir.join(def);
+                import_file(&file_path, &out_path).expect("cannot import file");
+            }
+        }
     }
 }
 
