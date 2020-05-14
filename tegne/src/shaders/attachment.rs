@@ -4,6 +4,7 @@ use ash::vk::AttachmentReference;
 use ash::vk::AttachmentStoreOp;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::images::ImageFormat;
 use crate::images::ImageLayout;
 use crate::instance::Device;
@@ -24,7 +25,7 @@ pub(crate) struct AttachmentOptions {
 }
 
 impl Attachment {
-    pub(crate) fn new(device: &Arc<Device>, options: AttachmentOptions) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: AttachmentOptions) -> Result<Self> {
         let format = match options.layout {
             ImageLayout::Color => ImageFormat::Bgra,
             ImageLayout::Depth => ImageFormat::Depth,
@@ -58,7 +59,7 @@ impl Attachment {
 
         let vk = AttachmentDescription::builder()
             .format(format.flag())
-            .samples(samples.flag())
+            .samples(samples.flag()?)
             .load_op(clear)
             .store_op(store)
             .stencil_load_op(AttachmentLoadOp::DONT_CARE)
@@ -72,7 +73,7 @@ impl Attachment {
             .layout(layout.flag())
             .build();
 
-        Self { vk, reference }
+        Ok(Self { vk, reference })
     }
 
     pub(crate) fn vk(&self) -> AttachmentDescription {

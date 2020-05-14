@@ -79,26 +79,36 @@ impl Tegne {
         let vulkan = Vulkan::new(&extensions).or_error("cannot initialize Vulkan");
 
         #[cfg(debug_assertions)]
-        let validator = Some(Validator::new(&vulkan));
+        let validator = Some(Validator::new(&vulkan).or_error("cannot create validator"));
         #[cfg(not(debug_assertions))]
         let validator = None;
 
-        let surface = Surface::new(&vulkan, window);
+        let surface = Surface::new(&vulkan, window).or_error("cannot create surface");
 
         let device = Device::new(&vulkan, &surface, &extensions, options.vsync, options.msaa)
             .or_error("cannot initialize device");
 
-        let swapchain = Swapchain::new(&vulkan, &device, &surface);
+        let swapchain =
+            Swapchain::new(&vulkan, &device, &surface).or_error("cannot create swapchain");
 
-        let shader_layout = ShaderLayout::new(&device);
+        let shader_layout = ShaderLayout::new(&device).or_error("cannot create shader layout");
 
         let image_uniforms = ImageUniforms::new(&device, &shader_layout, options.anisotropy)
             .or_error("cannot create image uniforms");
 
         let mut render_passes = HashMap::new();
-        render_passes.insert(RenderPassType::Color, RenderPass::color(&device));
-        render_passes.insert(RenderPassType::Window, RenderPass::window(&device));
-        render_passes.insert(RenderPassType::Depth, RenderPass::depth(&device));
+        render_passes.insert(
+            RenderPassType::Color,
+            RenderPass::color(&device).or_error("cannot create render pass"),
+        );
+        render_passes.insert(
+            RenderPassType::Window,
+            RenderPass::window(&device).or_error("cannot create render pass"),
+        );
+        render_passes.insert(
+            RenderPassType::Depth,
+            RenderPass::depth(&device).or_error("cannot create render pass"),
+        );
 
         let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms)
             .or_error("cannot create object storage");
@@ -186,8 +196,10 @@ impl Tegne {
     }
 
     pub fn end_draw(&self) {
-        self.device.submit().or_error("cannot end draw");
-        self.device.present(&self.swapchain);
+        self.device.submit().or_error("cannot submit");
+        self.device
+            .present(&self.swapchain)
+            .or_error("cannot present");
     }
 
     pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
@@ -287,7 +299,8 @@ impl Tegne {
             &self.shader_layout,
             source,
             options,
-        );
+        )
+        .or_error("cannot create shader");
         self.objects.add_shader(shader)
     }
 

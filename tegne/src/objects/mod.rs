@@ -166,7 +166,7 @@ impl Builtins {
         let meshes = builtin_meshes(device)?;
 
         debug!("creating builtin shaders");
-        let shaders = builtin_shaders(device, passes, layout);
+        let shaders = builtin_shaders(device, passes, layout)?;
 
         debug!("creating builtin textures");
         let textures = builtin_textures(device, uniforms)?;

@@ -8,7 +8,7 @@ use log::debug;
 use std::os::raw::c_void;
 
 use super::Vulkan;
-use crate::utils::OrError;
+use crate::error::Result;
 
 #[cfg(target_os = "windows")]
 #[derive(Copy, Clone)]
@@ -45,7 +45,7 @@ pub(crate) struct Surface {
 
 impl Surface {
     #[cfg(target_os = "windows")]
-    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Result<Self> {
         debug!("creating Windows window surface");
 
         use ash::extensions::khr::Win32Surface;
@@ -65,22 +65,18 @@ impl Surface {
 
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
         let loader = Win32Surface::new(vulkan.entry_ref(), vulkan.instance_ref());
-        let vk = unsafe {
-            loader
-                .create_win32_surface(&info, None)
-                .or_error("cannot create window surface")
-        };
+        let vk = unsafe { loader.create_win32_surface(&info, None)? };
 
-        Self {
+        Ok(Self {
             vk,
             ext,
             width: args.width,
             height: args.height,
-        }
+        })
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Result<Self> {
         debug!("creating Linux window surface");
 
         use ash::extensions::khr::XlibSurface;
@@ -93,22 +89,18 @@ impl Surface {
 
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
         let loader = XlibSurface::new(vulkan.entry_ref(), vulkan.instance_ref());
-        let vk = unsafe {
-            loader
-                .create_xlib_surface(&info, None)
-                .or_error("cannot create window surface")
-        };
+        let vk = unsafe { loader.create_xlib_surface(&info, None)? };
 
-        Self {
+        Ok(Self {
             vk,
             ext,
             width: args.width,
             height: args.height,
-        }
+        })
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Result<Self> {
         debug!("creating MacOS window surface");
 
         use ash::extensions::mvk::MacOSSurface;
@@ -142,50 +134,49 @@ impl Surface {
 
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
         let loader = MacOSSurface::new(vulkan.entry_ref(), vulkan.instance_ref());
-        let vk = unsafe {
-            loader
-                .create_mac_os_surface_mvk(&info, None)
-                .or_error("cannot create window surface")
-        };
+        let vk = unsafe { loader.create_mac_os_surface_mvk(&info, None)? };
 
-        Self {
+        Ok(Self {
             vk,
             ext,
             width: args.width,
             height: args.height,
-        }
+        })
     }
 
-    pub(crate) fn gpu_formats(&self, device: PhysicalDevice) -> Vec<SurfaceFormatKHR> {
-        unsafe {
+    pub(crate) fn gpu_formats(&self, device: PhysicalDevice) -> Result<Vec<SurfaceFormatKHR>> {
+        let formats = unsafe {
             self.ext
-                .get_physical_device_surface_formats(device, self.vk)
-                .or_error("cannot get surface formats")
-        }
+                .get_physical_device_surface_formats(device, self.vk)?
+        };
+        Ok(formats)
     }
 
-    pub(crate) fn gpu_capabilities(&self, device: PhysicalDevice) -> SurfaceCapabilitiesKHR {
-        unsafe {
+    pub(crate) fn gpu_capabilities(
+        &self,
+        device: PhysicalDevice,
+    ) -> Result<SurfaceCapabilitiesKHR> {
+        let capabilities = unsafe {
             self.ext
-                .get_physical_device_surface_capabilities(device, self.vk)
-                .or_error("cannot get surface capabilities")
-        }
+                .get_physical_device_surface_capabilities(device, self.vk)?
+        };
+        Ok(capabilities)
     }
 
-    pub(crate) fn gpu_present_modes(&self, device: PhysicalDevice) -> Vec<PresentModeKHR> {
-        unsafe {
+    pub(crate) fn gpu_present_modes(&self, device: PhysicalDevice) -> Result<Vec<PresentModeKHR>> {
+        let modes = unsafe {
             self.ext
-                .get_physical_device_surface_present_modes(device, self.vk)
-                .or_error("cannot get surface present modes")
-        }
+                .get_physical_device_surface_present_modes(device, self.vk)?
+        };
+        Ok(modes)
     }
 
-    pub(crate) fn supports_device(&self, device: PhysicalDevice, index: u32) -> bool {
-        unsafe {
+    pub(crate) fn supports_device(&self, device: PhysicalDevice, index: u32) -> Result<bool> {
+        let support = unsafe {
             self.ext
-                .get_physical_device_surface_support(device, index, self.vk)
-                .or_error("cannot get surface support")
-        }
+                .get_physical_device_surface_support(device, index, self.vk)?
+        };
+        Ok(support)
     }
 
     pub(crate) fn width(&self) -> u32 {

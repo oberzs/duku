@@ -119,7 +119,7 @@ impl Image {
                     .initial_layout(ImageLayout::Undefined.flag())
                     .usage(ImageUsage::combine(options.usage))
                     .sharing_mode(SharingMode::EXCLUSIVE)
-                    .samples(samples.flag());
+                    .samples(samples.flag()?);
 
                 let vk = unsafe {
                     device

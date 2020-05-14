@@ -41,8 +41,6 @@ use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::utils::clamp;
-use crate::utils::error;
-use crate::utils::OrError;
 
 const IN_FLIGHT_FRAME_COUNT: u32 = 2;
 
@@ -92,7 +90,7 @@ impl Device {
         for physical in gpus.into_iter() {
             let instance = vulkan.instance_ref();
 
-            let (g_index, p_index) = get_queue_indices(vulkan, physical, surface);
+            let (g_index, p_index) = get_queue_indices(vulkan, physical, surface)?;
             let has_queue_indices = g_index.is_some() && p_index.is_some();
             let graphics_index = g_index.unwrap_or_default();
             let present_index = p_index.unwrap_or_default();
@@ -100,7 +98,7 @@ impl Device {
             let device_props = unsafe { instance.get_physical_device_properties(physical) };
             let device_features = unsafe { instance.get_physical_device_features(physical) };
             let mem_props = unsafe { instance.get_physical_device_memory_properties(physical) };
-            let surface_capabilities = surface.gpu_capabilities(physical);
+            let surface_capabilities = surface.gpu_capabilities(physical)?;
 
             let samples = pick_samples(device_props, msaa)?;
             let extent = pick_extent(surface_capabilities, surface.width(), surface.height());
@@ -111,9 +109,9 @@ impl Device {
                 _properties: device_props,
                 features: device_features,
                 memory_properties: mem_props,
-                surface_formats: surface.gpu_formats(physical),
+                surface_formats: surface.gpu_formats(physical)?,
                 surface_capabilities,
-                surface_present_modes: surface.gpu_present_modes(physical),
+                surface_present_modes: surface.gpu_present_modes(physical)?,
                 graphics_index,
                 present_index,
                 samples,
@@ -146,19 +144,18 @@ impl Device {
                 info!("using VSync {}", if vsync { "enabled" } else { "disabled" });
                 info!("using MSAA level {}", msaa);
 
-                let logical = open_device(physical, vulkan, &props, exts);
+                let logical = open_device(physical, vulkan, &props, exts)?;
                 let graphics_queue = unsafe { logical.get_device_queue(graphics_index, 0) };
                 let present_queue = unsafe { logical.get_device_queue(present_index, 0) };
 
-                let sync_acquire_image = (0..IN_FLIGHT_FRAME_COUNT)
-                    .map(|_| semaphore::create(&logical))
-                    .collect::<Vec<_>>();
-                let sync_release_image = (0..IN_FLIGHT_FRAME_COUNT)
-                    .map(|_| semaphore::create(&logical))
-                    .collect::<Vec<_>>();
-                let sync_queue_submit = (0..IN_FLIGHT_FRAME_COUNT)
-                    .map(|_| fence::create(&logical))
-                    .collect::<Vec<_>>();
+                let mut sync_acquire_image = vec![];
+                let mut sync_release_image = vec![];
+                let mut sync_queue_submit = vec![];
+                for _ in 0..IN_FLIGHT_FRAME_COUNT {
+                    sync_acquire_image.push(semaphore::create(&logical)?);
+                    sync_release_image.push(semaphore::create(&logical)?);
+                    sync_queue_submit.push(fence::create(&logical)?);
+                }
 
                 let device = Arc::new(Self {
                     logical,
@@ -189,12 +186,12 @@ impl Device {
             .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
         let current = self.current_frame.get() as usize;
 
-        swapchain.next(self.sync_acquire_image[current]);
+        swapchain.next(self.sync_acquire_image[current])?;
 
         // wait for queue
         let wait = self.sync_queue_submit[current];
-        fence::wait_for(&self.logical, wait);
-        fence::reset(&self.logical, wait);
+        fence::wait_for(&self.logical, wait)?;
+        fence::reset(&self.logical, wait)?;
 
         // reset command recorder
         let cmd = &mut self.commands.borrow_mut()[current];
@@ -243,17 +240,18 @@ impl Device {
         Ok(())
     }
 
-    pub(crate) fn present(&self, swapchain: &Swapchain) {
+    pub(crate) fn present(&self, swapchain: &Swapchain) -> Result<()> {
         let current = self.current_frame.get() as usize;
         let wait = self.sync_release_image[current];
 
-        swapchain.present(self.present_queue, wait);
+        swapchain.present(self.present_queue, wait)?;
+        Ok(())
     }
 
     pub(crate) fn wait_for_idle(&self) -> Result<()> {
-        self.sync_queue_submit
-            .iter()
-            .for_each(|f| fence::wait_for(&self.logical, *f));
+        for fen in self.sync_queue_submit.iter() {
+            fence::wait_for(&self.logical, *fen)?;
+        }
 
         unsafe {
             self.logical.queue_wait_idle(self.graphics_queue)?;
@@ -328,8 +326,8 @@ impl Drop for Device {
 }
 
 impl Samples {
-    pub(crate) fn flag(&self) -> SampleCountFlags {
-        match self.0 {
+    pub(crate) fn flag(&self) -> Result<SampleCountFlags> {
+        let flag = match self.0 {
             1 => SampleCountFlags::TYPE_1,
             2 => SampleCountFlags::TYPE_2,
             4 => SampleCountFlags::TYPE_4,
@@ -337,8 +335,9 @@ impl Samples {
             16 => SampleCountFlags::TYPE_16,
             32 => SampleCountFlags::TYPE_32,
             64 => SampleCountFlags::TYPE_64,
-            n => error(format!("invalid sample count {}", n)),
-        }
+            _ => return Err(ErrorKind::InvalidMsaa.into()),
+        };
+        Ok(flag)
     }
 }
 
@@ -356,7 +355,7 @@ fn get_queue_indices(
     vulkan: &Vulkan,
     device: PhysicalDevice,
     surface: &Surface,
-) -> (Option<u32>, Option<u32>) {
+) -> Result<(Option<u32>, Option<u32>)> {
     let mut graphics = None;
     let mut present = None;
 
@@ -365,8 +364,8 @@ fn get_queue_indices(
             .instance_ref()
             .get_physical_device_queue_family_properties(device)
     };
-    queue_properties.iter().enumerate().for_each(|(i, props)| {
-        let present_support = surface.supports_device(device, i as u32);
+    for (i, props) in queue_properties.iter().enumerate() {
+        let present_support = surface.supports_device(device, i as u32)?;
         let graphics_support = props.queue_flags.contains(QueueFlags::GRAPHICS);
 
         if props.queue_count > 0 && present_support {
@@ -375,8 +374,8 @@ fn get_queue_indices(
         if props.queue_count > 0 && graphics_support {
             graphics = Some(i as u32);
         }
-    });
-    (graphics, present)
+    }
+    Ok((graphics, present))
 }
 
 fn open_device(
@@ -384,7 +383,7 @@ fn open_device(
     vulkan: &Vulkan,
     props: &DeviceProperties,
     exts: &Extensions,
-) -> LogicalDevice {
+) -> Result<LogicalDevice> {
     let features = PhysicalDeviceFeatures::builder()
         .sampler_anisotropy(true)
         .fill_mode_non_solid(true)
@@ -417,12 +416,8 @@ fn open_device(
         .enabled_layer_names(&layers)
         .enabled_extension_names(&extensions);
 
-    unsafe {
-        vulkan
-            .instance_ref()
-            .create_device(physical, &info, None)
-            .or_error("cannot open GPU")
-    }
+    let logical = unsafe { vulkan.instance_ref().create_device(physical, &info, None)? };
+    Ok(logical)
 }
 
 fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Result<Samples> {
@@ -431,7 +426,7 @@ fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Result<Sample
 
     let samples = Samples(msaa);
 
-    if !counts.contains(samples.flag()) {
+    if !counts.contains(samples.flag()?) {
         Err(ErrorKind::UnsupportedMsaa.into())
     } else {
         Ok(samples)

@@ -6,13 +6,13 @@ use ash::vk::DebugUtilsMessengerCreateInfoEXT;
 use ash::vk::DebugUtilsMessengerEXT as Messenger;
 use ash::vk::FALSE;
 use log::debug;
+use log::error;
 use log::warn;
 use std::ffi::c_void;
 use std::ffi::CStr;
 
 use super::Vulkan;
-use crate::utils::error;
-use crate::utils::OrError;
+use crate::error::Result;
 
 pub(crate) struct Validator {
     messenger: Messenger,
@@ -21,7 +21,7 @@ pub(crate) struct Validator {
 
 impl Validator {
     #[allow(dead_code)]
-    pub(crate) fn new(vulkan: &Vulkan) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan) -> Result<Self> {
         debug!("creating validator");
 
         let ext = Extension::new(vulkan.entry_ref(), vulkan.instance_ref());
@@ -31,12 +31,9 @@ impl Validator {
             .message_type(MessageType::all())
             .pfn_user_callback(Some(callback));
 
-        let messenger = unsafe {
-            ext.create_debug_utils_messenger(&info, None)
-                .or_error("cannot create validator")
-        };
+        let messenger = unsafe { ext.create_debug_utils_messenger(&info, None)? };
 
-        Self { ext, messenger }
+        Ok(Self { ext, messenger })
     }
 }
 
@@ -56,14 +53,13 @@ extern "system" fn callback(
     _: *mut c_void,
 ) -> u32 {
     let msg = unsafe {
-        let message = debug_data.as_ref().or_error("no debug data").p_message;
-        CStr::from_ptr(message)
-            .to_str()
-            .or_error("cannot convert cstr to str")
+        let message = debug_data.as_ref().unwrap().p_message;
+        CStr::from_ptr(message).to_str().unwrap()
     };
 
     if severity.contains(Severity::ERROR) {
-        error(msg);
+        error!("{}", msg);
+        std::process::exit(1);
     } else {
         warn!("{}", msg);
     }

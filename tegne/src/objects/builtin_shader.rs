@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::instance::Device;
 use crate::instance::RenderPassType;
 use crate::shaders::RenderPass;
@@ -29,7 +30,7 @@ pub(crate) fn builtin_shaders(
     device: &Arc<Device>,
     passes: &HashMap<RenderPassType, RenderPass>,
     layout: &ShaderLayout,
-) -> HashMap<BuiltinShader, Shader> {
+) -> Result<HashMap<BuiltinShader, Shader>> {
     let mut map = HashMap::new();
 
     let color_pass = passes
@@ -48,19 +49,19 @@ pub(crate) fn builtin_shaders(
 
     map.insert(
         BuiltinShader::Phong,
-        Shader::new(device, color_pass, layout, phong, Default::default()),
+        Shader::new(device, color_pass, layout, phong, Default::default())?,
     );
     map.insert(
         BuiltinShader::Unshaded,
-        Shader::new(device, color_pass, layout, unshaded, Default::default()),
+        Shader::new(device, color_pass, layout, unshaded, Default::default())?,
     );
     map.insert(
         BuiltinShader::Shadow,
-        Shader::new(device, depth_pass, layout, shadow, Default::default()),
+        Shader::new(device, depth_pass, layout, shadow, Default::default())?,
     );
     map.insert(
         BuiltinShader::Font,
-        Shader::new(device, color_pass, layout, font, Default::default()),
+        Shader::new(device, color_pass, layout, font, Default::default())?,
     );
     map.insert(
         BuiltinShader::Passthru,
@@ -73,7 +74,7 @@ pub(crate) fn builtin_shaders(
                 has_depth_test: false,
                 ..Default::default()
             },
-        ),
+        )?,
     );
     map.insert(
         BuiltinShader::Wireframe,
@@ -87,8 +88,8 @@ pub(crate) fn builtin_shaders(
                 has_depth_test: false,
                 ..Default::default()
             },
-        ),
+        )?,
     );
 
-    map
+    Ok(map)
 }

@@ -13,9 +13,9 @@ use std::sync::Weak;
 use super::Attachment;
 use super::AttachmentOptions;
 use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::instance::Device;
-use crate::utils::OrError;
 
 pub(crate) struct RenderPass {
     vk: VkRenderPass,
@@ -32,7 +32,7 @@ struct RenderPassOptions {
 }
 
 impl RenderPass {
-    pub(crate) fn window(device: &Arc<Device>) -> Self {
+    pub(crate) fn window(device: &Arc<Device>) -> Result<Self> {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -45,7 +45,7 @@ impl RenderPass {
                 has_clear: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // color
         options.color_attachment = Some(Attachment::new(
@@ -57,7 +57,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // msaa
         if device.is_msaa() {
@@ -70,7 +70,7 @@ impl RenderPass {
                     has_samples: true,
                     ..Default::default()
                 },
-            ));
+            )?);
         }
 
         options.dependency = Some(
@@ -89,7 +89,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    pub(crate) fn color(device: &Arc<Device>) -> Self {
+    pub(crate) fn color(device: &Arc<Device>) -> Result<Self> {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -102,7 +102,7 @@ impl RenderPass {
                 has_samples: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // color
         options.color_attachment = Some(Attachment::new(
@@ -114,7 +114,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // msaa
         if device.is_msaa() {
@@ -127,7 +127,7 @@ impl RenderPass {
                     has_samples: true,
                     ..Default::default()
                 },
-            ));
+            )?);
         }
 
         options.dependency = Some(
@@ -146,7 +146,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    pub(crate) fn depth(device: &Arc<Device>) -> Self {
+    pub(crate) fn depth(device: &Arc<Device>) -> Result<Self> {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -159,7 +159,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         options.dependency = Some(
             SubpassDependency::builder()
@@ -178,7 +178,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    fn new(device: &Arc<Device>, options: RenderPassOptions) -> Self {
+    fn new(device: &Arc<Device>, options: RenderPassOptions) -> Result<Self> {
         let dependencies = [options.dependency.expect("subpass dependency not set")];
         let mut attachments = vec![];
         let mut subpass_builder =
@@ -223,18 +223,13 @@ impl RenderPass {
             .subpasses(&subpasses)
             .dependencies(&dependencies);
 
-        let vk = unsafe {
-            device
-                .logical()
-                .create_render_pass(&info, None)
-                .or_error("cannot create render pass")
-        };
+        let vk = unsafe { device.logical().create_render_pass(&info, None)? };
 
-        Self {
+        Ok(Self {
             vk,
             has_msaa_attachment,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn has_msaa_attachment(&self) -> bool {

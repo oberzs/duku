@@ -50,7 +50,7 @@ impl Framebuffer {
         let extent = device.properties().extent;
 
         swapchain
-            .iter_images()
+            .iter_images()?
             .map(|img| {
                 let mut images = vec![];
 

@@ -25,7 +25,6 @@ use crate::buffer::DynamicBuffer;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::utils::OrError;
 
 pub(crate) struct ShaderLayout {
     pipeline_layout: PipelineLayout,
@@ -37,7 +36,7 @@ pub(crate) struct ShaderLayout {
 }
 
 impl ShaderLayout {
-    pub(crate) fn new(device: &Arc<Device>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
         debug!("creating shader layout");
 
         // world layout
@@ -54,8 +53,7 @@ impl ShaderLayout {
         let world_layout = unsafe {
             device
                 .logical()
-                .create_descriptor_set_layout(&world_layout_info, None)
-                .or_error("cannot create world descriptor set layout")
+                .create_descriptor_set_layout(&world_layout_info, None)?
         };
 
         let max_world_count = 100;
@@ -79,8 +77,7 @@ impl ShaderLayout {
         let material_layout = unsafe {
             device
                 .logical()
-                .create_descriptor_set_layout(&material_layout_info, None)
-                .or_error("cannot create material descriptor set layout")
+                .create_descriptor_set_layout(&material_layout_info, None)?
         };
 
         let max_material_count = 100;
@@ -110,8 +107,7 @@ impl ShaderLayout {
         let image_layout = unsafe {
             device
                 .logical()
-                .create_descriptor_set_layout(&image_layout_info, None)
-                .or_error("cannot create image descriptor set layout")
+                .create_descriptor_set_layout(&image_layout_info, None)?
         };
 
         let image_pool_size = DescriptorPoolSize::builder()
@@ -128,8 +124,7 @@ impl ShaderLayout {
         let descriptor_pool = unsafe {
             device
                 .logical()
-                .create_descriptor_pool(&descriptor_pool_info, None)
-                .or_error("cannot create descriptor pool")
+                .create_descriptor_pool(&descriptor_pool_info, None)?
         };
 
         // push constants
@@ -148,18 +143,17 @@ impl ShaderLayout {
         let pipeline_layout = unsafe {
             device
                 .logical()
-                .create_pipeline_layout(&pipeline_layout_info, None)
-                .or_error("cannot create pipeline layout")
+                .create_pipeline_layout(&pipeline_layout_info, None)?
         };
 
-        Self {
+        Ok(Self {
             pipeline_layout,
             world_layout,
             material_layout,
             image_layout,
             descriptor_pool,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<DescriptorSet> {
@@ -169,12 +163,7 @@ impl ShaderLayout {
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = unsafe {
-            device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate world descriptor set")[0]
-        };
+        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
 
         let buffer_info = DescriptorBufferInfo::builder()
             .buffer(buffer.vk_buffer())
@@ -208,12 +197,7 @@ impl ShaderLayout {
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = unsafe {
-            device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate material descriptor set")[0]
-        };
+        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
 
         let buffer_info = DescriptorBufferInfo::builder()
             .buffer(buffer.vk_buffer())
@@ -248,12 +232,7 @@ impl ShaderLayout {
             .set_layouts(&set_layouts)
             .build();
 
-        let set = unsafe {
-            device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)
-                .or_error("cannot allocate image descriptor set")[0]
-        };
+        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
         Ok(set)
     }
 

@@ -23,6 +23,7 @@ pub enum ErrorKind {
     UnsupportedMsaa,
     NoSuitableGpu,
     NoSuitableMemoryType,
+    InvalidMsaa,
 }
 
 impl Error for ErrorType {}

@@ -40,11 +40,11 @@ use tar::Archive;
 use super::RenderPass;
 use super::ShaderLayout;
 use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::Device;
 use crate::instance::Samples;
 use crate::mesh::Vertex;
 use crate::utils::cstring;
-use crate::utils::OrError;
 
 pub struct Shader {
     pipeline: Pipeline,
@@ -65,7 +65,7 @@ impl Shader {
         layout: &ShaderLayout,
         source: &[u8],
         options: ShaderOptions,
-    ) -> Self {
+    ) -> Result<Self> {
         let polygon_mode = if options.has_lines {
             PolygonMode::LINE
         } else {
@@ -83,29 +83,21 @@ impl Shader {
         let mut vert_source = vec![];
         let mut frag_source = vec![];
 
-        for file in archive.entries().or_error("invalid shader file") {
-            let mut file = file.or_error("invalid shader file");
+        for file in archive.entries()? {
+            let mut file = file?;
 
-            let path = file
-                .header()
-                .path()
-                .or_error("invalid shader file")
-                .to_str()
-                .or_error("invalid shader file")
-                .to_string();
+            let path = file.header().path()?.into_owned();
 
-            if path == "vert.spv" {
-                file.read_to_end(&mut vert_source)
-                    .or_error("cannot read vertex shader");
+            if path.ends_with("vert.spv") {
+                file.read_to_end(&mut vert_source)?;
             }
-            if path == "frag.spv" {
-                file.read_to_end(&mut frag_source)
-                    .or_error("cannot read fragment shader");
+            if path.ends_with("frag.spv") {
+                file.read_to_end(&mut frag_source)?;
             }
         }
 
-        let vert_module = create_shader_module(device, &vert_source);
-        let frag_module = create_shader_module(device, &frag_source);
+        let vert_module = create_shader_module(device, &vert_source)?;
+        let frag_module = create_shader_module(device, &frag_source)?;
         let entry_point = cstring("main");
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
@@ -172,7 +164,7 @@ impl Shader {
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
-            .rasterization_samples(samples.flag());
+            .rasterization_samples(samples.flag()?);
 
         let stencil = StencilOpState::builder()
             .fail_op(StencilOp::KEEP)
@@ -243,10 +235,14 @@ impl Shader {
 
         let pipeline_infos = [pipeline_info];
         let pipeline = unsafe {
-            device
-                .logical()
-                .create_graphics_pipelines(PipelineCache::null(), &pipeline_infos, None)
-                .or_error("cannot create pipeline")[0]
+            match device.logical().create_graphics_pipelines(
+                PipelineCache::null(),
+                &pipeline_infos,
+                None,
+            ) {
+                Ok(ps) => ps[0],
+                Err(err) => return Err(err.1.into()),
+            }
         };
 
         unsafe {
@@ -254,10 +250,10 @@ impl Shader {
             device.logical().destroy_shader_module(frag_module, None);
         }
 
-        Self {
+        Ok(Self {
             pipeline,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn pipeline(&self) -> Pipeline {
@@ -288,13 +284,9 @@ impl Default for ShaderOptions {
     }
 }
 
-fn create_shader_module(device: &Arc<Device>, source: &[u8]) -> ShaderModule {
-    let words = read_spv(&mut Cursor::new(&source[..])).or_error("cannot read spv");
+fn create_shader_module(device: &Arc<Device>, source: &[u8]) -> Result<ShaderModule> {
+    let words = read_spv(&mut Cursor::new(&source[..]))?;
     let info = ShaderModuleCreateInfo::builder().code(&words).build();
-    unsafe {
-        device
-            .logical()
-            .create_shader_module(&info, None)
-            .or_error("cannot create shader module")
-    }
+    let module = unsafe { device.logical().create_shader_module(&info, None)? };
+    Ok(module)
 }

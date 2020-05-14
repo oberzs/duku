@@ -4,15 +4,12 @@ use ash::vk::FenceCreateFlags;
 use ash::vk::FenceCreateInfo;
 use ash::Device as LogicalDevice;
 
-use crate::utils::OrError;
+use crate::error::Result;
 
-pub(crate) fn create(logical: &LogicalDevice) -> Fence {
+pub(crate) fn create(logical: &LogicalDevice) -> Result<Fence> {
     let info = FenceCreateInfo::builder().flags(FenceCreateFlags::SIGNALED);
-    unsafe {
-        logical
-            .create_fence(&info, None)
-            .or_error("cannot create fence")
-    }
+    let fen = unsafe { logical.create_fence(&info, None)? };
+    Ok(fen)
 }
 
 pub(crate) fn destroy(logical: &LogicalDevice, f: Fence) {
@@ -21,16 +18,16 @@ pub(crate) fn destroy(logical: &LogicalDevice, f: Fence) {
     }
 }
 
-pub(crate) fn wait_for(logical: &LogicalDevice, f: Fence) {
+pub(crate) fn wait_for(logical: &LogicalDevice, f: Fence) -> Result<()> {
     unsafe {
-        logical
-            .wait_for_fences(&[f], true, u64::max_value())
-            .or_error("cannot wait for fence");
+        logical.wait_for_fences(&[f], true, u64::max_value())?;
     }
+    Ok(())
 }
 
-pub(crate) fn reset(logical: &LogicalDevice, f: Fence) {
+pub(crate) fn reset(logical: &LogicalDevice, f: Fence) -> Result<()> {
     unsafe {
-        logical.reset_fences(&[f]).or_error("cannot reset fence");
+        logical.reset_fences(&[f])?;
     }
+    Ok(())
 }
