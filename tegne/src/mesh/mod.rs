@@ -52,7 +52,7 @@ impl Mesh {
             error("too many normals");
         }
 
-        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex);
+        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;
         let index_buffer = FixedBuffer::new::<u32>(device, options.triangles, BufferType::Index)?;
 
         let vertices = options.vertices.to_vec();

@@ -39,6 +39,6 @@ pub(crate) fn buffer_to_buffer(
     let cmd = Commands::new(device);
     cmd.begin_one_time()?;
     cmd.copy_buffer(src, dst, size)?;
-    device.submit_buffer(cmd.end()?);
+    device.submit_buffer(cmd.end()?)?;
     Ok(())
 }

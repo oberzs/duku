@@ -36,6 +36,7 @@ use super::Extensions;
 use super::Surface;
 use super::Swapchain;
 use super::Vulkan;
+use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
@@ -59,7 +60,7 @@ pub(crate) struct Device {
 }
 
 pub(crate) struct DeviceProperties {
-    pub(crate) properties: PhysicalDeviceProperties,
+    pub(crate) _properties: PhysicalDeviceProperties,
     pub(crate) features: PhysicalDeviceFeatures,
     pub(crate) surface_formats: Vec<SurfaceFormatKHR>,
     pub(crate) surface_present_modes: Vec<PresentModeKHR>,
@@ -67,8 +68,10 @@ pub(crate) struct DeviceProperties {
     pub(crate) memory_properties: PhysicalDeviceMemoryProperties,
     pub(crate) graphics_index: u32,
     pub(crate) present_index: u32,
-    pub(crate) vsync: bool,
-    pub(crate) msaa: u8,
+    pub(crate) samples: Samples,
+    pub(crate) extent: Extent2D,
+    pub(crate) present_mode: PresentModeKHR,
+    pub(crate) image_count: u32,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -81,15 +84,10 @@ impl Device {
         exts: &Extensions,
         vsync: bool,
         msaa: u8,
-    ) -> Arc<Self> {
+    ) -> Result<Arc<Self>> {
         info!("looking for suitable GPU");
 
-        let gpus = unsafe {
-            vulkan
-                .instance_ref()
-                .enumerate_physical_devices()
-                .or_error("cannot find a GPU")
-        };
+        let gpus = unsafe { vulkan.instance_ref().enumerate_physical_devices()? };
 
         for physical in gpus.into_iter() {
             let instance = vulkan.instance_ref();
@@ -102,21 +100,29 @@ impl Device {
             let device_props = unsafe { instance.get_physical_device_properties(physical) };
             let device_features = unsafe { instance.get_physical_device_features(physical) };
             let mem_props = unsafe { instance.get_physical_device_memory_properties(physical) };
+            let surface_capabilities = surface.gpu_capabilities(physical);
+
+            let samples = pick_samples(device_props, msaa)?;
+            let extent = pick_extent(surface_capabilities, surface.width(), surface.height());
+            let present_mode = pick_present_mode(vsync);
+            let image_count = pick_image_count(surface_capabilities);
 
             let props = DeviceProperties {
-                properties: device_props,
+                _properties: device_props,
                 features: device_features,
                 memory_properties: mem_props,
                 surface_formats: surface.gpu_formats(physical),
-                surface_capabilities: surface.gpu_capabilities(physical),
+                surface_capabilities,
                 surface_present_modes: surface.gpu_present_modes(physical),
                 graphics_index,
                 present_index,
-                msaa,
-                vsync,
+                samples,
+                extent,
+                present_mode,
+                image_count,
             };
 
-            if exts.supports_device(vulkan, physical)
+            if exts.supports_device(vulkan, physical).is_ok()
                 && is_gpu_suitable(&props)
                 && has_queue_indices
             {
@@ -171,11 +177,11 @@ impl Device {
                     .map(|_| Commands::new(&device))
                     .collect::<Vec<_>>();
 
-                return device;
+                return Ok(device);
             }
         }
 
-        error("cannot find suitable GPU");
+        Err(ErrorKind::NoSuitableGpu.into())
     }
 
     pub(crate) fn next_frame(&self, swapchain: &Swapchain) -> Result<()> {
@@ -203,19 +209,17 @@ impl Device {
         })
     }
 
-    pub(crate) fn submit_buffer(&self, buffer: CommandBuffer) {
+    pub(crate) fn submit_buffer(&self, buffer: CommandBuffer) -> Result<()> {
         let buffers = [buffer];
         let info = SubmitInfo::builder().command_buffers(&buffers).build();
         let infos = [info];
 
         unsafe {
             self.logical
-                .queue_submit(self.graphics_queue, &infos, Fence::null())
-                .or_error("cannot submit command buffer");
-            self.logical
-                .device_wait_idle()
-                .or_error("cannot wait device idle");
+                .queue_submit(self.graphics_queue, &infos, Fence::null())?;
+            self.logical.device_wait_idle()?;
         }
+        Ok(())
     }
 
     pub(crate) fn submit(&self) -> Result<()> {
@@ -234,8 +238,7 @@ impl Device {
             .build()];
         unsafe {
             self.logical
-                .queue_submit(self.graphics_queue, &info, done)
-                .or_error("cannot submit draw command buffer")
+                .queue_submit(self.graphics_queue, &info, done)?
         };
         Ok(())
     }
@@ -247,97 +250,40 @@ impl Device {
         swapchain.present(self.present_queue, wait);
     }
 
-    pub(crate) fn wait_for_idle(&self) {
+    pub(crate) fn wait_for_idle(&self) -> Result<()> {
         self.sync_queue_submit
             .iter()
             .for_each(|f| fence::wait_for(&self.logical, *f));
 
         unsafe {
-            self.logical
-                .queue_wait_idle(self.graphics_queue)
-                .or_error("cannot wait queue idle");
-            self.logical
-                .queue_wait_idle(self.present_queue)
-                .or_error("cannot wait queue idle");
-            self.logical
-                .device_wait_idle()
-                .or_error("cannot wait device idle")
+            self.logical.queue_wait_idle(self.graphics_queue)?;
+            self.logical.queue_wait_idle(self.present_queue)?;
+            self.logical.device_wait_idle()?;
         }
+        Ok(())
     }
 
-    pub(crate) fn pick_memory_type(&self, type_filter: u32, props: MemoryPropertyFlags) -> u32 {
-        self.properties
+    pub(crate) fn pick_memory_type(
+        &self,
+        type_filter: u32,
+        props: MemoryPropertyFlags,
+    ) -> Result<u32> {
+        let mem_type = self
+            .properties
             .memory_properties
             .memory_types
             .iter()
             .enumerate()
             .find(|(i, mem_type)| {
-                (type_filter & (1 << i) as u32 != 0) && (mem_type.property_flags & props) == props
+                let byte: u32 = 1 << i;
+                (type_filter & byte != 0) && (mem_type.property_flags & props) == props
             })
-            .or_error("cannot find suitable memory type")
-            .0 as u32
-    }
-
-    pub(crate) fn pick_samples(&self) -> Samples {
-        let counts = self
-            .properties
-            .properties
-            .limits
-            .framebuffer_color_sample_counts
-            & self
-                .properties
-                .properties
-                .limits
-                .framebuffer_depth_sample_counts;
-
-        let samples = Samples(self.properties.msaa);
-
-        if !counts.contains(samples.flag()) {
-            error(format!("unsupported msaa value {}", self.properties.msaa));
-        }
-
-        samples
-    }
-
-    pub(crate) fn pick_extent(&self, width: u32, height: u32) -> Extent2D {
-        let extent = self.properties.surface_capabilities.current_extent;
-        let min_width = self.properties.surface_capabilities.min_image_extent.width;
-        let max_width = self.properties.surface_capabilities.max_image_extent.width;
-        let min_height = self.properties.surface_capabilities.min_image_extent.height;
-        let max_height = self.properties.surface_capabilities.max_image_extent.height;
-
-        if extent.width != u32::max_value() {
-            extent
-        } else {
-            let w = clamp(width, min_width, max_width);
-            let h = clamp(height, min_height, max_height);
-            Extent2D {
-                width: w,
-                height: h,
-            }
-        }
-    }
-
-    pub(crate) fn pick_present_mode(&self) -> PresentModeKHR {
-        if self.properties.vsync {
-            PresentModeKHR::FIFO
-        } else {
-            PresentModeKHR::IMMEDIATE
-        }
-    }
-
-    pub(crate) fn pick_image_count(&self) -> u32 {
-        let min_image_count = self.properties.surface_capabilities.min_image_count;
-        let max_image_count = self.properties.surface_capabilities.max_image_count;
-        if max_image_count > 0 && min_image_count + 1 > max_image_count {
-            max_image_count
-        } else {
-            min_image_count + 1
-        }
+            .ok_or(ErrorKind::NoSuitableMemoryType)?;
+        Ok(mem_type.0 as u32)
     }
 
     pub(crate) fn is_msaa(&self) -> bool {
-        self.pick_samples() != Samples(1)
+        self.properties.samples != Samples(1)
     }
 
     pub(crate) fn logical(&self) -> &LogicalDevice {
@@ -476,5 +422,55 @@ fn open_device(
             .instance_ref()
             .create_device(physical, &info, None)
             .or_error("cannot open GPU")
+    }
+}
+
+fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Result<Samples> {
+    let counts = properties.limits.framebuffer_color_sample_counts
+        & properties.limits.framebuffer_depth_sample_counts;
+
+    let samples = Samples(msaa);
+
+    if !counts.contains(samples.flag()) {
+        Err(ErrorKind::UnsupportedMsaa.into())
+    } else {
+        Ok(samples)
+    }
+}
+
+fn pick_extent(capabilities: SurfaceCapabilitiesKHR, width: u32, height: u32) -> Extent2D {
+    let extent = capabilities.current_extent;
+    let min_width = capabilities.min_image_extent.width;
+    let max_width = capabilities.max_image_extent.width;
+    let min_height = capabilities.min_image_extent.height;
+    let max_height = capabilities.max_image_extent.height;
+
+    if extent.width != u32::max_value() {
+        extent
+    } else {
+        let w = clamp(width, min_width, max_width);
+        let h = clamp(height, min_height, max_height);
+        Extent2D {
+            width: w,
+            height: h,
+        }
+    }
+}
+
+fn pick_present_mode(vsync: bool) -> PresentModeKHR {
+    if vsync {
+        PresentModeKHR::FIFO
+    } else {
+        PresentModeKHR::IMMEDIATE
+    }
+}
+
+fn pick_image_count(capabilities: SurfaceCapabilitiesKHR) -> u32 {
+    let min_image_count = capabilities.min_image_count;
+    let max_image_count = capabilities.max_image_count;
+    if max_image_count > 0 && min_image_count + 1 > max_image_count {
+        max_image_count
+    } else {
+        min_image_count + 1
     }
 }

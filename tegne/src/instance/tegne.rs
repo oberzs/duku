@@ -76,7 +76,7 @@ impl Tegne {
     pub fn new(window: WindowArgs, options: TegneOptions) -> Self {
         let extensions = Extensions::new();
 
-        let vulkan = Vulkan::new(&extensions);
+        let vulkan = Vulkan::new(&extensions).or_error("cannot initialize Vulkan");
 
         #[cfg(debug_assertions)]
         let validator = Some(Validator::new(&vulkan));
@@ -85,9 +85,10 @@ impl Tegne {
 
         let surface = Surface::new(&vulkan, window);
 
-        let device = Device::new(&vulkan, &surface, &extensions, options.vsync, options.msaa);
+        let device = Device::new(&vulkan, &surface, &extensions, options.vsync, options.msaa)
+            .or_error("cannot initialize device");
 
-        let swapchain = Swapchain::new(&vulkan, &device, &surface, window.width, window.height);
+        let swapchain = Swapchain::new(&vulkan, &device, &surface);
 
         let shader_layout = ShaderLayout::new(&device);
 
@@ -115,8 +116,6 @@ impl Tegne {
             &window_pass,
             &image_uniforms,
             &shader_layout,
-            window.width,
-            window.height,
         )
         .or_error("cannot create window framebuffers");
 
@@ -338,7 +337,7 @@ impl Tegne {
 
 impl Drop for Tegne {
     fn drop(&mut self) {
-        self.device.wait_for_idle();
+        self.device.wait_for_idle().unwrap();
     }
 }
 

@@ -10,10 +10,8 @@ use ash::Entry;
 use ash::Instance;
 use log::info;
 
-use crate::utils::error;
-use crate::utils::OrError;
-
 use super::Extensions;
+use crate::error::Result;
 
 pub(crate) struct Vulkan {
     instance: Instance,
@@ -21,15 +19,12 @@ pub(crate) struct Vulkan {
 }
 
 impl Vulkan {
-    pub(crate) fn new(exts: &Extensions) -> Self {
+    pub(crate) fn new(exts: &Extensions) -> Result<Self> {
         info!("initializing the Vulkan API");
 
-        let entry = Entry::new().or_error("cannot init Vulkan");
+        let entry = Entry::new()?;
 
-        match entry
-            .try_enumerate_instance_version()
-            .expect("cannot enumerate instance version")
-        {
+        match entry.try_enumerate_instance_version()? {
             Some(version) => {
                 let major = version_major(version);
                 let minor = version_minor(version);
@@ -39,12 +34,8 @@ impl Vulkan {
             None => info!("using Vulkan 1.0"),
         }
 
-        if !exts.supports_instance(&entry) {
-            error("requested instance extensions not available");
-        }
-        if !exts.supports_layers(&entry) {
-            error("validation layers requested, but not available");
-        }
+        exts.supports_instance(&entry)?;
+        exts.supports_layers(&entry)?;
 
         let layers = exts.layers();
         let extensions = exts.instance();
@@ -55,13 +46,9 @@ impl Vulkan {
             .enabled_layer_names(&layers)
             .enabled_extension_names(&extensions);
 
-        let instance = unsafe {
-            entry
-                .create_instance(&info, None)
-                .or_error("cannot create instance")
-        };
+        let instance = unsafe { entry.create_instance(&info, None)? };
 
-        Self { instance, entry }
+        Ok(Self { instance, entry })
     }
 
     pub(crate) fn instance_ref(&self) -> &Instance {

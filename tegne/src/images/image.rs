@@ -86,7 +86,7 @@ pub(crate) enum ImageLayout {
 }
 
 impl Image {
-    pub(crate) fn new(device: &Arc<Device>, options: ImageOptions<'_>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: ImageOptions<'_>) -> Result<Self> {
         let mip_levels = if options.has_mipmaps {
             (cmp::max(options.width, options.height) as f32)
                 .log2()
@@ -96,7 +96,7 @@ impl Image {
             1
         };
         let samples = if options.has_samples {
-            device.pick_samples()
+            device.properties().samples
         } else {
             Samples(1)
         };
@@ -135,7 +135,7 @@ impl Image {
                 let mem_type = device.pick_memory_type(
                     mem_requirements.memory_type_bits,
                     MemoryPropertyFlags::DEVICE_LOCAL,
-                );
+                )?;
 
                 let alloc_info = MemoryAllocateInfo::builder()
                     .allocation_size(mem_requirements.size)
@@ -196,7 +196,7 @@ impl Image {
             None
         };
 
-        Self {
+        Ok(Self {
             width: options.width,
             height: options.height,
             mip_levels,
@@ -205,7 +205,7 @@ impl Image {
             view,
             format: options.format,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn copy_data_from(&self, src: Buffer) -> Result<()> {
@@ -234,7 +234,7 @@ impl Image {
         let cmd = Commands::new(&device);
         cmd.begin_one_time()?;
         cmd.copy_buffer_to_image(src, self.vk, region)?;
-        device.submit_buffer(cmd.end()?);
+        device.submit_buffer(cmd.end()?)?;
         Ok(())
     }
 
@@ -308,7 +308,7 @@ impl Image {
             .change_to_shader_read()
             .record()?;
 
-        device.submit_buffer(cmd.end()?);
+        device.submit_buffer(cmd.end()?)?;
         Ok(())
     }
 

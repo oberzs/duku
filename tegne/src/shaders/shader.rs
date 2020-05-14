@@ -165,7 +165,7 @@ impl Shader {
             .polygon_mode(polygon_mode);
 
         let samples = if pass.has_msaa_attachment() {
-            device.pick_samples()
+            device.properties().samples
         } else {
             Samples(1)
         };

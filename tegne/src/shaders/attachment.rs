@@ -51,7 +51,7 @@ impl Attachment {
         };
 
         let samples = if options.has_samples {
-            device.pick_samples()
+            device.properties().samples
         } else {
             Samples(1)
         };

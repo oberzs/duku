@@ -26,31 +26,23 @@ pub(crate) struct Swapchain {
 }
 
 impl Swapchain {
-    pub(crate) fn new(
-        vulkan: &Vulkan,
-        device: &Arc<Device>,
-        surface: &Surface,
-        width: u32,
-        height: u32,
-    ) -> Self {
+    pub(crate) fn new(vulkan: &Vulkan, device: &Arc<Device>, surface: &Surface) -> Self {
         debug!("creating window swapchain");
 
-        let image_count = device.pick_image_count();
-        let extent = device.pick_extent(width, height);
-        let present_mode = device.pick_present_mode();
-        let transform = device.properties().surface_capabilities.current_transform;
+        let props = device.properties();
+        let transform = props.surface_capabilities.current_transform;
 
         let mut create_info = SwapchainCreateInfoKHR::builder()
             .surface(surface.vk())
             .image_format(ImageFormat::Bgra.flag())
             .image_color_space(ColorSpaceKHR::SRGB_NONLINEAR)
-            .image_extent(extent)
+            .image_extent(props.extent)
             .image_array_layers(1)
             .image_usage(ImageUsage::Color.flag())
             .pre_transform(transform)
-            .min_image_count(image_count)
+            .min_image_count(props.image_count)
             .composite_alpha(CompositeAlphaFlagsKHR::OPAQUE)
-            .present_mode(present_mode)
+            .present_mode(props.present_mode)
             .clipped(true);
 
         let indices = device.indices();

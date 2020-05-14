@@ -44,12 +44,10 @@ impl Framebuffer {
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
-        width: u32,
-        height: u32,
     ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
-        let extent = device.pick_extent(width, height);
+        let extent = device.properties().extent;
 
         swapchain
             .iter_images()
@@ -68,7 +66,7 @@ impl Framebuffer {
                         has_samples: true,
                         ..Default::default()
                     },
-                ));
+                )?);
 
                 // color
                 images.push(Image::new(
@@ -81,7 +79,7 @@ impl Framebuffer {
                         has_view: true,
                         ..Default::default()
                     },
-                ));
+                )?);
 
                 // msaa
                 if device.is_msaa() {
@@ -96,7 +94,7 @@ impl Framebuffer {
                             has_samples: true,
                             ..Default::default()
                         },
-                    ));
+                    )?);
                 }
 
                 Self::from_images(
@@ -134,7 +132,7 @@ impl Framebuffer {
                 has_samples: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // color
         images.push(Image::new(
@@ -147,7 +145,7 @@ impl Framebuffer {
                 has_view: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         // msaa
         if device.is_msaa() {
@@ -162,7 +160,7 @@ impl Framebuffer {
                     has_samples: true,
                     ..Default::default()
                 },
-            ));
+            )?);
         }
 
         Self::from_images(
@@ -198,7 +196,7 @@ impl Framebuffer {
                 has_view: true,
                 ..Default::default()
             },
-        ));
+        )?);
 
         Self::from_images(
             device,
@@ -235,14 +233,14 @@ impl Framebuffer {
                 has_view: true,
                 ..Default::default()
             },
-        );
+        )?;
 
         let cmd = Commands::new(device);
         cmd.begin_one_time()?;
         cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
             .record()?;
-        device.submit_buffer(cmd.end()?);
+        device.submit_buffer(cmd.end()?)?;
 
         let shader_index = image_uniforms.image_count() as i32;
         image_uniforms.add(shader_image.view());

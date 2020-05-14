@@ -8,6 +8,7 @@ use ash::vk::MemoryPropertyFlags;
 use ash::vk::SharingMode;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::instance::Device;
 use crate::utils::OrError;
 
@@ -16,7 +17,7 @@ pub(crate) fn buffer(
     usage: BufferUsageFlags,
     properties: MemoryPropertyFlags,
     size: usize,
-) -> (Buffer, DeviceMemory) {
+) -> Result<(Buffer, DeviceMemory)> {
     // create buffer
     let buffer_info = BufferCreateInfo::builder()
         .size((size as u32).into())
@@ -33,7 +34,7 @@ pub(crate) fn buffer(
     // alloc memory
     let mem_requirements = unsafe { device.logical().get_buffer_memory_requirements(buffer) };
 
-    let mem_type = device.pick_memory_type(mem_requirements.memory_type_bits, properties);
+    let mem_type = device.pick_memory_type(mem_requirements.memory_type_bits, properties)?;
 
     let alloc_info = MemoryAllocateInfo::builder()
         .allocation_size(mem_requirements.size)
@@ -53,5 +54,5 @@ pub(crate) fn buffer(
             .bind_buffer_memory(buffer, memory, 0)
             .or_error("cannot bind buffer memory")
     };
-    (buffer, memory)
+    Ok((buffer, memory))
 }

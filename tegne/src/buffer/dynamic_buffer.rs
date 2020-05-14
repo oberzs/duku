@@ -22,7 +22,11 @@ pub(crate) struct DynamicBuffer {
 }
 
 impl DynamicBuffer {
-    pub(crate) fn new<T: Copy>(device: &Arc<Device>, len: usize, buffer_type: BufferType) -> Self {
+    pub(crate) fn new<T: Copy>(
+        device: &Arc<Device>,
+        len: usize,
+        buffer_type: BufferType,
+    ) -> Result<Self> {
         let size = mem::size_of::<T>() * len;
 
         let (vk, memory) = alloc::buffer(
@@ -30,14 +34,14 @@ impl DynamicBuffer {
             buffer_type.into(),
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
             size,
-        );
+        )?;
 
-        Self {
+        Ok(Self {
             vk,
             memory,
             size: size as u32,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
@@ -60,7 +64,7 @@ impl Drop for DynamicBuffer {
             .ok_or(ErrorKind::DeviceDropped)
             .unwrap();
         unsafe {
-            device.wait_for_idle();
+            device.wait_for_idle().unwrap();
             device.logical().destroy_buffer(self.vk, None);
             device.logical().free_memory(self.memory, None);
         }

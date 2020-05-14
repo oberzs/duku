@@ -53,7 +53,7 @@ impl Texture {
             BufferUsageFlags::TRANSFER_SRC,
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
             size as usize,
-        );
+        )?;
 
         copy::data_to_buffer(&device, data, staging_memory, size as usize);
 
@@ -72,7 +72,7 @@ impl Texture {
                 has_mipmaps: true,
                 ..Default::default()
             },
-        );
+        )?;
 
         let cmd = Commands::new(device);
         cmd.begin_one_time()?;
@@ -80,7 +80,7 @@ impl Texture {
             .with_mips(0, mip_levels)
             .change_to_write()
             .record()?;
-        device.submit_buffer(cmd.end()?);
+        device.submit_buffer(cmd.end()?)?;
 
         image.copy_data_from(staging_buffer)?;
         image.generate_mipmaps()?;

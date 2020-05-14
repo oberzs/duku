@@ -39,6 +39,8 @@ pub struct WindowArgs {
 pub(crate) struct Surface {
     vk: SurfaceKHR,
     ext: Extension,
+    width: u32,
+    height: u32,
 }
 
 impl Surface {
@@ -69,7 +71,12 @@ impl Surface {
                 .or_error("cannot create window surface")
         };
 
-        Self { vk, ext }
+        Self {
+            vk,
+            ext,
+            width: args.width,
+            height: args.height,
+        }
     }
 
     #[cfg(target_os = "linux")]
@@ -92,7 +99,12 @@ impl Surface {
                 .or_error("cannot create window surface")
         };
 
-        Self { vk, ext }
+        Self {
+            vk,
+            ext,
+            width: args.width,
+            height: args.height,
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -136,7 +148,12 @@ impl Surface {
                 .or_error("cannot create window surface")
         };
 
-        Self { vk, ext }
+        Self {
+            vk,
+            ext,
+            width: args.width,
+            height: args.height,
+        }
     }
 
     pub(crate) fn gpu_formats(&self, device: PhysicalDevice) -> Vec<SurfaceFormatKHR> {
@@ -169,6 +186,14 @@ impl Surface {
                 .get_physical_device_surface_support(device, index, self.vk)
                 .or_error("cannot get surface support")
         }
+    }
+
+    pub(crate) fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> u32 {
+        self.height
     }
 
     pub(crate) fn vk(&self) -> SurfaceKHR {

@@ -34,7 +34,7 @@ impl FixedBuffer {
             BufferUsageFlags::TRANSFER_SRC,
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
             size,
-        );
+        )?;
 
         copy::data_to_buffer(device, data, staging_memory, size);
 
@@ -43,7 +43,7 @@ impl FixedBuffer {
             BufferUsageFlags::TRANSFER_DST | buffer_type.into(),
             MemoryPropertyFlags::DEVICE_LOCAL,
             size,
-        );
+        )?;
 
         copy::buffer_to_buffer(device, staging_buffer, vk, size)?;
 
@@ -74,7 +74,7 @@ impl Drop for FixedBuffer {
             .ok_or(ErrorKind::DeviceDropped)
             .unwrap();
         unsafe {
-            device.wait_for_idle();
+            device.wait_for_idle().unwrap();
             device.logical().destroy_buffer(self.vk, None);
             device.logical().free_memory(self.memory, None);
         }
