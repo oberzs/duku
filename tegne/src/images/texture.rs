@@ -8,7 +8,7 @@ use super::Image;
 use super::ImageFormat;
 use super::ImageOptions;
 use super::ImageUsage;
-use crate::instance::CommandRecorder;
+use crate::instance::Commands;
 use crate::instance::Device;
 use crate::memory::alloc;
 use crate::memory::copy;
@@ -73,14 +73,13 @@ impl Texture {
             },
         );
 
-        let recorder = CommandRecorder::new(device);
-        recorder.begin_one_time();
-        recorder
-            .change_image_layout(&image)
+        let cmd = Commands::new(device);
+        cmd.begin_one_time();
+        cmd.change_image_layout(&image)
             .with_mips(0, mip_levels)
             .change_to_write()
             .record();
-        device.submit_buffer(recorder.end());
+        device.submit_buffer(cmd.end());
 
         image.copy_data_from(staging_buffer);
         image.generate_mipmaps();

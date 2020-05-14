@@ -1,17 +1,19 @@
-mod command_recorder;
+mod commands;
 mod device;
 mod extensions;
+mod surface;
 mod swapchain;
 mod target;
 mod tegne;
 mod validator;
 mod vulkan;
-mod window_surface;
 
-pub(crate) use command_recorder::CommandRecorder;
+pub(crate) use commands::Commands;
 pub(crate) use device::Device;
 pub(crate) use device::Samples;
 use extensions::Extensions;
+use surface::Surface;
+use surface::WindowArgs;
 pub(crate) use swapchain::Swapchain;
 pub(crate) use target::Order;
 pub use target::Target;
@@ -20,5 +22,3 @@ pub use tegne::Tegne;
 pub use tegne::TegneOptions;
 use validator::Validator;
 use vulkan::Vulkan;
-use window_surface::WindowArgs;
-use window_surface::WindowSurface;

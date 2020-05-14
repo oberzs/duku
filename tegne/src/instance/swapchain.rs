@@ -13,8 +13,8 @@ use std::cell::Cell;
 use std::sync::Arc;
 
 use super::Device;
+use super::Surface;
 use super::Vulkan;
-use super::WindowSurface;
 use crate::images::ImageFormat;
 use crate::images::ImageUsage;
 use crate::utils::OrError;
@@ -29,7 +29,7 @@ impl Swapchain {
     pub(crate) fn new(
         vulkan: &Vulkan,
         device: &Arc<Device>,
-        window_surface: &WindowSurface,
+        surface: &Surface,
         width: u32,
         height: u32,
     ) -> Self {
@@ -41,7 +41,7 @@ impl Swapchain {
         let transform = device.properties().surface_capabilities.current_transform;
 
         let mut create_info = SwapchainCreateInfoKHR::builder()
-            .surface(window_surface.vk())
+            .surface(surface.vk())
             .image_format(ImageFormat::Bgra.flag())
             .image_color_space(ColorSpaceKHR::SRGB_NONLINEAR)
             .image_extent(extent)

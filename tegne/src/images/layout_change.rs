@@ -7,10 +7,10 @@ use ash::vk::QUEUE_FAMILY_IGNORED;
 
 use super::Image;
 use super::ImageLayout;
-use crate::instance::CommandRecorder;
+use crate::instance::Commands;
 
 pub(crate) struct LayoutChange<'a> {
-    recorder: &'a CommandRecorder,
+    cmd: &'a Commands,
     image: &'a Image,
     old_layout: ImageLayout,
     new_layout: ImageLayout,
@@ -23,9 +23,9 @@ pub(crate) struct LayoutChange<'a> {
 }
 
 impl<'a> LayoutChange<'a> {
-    pub(crate) fn new(recorder: &'a CommandRecorder, image: &'a Image) -> Self {
+    pub(crate) fn new(cmd: &'a Commands, image: &'a Image) -> Self {
         Self {
-            recorder,
+            cmd,
             image,
             old_layout: ImageLayout::Undefined,
             new_layout: ImageLayout::Undefined,
@@ -141,7 +141,7 @@ impl<'a> LayoutChange<'a> {
             .dst_access_mask(self.dst_access)
             .build();
 
-        self.recorder
+        self.cmd
             .set_pipeline_barrier(barrier, self.src_stage, self.dst_stage);
     }
 }

@@ -12,6 +12,7 @@
 )]
 
 mod buffer;
+mod error;
 mod images;
 mod instance;
 mod memory;

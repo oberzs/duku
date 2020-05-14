@@ -17,12 +17,12 @@ use tegne_math::Camera;
 
 use super::Device;
 use super::Extensions;
+use super::Surface;
 use super::Swapchain;
 use super::Target;
 use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
-use super::WindowSurface;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
@@ -53,7 +53,7 @@ pub struct Tegne {
     shader_layout: ShaderLayout,
     swapchain: Swapchain,
     device: Arc<Device>,
-    _window_surface: WindowSurface,
+    _surface: Surface,
     _validator: Option<Validator>,
     _vulkan: Vulkan,
 }
@@ -83,23 +83,11 @@ impl Tegne {
         #[cfg(not(debug_assertions))]
         let validator = None;
 
-        let window_surface = WindowSurface::new(&vulkan, window);
+        let surface = Surface::new(&vulkan, window);
 
-        let device = Device::new(
-            &vulkan,
-            &window_surface,
-            &extensions,
-            options.vsync,
-            options.msaa,
-        );
+        let device = Device::new(&vulkan, &surface, &extensions, options.vsync, options.msaa);
 
-        let swapchain = Swapchain::new(
-            &vulkan,
-            &device,
-            &window_surface,
-            window.width,
-            window.height,
-        );
+        let swapchain = Swapchain::new(&vulkan, &device, &surface, window.width, window.height);
 
         let shader_layout = ShaderLayout::new(&device);
 
@@ -142,7 +130,7 @@ impl Tegne {
             shader_layout,
             swapchain,
             device,
-            _window_surface: window_surface,
+            _surface: surface,
             _validator: validator,
             _vulkan: vulkan,
         }
@@ -181,7 +169,7 @@ impl Tegne {
     pub fn begin_draw(&self) {
         self.device.next_frame(&self.swapchain);
         self.image_uniforms.update_if_needed();
-        self.device.record_commands().bind_descriptor(
+        self.device.commands().bind_descriptor(
             self.image_uniforms.descriptor(),
             self.shader_layout.pipeline(),
         );
@@ -292,37 +280,40 @@ impl Tegne {
         path: impl AsRef<Path>,
         options: ShaderOptions,
     ) -> Id<Shader> {
-        let p = path.as_ref();
-        let source = fs::read(p).or_error(format!("cannot open shader {}", p.display()));
+        let path_buf = path.as_ref().to_path_buf();
+        let source =
+            fs::read(&path_buf).or_error(format!("cannot open shader {}", path_buf.display()));
         let id = self.create_shader(&source, options);
 
         // setup watcher
-        // let (tx, rx) = channel();
-        // let mut watcher: RecommendedWatcher =
-        //     Watcher::new(tx, Duration::from_secs(1)).or_error("cannot watch system");
-        // watcher
-        //     .watch(p, RecursiveMode::NonRecursive)
-        //     .expect("cannot watch shader");
-
-        // thread::spawn(move || loop {
-        //     let event = rx.recv().or_error("watch event error");
-        //     if let DebouncedEvent::NoticeWrite(new_path) = event {
-        //         let new_source = fs::read(&new_path)
-        //             .or_error(format!("cannot open shader {}", new_path.display()));
-        //         // let render_pass = self
-        //         //     .render_passes
-        //         //     .get(&RenderPassType::Color)
-        //         //     .or_error("render passes not setup");
-        //         // let shader = Shader::new(
-        //         //     &self.device,
-        //         //     render_pass,
-        //         //     &self.shader_layout,
-        //         //     &new_source,
-        //         //     options,
-        //         // );
-        //         println!("new shader");
-        //     }
-        // });
+        let arc_path_buf = path_buf;
+        thread::spawn(move || {
+            let (tx, rx) = channel();
+            let mut watcher: RecommendedWatcher =
+                Watcher::new(tx, Duration::from_secs(1)).or_error("cannot watch system");
+            watcher
+                .watch(&arc_path_buf, RecursiveMode::NonRecursive)
+                .expect("cannot watch shader");
+            loop {
+                let event = rx.recv().unwrap();
+                if let DebouncedEvent::NoticeWrite(_) = event {
+                    println!("new shader {:?}", &arc_path_buf);
+                    // let new_source = fs::read(&new_path)
+                    // .or_error(format!("cannot open shader {}", new_path.display()));
+                    // let render_pass = self
+                    //     .render_passes
+                    //     .get(&RenderPassType::Color)
+                    //     .or_error("render passes not setup");
+                    // let shader = Shader::new(
+                    //     &self.device,
+                    //     render_pass,
+                    //     &self.shader_layout,
+                    //     &new_source,
+                    //     options,
+                    // );
+                }
+            }
+        });
 
         id
     }

@@ -15,7 +15,7 @@ use super::Image;
 use super::ImageFormat;
 use super::ImageOptions;
 use super::ImageUsage;
-use crate::instance::CommandRecorder;
+use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Swapchain;
 use crate::shaders::ImageUniforms;
@@ -235,13 +235,12 @@ impl Framebuffer {
             },
         );
 
-        let recorder = CommandRecorder::new(device);
-        recorder.begin_one_time();
-        recorder
-            .change_image_layout(&shader_image)
+        let cmd = Commands::new(device);
+        cmd.begin_one_time();
+        cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
             .record();
-        device.submit_buffer(recorder.end());
+        device.submit_buffer(cmd.end());
 
         let shader_index = image_uniforms.image_count() as i32;
         image_uniforms.add(shader_image.view());
@@ -277,7 +276,7 @@ impl Framebuffer {
         }
     }
 
-    pub(crate) fn blit_to_shader_image(&self, recorder: &Ref<'_, CommandRecorder>) {
+    pub(crate) fn blit_to_shader_image(&self, cmd: &Ref<'_, Commands>) {
         let image = self
             .attachment_images
             .last()
@@ -285,20 +284,17 @@ impl Framebuffer {
         let is_depth = image.is_depth_format();
 
         if is_depth {
-            recorder
-                .change_image_layout(image)
+            cmd.change_image_layout(image)
                 .change_from_depth_write()
                 .change_to_read()
                 .record();
         } else {
-            recorder
-                .change_image_layout(image)
+            cmd.change_image_layout(image)
                 .change_from_color_write()
                 .change_to_read()
                 .record();
         }
-        recorder
-            .change_image_layout(&self.shader_image)
+        cmd.change_image_layout(&self.shader_image)
             .change_from_shader_read()
             .change_to_write()
             .record();
@@ -336,23 +332,20 @@ impl Framebuffer {
             Filter::LINEAR
         };
 
-        recorder.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
+        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
 
         if is_depth {
-            recorder
-                .change_image_layout(image)
+            cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_depth_write()
                 .record();
         } else {
-            recorder
-                .change_image_layout(image)
+            cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_color_write()
                 .record();
         }
-        recorder
-            .change_image_layout(&self.shader_image)
+        cmd.change_image_layout(&self.shader_image)
             .change_from_write()
             .change_to_shader_read()
             .record();

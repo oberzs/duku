@@ -47,14 +47,14 @@ use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::utils::OrError;
 
-pub(crate) struct CommandRecorder {
+pub(crate) struct Commands {
     buffer: CommandBuffer,
     pool: CommandPool,
     device: Weak<Device>,
     dropped: bool,
 }
 
-impl CommandRecorder {
+impl Commands {
     pub(crate) fn new(device: &Arc<Device>) -> Self {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
@@ -357,7 +357,7 @@ impl CommandRecorder {
     }
 }
 
-impl Drop for CommandRecorder {
+impl Drop for Commands {
     fn drop(&mut self) {
         if !self.dropped {
             unsafe {

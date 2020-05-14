@@ -26,7 +26,7 @@ use std::cmp;
 use std::sync::Arc;
 use std::sync::Weak;
 
-use crate::instance::CommandRecorder;
+use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Samples;
 use crate::utils::OrError;
@@ -227,22 +227,21 @@ impl Image {
             })
             .build();
 
-        let recorder = CommandRecorder::new(&self.device());
-        recorder.begin_one_time();
-        recorder.copy_buffer_to_image(src, self.vk, region);
-        self.device().submit_buffer(recorder.end());
+        let cmd = Commands::new(&self.device());
+        cmd.begin_one_time();
+        cmd.copy_buffer_to_image(src, self.vk, region);
+        self.device().submit_buffer(cmd.end());
     }
 
     pub(crate) fn generate_mipmaps(&self) {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let recorder = CommandRecorder::new(&self.device());
-        recorder.begin_one_time();
+        let cmd = Commands::new(&self.device());
+        cmd.begin_one_time();
 
         for i in 1..self.mip_levels {
-            recorder
-                .change_image_layout(self)
+            cmd.change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .change_from_write()
                 .change_to_read()
@@ -287,24 +286,22 @@ impl Image {
                 .dst_subresource(dst_subresource)
                 .build();
 
-            recorder.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
+            cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
 
-            recorder
-                .change_image_layout(self)
+            cmd.change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .change_from_read()
                 .change_to_shader_read()
                 .record();
         }
 
-        recorder
-            .change_image_layout(self)
+        cmd.change_image_layout(self)
             .with_mips(self.mip_levels - 1, 1)
             .change_from_write()
             .change_to_shader_read()
             .record();
 
-        self.device().submit_buffer(recorder.end());
+        self.device().submit_buffer(cmd.end());
     }
 
     pub(crate) fn vk(&self) -> VkImage {

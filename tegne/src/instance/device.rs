@@ -31,11 +31,11 @@ use std::cell::RefCell;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use super::CommandRecorder;
+use super::Commands;
 use super::Extensions;
+use super::Surface;
 use super::Swapchain;
 use super::Vulkan;
-use super::WindowSurface;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::utils::clamp;
@@ -53,7 +53,7 @@ pub(crate) struct Device {
     sync_acquire_image: Vec<Semaphore>,
     sync_release_image: Vec<Semaphore>,
     sync_queue_submit: Vec<Fence>,
-    command_recorders: RefCell<Vec<CommandRecorder>>,
+    commands: RefCell<Vec<Commands>>,
     current_frame: Cell<u32>,
 }
 
@@ -76,7 +76,7 @@ pub(crate) struct Samples(pub(crate) u8);
 impl Device {
     pub(crate) fn new(
         vulkan: &Vulkan,
-        surface: &WindowSurface,
+        surface: &Surface,
         exts: &Extensions,
         vsync: bool,
         msaa: u8,
@@ -162,12 +162,12 @@ impl Device {
                     sync_acquire_image,
                     sync_release_image,
                     sync_queue_submit,
-                    command_recorders: RefCell::new(vec![]),
+                    commands: RefCell::new(vec![]),
                     current_frame: Cell::new(0),
                 });
 
-                *device.command_recorders.borrow_mut() = (0..IN_FLIGHT_FRAME_COUNT)
-                    .map(|_| CommandRecorder::new(&device))
+                *device.commands.borrow_mut() = (0..IN_FLIGHT_FRAME_COUNT)
+                    .map(|_| Commands::new(&device))
                     .collect::<Vec<_>>();
 
                 return device;
@@ -190,13 +190,13 @@ impl Device {
         fence::reset(&self.logical, wait);
 
         // reset command recorder
-        let recorder = &mut self.command_recorders.borrow_mut()[current];
+        let recorder = &mut self.commands.borrow_mut()[current];
         recorder.reset();
         recorder.begin();
     }
 
-    pub(crate) fn record_commands(&self) -> Ref<'_, CommandRecorder> {
-        Ref::map(self.command_recorders.borrow(), |rs| {
+    pub(crate) fn commands(&self) -> Ref<'_, Commands> {
+        Ref::map(self.commands.borrow(), |rs| {
             &rs[self.current_frame.get() as usize]
         })
     }
@@ -221,7 +221,7 @@ impl Device {
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
         let done = self.sync_queue_submit[current];
-        let buffers = [self.command_recorders.borrow()[current].end()];
+        let buffers = [self.commands.borrow()[current].end()];
         let stage_mask = [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let info = [SubmitInfo::builder()
@@ -369,7 +369,7 @@ impl Drop for Device {
             self.sync_queue_submit
                 .iter()
                 .for_each(|f| fence::destroy(&self.logical, *f));
-            self.command_recorders
+            self.commands
                 .borrow_mut()
                 .iter_mut()
                 .for_each(|r| r.manual_drop(&self.logical));
@@ -406,7 +406,7 @@ fn is_gpu_suitable(props: &DeviceProperties) -> bool {
 fn get_queue_indices(
     vulkan: &Vulkan,
     device: PhysicalDevice,
-    surface: &WindowSurface,
+    surface: &Surface,
 ) -> (Option<u32>, Option<u32>) {
     let mut graphics = None;
     let mut present = None;

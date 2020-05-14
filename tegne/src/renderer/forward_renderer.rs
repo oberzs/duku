@@ -1,11 +1,15 @@
 use ash::vk::Pipeline;
+use std::cell::Ref;
 use std::sync::Arc;
 use std::sync::Weak;
 use tegne_math::Camera;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
 
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::images::Framebuffer;
+use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Order;
 use crate::instance::Target;
@@ -56,7 +60,7 @@ impl ForwardRenderer {
         }
     }
 
-    pub fn draw(&self, options: ForwardDrawOptions<'_>) {
+    pub fn draw(&self, options: ForwardDrawOptions<'_>) -> Result<()> {
         let cam_mat = options.camera.matrix();
 
         let light_distance = 10.0;
@@ -78,111 +82,100 @@ impl ForwardRenderer {
 
         let clear = options.target.clear();
 
-        let device = self.device();
-        let recorder = device.record_commands();
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
+        let cmd = device.commands();
 
         // shadow mapping
-        recorder.begin_render_pass(&self.shadow_framebuffer, options.depth_pass, clear);
-        self.setup_pass(&self.shadow_framebuffer);
-        self.bind_world(&self.shadow_framebuffer, world_object, &options);
+        cmd.begin_render_pass(&self.shadow_framebuffer, options.depth_pass, clear);
+        self.setup_pass(&cmd, &self.shadow_framebuffer);
+        self.bind_world(&cmd, &self.shadow_framebuffer, world_object, &options);
 
         let shadow_shader = options.objects.builtins().shader(BuiltinShader::Shadow);
-        self.bind_shader(shadow_shader.pipeline());
+        self.bind_shader(&cmd, shadow_shader.pipeline());
 
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
-                self.bind_material(m_order.material(), &options);
+                self.bind_material(&cmd, m_order.material(), &options);
                 for order in m_order.orders() {
                     if order.has_shadows {
-                        self.draw_order(order, &options);
+                        self.draw_order(&cmd, order, &options);
                     }
                 }
             }
         }
 
-        recorder.end_render_pass();
-        self.shadow_framebuffer.blit_to_shader_image(&recorder);
+        cmd.end_render_pass();
+        self.shadow_framebuffer.blit_to_shader_image(&cmd);
 
         // normal render
-        recorder.begin_render_pass(options.framebuffer, options.color_pass, clear);
-        self.setup_pass(options.framebuffer);
-        self.bind_world(options.framebuffer, world_object, &options);
+        cmd.begin_render_pass(options.framebuffer, options.color_pass, clear);
+        self.setup_pass(&cmd, options.framebuffer);
+        self.bind_world(&cmd, options.framebuffer, world_object, &options);
 
         for s_order in options.target.orders_by_shader() {
-            self.bind_shader(s_order.shader());
+            self.bind_shader(&cmd, s_order.shader());
             for m_order in s_order.orders_by_material() {
-                self.bind_material(m_order.material(), &options);
+                self.bind_material(&cmd, m_order.material(), &options);
                 for order in m_order.orders() {
-                    self.draw_order(order, &options);
+                    self.draw_order(&cmd, order, &options);
                 }
             }
         }
 
         // wireframe render
         let wireframe_shader = options.objects.builtins().shader(BuiltinShader::Wireframe);
-        self.bind_shader(wireframe_shader.pipeline());
+        self.bind_shader(&cmd, wireframe_shader.pipeline());
         for order in options.target.wireframe_orders() {
-            self.draw_order(order, &options);
+            self.draw_order(&cmd, order, &options);
         }
 
-        recorder.end_render_pass();
+        cmd.end_render_pass();
+
+        Ok(())
     }
 
-    fn setup_pass(&self, framebuffer: &Framebuffer) {
-        let device = self.device();
-        let recorder = device.record_commands();
-
-        recorder.set_view(framebuffer.width(), framebuffer.height());
-        recorder.set_line_width(1.0);
+    fn setup_pass(&self, cmd: &Ref<'_, Commands>, framebuffer: &Framebuffer) {
+        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.set_line_width(1.0);
     }
 
     fn bind_world(
         &self,
+        cmd: &Ref<'_, Commands>,
         framebuffer: &Framebuffer,
         object: WorldObject,
         options: &ForwardDrawOptions<'_>,
     ) {
-        let device = self.device();
-        let recorder = device.record_commands();
-
         framebuffer.world_uniforms().update(object);
-        recorder.bind_descriptor(
+        cmd.bind_descriptor(
             framebuffer.world_uniforms().descriptor(),
             options.shader_layout.pipeline(),
         );
     }
 
-    fn bind_shader(&self, shader: Pipeline) {
-        let device = self.device();
-        let recorder = device.record_commands();
-
-        recorder.bind_pipeline(shader);
+    fn bind_shader(&self, cmd: &Ref<'_, Commands>, shader: Pipeline) {
+        cmd.bind_pipeline(shader);
     }
 
-    fn bind_material(&self, descriptor: Descriptor, options: &ForwardDrawOptions<'_>) {
-        let device = self.device();
-        let recorder = device.record_commands();
-
-        recorder.bind_descriptor(descriptor, options.shader_layout.pipeline());
+    fn bind_material(
+        &self,
+        cmd: &Ref<'_, Commands>,
+        descriptor: Descriptor,
+        options: &ForwardDrawOptions<'_>,
+    ) {
+        cmd.bind_descriptor(descriptor, options.shader_layout.pipeline());
     }
 
-    fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) {
-        let device = self.device();
-        let recorder = device.record_commands();
-
-        recorder.set_push_constant(
+    fn draw_order(&self, cmd: &Ref<'_, Commands>, order: Order, options: &ForwardDrawOptions<'_>) {
+        cmd.set_push_constant(
             PushConstants {
                 model_mat: order.model,
                 albedo_index: order.albedo_index,
             },
             options.shader_layout.pipeline(),
         );
-        recorder.bind_vertex_buffer(order.vertex_buffer);
-        recorder.bind_index_buffer(order.index_buffer);
-        recorder.draw(order.index_count);
-    }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().expect("device does not exist")
+        cmd.bind_vertex_buffer(order.vertex_buffer);
+        cmd.bind_index_buffer(order.index_buffer);
+        cmd.draw(order.index_count);
     }
 }

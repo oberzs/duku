@@ -36,12 +36,12 @@ pub struct WindowArgs {
     pub height: u32,
 }
 
-pub(crate) struct WindowSurface {
+pub(crate) struct Surface {
     vk: SurfaceKHR,
     ext: Extension,
 }
 
-impl WindowSurface {
+impl Surface {
     #[cfg(target_os = "windows")]
     pub(crate) fn new(vulkan: &Vulkan, args: WindowArgs) -> Self {
         debug!("creating Windows window surface");
@@ -176,7 +176,7 @@ impl WindowSurface {
     }
 }
 
-impl Drop for WindowSurface {
+impl Drop for Surface {
     fn drop(&mut self) {
         unsafe {
             self.ext.destroy_surface(self.vk, None);
