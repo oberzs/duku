@@ -170,9 +170,9 @@ impl Device {
                     current_frame: Cell::new(0),
                 });
 
-                *device.commands.borrow_mut() = (0..IN_FLIGHT_FRAME_COUNT)
-                    .map(|_| Commands::new(&device))
-                    .collect::<Vec<_>>();
+                for _ in 0..IN_FLIGHT_FRAME_COUNT {
+                    device.commands.borrow_mut().push(Commands::new(&device)?);
+                }
 
                 return Ok(device);
             }

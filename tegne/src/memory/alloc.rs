@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::instance::Device;
-use crate::utils::OrError;
 
 pub(crate) fn buffer(
     device: &Arc<Device>,
@@ -24,12 +23,7 @@ pub(crate) fn buffer(
         .usage(usage)
         .sharing_mode(SharingMode::EXCLUSIVE);
 
-    let buffer = unsafe {
-        device
-            .logical()
-            .create_buffer(&buffer_info, None)
-            .or_error("annot create buffer")
-    };
+    let buffer = unsafe { device.logical().create_buffer(&buffer_info, None)? };
 
     // alloc memory
     let mem_requirements = unsafe { device.logical().get_buffer_memory_requirements(buffer) };
@@ -40,19 +34,9 @@ pub(crate) fn buffer(
         .allocation_size(mem_requirements.size)
         .memory_type_index(mem_type);
 
-    let memory = unsafe {
-        device
-            .logical()
-            .allocate_memory(&alloc_info, None)
-            .or_error("cannot allocate buffer memory")
-    };
+    let memory = unsafe { device.logical().allocate_memory(&alloc_info, None)? };
 
     // bind memory
-    unsafe {
-        device
-            .logical()
-            .bind_buffer_memory(buffer, memory, 0)
-            .or_error("cannot bind buffer memory")
-    };
+    unsafe { device.logical().bind_buffer_memory(buffer, memory, 0)? };
     Ok((buffer, memory))
 }

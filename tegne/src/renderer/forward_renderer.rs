@@ -19,6 +19,7 @@ use crate::shaders::Descriptor;
 use crate::shaders::ImageUniforms;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
+use crate::shaders::RenderPasses;
 use crate::shaders::ShaderLayout;
 use crate::shaders::WorldObject;
 
@@ -29,7 +30,7 @@ pub(crate) struct ForwardRenderer {
 
 pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) framebuffer: &'a Framebuffer,
-    pub(crate) depth_pass: &'a RenderPass,
+    pub(crate) render_passes: &'a RenderPasses,
     pub(crate) color_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
@@ -41,13 +42,13 @@ pub(crate) struct ForwardDrawOptions<'a> {
 impl ForwardRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
-        depth_pass: &RenderPass,
+        render_passes: &RenderPasses,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
     ) -> Result<Self> {
         let shadow_framebuffer = Framebuffer::depth(
             device,
-            depth_pass,
+            render_passes,
             image_uniforms,
             shader_layout,
             2048,
@@ -61,6 +62,8 @@ impl ForwardRenderer {
     }
 
     pub fn draw(&self, options: ForwardDrawOptions<'_>) -> Result<()> {
+        let depth_pass = options.render_passes.depth();
+
         let cam_mat = options.camera.matrix();
 
         let light_distance = 10.0;
@@ -86,11 +89,15 @@ impl ForwardRenderer {
         let cmd = device.commands();
 
         // shadow mapping
-        cmd.begin_render_pass(&self.shadow_framebuffer, options.depth_pass, clear)?;
+        cmd.begin_render_pass(&self.shadow_framebuffer, depth_pass, clear)?;
         self.setup_pass(&cmd, &self.shadow_framebuffer)?;
         self.bind_world(&cmd, &self.shadow_framebuffer, world_object, &options)?;
 
-        let shadow_shader = options.objects.builtins().shader(BuiltinShader::Shadow);
+        let shadow_shader = options
+            .objects
+            .builtins()
+            .shader(BuiltinShader::Shadow)
+            .ok_or(ErrorKind::NoBuiltins)?;
         self.bind_shader(&cmd, shadow_shader.pipeline())?;
 
         for s_order in options.target.orders_by_shader() {
@@ -123,7 +130,11 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        let wireframe_shader = options.objects.builtins().shader(BuiltinShader::Wireframe);
+        let wireframe_shader = options
+            .objects
+            .builtins()
+            .shader(BuiltinShader::Wireframe)
+            .ok_or(ErrorKind::NoBuiltins)?;
         self.bind_shader(&cmd, wireframe_shader.pipeline())?;
         for order in options.target.wireframe_orders() {
             self.draw_order(&cmd, order, &options)?;

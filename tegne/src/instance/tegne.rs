@@ -5,7 +5,6 @@ use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
 use std::cell::RefMut;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::sync::mpsc::channel;
@@ -34,7 +33,7 @@ use crate::renderer::ForwardRenderer;
 use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
 use crate::shaders::MaterialOptions;
-use crate::shaders::RenderPass;
+use crate::shaders::RenderPasses;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::shaders::ShaderOptions;
@@ -48,7 +47,7 @@ pub struct Tegne {
     forward_renderer: ForwardRenderer,
     objects: Objects,
     window_framebuffers: Vec<Framebuffer>,
-    render_passes: HashMap<RenderPassType, RenderPass>,
+    render_passes: RenderPasses,
     image_uniforms: ImageUniforms,
     shader_layout: ShaderLayout,
     swapchain: Swapchain,
@@ -63,13 +62,6 @@ pub struct TegneOptions {
     pub anisotropy: f32,
     pub vsync: bool,
     pub msaa: u8,
-}
-
-#[derive(Hash, Eq, PartialEq)]
-pub(crate) enum RenderPassType {
-    Window,
-    Color,
-    Depth,
 }
 
 impl Tegne {
@@ -96,41 +88,22 @@ impl Tegne {
         let image_uniforms = ImageUniforms::new(&device, &shader_layout, options.anisotropy)
             .or_error("cannot create image uniforms");
 
-        let mut render_passes = HashMap::new();
-        render_passes.insert(
-            RenderPassType::Color,
-            RenderPass::color(&device).or_error("cannot create render pass"),
-        );
-        render_passes.insert(
-            RenderPassType::Window,
-            RenderPass::window(&device).or_error("cannot create render pass"),
-        );
-        render_passes.insert(
-            RenderPassType::Depth,
-            RenderPass::depth(&device).or_error("cannot create render pass"),
-        );
+        let render_passes = RenderPasses::new(&device).or_error("cannot create render passes");
 
         let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms)
             .or_error("cannot create object storage");
 
-        let window_pass = render_passes
-            .get(&RenderPassType::Window)
-            .or_error("render passes not setup");
-        let depth_pass = render_passes
-            .get(&RenderPassType::Depth)
-            .or_error("render passes not setup");
-
         let window_framebuffers = Framebuffer::window(
             &device,
             &swapchain,
-            &window_pass,
+            &render_passes,
             &image_uniforms,
             &shader_layout,
         )
         .or_error("cannot create window framebuffers");
 
         let forward_renderer =
-            ForwardRenderer::new(&device, &depth_pass, &image_uniforms, &shader_layout)
+            ForwardRenderer::new(&device, &render_passes, &image_uniforms, &shader_layout)
                 .or_error("cannot create forward renderer");
 
         Self {
@@ -207,20 +180,13 @@ impl Tegne {
         draw_callback(&mut target);
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-        let window_pass = self
-            .render_passes
-            .get(&RenderPassType::Window)
-            .or_error("render passes not setup");
-        let depth_pass = self
-            .render_passes
-            .get(&RenderPassType::Depth)
-            .or_error("render passes not setup");
+        let window_pass = self.render_passes.window();
 
         self.forward_renderer
             .draw(ForwardDrawOptions {
                 framebuffer,
                 color_pass: window_pass,
-                depth_pass,
+                render_passes: &self.render_passes,
                 shader_layout: &self.shader_layout,
                 camera,
                 objects: &self.objects,
@@ -266,19 +232,15 @@ impl Tegne {
         self.objects.add_material(material)
     }
 
-    pub fn get_material(&self, material: Id<Material>) -> RefMut<'_, Material> {
+    pub fn get_material(&self, material: Id<Material>) -> Option<RefMut<'_, Material>> {
         self.objects.material(material)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {
         debug!("creating framebuffer");
-        let render_pass = self
-            .render_passes
-            .get(&RenderPassType::Color)
-            .or_error("render passes not setup");
         Framebuffer::color(
             &self.device,
-            render_pass,
+            &self.render_passes,
             &self.image_uniforms,
             &self.shader_layout,
             width,
@@ -289,10 +251,7 @@ impl Tegne {
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
         debug!("creating shader");
-        let render_pass = self
-            .render_passes
-            .get(&RenderPassType::Color)
-            .or_error("render passes not setup");
+        let render_pass = self.render_passes.color();
         let shader = Shader::new(
             &self.device,
             render_pass,

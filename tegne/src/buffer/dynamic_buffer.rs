@@ -47,7 +47,7 @@ impl DynamicBuffer {
     pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
         let size = mem::size_of::<T>() * data.len();
         let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
-        copy::data_to_buffer(&device, data, self.memory, size);
+        copy::data_to_buffer(&device, data, self.memory, size)?;
         Ok(())
     }
 

@@ -10,6 +10,7 @@ pub(crate) use attachment::AttachmentOptions;
 pub use material::Material;
 pub use material::MaterialOptions;
 pub(crate) use render_pass::RenderPass;
+pub(crate) use render_pass::RenderPasses;
 pub use shader::Shader;
 pub use shader::ShaderOptions;
 pub(crate) use shader_layout::ShaderLayout;

@@ -17,7 +17,6 @@ use surface::WindowArgs;
 pub(crate) use swapchain::Swapchain;
 pub(crate) use target::Order;
 pub use target::Target;
-pub(crate) use tegne::RenderPassType;
 pub use tegne::Tegne;
 pub use tegne::TegneOptions;
 use validator::Validator;

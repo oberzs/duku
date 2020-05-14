@@ -18,14 +18,12 @@ use crate::error::Result;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::instance::Device;
-use crate::instance::RenderPassType;
 use crate::mesh::Mesh;
 use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
-use crate::shaders::RenderPass;
+use crate::shaders::RenderPasses;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
-use crate::utils::OrError;
 use builtin_font::builtin_fonts;
 pub(crate) use builtin_font::BuiltinFont;
 use builtin_material::builtin_materials;
@@ -63,7 +61,7 @@ pub struct Id<T>(u32, PhantomData<*const T>);
 impl Objects {
     pub(crate) fn new(
         device: &Arc<Device>,
-        passes: &HashMap<RenderPassType, RenderPass>,
+        passes: &RenderPasses,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
     ) -> Result<Self> {
@@ -92,10 +90,8 @@ impl Objects {
         id
     }
 
-    pub(crate) fn texture(&self, id: Id<Texture>) -> RefMut<'_, Texture> {
-        RefMut::map(self.textures.borrow_mut(), |ts| {
-            ts.get_mut(&id).expect("texture does not exist")
-        })
+    pub(crate) fn texture(&self, id: Id<Texture>) -> Option<RefMut<'_, Texture>> {
+        ref_mut_filter_map(self.textures.borrow_mut(), |ts| ts.get_mut(&id))
     }
 
     pub(crate) fn add_material(&self, material: Material) -> Id<Material> {
@@ -108,10 +104,8 @@ impl Objects {
         id
     }
 
-    pub(crate) fn material(&self, id: Id<Material>) -> RefMut<'_, Material> {
-        RefMut::map(self.materials.borrow_mut(), |ts| {
-            ts.get_mut(&id).expect("material does not exist")
-        })
+    pub(crate) fn material(&self, id: Id<Material>) -> Option<RefMut<'_, Material>> {
+        ref_mut_filter_map(self.materials.borrow_mut(), |ms| ms.get_mut(&id))
     }
 
     pub(crate) fn add_mesh(&self, mesh: Mesh) -> Id<Mesh> {
@@ -124,10 +118,8 @@ impl Objects {
         id
     }
 
-    pub(crate) fn mesh(&self, id: Id<Mesh>) -> RefMut<'_, Mesh> {
-        RefMut::map(self.meshes.borrow_mut(), |ts| {
-            ts.get_mut(&id).expect("mesh does not exist")
-        })
+    pub(crate) fn mesh(&self, id: Id<Mesh>) -> Option<RefMut<'_, Mesh>> {
+        ref_mut_filter_map(self.meshes.borrow_mut(), |ms| ms.get_mut(&id))
     }
 
     pub(crate) fn add_shader(&self, shader: Shader) -> Id<Shader> {
@@ -144,10 +136,8 @@ impl Objects {
     //     self.shaders.borrow_mut().insert(id, shader);
     // }
 
-    pub(crate) fn shader(&self, id: Id<Shader>) -> RefMut<'_, Shader> {
-        RefMut::map(self.shaders.borrow_mut(), |ts| {
-            ts.get_mut(&id).expect("shader does not exist")
-        })
+    pub(crate) fn shader(&self, id: Id<Shader>) -> Option<RefMut<'_, Shader>> {
+        ref_mut_filter_map(self.shaders.borrow_mut(), |ss| ss.get_mut(&id))
     }
 
     pub(crate) fn builtins(&self) -> &Builtins {
@@ -158,7 +148,7 @@ impl Objects {
 impl Builtins {
     fn new(
         device: &Arc<Device>,
-        passes: &HashMap<RenderPassType, RenderPass>,
+        passes: &RenderPasses,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
     ) -> Result<Self> {
@@ -186,30 +176,24 @@ impl Builtins {
         })
     }
 
-    pub(crate) fn mesh(&self, mesh: BuiltinMesh) -> &Mesh {
-        self.meshes.get(&mesh).or_error("mesh builtins not setup")
+    pub(crate) fn mesh(&self, mesh: BuiltinMesh) -> Option<&Mesh> {
+        self.meshes.get(&mesh)
     }
 
-    pub(crate) fn material(&self, material: BuiltinMaterial) -> &Material {
-        self.materials
-            .get(&material)
-            .or_error("material builtins not setup")
+    pub(crate) fn material(&self, material: BuiltinMaterial) -> Option<&Material> {
+        self.materials.get(&material)
     }
 
-    pub(crate) fn shader(&self, shader: BuiltinShader) -> &Shader {
-        self.shaders
-            .get(&shader)
-            .or_error("shader builtins not setup")
+    pub(crate) fn shader(&self, shader: BuiltinShader) -> Option<&Shader> {
+        self.shaders.get(&shader)
     }
 
-    pub(crate) fn texture(&self, texture: BuiltinTexture) -> &Texture {
-        self.textures
-            .get(&texture)
-            .or_error("texture builtins not setup")
+    pub(crate) fn texture(&self, texture: BuiltinTexture) -> Option<&Texture> {
+        self.textures.get(&texture)
     }
 
-    pub(crate) fn font(&self, font: BuiltinFont) -> &Font {
-        self.fonts.get(&font).or_error("font builtins not setup")
+    pub(crate) fn font(&self, font: BuiltinFont) -> Option<&Font> {
+        self.fonts.get(&font)
     }
 }
 
@@ -234,3 +218,13 @@ impl<T> Clone for Id<T> {
 
 impl<T> Eq for Id<T> {}
 impl<T> Copy for Id<T> {}
+
+// temporary
+fn ref_mut_filter_map<T: ?Sized, U: ?Sized, F: FnOnce(&mut T) -> Option<&mut U>>(
+    mut orig: RefMut<'_, T>,
+    f: F,
+) -> Option<RefMut<'_, U>> {
+    f(&mut orig)
+        .map(|new| new as *mut U)
+        .map(|raw| RefMut::map(orig, |_| unsafe { &mut *raw }))
+}

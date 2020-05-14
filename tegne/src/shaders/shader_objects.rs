@@ -146,7 +146,7 @@ impl ImageUniforms {
                 anisotropy,
                 ..Default::default()
             },
-        );
+        )?;
         let linear_clamp_sampler = Sampler::new(
             device,
             SamplerOptions {
@@ -154,7 +154,7 @@ impl ImageUniforms {
                 address: SamplerAddress::Clamp,
                 ..Default::default()
             },
-        );
+        )?;
         let nearest_repeat_sampler = Sampler::new(
             device,
             SamplerOptions {
@@ -162,7 +162,7 @@ impl ImageUniforms {
                 filter: SamplerFilter::Nearest,
                 ..Default::default()
             },
-        );
+        )?;
 
         Ok(Self {
             descriptor,

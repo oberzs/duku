@@ -6,9 +6,6 @@
     // missing_docs,
     single_use_lifetimes,
     unused_qualifications,
-    trivial_casts,
-    trivial_numeric_casts,
-    box_pointers
 )]
 
 mod buffer;

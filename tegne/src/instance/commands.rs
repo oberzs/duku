@@ -47,7 +47,6 @@ use crate::images::LayoutChange;
 use crate::shaders::Descriptor;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
-use crate::utils::OrError;
 
 pub(crate) struct Commands {
     buffer: CommandBuffer,
@@ -57,27 +56,22 @@ pub(crate) struct Commands {
 }
 
 impl Commands {
-    pub(crate) fn new(device: &Arc<Device>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
             .queue_family_index(device.properties().graphics_index)
             .build();
 
-        let pool = unsafe {
-            device
-                .logical()
-                .create_command_pool(&pool_info, None)
-                .or_error("cannot create command pool")
-        };
+        let pool = unsafe { device.logical().create_command_pool(&pool_info, None)? };
 
-        let buffer = create_buffer(device, pool);
+        let buffer = create_buffer(device, pool)?;
 
-        Self {
+        Ok(Self {
             buffer,
             pool,
             device: Arc::downgrade(device),
             dropped: false,
-        }
+        })
     }
 
     pub(crate) fn reset(&mut self) -> Result<()> {
@@ -85,10 +79,9 @@ impl Commands {
         unsafe {
             device
                 .logical()
-                .reset_command_pool(self.pool, CommandPoolResetFlags::empty())
-                .or_error("cannot reset command pool");
+                .reset_command_pool(self.pool, CommandPoolResetFlags::empty())?;
         }
-        self.buffer = create_buffer(&device, self.pool);
+        self.buffer = create_buffer(&device, self.pool)?;
         Ok(())
     }
 
@@ -98,8 +91,7 @@ impl Commands {
         unsafe {
             device
                 .logical()
-                .begin_command_buffer(self.buffer, &begin_info)
-                .or_error("cannot begin command buffer");
+                .begin_command_buffer(self.buffer, &begin_info)?;
         }
         Ok(())
     }
@@ -111,8 +103,7 @@ impl Commands {
         unsafe {
             device
                 .logical()
-                .begin_command_buffer(self.buffer, &begin_info)
-                .or_error("cannot begin command buffer");
+                .begin_command_buffer(self.buffer, &begin_info)?;
         }
         Ok(())
     }
@@ -120,10 +111,7 @@ impl Commands {
     pub(crate) fn end(&self) -> Result<CommandBuffer> {
         let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            device
-                .logical()
-                .end_command_buffer(self.buffer)
-                .or_error("cannot end command buffer");
+            device.logical().end_command_buffer(self.buffer)?;
         }
         Ok(self.buffer)
     }
@@ -406,16 +394,12 @@ impl Drop for Commands {
     }
 }
 
-fn create_buffer(device: &Arc<Device>, pool: CommandPool) -> CommandBuffer {
+fn create_buffer(device: &Arc<Device>, pool: CommandPool) -> Result<CommandBuffer> {
     let info = CommandBufferAllocateInfo::builder()
         .command_pool(pool)
         .level(CommandBufferLevel::PRIMARY)
         .command_buffer_count(1);
 
-    unsafe {
-        device
-            .logical()
-            .allocate_command_buffers(&info)
-            .or_error("cannot allocate command buffers")[0]
-    }
+    let buffer = unsafe { device.logical().allocate_command_buffers(&info)?[0] };
+    Ok(buffer)
 }

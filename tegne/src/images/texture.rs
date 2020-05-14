@@ -55,7 +55,7 @@ impl Texture {
             size as usize,
         )?;
 
-        copy::data_to_buffer(&device, data, staging_memory, size as usize);
+        copy::data_to_buffer(&device, data, staging_memory, size as usize)?;
 
         let image = Image::new(
             device,
@@ -74,7 +74,7 @@ impl Texture {
             },
         )?;
 
-        let cmd = Commands::new(device);
+        let cmd = Commands::new(device)?;
         cmd.begin_one_time()?;
         cmd.change_image_layout(&image)
             .with_mips(0, mip_levels)
@@ -91,7 +91,9 @@ impl Texture {
         }
 
         let image_index = image_uniforms.image_count() as i32;
-        image_uniforms.add(image.view());
+        if let Some(view) = image.view() {
+            image_uniforms.add(view);
+        }
 
         Ok(Self {
             _image: image,

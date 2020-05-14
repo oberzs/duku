@@ -12,7 +12,6 @@ use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::shaders::ImageUniforms;
-use crate::utils::OrError;
 
 pub struct Font {
     texture: Texture,
@@ -49,29 +48,20 @@ impl Font {
         let mut atlas_source = vec![];
         let mut image_source = vec![];
 
-        for file in archive.entries().or_error("invalid shader file") {
-            let mut file = file.or_error("invalid shader file");
+        for file in archive.entries()? {
+            let mut file = file?;
 
-            let path = file
-                .header()
-                .path()
-                .or_error("invalid shader file")
-                .to_str()
-                .or_error("invalid shader file")
-                .to_string();
+            let path = file.header().path()?.into_owned();
 
-            if path == "atlas.json" {
-                file.read_to_end(&mut atlas_source)
-                    .or_error("cannot read atlas");
+            if path.ends_with("atlas.json") {
+                file.read_to_end(&mut atlas_source)?;
             }
-            if path == "atlas.img" {
-                file.read_to_end(&mut image_source)
-                    .or_error("cannot read image");
+            if path.ends_with("atlas.img") {
+                file.read_to_end(&mut image_source)?;
             }
         }
 
-        let atlas: JsonAtlasMetrics =
-            serde_json::from_slice(&atlas_source).or_error("invalid font atlas format");
+        let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
         let texture = Texture::from_raw_rgba(
             device,

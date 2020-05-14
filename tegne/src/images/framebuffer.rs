@@ -22,9 +22,9 @@ use crate::instance::Device;
 use crate::instance::Swapchain;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
+use crate::shaders::RenderPasses;
 use crate::shaders::ShaderLayout;
 use crate::shaders::WorldUniforms;
-use crate::utils::OrError;
 
 pub struct Framebuffer {
     vk: VkFramebuffer,
@@ -41,13 +41,14 @@ impl Framebuffer {
     pub(crate) fn window(
         device: &Arc<Device>,
         swapchain: &Swapchain,
-        render_pass: &RenderPass,
+        render_passes: &RenderPasses,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
     ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
         let extent = device.properties().extent;
+        let render_pass = render_passes.window();
 
         swapchain
             .iter_images()?
@@ -112,13 +113,14 @@ impl Framebuffer {
 
     pub(crate) fn color(
         device: &Arc<Device>,
-        render_pass: &RenderPass,
+        render_passes: &RenderPasses,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
     ) -> Result<Self> {
         let mut images = vec![];
+        let render_pass = render_passes.color();
 
         // depth
         images.push(Image::new(
@@ -176,13 +178,14 @@ impl Framebuffer {
 
     pub(crate) fn depth(
         device: &Arc<Device>,
-        render_pass: &RenderPass,
+        render_passes: &RenderPasses,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
     ) -> Result<Self> {
         let mut images = vec![];
+        let render_pass = render_passes.depth();
 
         // depth
         images.push(Image::new(
@@ -218,7 +221,7 @@ impl Framebuffer {
         width: u32,
         height: u32,
     ) -> Result<Self> {
-        let format = if images.last().or_error("no images").is_depth_format() {
+        let format = if images[images.len() - 1].is_depth_format() {
             ImageFormat::Depth
         } else {
             ImageFormat::Bgra
@@ -235,7 +238,7 @@ impl Framebuffer {
             },
         )?;
 
-        let cmd = Commands::new(device);
+        let cmd = Commands::new(device)?;
         cmd.begin_one_time()?;
         cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
@@ -243,9 +246,11 @@ impl Framebuffer {
         device.submit_buffer(cmd.end()?)?;
 
         let shader_index = image_uniforms.image_count() as i32;
-        image_uniforms.add(shader_image.view());
+        if let Some(view) = shader_image.view() {
+            image_uniforms.add(view);
+        }
 
-        let attachments = images.iter().map(|i| i.view()).collect::<Vec<_>>();
+        let attachments = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
 
         let info = FramebufferCreateInfo::builder()
             .render_pass(render_pass.vk())
@@ -255,12 +260,7 @@ impl Framebuffer {
             .layers(1)
             .build();
 
-        let vk = unsafe {
-            device
-                .logical()
-                .create_framebuffer(&info, None)
-                .or_error("cannot create framebuffer")
-        };
+        let vk = unsafe { device.logical().create_framebuffer(&info, None)? };
 
         let world_uniforms = WorldUniforms::new(device, shader_layout)?;
 
@@ -277,10 +277,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn blit_to_shader_image(&self, cmd: &Ref<'_, Commands>) -> Result<()> {
-        let image = self
-            .attachment_images
-            .last()
-            .or_error("no attachment images");
+        let image = &self.attachment_images[self.attachment_images.len() - 1];
         let is_depth = image.is_depth_format();
 
         if is_depth {

@@ -36,7 +36,7 @@ impl FixedBuffer {
             size,
         )?;
 
-        copy::data_to_buffer(device, data, staging_memory, size);
+        copy::data_to_buffer(device, data, staging_memory, size)?;
 
         let (vk, memory) = alloc::buffer(
             device,

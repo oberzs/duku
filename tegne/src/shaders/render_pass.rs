@@ -17,6 +17,12 @@ use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::instance::Device;
 
+pub(crate) struct RenderPasses {
+    window: RenderPass,
+    color: RenderPass,
+    depth: RenderPass,
+}
+
 pub(crate) struct RenderPass {
     vk: VkRenderPass,
     has_msaa_attachment: bool,
@@ -29,6 +35,32 @@ struct RenderPassOptions {
     color_attachment: Option<Attachment>,
     msaa_attachment: Option<Attachment>,
     dependency: Option<SubpassDependency>,
+}
+
+impl RenderPasses {
+    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
+        let window = RenderPass::window(device)?;
+        let color = RenderPass::color(device)?;
+        let depth = RenderPass::depth(device)?;
+
+        Ok(Self {
+            window,
+            color,
+            depth,
+        })
+    }
+
+    pub(crate) fn window(&self) -> &RenderPass {
+        &self.window
+    }
+
+    pub(crate) fn color(&self) -> &RenderPass {
+        &self.color
+    }
+
+    pub(crate) fn depth(&self) -> &RenderPass {
+        &self.depth
+    }
 }
 
 impl RenderPass {

@@ -31,7 +31,6 @@ use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Samples;
-use crate::utils::OrError;
 
 pub(crate) struct Image {
     width: u32,
@@ -121,12 +120,7 @@ impl Image {
                     .sharing_mode(SharingMode::EXCLUSIVE)
                     .samples(samples.flag()?);
 
-                let vk = unsafe {
-                    device
-                        .logical()
-                        .create_image(&image_info, None)
-                        .or_error("cannot create texture image")
-                };
+                let vk = unsafe { device.logical().create_image(&image_info, None)? };
 
                 // alloc memory
                 let mem_requirements =
@@ -141,19 +135,11 @@ impl Image {
                     .allocation_size(mem_requirements.size)
                     .memory_type_index(mem_type);
 
-                let memory = unsafe {
-                    device
-                        .logical()
-                        .allocate_memory(&alloc_info, None)
-                        .or_error("cannot allocate texture memory")
-                };
+                let memory = unsafe { device.logical().allocate_memory(&alloc_info, None)? };
 
                 // bind memory
                 unsafe {
-                    device
-                        .logical()
-                        .bind_image_memory(vk, memory, 0)
-                        .or_error("cannot bind texture memory");
+                    device.logical().bind_image_memory(vk, memory, 0)?;
                 }
 
                 (vk, Some(memory))
@@ -184,14 +170,7 @@ impl Image {
                 .format(options.format.flag())
                 .subresource_range(subresource);
 
-            unsafe {
-                Some(
-                    device
-                        .logical()
-                        .create_image_view(&view_info, None)
-                        .or_error("cannot create image view"),
-                )
-            }
+            unsafe { Some(device.logical().create_image_view(&view_info, None)?) }
         } else {
             None
         };
@@ -231,7 +210,7 @@ impl Image {
             })
             .build();
 
-        let cmd = Commands::new(&device);
+        let cmd = Commands::new(&device)?;
         cmd.begin_one_time()?;
         cmd.copy_buffer_to_image(src, self.vk, region)?;
         device.submit_buffer(cmd.end()?)?;
@@ -244,7 +223,7 @@ impl Image {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let cmd = Commands::new(&device);
+        let cmd = Commands::new(&device)?;
         cmd.begin_one_time()?;
 
         for i in 1..self.mip_levels {
@@ -316,8 +295,8 @@ impl Image {
         self.vk
     }
 
-    pub(crate) fn view(&self) -> ImageView {
-        self.view.or_error("image does not have a view")
+    pub(crate) fn view(&self) -> Option<ImageView> {
+        self.view
     }
 
     pub(crate) fn is_depth_format(&self) -> bool {

@@ -3,12 +3,10 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::instance::Device;
-use crate::instance::RenderPassType;
-use crate::shaders::RenderPass;
+use crate::shaders::RenderPasses;
 use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::shaders::ShaderOptions;
-use crate::utils::OrError;
 
 macro_rules! include_shader {
     ($path:expr) => {
@@ -28,17 +26,13 @@ pub(crate) enum BuiltinShader {
 
 pub(crate) fn builtin_shaders(
     device: &Arc<Device>,
-    passes: &HashMap<RenderPassType, RenderPass>,
+    passes: &RenderPasses,
     layout: &ShaderLayout,
 ) -> Result<HashMap<BuiltinShader, Shader>> {
     let mut map = HashMap::new();
 
-    let color_pass = passes
-        .get(&RenderPassType::Color)
-        .or_error("render passes not setup");
-    let depth_pass = passes
-        .get(&RenderPassType::Depth)
-        .or_error("render passes not setup");
+    let color_pass = passes.color();
+    let depth_pass = passes.depth();
 
     let phong = include_shader!("phong.shader");
     let unshaded = include_shader!("unshaded.shader");

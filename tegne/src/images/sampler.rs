@@ -10,8 +10,8 @@ use std::sync::Arc;
 use std::sync::Weak;
 
 use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::Device;
-use crate::utils::OrError;
 
 pub(crate) struct Sampler {
     vk: VkSampler,
@@ -38,7 +38,7 @@ pub(crate) enum SamplerAddress {
 }
 
 impl Sampler {
-    pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Result<Self> {
         let info = SamplerCreateInfo::builder()
             .mag_filter(options.filter.flag())
             .min_filter(options.filter.flag())
@@ -56,17 +56,12 @@ impl Sampler {
             .min_lod(0.0)
             .max_lod(16.0);
 
-        let vk = unsafe {
-            device
-                .logical()
-                .create_sampler(&info, None)
-                .or_error("cannot create sampler")
-        };
+        let vk = unsafe { device.logical().create_sampler(&info, None)? };
 
-        Self {
+        Ok(Self {
             vk,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn vk(&self) -> VkSampler {
