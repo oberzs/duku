@@ -36,6 +36,7 @@ use super::Extensions;
 use super::Surface;
 use super::Swapchain;
 use super::Vulkan;
+use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::utils::clamp;
@@ -177,7 +178,7 @@ impl Device {
         error("cannot find suitable GPU");
     }
 
-    pub(crate) fn next_frame(&self, swapchain: &Swapchain) {
+    pub(crate) fn next_frame(&self, swapchain: &Swapchain) -> Result<()> {
         self.current_frame
             .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
         let current = self.current_frame.get() as usize;
@@ -190,9 +191,10 @@ impl Device {
         fence::reset(&self.logical, wait);
 
         // reset command recorder
-        let recorder = &mut self.commands.borrow_mut()[current];
-        recorder.reset();
-        recorder.begin();
+        let cmd = &mut self.commands.borrow_mut()[current];
+        cmd.reset()?;
+        cmd.begin()?;
+        Ok(())
     }
 
     pub(crate) fn commands(&self) -> Ref<'_, Commands> {
@@ -216,12 +218,12 @@ impl Device {
         }
     }
 
-    pub(crate) fn submit(&self) {
+    pub(crate) fn submit(&self) -> Result<()> {
         let current = self.current_frame.get() as usize;
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
         let done = self.sync_queue_submit[current];
-        let buffers = [self.commands.borrow()[current].end()];
+        let buffers = [self.commands.borrow()[current].end()?];
         let stage_mask = [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let info = [SubmitInfo::builder()
@@ -235,6 +237,7 @@ impl Device {
                 .queue_submit(self.graphics_queue, &info, done)
                 .or_error("cannot submit draw command buffer")
         };
+        Ok(())
     }
 
     pub(crate) fn present(&self, swapchain: &Swapchain) {

@@ -12,6 +12,7 @@ use std::sync::Weak;
 
 use super::Attachment;
 use super::AttachmentOptions;
+use crate::error::ErrorKind;
 use crate::images::ImageLayout;
 use crate::instance::Device;
 use crate::utils::OrError;
@@ -243,16 +244,17 @@ impl RenderPass {
     pub(crate) fn vk(&self) -> VkRenderPass {
         self.vk
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for RenderPass {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
-            self.device().logical().destroy_render_pass(self.vk, None);
+            device.logical().destroy_render_pass(self.vk, None);
         }
     }
 }

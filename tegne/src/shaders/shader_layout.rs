@@ -22,6 +22,8 @@ use std::sync::Weak;
 use super::PushConstants;
 use crate::buffer::Buffer;
 use crate::buffer::DynamicBuffer;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::Device;
 use crate::utils::OrError;
 
@@ -160,14 +162,15 @@ impl ShaderLayout {
         }
     }
 
-    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
+    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<DescriptorSet> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.world_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
         let set = unsafe {
-            self.device()
+            device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate world descriptor set")[0]
@@ -190,22 +193,23 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            self.device()
+            device
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
 
-        set
+        Ok(set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> DescriptorSet {
+    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<DescriptorSet> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.material_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
         let set = unsafe {
-            self.device()
+            device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate material descriptor set")[0]
@@ -228,54 +232,57 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            self.device()
+            device
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
 
-        set
+        Ok(set)
     }
 
-    pub(crate) fn image_set(&self) -> DescriptorSet {
+    pub(crate) fn image_set(&self) -> Result<DescriptorSet> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.image_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts)
             .build();
 
-        unsafe {
-            self.device()
+        let set = unsafe {
+            device
                 .logical()
                 .allocate_descriptor_sets(&set_alloc_info)
                 .or_error("cannot allocate image descriptor set")[0]
-        }
+        };
+        Ok(set)
     }
 
     pub(crate) fn pipeline(&self) -> PipelineLayout {
         self.pipeline_layout
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for ShaderLayout {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
-            self.device()
+            device
                 .logical()
                 .destroy_pipeline_layout(self.pipeline_layout, None);
-            self.device()
+            device
                 .logical()
                 .destroy_descriptor_set_layout(self.world_layout, None);
-            self.device()
+            device
                 .logical()
                 .destroy_descriptor_set_layout(self.material_layout, None);
-            self.device()
+            device
                 .logical()
                 .destroy_descriptor_set_layout(self.image_layout, None);
-            self.device()
+            device
                 .logical()
                 .destroy_descriptor_pool(self.descriptor_pool, None);
         }

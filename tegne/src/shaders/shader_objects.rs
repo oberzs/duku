@@ -18,13 +18,14 @@ use tegne_math::Vector4;
 use super::ShaderLayout;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::images::Sampler;
 use crate::images::SamplerAddress;
 use crate::images::SamplerFilter;
 use crate::images::SamplerOptions;
 use crate::instance::Device;
-use crate::utils::OrError;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
@@ -91,17 +92,17 @@ pub(crate) struct ImageUniforms {
 pub(crate) struct Descriptor(pub u32, pub DescriptorSet);
 
 impl WorldUniforms {
-    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
         let buffer = DynamicBuffer::new::<WorldObject>(device, 1, BufferType::Uniform);
 
-        let descriptor_set = layout.world_set(&buffer);
+        let descriptor_set = layout.world_set(&buffer)?;
         let descriptor = Descriptor(0, descriptor_set);
 
-        Self { buffer, descriptor }
+        Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update(&self, data: WorldObject) {
-        self.buffer.update_data(&[data]);
+    pub(crate) fn update(&self, data: WorldObject) -> Result<()> {
+        self.buffer.update_data(&[data])
     }
 
     pub(crate) fn descriptor(&self) -> Descriptor {
@@ -110,17 +111,17 @@ impl WorldUniforms {
 }
 
 impl MaterialUniforms {
-    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
         let buffer = DynamicBuffer::new::<MaterialObject>(device, 1, BufferType::Uniform);
 
-        let descriptor_set = layout.material_set(&buffer);
+        let descriptor_set = layout.material_set(&buffer)?;
         let descriptor = Descriptor(1, descriptor_set);
 
-        Self { buffer, descriptor }
+        Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update(&self, data: MaterialObject) {
-        self.buffer.update_data(&[data]);
+    pub(crate) fn update(&self, data: MaterialObject) -> Result<()> {
+        self.buffer.update_data(&[data])
     }
 
     pub(crate) fn descriptor(&self) -> Descriptor {
@@ -129,11 +130,15 @@ impl MaterialUniforms {
 }
 
 impl ImageUniforms {
-    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        layout: &ShaderLayout,
+        anisotropy: f32,
+    ) -> Result<Self> {
         debug!("creating image uniforms");
         info!("using anisotropy level {}", anisotropy);
 
-        let descriptor_set = layout.image_set();
+        let descriptor_set = layout.image_set()?;
         let descriptor = Descriptor(2, descriptor_set);
         let linear_repeat_sampler = Sampler::new(
             device,
@@ -159,7 +164,7 @@ impl ImageUniforms {
             },
         );
 
-        Self {
+        Ok(Self {
             descriptor,
             linear_repeat_sampler,
             linear_clamp_sampler,
@@ -167,7 +172,7 @@ impl ImageUniforms {
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub(crate) fn image_count(&self) -> u32 {
@@ -179,7 +184,9 @@ impl ImageUniforms {
         self.should_update.set(true);
     }
 
-    pub(crate) fn update_if_needed(&self) {
+    pub(crate) fn update_if_needed(&self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
+
         if self.should_update.get() {
             let image_infos = (0..100)
                 .map(|i| {
@@ -223,18 +230,16 @@ impl ImageUniforms {
 
             let writes = [image_write, sampler_write];
             unsafe {
-                self.device().logical().update_descriptor_sets(&writes, &[]);
+                device.logical().update_descriptor_sets(&writes, &[]);
             }
 
             self.should_update.set(false);
         }
+
+        Ok(())
     }
 
     pub(crate) fn descriptor(&self) -> Descriptor {
         self.descriptor
-    }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
     }
 }

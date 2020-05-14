@@ -8,6 +8,7 @@ use super::Descriptor;
 use super::MaterialObject;
 use super::MaterialUniforms;
 use super::ShaderLayout;
+use crate::error::Result;
 use crate::instance::Device;
 
 pub struct Material {
@@ -46,10 +47,10 @@ impl Material {
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
         options: MaterialOptions,
-    ) -> Self {
-        let uniforms = MaterialUniforms::new(device, shader_layout);
+    ) -> Result<Self> {
+        let uniforms = MaterialUniforms::new(device, shader_layout)?;
 
-        Self {
+        Ok(Self {
             albedo_tint: options.albedo_tint,
             font_width: options.font_width,
             font_edge: options.font_edge,
@@ -63,7 +64,7 @@ impl Material {
             arg_4: options.arg_4,
             uniforms,
             should_update: Cell::new(true),
-        }
+        })
     }
 
     pub fn set_albedo_tint(&mut self, tint: impl Into<Vector3>) {
@@ -121,7 +122,7 @@ impl Material {
         self.should_update.set(true);
     }
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+    pub(crate) fn descriptor(&self) -> Result<Descriptor> {
         if self.should_update.get() {
             self.uniforms.update(MaterialObject {
                 albedo_tint: self.albedo_tint,
@@ -135,9 +136,9 @@ impl Material {
                 arg_2: self.arg_2,
                 arg_3: self.arg_3,
                 arg_4: self.arg_4,
-            });
+            })?;
         }
-        self.uniforms.descriptor()
+        Ok(self.uniforms.descriptor())
     }
 }
 

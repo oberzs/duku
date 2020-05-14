@@ -10,6 +10,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
 use crate::buffer::FixedBuffer;
+use crate::error::Result;
 use crate::instance::Device;
 use crate::utils::error;
 pub(crate) use vertex::Vertex;
@@ -33,7 +34,7 @@ pub struct MeshOptions<'slice> {
 }
 
 impl Mesh {
-    pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Result<Self> {
         if options.vertices.is_empty() {
             error("no vertices in mesh");
         }
@@ -52,7 +53,7 @@ impl Mesh {
         }
 
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex);
-        let index_buffer = FixedBuffer::new::<u32>(device, options.triangles, BufferType::Index);
+        let index_buffer = FixedBuffer::new::<u32>(device, options.triangles, BufferType::Index)?;
 
         let vertices = options.vertices.to_vec();
 
@@ -81,7 +82,7 @@ impl Mesh {
             }
         }
 
-        Self {
+        Ok(Self {
             vertices,
             uvs,
             normals,
@@ -89,7 +90,7 @@ impl Mesh {
             index_buffer,
             should_update: Cell::new(true),
             drawn_triangles: index_count as u32 / 3,
-        }
+        })
     }
 
     pub fn set_vertices(&mut self, vertices: &[Vector3]) {
@@ -111,7 +112,7 @@ impl Mesh {
         self.drawn_triangles = count;
     }
 
-    pub(crate) fn vk_vertex_buffer(&self) -> VkBuffer {
+    pub(crate) fn vk_vertex_buffer(&self) -> Result<VkBuffer> {
         if self.should_update.get() {
             let vertices = self
                 .vertices
@@ -124,10 +125,10 @@ impl Mesh {
                     norm: *normal,
                 })
                 .collect::<Vec<_>>();
-            self.vertex_buffer.update_data(&vertices);
+            self.vertex_buffer.update_data(&vertices)?;
             self.should_update.set(false);
         }
-        self.vertex_buffer.vk_buffer()
+        Ok(self.vertex_buffer.vk_buffer())
     }
 
     pub(crate) fn vk_index_buffer(&self) -> VkBuffer {

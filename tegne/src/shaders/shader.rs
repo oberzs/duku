@@ -39,6 +39,7 @@ use tar::Archive;
 
 use super::RenderPass;
 use super::ShaderLayout;
+use crate::error::ErrorKind;
 use crate::instance::Device;
 use crate::instance::Samples;
 use crate::mesh::Vertex;
@@ -262,18 +263,17 @@ impl Shader {
     pub(crate) fn pipeline(&self) -> Pipeline {
         self.pipeline
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for Shader {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
-            self.device()
-                .logical()
-                .destroy_pipeline(self.pipeline, None);
+            device.logical().destroy_pipeline(self.pipeline, None);
         }
     }
 }

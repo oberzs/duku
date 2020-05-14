@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::instance::Device;
 use crate::shaders::Material;
 use crate::shaders::ShaderLayout;
@@ -13,13 +14,13 @@ pub(crate) enum BuiltinMaterial {
 pub(crate) fn builtin_materials(
     device: &Arc<Device>,
     layout: &ShaderLayout,
-) -> HashMap<BuiltinMaterial, Material> {
+) -> Result<HashMap<BuiltinMaterial, Material>> {
     let mut map = HashMap::new();
 
     map.insert(
         BuiltinMaterial::White,
-        Material::new(device, layout, Default::default()),
+        Material::new(device, layout, Default::default())?,
     );
 
-    map
+    Ok(map)
 }

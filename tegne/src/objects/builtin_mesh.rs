@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
+use crate::error::Result;
 use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
@@ -14,14 +15,14 @@ pub(crate) enum BuiltinMesh {
     Sphere,
 }
 
-pub(crate) fn builtin_meshes(device: &Arc<Device>) -> HashMap<BuiltinMesh, Mesh> {
+pub(crate) fn builtin_meshes(device: &Arc<Device>) -> Result<HashMap<BuiltinMesh, Mesh>> {
     let mut map = HashMap::new();
-    map.insert(BuiltinMesh::Cube, create_cube(device));
-    map.insert(BuiltinMesh::Sphere, create_sphere(device, 2));
-    map
+    map.insert(BuiltinMesh::Cube, create_cube(device)?);
+    map.insert(BuiltinMesh::Sphere, create_sphere(device, 2)?);
+    Ok(map)
 }
 
-fn create_cube(device: &Arc<Device>) -> Mesh {
+fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
     let vertices = &[
         // bottom
         Vector3::new(-0.5, -0.5, -0.5),
@@ -64,7 +65,7 @@ fn create_cube(device: &Arc<Device>) -> Mesh {
     )
 }
 
-fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Mesh {
+fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     let mut vertices = vec![];
     let mut triangles = vec![];
 

@@ -44,7 +44,7 @@ impl ForwardRenderer {
         depth_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
-    ) -> Self {
+    ) -> Result<Self> {
         let shadow_framebuffer = Framebuffer::depth(
             device,
             depth_pass,
@@ -52,12 +52,12 @@ impl ForwardRenderer {
             shader_layout,
             2048,
             2048,
-        );
+        )?;
 
-        Self {
+        Ok(Self {
             shadow_framebuffer,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
     pub fn draw(&self, options: ForwardDrawOptions<'_>) -> Result<()> {
@@ -86,57 +86,58 @@ impl ForwardRenderer {
         let cmd = device.commands();
 
         // shadow mapping
-        cmd.begin_render_pass(&self.shadow_framebuffer, options.depth_pass, clear);
-        self.setup_pass(&cmd, &self.shadow_framebuffer);
-        self.bind_world(&cmd, &self.shadow_framebuffer, world_object, &options);
+        cmd.begin_render_pass(&self.shadow_framebuffer, options.depth_pass, clear)?;
+        self.setup_pass(&cmd, &self.shadow_framebuffer)?;
+        self.bind_world(&cmd, &self.shadow_framebuffer, world_object, &options)?;
 
         let shadow_shader = options.objects.builtins().shader(BuiltinShader::Shadow);
-        self.bind_shader(&cmd, shadow_shader.pipeline());
+        self.bind_shader(&cmd, shadow_shader.pipeline())?;
 
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
-                self.bind_material(&cmd, m_order.material(), &options);
+                self.bind_material(&cmd, m_order.material(), &options)?;
                 for order in m_order.orders() {
                     if order.has_shadows {
-                        self.draw_order(&cmd, order, &options);
+                        self.draw_order(&cmd, order, &options)?;
                     }
                 }
             }
         }
 
-        cmd.end_render_pass();
-        self.shadow_framebuffer.blit_to_shader_image(&cmd);
+        cmd.end_render_pass()?;
+        self.shadow_framebuffer.blit_to_shader_image(&cmd)?;
 
         // normal render
-        cmd.begin_render_pass(options.framebuffer, options.color_pass, clear);
-        self.setup_pass(&cmd, options.framebuffer);
-        self.bind_world(&cmd, options.framebuffer, world_object, &options);
+        cmd.begin_render_pass(options.framebuffer, options.color_pass, clear)?;
+        self.setup_pass(&cmd, options.framebuffer)?;
+        self.bind_world(&cmd, options.framebuffer, world_object, &options)?;
 
         for s_order in options.target.orders_by_shader() {
-            self.bind_shader(&cmd, s_order.shader());
+            self.bind_shader(&cmd, s_order.shader())?;
             for m_order in s_order.orders_by_material() {
-                self.bind_material(&cmd, m_order.material(), &options);
+                self.bind_material(&cmd, m_order.material(), &options)?;
                 for order in m_order.orders() {
-                    self.draw_order(&cmd, order, &options);
+                    self.draw_order(&cmd, order, &options)?;
                 }
             }
         }
 
         // wireframe render
         let wireframe_shader = options.objects.builtins().shader(BuiltinShader::Wireframe);
-        self.bind_shader(&cmd, wireframe_shader.pipeline());
+        self.bind_shader(&cmd, wireframe_shader.pipeline())?;
         for order in options.target.wireframe_orders() {
-            self.draw_order(&cmd, order, &options);
+            self.draw_order(&cmd, order, &options)?;
         }
 
-        cmd.end_render_pass();
+        cmd.end_render_pass()?;
 
         Ok(())
     }
 
-    fn setup_pass(&self, cmd: &Ref<'_, Commands>, framebuffer: &Framebuffer) {
-        cmd.set_view(framebuffer.width(), framebuffer.height());
-        cmd.set_line_width(1.0);
+    fn setup_pass(&self, cmd: &Ref<'_, Commands>, framebuffer: &Framebuffer) -> Result<()> {
+        cmd.set_view(framebuffer.width(), framebuffer.height())?;
+        cmd.set_line_width(1.0)?;
+        Ok(())
     }
 
     fn bind_world(
@@ -145,16 +146,18 @@ impl ForwardRenderer {
         framebuffer: &Framebuffer,
         object: WorldObject,
         options: &ForwardDrawOptions<'_>,
-    ) {
-        framebuffer.world_uniforms().update(object);
+    ) -> Result<()> {
+        framebuffer.world_uniforms().update(object)?;
         cmd.bind_descriptor(
             framebuffer.world_uniforms().descriptor(),
             options.shader_layout.pipeline(),
-        );
+        )?;
+        Ok(())
     }
 
-    fn bind_shader(&self, cmd: &Ref<'_, Commands>, shader: Pipeline) {
-        cmd.bind_pipeline(shader);
+    fn bind_shader(&self, cmd: &Ref<'_, Commands>, shader: Pipeline) -> Result<()> {
+        cmd.bind_pipeline(shader)?;
+        Ok(())
     }
 
     fn bind_material(
@@ -162,20 +165,27 @@ impl ForwardRenderer {
         cmd: &Ref<'_, Commands>,
         descriptor: Descriptor,
         options: &ForwardDrawOptions<'_>,
-    ) {
-        cmd.bind_descriptor(descriptor, options.shader_layout.pipeline());
+    ) -> Result<()> {
+        cmd.bind_descriptor(descriptor, options.shader_layout.pipeline())?;
+        Ok(())
     }
 
-    fn draw_order(&self, cmd: &Ref<'_, Commands>, order: Order, options: &ForwardDrawOptions<'_>) {
+    fn draw_order(
+        &self,
+        cmd: &Ref<'_, Commands>,
+        order: Order,
+        options: &ForwardDrawOptions<'_>,
+    ) -> Result<()> {
         cmd.set_push_constant(
             PushConstants {
                 model_mat: order.model,
                 albedo_index: order.albedo_index,
             },
             options.shader_layout.pipeline(),
-        );
-        cmd.bind_vertex_buffer(order.vertex_buffer);
-        cmd.bind_index_buffer(order.index_buffer);
-        cmd.draw(order.index_count);
+        )?;
+        cmd.bind_vertex_buffer(order.vertex_buffer)?;
+        cmd.bind_index_buffer(order.index_buffer)?;
+        cmd.draw(order.index_count)?;
+        Ok(())
     }
 }

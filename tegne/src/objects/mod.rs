@@ -14,6 +14,7 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::instance::Device;
@@ -65,10 +66,10 @@ impl Objects {
         passes: &HashMap<RenderPassType, RenderPass>,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
-    ) -> Self {
-        let builtins = Builtins::new(device, passes, layout, uniforms);
+    ) -> Result<Self> {
+        let builtins = Builtins::new(device, passes, layout, uniforms)?;
 
-        Self {
+        Ok(Self {
             builtins,
             textures: RefCell::new(HashMap::new()),
             max_texture_id: Cell::new(0),
@@ -78,7 +79,7 @@ impl Objects {
             max_mesh_id: Cell::new(0),
             shaders: RefCell::new(HashMap::new()),
             max_shader_id: Cell::new(0),
-        }
+        })
     }
 
     pub(crate) fn add_texture(&self, texture: Texture) -> Id<Texture> {
@@ -139,9 +140,9 @@ impl Objects {
         id
     }
 
-    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) {
-        self.shaders.borrow_mut().insert(id, shader);
-    }
+    // pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) {
+    //     self.shaders.borrow_mut().insert(id, shader);
+    // }
 
     pub(crate) fn shader(&self, id: Id<Shader>) -> RefMut<'_, Shader> {
         RefMut::map(self.shaders.borrow_mut(), |ts| {
@@ -160,29 +161,29 @@ impl Builtins {
         passes: &HashMap<RenderPassType, RenderPass>,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
-    ) -> Self {
+    ) -> Result<Self> {
         debug!("creating builtin meshes");
-        let meshes = builtin_meshes(device);
+        let meshes = builtin_meshes(device)?;
 
         debug!("creating builtin shaders");
         let shaders = builtin_shaders(device, passes, layout);
 
         debug!("creating builtin textures");
-        let textures = builtin_textures(device, uniforms);
+        let textures = builtin_textures(device, uniforms)?;
 
         debug!("creating builtin materials");
-        let materials = builtin_materials(device, layout);
+        let materials = builtin_materials(device, layout)?;
 
         debug!("creating builtin fonts");
-        let fonts = builtin_fonts(device, uniforms);
+        let fonts = builtin_fonts(device, uniforms)?;
 
-        Self {
+        Ok(Self {
             meshes,
             shaders,
             textures,
             materials,
             fonts,
-        }
+        })
     }
 
     pub(crate) fn mesh(&self, mesh: BuiltinMesh) -> &Mesh {

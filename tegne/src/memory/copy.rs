@@ -6,6 +6,7 @@ use std::ffi::c_void;
 use std::ptr;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::utils::OrError;
@@ -29,9 +30,15 @@ pub(crate) fn data_to_buffer<T: Copy>(
     }
 }
 
-pub(crate) fn buffer_to_buffer(device: &Arc<Device>, src: Buffer, dst: Buffer, size: usize) {
+pub(crate) fn buffer_to_buffer(
+    device: &Arc<Device>,
+    src: Buffer,
+    dst: Buffer,
+    size: usize,
+) -> Result<()> {
     let cmd = Commands::new(device);
-    cmd.begin_one_time();
-    cmd.copy_buffer(src, dst, size);
-    device.submit_buffer(cmd.end());
+    cmd.begin_one_time()?;
+    cmd.copy_buffer(src, dst, size)?;
+    device.submit_buffer(cmd.end()?);
+    Ok(())
 }

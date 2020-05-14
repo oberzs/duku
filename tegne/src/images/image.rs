@@ -26,6 +26,8 @@ use std::cmp;
 use std::sync::Arc;
 use std::sync::Weak;
 
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Samples;
@@ -206,7 +208,9 @@ impl Image {
         }
     }
 
-    pub(crate) fn copy_data_from(&self, src: Buffer) {
+    pub(crate) fn copy_data_from(&self, src: Buffer) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
+
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)
@@ -227,25 +231,28 @@ impl Image {
             })
             .build();
 
-        let cmd = Commands::new(&self.device());
-        cmd.begin_one_time();
-        cmd.copy_buffer_to_image(src, self.vk, region);
-        self.device().submit_buffer(cmd.end());
+        let cmd = Commands::new(&device);
+        cmd.begin_one_time()?;
+        cmd.copy_buffer_to_image(src, self.vk, region)?;
+        device.submit_buffer(cmd.end()?);
+        Ok(())
     }
 
-    pub(crate) fn generate_mipmaps(&self) {
+    pub(crate) fn generate_mipmaps(&self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
+
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let cmd = Commands::new(&self.device());
-        cmd.begin_one_time();
+        let cmd = Commands::new(&device);
+        cmd.begin_one_time()?;
 
         for i in 1..self.mip_levels {
             cmd.change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .change_from_write()
                 .change_to_read()
-                .record();
+                .record()?;
 
             let src_offsets = [
                 Offset3D { x: 0, y: 0, z: 0 },
@@ -286,22 +293,23 @@ impl Image {
                 .dst_subresource(dst_subresource)
                 .build();
 
-            cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
+            cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR)?;
 
             cmd.change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .change_from_read()
                 .change_to_shader_read()
-                .record();
+                .record()?;
         }
 
         cmd.change_image_layout(self)
             .with_mips(self.mip_levels - 1, 1)
             .change_from_write()
             .change_to_shader_read()
-            .record();
+            .record()?;
 
-        self.device().submit_buffer(cmd.end());
+        device.submit_buffer(cmd.end()?);
+        Ok(())
     }
 
     pub(crate) fn vk(&self) -> VkImage {
@@ -315,21 +323,22 @@ impl Image {
     pub(crate) fn is_depth_format(&self) -> bool {
         self.format == ImageFormat::Depth
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for Image {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
             if let Some(view) = self.view {
-                self.device().logical().destroy_image_view(view, None);
+                device.logical().destroy_image_view(view, None);
             }
             if let Some(memory) = self.memory {
-                self.device().logical().destroy_image(self.vk, None);
-                self.device().logical().free_memory(memory, None);
+                device.logical().destroy_image(self.vk, None);
+                device.logical().free_memory(memory, None);
             }
         }
     }

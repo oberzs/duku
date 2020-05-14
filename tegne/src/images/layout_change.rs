@@ -7,6 +7,7 @@ use ash::vk::QUEUE_FAMILY_IGNORED;
 
 use super::Image;
 use super::ImageLayout;
+use crate::error::Result;
 use crate::instance::Commands;
 
 pub(crate) struct LayoutChange<'a> {
@@ -116,7 +117,7 @@ impl<'a> LayoutChange<'a> {
         self
     }
 
-    pub(crate) fn record(&self) {
+    pub(crate) fn record(&self) -> Result<()> {
         let aspect_mask = if self.image.is_depth_format() {
             ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL
         } else {
@@ -142,6 +143,8 @@ impl<'a> LayoutChange<'a> {
             .build();
 
         self.cmd
-            .set_pipeline_barrier(barrier, self.src_stage, self.dst_stage);
+            .set_pipeline_barrier(barrier, self.src_stage, self.dst_stage)?;
+
+        Ok(())
     }
 }

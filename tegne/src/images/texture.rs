@@ -8,6 +8,7 @@ use super::Image;
 use super::ImageFormat;
 use super::ImageOptions;
 use super::ImageUsage;
+use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::memory::alloc;
@@ -26,7 +27,7 @@ impl Texture {
         width: u32,
         height: u32,
         image_uniforms: &ImageUniforms,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut rgba = vec![];
         rgba.reserve(data.len() + data.len() / 3);
         for c in data.chunks(3) {
@@ -42,7 +43,7 @@ impl Texture {
         width: u32,
         height: u32,
         image_uniforms: &ImageUniforms,
-    ) -> Self {
+    ) -> Result<Self> {
         let mip_levels = (cmp::max(width, height) as f32).log2().floor() as u32 + 1;
 
         let size = width * height * 4;
@@ -74,15 +75,15 @@ impl Texture {
         );
 
         let cmd = Commands::new(device);
-        cmd.begin_one_time();
+        cmd.begin_one_time()?;
         cmd.change_image_layout(&image)
             .with_mips(0, mip_levels)
             .change_to_write()
-            .record();
-        device.submit_buffer(cmd.end());
+            .record()?;
+        device.submit_buffer(cmd.end()?);
 
-        image.copy_data_from(staging_buffer);
-        image.generate_mipmaps();
+        image.copy_data_from(staging_buffer)?;
+        image.generate_mipmaps()?;
 
         unsafe {
             device.logical().destroy_buffer(staging_buffer, None);
@@ -92,10 +93,10 @@ impl Texture {
         let image_index = image_uniforms.image_count() as i32;
         image_uniforms.add(image.view());
 
-        Self {
+        Ok(Self {
             _image: image,
             image_index,
-        }
+        })
     }
 
     pub(crate) fn image_index(&self) -> i32 {

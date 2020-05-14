@@ -9,6 +9,7 @@ use ash::vk::SamplerMipmapMode;
 use std::sync::Arc;
 use std::sync::Weak;
 
+use crate::error::ErrorKind;
 use crate::instance::Device;
 use crate::utils::OrError;
 
@@ -71,16 +72,17 @@ impl Sampler {
     pub(crate) fn vk(&self) -> VkSampler {
         self.vk
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for Sampler {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
-            self.device().logical().destroy_sampler(self.vk, None);
+            device.logical().destroy_sampler(self.vk, None);
         }
     }
 }

@@ -38,6 +38,8 @@ use std::sync::Arc;
 use std::sync::Weak;
 
 use super::Device;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::images::Framebuffer;
 use crate::images::Image;
 use crate::images::ImageLayout;
@@ -78,45 +80,52 @@ impl Commands {
         }
     }
 
-    pub(crate) fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device()
+            device
                 .logical()
                 .reset_command_pool(self.pool, CommandPoolResetFlags::empty())
                 .or_error("cannot reset command pool");
         }
-        self.buffer = create_buffer(&self.device(), self.pool);
+        self.buffer = create_buffer(&device, self.pool);
+        Ok(())
     }
 
-    pub(crate) fn begin(&self) {
+    pub(crate) fn begin(&self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let begin_info = CommandBufferBeginInfo::builder();
         unsafe {
-            self.device()
+            device
                 .logical()
                 .begin_command_buffer(self.buffer, &begin_info)
                 .or_error("cannot begin command buffer");
         }
+        Ok(())
     }
 
-    pub(crate) fn begin_one_time(&self) {
+    pub(crate) fn begin_one_time(&self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let begin_info =
             CommandBufferBeginInfo::builder().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
         unsafe {
-            self.device()
+            device
                 .logical()
                 .begin_command_buffer(self.buffer, &begin_info)
                 .or_error("cannot begin command buffer");
         }
+        Ok(())
     }
 
-    pub(crate) fn end(&self) -> CommandBuffer {
+    pub(crate) fn end(&self) -> Result<CommandBuffer> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device()
+            device
                 .logical()
                 .end_command_buffer(self.buffer)
                 .or_error("cannot end command buffer");
         }
-        self.buffer
+        Ok(self.buffer)
     }
 
     pub(crate) fn begin_render_pass(
@@ -124,7 +133,8 @@ impl Commands {
         framebuffer: &Framebuffer,
         render_pass: &RenderPass,
         clear: [f32; 4],
-    ) {
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let clear_values = framebuffer
             .iter_attachments()
             .map(|image| {
@@ -155,34 +165,40 @@ impl Commands {
             })
             .clear_values(&clear_values);
         unsafe {
-            self.device().logical().cmd_begin_render_pass(
-                self.buffer,
-                &info,
-                SubpassContents::INLINE,
-            );
+            device
+                .logical()
+                .cmd_begin_render_pass(self.buffer, &info, SubpassContents::INLINE);
         }
+        Ok(())
     }
 
-    pub(crate) fn end_render_pass(&self) {
+    pub(crate) fn end_render_pass(&self) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device().logical().cmd_end_render_pass(self.buffer);
+            device.logical().cmd_end_render_pass(self.buffer);
         }
+        Ok(())
     }
 
-    pub(crate) fn bind_pipeline(&self, pipeline: Pipeline) {
+    pub(crate) fn bind_pipeline(&self, pipeline: Pipeline) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device().logical().cmd_bind_pipeline(
-                self.buffer,
-                PipelineBindPoint::GRAPHICS,
-                pipeline,
-            );
+            device
+                .logical()
+                .cmd_bind_pipeline(self.buffer, PipelineBindPoint::GRAPHICS, pipeline);
         }
+        Ok(())
     }
 
-    pub(crate) fn bind_descriptor(&self, descriptor: Descriptor, layout: PipelineLayout) {
+    pub(crate) fn bind_descriptor(
+        &self,
+        descriptor: Descriptor,
+        layout: PipelineLayout,
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let sets = [descriptor.1];
         unsafe {
-            self.device().logical().cmd_bind_descriptor_sets(
+            device.logical().cmd_bind_descriptor_sets(
                 self.buffer,
                 PipelineBindPoint::GRAPHICS,
                 layout,
@@ -191,36 +207,43 @@ impl Commands {
                 &[],
             );
         }
+        Ok(())
     }
 
-    pub(crate) fn bind_vertex_buffer(&self, buffer: Buffer) {
+    pub(crate) fn bind_vertex_buffer(&self, buffer: Buffer) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let buffers = [buffer];
         let offsets = [0];
         unsafe {
-            self.device()
+            device
                 .logical()
                 .cmd_bind_vertex_buffers(self.buffer, 0, &buffers, &offsets);
         }
+        Ok(())
     }
 
-    pub(crate) fn bind_index_buffer(&self, buffer: Buffer) {
+    pub(crate) fn bind_index_buffer(&self, buffer: Buffer) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device().logical().cmd_bind_index_buffer(
-                self.buffer,
-                buffer,
-                0,
-                IndexType::UINT32,
-            );
+            device
+                .logical()
+                .cmd_bind_index_buffer(self.buffer, buffer, 0, IndexType::UINT32);
         }
+        Ok(())
     }
 
-    pub(crate) fn set_push_constant(&self, constants: PushConstants, layout: PipelineLayout) {
+    pub(crate) fn set_push_constant(
+        &self,
+        constants: PushConstants,
+        layout: PipelineLayout,
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
             let constant_ptr: *const PushConstants = &constants;
             let data: &[u8] =
                 slice::from_raw_parts(constant_ptr as *const u8, mem::size_of::<PushConstants>());
 
-            self.device().logical().cmd_push_constants(
+            device.logical().cmd_push_constants(
                 self.buffer,
                 layout,
                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
@@ -228,17 +251,21 @@ impl Commands {
                 data,
             );
         }
+        Ok(())
     }
 
-    pub(crate) fn draw(&self, count: u32) {
+    pub(crate) fn draw(&self, count: u32) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device()
+            device
                 .logical()
                 .cmd_draw_indexed(self.buffer, count, 1, 0, 0, 0);
         }
+        Ok(())
     }
 
-    pub(crate) fn copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) {
+    pub(crate) fn copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let region = BufferCopy::builder()
             .src_offset(0)
             .dst_offset(0)
@@ -246,13 +273,15 @@ impl Commands {
             .build();
         let regions = [region];
         unsafe {
-            self.device()
+            device
                 .logical()
                 .cmd_copy_buffer(self.buffer, src, dst, &regions);
         }
+        Ok(())
     }
 
-    pub(crate) fn set_view(&self, width: u32, height: u32) {
+    pub(crate) fn set_view(&self, width: u32, height: u32) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let viewport = Viewport {
             x: 0.0,
             y: 0.0,
@@ -269,21 +298,20 @@ impl Commands {
         let scissors = [scissor];
 
         unsafe {
-            self.device()
+            device
                 .logical()
                 .cmd_set_viewport(self.buffer, 0, &viewports);
-            self.device()
-                .logical()
-                .cmd_set_scissor(self.buffer, 0, &scissors);
+            device.logical().cmd_set_scissor(self.buffer, 0, &scissors);
         }
+        Ok(())
     }
 
-    pub(crate) fn set_line_width(&self, width: f32) {
+    pub(crate) fn set_line_width(&self, width: f32) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         unsafe {
-            self.device()
-                .logical()
-                .cmd_set_line_width(self.buffer, width);
+            device.logical().cmd_set_line_width(self.buffer, width);
         }
+        Ok(())
     }
 
     pub(crate) fn set_pipeline_barrier(
@@ -291,10 +319,11 @@ impl Commands {
         barrier: ImageMemoryBarrier,
         src_stage: PipelineStageFlags,
         dst_stage: PipelineStageFlags,
-    ) {
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let barriers = [barrier];
         unsafe {
-            self.device().logical().cmd_pipeline_barrier(
+            device.logical().cmd_pipeline_barrier(
                 self.buffer,
                 src_stage,
                 dst_stage,
@@ -304,6 +333,7 @@ impl Commands {
                 &barriers,
             );
         }
+        Ok(())
     }
 
     pub(crate) fn copy_buffer_to_image(
@@ -311,10 +341,11 @@ impl Commands {
         buffer: Buffer,
         image: VkImage,
         region: BufferImageCopy,
-    ) {
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let regions = [region];
         unsafe {
-            self.device().logical().cmd_copy_buffer_to_image(
+            device.logical().cmd_copy_buffer_to_image(
                 self.buffer,
                 buffer,
                 image,
@@ -322,12 +353,20 @@ impl Commands {
                 &regions,
             );
         }
+        Ok(())
     }
 
-    pub(crate) fn blit_image(&self, src: VkImage, dst: VkImage, blit: ImageBlit, filter: Filter) {
+    pub(crate) fn blit_image(
+        &self,
+        src: VkImage,
+        dst: VkImage,
+        blit: ImageBlit,
+        filter: Filter,
+    ) -> Result<()> {
+        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let regions = [blit];
         unsafe {
-            self.device().logical().cmd_blit_image(
+            device.logical().cmd_blit_image(
                 self.buffer,
                 src,
                 ImageLayout::TransferSrc.flag(),
@@ -337,6 +376,7 @@ impl Commands {
                 filter,
             );
         }
+        Ok(())
     }
 
     pub(crate) fn change_image_layout<'a>(&'a self, image: &'a Image) -> LayoutChange<'a> {
@@ -349,21 +389,18 @@ impl Commands {
         }
         self.dropped = true;
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device
-            .upgrade()
-            .or_error("(command recorder) device has been dropped")
-    }
 }
 
 impl Drop for Commands {
     fn drop(&mut self) {
         if !self.dropped {
+            let device = self
+                .device
+                .upgrade()
+                .ok_or(ErrorKind::DeviceDropped)
+                .unwrap();
             unsafe {
-                self.device()
-                    .logical()
-                    .destroy_command_pool(self.pool, None);
+                device.logical().destroy_command_pool(self.pool, None);
             }
         }
     }

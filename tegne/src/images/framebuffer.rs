@@ -15,6 +15,8 @@ use super::Image;
 use super::ImageFormat;
 use super::ImageOptions;
 use super::ImageUsage;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Swapchain;
@@ -44,7 +46,7 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
         let extent = device.pick_extent(width, height);
@@ -107,7 +109,7 @@ impl Framebuffer {
                     extent.height,
                 )
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>>>()
     }
 
     pub(crate) fn color(
@@ -117,7 +119,7 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut images = vec![];
 
         // depth
@@ -181,7 +183,7 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut images = vec![];
 
         // depth
@@ -217,7 +219,7 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
-    ) -> Self {
+    ) -> Result<Self> {
         let format = if images.last().or_error("no images").is_depth_format() {
             ImageFormat::Depth
         } else {
@@ -236,11 +238,11 @@ impl Framebuffer {
         );
 
         let cmd = Commands::new(device);
-        cmd.begin_one_time();
+        cmd.begin_one_time()?;
         cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
-            .record();
-        device.submit_buffer(cmd.end());
+            .record()?;
+        device.submit_buffer(cmd.end()?);
 
         let shader_index = image_uniforms.image_count() as i32;
         image_uniforms.add(shader_image.view());
@@ -262,9 +264,9 @@ impl Framebuffer {
                 .or_error("cannot create framebuffer")
         };
 
-        let world_uniforms = WorldUniforms::new(device, shader_layout);
+        let world_uniforms = WorldUniforms::new(device, shader_layout)?;
 
-        Self {
+        Ok(Self {
             vk,
             width,
             height,
@@ -273,10 +275,10 @@ impl Framebuffer {
             attachment_images: images,
             world_uniforms,
             device: Arc::downgrade(device),
-        }
+        })
     }
 
-    pub(crate) fn blit_to_shader_image(&self, cmd: &Ref<'_, Commands>) {
+    pub(crate) fn blit_to_shader_image(&self, cmd: &Ref<'_, Commands>) -> Result<()> {
         let image = self
             .attachment_images
             .last()
@@ -287,17 +289,17 @@ impl Framebuffer {
             cmd.change_image_layout(image)
                 .change_from_depth_write()
                 .change_to_read()
-                .record();
+                .record()?;
         } else {
             cmd.change_image_layout(image)
                 .change_from_color_write()
                 .change_to_read()
-                .record();
+                .record()?;
         }
         cmd.change_image_layout(&self.shader_image)
             .change_from_shader_read()
             .change_to_write()
-            .record();
+            .record()?;
 
         let offsets = [
             Offset3D::default(),
@@ -332,23 +334,25 @@ impl Framebuffer {
             Filter::LINEAR
         };
 
-        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
+        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter)?;
 
         if is_depth {
             cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_depth_write()
-                .record();
+                .record()?;
         } else {
             cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_color_write()
-                .record();
+                .record()?;
         }
         cmd.change_image_layout(&self.shader_image)
             .change_from_write()
             .change_to_shader_read()
-            .record();
+            .record()?;
+
+        Ok(())
     }
 
     pub(crate) fn vk(&self) -> VkFramebuffer {
@@ -374,16 +378,17 @@ impl Framebuffer {
     pub(crate) fn world_uniforms(&self) -> &WorldUniforms {
         &self.world_uniforms
     }
-
-    fn device(&self) -> Arc<Device> {
-        self.device.upgrade().or_error("device has been dropped")
-    }
 }
 
 impl Drop for Framebuffer {
     fn drop(&mut self) {
+        let device = self
+            .device
+            .upgrade()
+            .ok_or(ErrorKind::DeviceDropped)
+            .unwrap();
         unsafe {
-            self.device().logical().destroy_framebuffer(self.vk, None);
+            device.logical().destroy_framebuffer(self.vk, None);
         }
     }
 }

@@ -91,14 +91,16 @@ impl Tegne {
 
         let shader_layout = ShaderLayout::new(&device);
 
-        let image_uniforms = ImageUniforms::new(&device, &shader_layout, options.anisotropy);
+        let image_uniforms = ImageUniforms::new(&device, &shader_layout, options.anisotropy)
+            .or_error("cannot create image uniforms");
 
         let mut render_passes = HashMap::new();
         render_passes.insert(RenderPassType::Color, RenderPass::color(&device));
         render_passes.insert(RenderPassType::Window, RenderPass::window(&device));
         render_passes.insert(RenderPassType::Depth, RenderPass::depth(&device));
 
-        let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms);
+        let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms)
+            .or_error("cannot create object storage");
 
         let window_pass = render_passes
             .get(&RenderPassType::Window)
@@ -115,10 +117,12 @@ impl Tegne {
             &shader_layout,
             window.width,
             window.height,
-        );
+        )
+        .or_error("cannot create window framebuffers");
 
         let forward_renderer =
-            ForwardRenderer::new(&device, &depth_pass, &image_uniforms, &shader_layout);
+            ForwardRenderer::new(&device, &depth_pass, &image_uniforms, &shader_layout)
+                .or_error("cannot create forward renderer");
 
         Self {
             start_time: Instant::now(),
@@ -167,21 +171,28 @@ impl Tegne {
     }
 
     pub fn begin_draw(&self) {
-        self.device.next_frame(&self.swapchain);
-        self.image_uniforms.update_if_needed();
-        self.device.commands().bind_descriptor(
-            self.image_uniforms.descriptor(),
-            self.shader_layout.pipeline(),
-        );
+        self.device
+            .next_frame(&self.swapchain)
+            .or_error("cannot start next frame");
+        self.image_uniforms
+            .update_if_needed()
+            .or_error("cannot update image uniforms");
+        self.device
+            .commands()
+            .bind_descriptor(
+                self.image_uniforms.descriptor(),
+                self.shader_layout.pipeline(),
+            )
+            .or_error("cannod bind descriptor");
     }
 
     pub fn end_draw(&self) {
-        self.device.submit();
+        self.device.submit().or_error("cannot end draw");
         self.device.present(&self.swapchain);
     }
 
     pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
-        let mut target = Target::new(&self.objects);
+        let mut target = Target::new(&self.objects).or_error("cannot create target");
         draw_callback(&mut target);
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
@@ -194,28 +205,32 @@ impl Tegne {
             .get(&RenderPassType::Depth)
             .or_error("render passes not setup");
 
-        self.forward_renderer.draw(ForwardDrawOptions {
-            framebuffer,
-            color_pass: window_pass,
-            depth_pass,
-            shader_layout: &self.shader_layout,
-            camera,
-            objects: &self.objects,
-            target,
-            time: self.start_time.elapsed().as_secs_f32(),
-        });
+        self.forward_renderer
+            .draw(ForwardDrawOptions {
+                framebuffer,
+                color_pass: window_pass,
+                depth_pass,
+                shader_layout: &self.shader_layout,
+                camera,
+                objects: &self.objects,
+                target,
+                time: self.start_time.elapsed().as_secs_f32(),
+            })
+            .or_error("cannot do forward render");
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
         debug!("creating rgba texture");
         let texture =
-            Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms);
+            Texture::from_raw_rgba(&self.device, raw, width, height, &self.image_uniforms)
+                .or_error("cannot create texture");
         self.objects.add_texture(texture)
     }
 
     pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
         debug!("creating rgb texture");
-        let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms);
+        let texture = Texture::from_raw_rgb(&self.device, raw, width, height, &self.image_uniforms)
+            .or_error("cannot create texture");
         self.objects.add_texture(texture)
     }
 
@@ -229,13 +244,14 @@ impl Tegne {
 
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
         debug!("creating mesh");
-        let mesh = Mesh::new(&self.device, options);
+        let mesh = Mesh::new(&self.device, options).or_error("cannot create mesh");
         self.objects.add_mesh(mesh)
     }
 
     pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
         debug!("creating material");
-        let material = Material::new(&self.device, &self.shader_layout, options);
+        let material = Material::new(&self.device, &self.shader_layout, options)
+            .or_error("cannot create material");
         self.objects.add_material(material)
     }
 
@@ -257,6 +273,7 @@ impl Tegne {
             width,
             height,
         )
+        .or_error("cannot create framebuffer")
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {

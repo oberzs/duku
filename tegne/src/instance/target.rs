@@ -4,6 +4,7 @@ use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
+use crate::error::Result;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::mesh::Mesh;
@@ -18,6 +19,7 @@ use crate::shaders::Descriptor;
 use crate::shaders::Light;
 use crate::shaders::Material;
 use crate::shaders::Shader;
+use crate::utils::OrError;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
@@ -53,31 +55,31 @@ pub(crate) struct Order {
 }
 
 impl<'a> Target<'a> {
-    pub(crate) fn new(objects: &'a Objects) -> Self {
+    pub(crate) fn new(objects: &'a Objects) -> Result<Self> {
         let material = objects.builtins().material(BuiltinMaterial::White);
         let shader = objects.builtins().shader(BuiltinShader::Phong);
         let texture = objects.builtins().texture(BuiltinTexture::White);
         let font = objects.builtins().font(BuiltinFont::NotoSans);
 
-        Self {
+        Ok(Self {
             orders_by_shader: vec![],
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             lights: vec![],
             current_shader: shader.pipeline(),
-            current_material: material.descriptor(),
+            current_material: material.descriptor()?,
             current_albedo: texture.image_index(),
             current_font: font,
             draw_wireframes: false,
             objects,
-        }
+        })
     }
 
     pub fn draw(&mut self, mesh: Id<Mesh>, transform: impl Into<Transform>) {
         let m = self.objects.mesh(mesh);
         self.add_order(Order {
             model: transform.into().as_matrix(),
-            vertex_buffer: m.vk_vertex_buffer(),
+            vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
             index_buffer: m.vk_index_buffer(),
             index_count: m.drawn_triangles() * 3,
             albedo_index: self.current_albedo,
@@ -89,7 +91,7 @@ impl<'a> Target<'a> {
         let m = self.objects.builtins().mesh(BuiltinMesh::Cube);
         self.add_order(Order {
             model: transform.into().as_matrix(),
-            vertex_buffer: m.vk_vertex_buffer(),
+            vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
             index_buffer: m.vk_index_buffer(),
             index_count: m.drawn_triangles() * 3,
             albedo_index: self.current_albedo,
@@ -101,7 +103,7 @@ impl<'a> Target<'a> {
         let m = self.objects.builtins().mesh(BuiltinMesh::Sphere);
         self.add_order(Order {
             model: transform.into().as_matrix(),
-            vertex_buffer: m.vk_vertex_buffer(),
+            vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
             index_buffer: m.vk_index_buffer(),
             index_count: m.drawn_triangles() * 3,
             albedo_index: self.current_albedo,
@@ -127,7 +129,7 @@ impl<'a> Target<'a> {
             let mesh = self.current_font.char_mesh(c);
             self.add_order(Order {
                 model: current_transform.as_matrix(),
-                vertex_buffer: mesh.vk_vertex_buffer(),
+                vertex_buffer: mesh.vk_vertex_buffer().or_error("cannot get vertex buffer"),
                 index_buffer: mesh.vk_index_buffer(),
                 index_count: mesh.drawn_triangles() * 3,
                 albedo_index: self.current_font.image_index(),
@@ -152,12 +154,18 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material(&mut self, material: Id<Material>) {
-        self.current_material = self.objects.material(material).descriptor();
+        self.current_material = self
+            .objects
+            .material(material)
+            .descriptor()
+            .or_error("cannot set material");
     }
 
     pub fn set_material_white(&mut self) {
         let material = self.objects.builtins().material(BuiltinMaterial::White);
-        self.current_material = material.descriptor();
+        self.current_material = material
+            .descriptor()
+            .or_error("cannot set material to white");
     }
 
     pub fn set_texture(&mut self, texture: Id<Texture>) {

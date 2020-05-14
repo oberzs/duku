@@ -7,6 +7,7 @@ use tegne_math::Vector2;
 use tegne_math::Vector3;
 
 use super::Texture;
+use crate::error::Result;
 use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
@@ -38,7 +39,11 @@ struct JsonCharMetrics {
 }
 
 impl Font {
-    pub(crate) fn new(device: &Arc<Device>, image_uniforms: &ImageUniforms, source: &[u8]) -> Self {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        image_uniforms: &ImageUniforms,
+        source: &[u8],
+    ) -> Result<Self> {
         let mut archive: Archive<&[u8]> = Archive::new(source);
 
         let mut atlas_source = vec![];
@@ -74,7 +79,7 @@ impl Font {
             atlas.atlas_size,
             atlas.atlas_size,
             image_uniforms,
-        );
+        )?;
 
         let mut char_data = HashMap::new();
         for (c, metrics) in atlas.char_metrics {
@@ -112,14 +117,14 @@ impl Font {
                     uvs,
                     ..Default::default()
                 },
-            );
+            )?;
 
             let data = CharData { mesh, advance };
 
             char_data.insert(c, data);
         }
 
-        Font { texture, char_data }
+        Ok(Font { texture, char_data })
     }
 
     pub(crate) fn char_mesh(&self, c: char) -> &Mesh {

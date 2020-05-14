@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::error::Result;
 use crate::images::Texture;
 use crate::instance::Device;
 use crate::shaders::ImageUniforms;
@@ -13,11 +14,11 @@ pub(crate) enum BuiltinTexture {
 pub(crate) fn builtin_textures(
     device: &Arc<Device>,
     uniforms: &ImageUniforms,
-) -> HashMap<BuiltinTexture, Texture> {
+) -> Result<HashMap<BuiltinTexture, Texture>> {
     let mut map = HashMap::new();
     map.insert(
         BuiltinTexture::White,
-        Texture::from_raw_rgba(device, &[255, 255, 255, 255], 1, 1, uniforms),
+        Texture::from_raw_rgba(device, &[255, 255, 255, 255], 1, 1, uniforms)?,
     );
-    map
+    Ok(map)
 }
