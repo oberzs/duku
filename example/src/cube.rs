@@ -1,6 +1,7 @@
 use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
+use tegne::Shader;
 use tegne::Target;
 use tegne::Tegne;
 use tegne::Texture;
@@ -11,6 +12,7 @@ use tegne::Vector3;
 pub struct Cube {
     mesh: Vec<Id<Mesh>>,
     texture: Id<Texture>,
+    shader: Id<Shader>,
     transform: Transform,
 }
 
@@ -21,20 +23,25 @@ impl Cube {
             "example/assets/prototype_512x512_{}.png",
             color.as_ref()
         ));
+        let shader =
+            tegne.create_shader_from_file_watch("example/assets/test.Shader", Default::default());
         let transform = Transform::from(pos.into());
 
         Self {
             mesh,
             texture,
+            shader,
             transform,
         }
     }
 
     pub fn draw(&self, target: &mut Target) {
+        target.set_shader(self.shader);
         target.set_texture(self.texture);
         for mesh in self.mesh.iter() {
             target.draw(*mesh, self.transform);
         }
+        target.set_shader_phong();
     }
 }
 

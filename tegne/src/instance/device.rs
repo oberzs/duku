@@ -29,7 +29,7 @@ use std::cell::Cell;
 use std::cell::Ref;
 use std::cell::RefCell;
 use std::ffi::CStr;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::CommandRecorder;
 use super::Extensions;
@@ -80,7 +80,7 @@ impl Device {
         exts: &Extensions,
         vsync: bool,
         msaa: u8,
-    ) -> Rc<Self> {
+    ) -> Arc<Self> {
         info!("looking for suitable GPU");
 
         let gpus = unsafe {
@@ -153,7 +153,7 @@ impl Device {
                     .map(|_| fence::create(&logical))
                     .collect::<Vec<_>>();
 
-                let device = Rc::new(Self {
+                let device = Arc::new(Self {
                     logical,
                     _physical: physical,
                     properties: props,

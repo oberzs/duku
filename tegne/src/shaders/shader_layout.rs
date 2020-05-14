@@ -16,8 +16,8 @@ use ash::vk::ShaderStageFlags;
 use ash::vk::WriteDescriptorSet;
 use log::debug;
 use std::mem;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use super::PushConstants;
 use crate::buffer::Buffer;
@@ -35,7 +35,7 @@ pub(crate) struct ShaderLayout {
 }
 
 impl ShaderLayout {
-    pub(crate) fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>) -> Self {
         debug!("creating shader layout");
 
         // world layout
@@ -156,7 +156,7 @@ impl ShaderLayout {
             material_layout,
             image_layout,
             descriptor_pool,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -255,7 +255,7 @@ impl ShaderLayout {
         self.pipeline_layout
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::instance::Device;
 use crate::shaders::Material;
@@ -11,7 +11,7 @@ pub(crate) enum BuiltinMaterial {
 }
 
 pub(crate) fn builtin_materials(
-    device: &Rc<Device>,
+    device: &Arc<Device>,
     layout: &ShaderLayout,
 ) -> HashMap<BuiltinMaterial, Material> {
     let mut map = HashMap::new();

@@ -8,8 +8,8 @@ use log::debug;
 use log::info;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 use tegne_math::Matrix4;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
@@ -91,7 +91,7 @@ pub(crate) struct ImageUniforms {
 pub(crate) struct Descriptor(pub u32, pub DescriptorSet);
 
 impl WorldUniforms {
-    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<WorldObject>(device, 1, BufferType::Uniform);
 
         let descriptor_set = layout.world_set(&buffer);
@@ -110,7 +110,7 @@ impl WorldUniforms {
 }
 
 impl MaterialUniforms {
-    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Self {
         let buffer = DynamicBuffer::new::<MaterialObject>(device, 1, BufferType::Uniform);
 
         let descriptor_set = layout.material_set(&buffer);
@@ -129,7 +129,7 @@ impl MaterialUniforms {
 }
 
 impl ImageUniforms {
-    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
         debug!("creating image uniforms");
         info!("using anisotropy level {}", anisotropy);
 
@@ -166,7 +166,7 @@ impl ImageUniforms {
             nearest_repeat_sampler,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -234,7 +234,7 @@ impl ImageUniforms {
         self.descriptor
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

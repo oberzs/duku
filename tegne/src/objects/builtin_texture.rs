@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::images::Texture;
 use crate::instance::Device;
@@ -11,7 +11,7 @@ pub(crate) enum BuiltinTexture {
 }
 
 pub(crate) fn builtin_textures(
-    device: &Rc<Device>,
+    device: &Arc<Device>,
     uniforms: &ImageUniforms,
 ) -> HashMap<BuiltinTexture, Texture> {
     let mut map = HashMap::new();

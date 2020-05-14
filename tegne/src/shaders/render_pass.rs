@@ -7,8 +7,8 @@ use ash::vk::RenderPassCreateInfo;
 use ash::vk::SubpassDependency;
 use ash::vk::SubpassDescription;
 use ash::vk::SUBPASS_EXTERNAL;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use super::Attachment;
 use super::AttachmentOptions;
@@ -31,7 +31,7 @@ struct RenderPassOptions {
 }
 
 impl RenderPass {
-    pub(crate) fn window(device: &Rc<Device>) -> Self {
+    pub(crate) fn window(device: &Arc<Device>) -> Self {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -88,7 +88,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    pub(crate) fn color(device: &Rc<Device>) -> Self {
+    pub(crate) fn color(device: &Arc<Device>) -> Self {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -145,7 +145,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    pub(crate) fn depth(device: &Rc<Device>) -> Self {
+    pub(crate) fn depth(device: &Arc<Device>) -> Self {
         let mut options = RenderPassOptions::default();
 
         // depth
@@ -177,7 +177,7 @@ impl RenderPass {
         Self::new(device, options)
     }
 
-    fn new(device: &Rc<Device>, options: RenderPassOptions) -> Self {
+    fn new(device: &Arc<Device>, options: RenderPassOptions) -> Self {
         let dependencies = [options.dependency.expect("subpass dependency not set")];
         let mut attachments = vec![];
         let mut subpass_builder =
@@ -232,7 +232,7 @@ impl RenderPass {
         Self {
             vk,
             has_msaa_attachment,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -244,7 +244,7 @@ impl RenderPass {
         self.vk
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

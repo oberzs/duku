@@ -4,14 +4,14 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryMapFlags;
 use std::ffi::c_void;
 use std::ptr;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
 use crate::utils::OrError;
 
 pub(crate) fn data_to_buffer<T: Copy>(
-    device: &Rc<Device>,
+    device: &Arc<Device>,
     src: &[T],
     dst: DeviceMemory,
     size: usize,
@@ -29,7 +29,7 @@ pub(crate) fn data_to_buffer<T: Copy>(
     }
 }
 
-pub(crate) fn buffer_to_buffer(device: &Rc<Device>, src: Buffer, dst: Buffer, size: usize) {
+pub(crate) fn buffer_to_buffer(device: &Arc<Device>, src: Buffer, dst: Buffer, size: usize) {
     let recorder = CommandRecorder::new(device);
     recorder.begin_one_time();
     recorder.copy_buffer(src, dst, size);

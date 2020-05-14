@@ -8,8 +8,8 @@ use ash::vk::ImageSubresourceLayers;
 use ash::vk::Offset3D;
 use log::debug;
 use std::cell::Ref;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use super::Image;
 use super::ImageFormat;
@@ -37,7 +37,7 @@ pub struct Framebuffer {
 
 impl Framebuffer {
     pub(crate) fn window(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         swapchain: &Swapchain,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
@@ -111,7 +111,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn color(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
@@ -175,7 +175,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn depth(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         render_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
@@ -210,7 +210,7 @@ impl Framebuffer {
     }
 
     fn from_images(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         images: Vec<Image>,
         image_uniforms: &ImageUniforms,
         render_pass: &RenderPass,
@@ -273,7 +273,7 @@ impl Framebuffer {
             shader_index,
             attachment_images: images,
             world_uniforms,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -382,7 +382,7 @@ impl Framebuffer {
         &self.world_uniforms
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

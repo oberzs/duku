@@ -1,6 +1,6 @@
 use ash::vk::Pipeline;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 use tegne_math::Camera;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
@@ -36,7 +36,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
 
 impl ForwardRenderer {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         depth_pass: &RenderPass,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
@@ -52,7 +52,7 @@ impl ForwardRenderer {
 
         Self {
             shadow_framebuffer,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -182,7 +182,7 @@ impl ForwardRenderer {
         recorder.draw(order.index_count);
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().expect("device does not exist")
     }
 }

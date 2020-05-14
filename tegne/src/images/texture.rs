@@ -2,7 +2,7 @@ use ash::version::DeviceV1_0;
 use ash::vk::BufferUsageFlags;
 use ash::vk::MemoryPropertyFlags;
 use std::cmp;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::Image;
 use super::ImageFormat;
@@ -21,7 +21,7 @@ pub struct Texture {
 
 impl Texture {
     pub(crate) fn from_raw_rgb(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         data: &[u8],
         width: u32,
         height: u32,
@@ -37,7 +37,7 @@ impl Texture {
     }
 
     pub(crate) fn from_raw_rgba(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         data: &[u8],
         width: u32,
         height: u32,

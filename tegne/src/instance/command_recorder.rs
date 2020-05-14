@@ -33,9 +33,9 @@ use ash::vk::SubpassContents;
 use ash::vk::Viewport;
 use ash::Device as LogicalDevice;
 use std::mem;
-use std::rc::Rc;
-use std::rc::Weak;
 use std::slice;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use super::Device;
 use crate::images::Framebuffer;
@@ -55,7 +55,7 @@ pub(crate) struct CommandRecorder {
 }
 
 impl CommandRecorder {
-    pub(crate) fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>) -> Self {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
             .queue_family_index(device.properties().graphics_index)
@@ -73,7 +73,7 @@ impl CommandRecorder {
         Self {
             buffer,
             pool,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
             dropped: false,
         }
     }
@@ -350,7 +350,7 @@ impl CommandRecorder {
         self.dropped = true;
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device
             .upgrade()
             .or_error("(command recorder) device has been dropped")
@@ -369,7 +369,7 @@ impl Drop for CommandRecorder {
     }
 }
 
-fn create_buffer(device: &Rc<Device>, pool: CommandPool) -> CommandBuffer {
+fn create_buffer(device: &Arc<Device>, pool: CommandPool) -> CommandBuffer {
     let info = CommandBufferAllocateInfo::builder()
         .command_pool(pool)
         .level(CommandBufferLevel::PRIMARY)

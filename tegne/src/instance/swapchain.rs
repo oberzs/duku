@@ -10,7 +10,7 @@ use ash::vk::SwapchainCreateInfoKHR;
 use ash::vk::SwapchainKHR;
 use log::debug;
 use std::cell::Cell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::Device;
 use super::Vulkan;
@@ -28,7 +28,7 @@ pub(crate) struct Swapchain {
 impl Swapchain {
     pub(crate) fn new(
         vulkan: &Vulkan,
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         window_surface: &WindowSurface,
         width: u32,
         height: u32,

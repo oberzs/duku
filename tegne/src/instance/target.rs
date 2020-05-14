@@ -17,6 +17,7 @@ use crate::objects::Objects;
 use crate::shaders::Descriptor;
 use crate::shaders::Light;
 use crate::shaders::Material;
+use crate::shaders::Shader;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
@@ -154,13 +155,22 @@ impl<'a> Target<'a> {
         self.current_material = self.objects.material(material).descriptor();
     }
 
+    pub fn set_material_white(&mut self) {
+        let material = self.objects.builtins().material(BuiltinMaterial::White);
+        self.current_material = material.descriptor();
+    }
+
     pub fn set_texture(&mut self, texture: Id<Texture>) {
         self.current_albedo = self.objects.texture(texture).image_index();
     }
 
-    pub fn set_material_white(&mut self) {
-        let material = self.objects.builtins().material(BuiltinMaterial::White);
-        self.current_material = material.descriptor();
+    pub fn set_shader(&mut self, shader: Id<Shader>) {
+        self.current_shader = self.objects.shader(shader).pipeline();
+    }
+
+    pub fn set_shader_phong(&mut self) {
+        let shader = self.objects.builtins().shader(BuiltinShader::Phong);
+        self.current_shader = shader.pipeline();
     }
 
     pub fn set_clear_color(&mut self, clear: [f32; 3]) {

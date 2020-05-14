@@ -46,23 +46,15 @@ fn main() {
         )
         .arg(
             Arg::with_name("dir")
-                .short("d")
                 .long("dir")
+                .short("d")
                 .takes_value(true)
                 .help("Input directory to import"),
         )
         .arg(
-            Arg::with_name("out")
-                .short("o")
-                .long("out")
-                .conflicts_with("dir")
-                .takes_value(true)
-                .help("Output file"),
-        )
-        .arg(
             Arg::with_name("out-dir")
                 .long("out-dir")
-                .conflicts_with("in")
+                .short("o")
                 .takes_value(true)
                 .help("Output directory"),
         )
@@ -76,8 +68,10 @@ fn main() {
 
     let input = opts.value_of("in").map(|p| Path::new(p));
     let dir = opts.value_of("dir").map(|p| Path::new(p));
-    let output = opts.value_of("out").map(|p| Path::new(p));
-    let output_dir = opts.value_of("out-dir").map(|p| Path::new(p));
+    let out_dir = opts
+        .value_of("out-dir")
+        .map(|p| Path::new(p))
+        .unwrap_or_else(|| Path::new("."));
     let watch = opts.is_present("watch");
 
     match (input, dir) {
@@ -85,18 +79,15 @@ fn main() {
             if !in_path.is_file() {
                 panic!("input is not a file");
             }
-            let def = default_out(in_path);
-            let out_path = output.unwrap_or(&def);
-            import_file(in_path, out_path).expect("cannot import file");
+            let out_path = create_out_path(in_path, out_dir);
+            import_file(in_path, &out_path).expect("cannot import file");
         }
         (None, Some(in_dir)) => {
             for entry in in_dir.read_dir().expect("dir is not a directory") {
                 if let Ok(entry) = entry {
                     let in_path = entry.path();
                     if in_path.is_file() {
-                        let dir = output_dir.unwrap_or_else(|| Path::new("."));
-                        let def = default_out(&in_path);
-                        let out_path = dir.join(def);
+                        let out_path = create_out_path(&in_path, out_dir);
                         import_file(&in_path, &out_path).expect("cannot import file");
                     }
                 }
@@ -115,14 +106,12 @@ fn main() {
         watcher
             .watch(path, RecursiveMode::NonRecursive)
             .expect("cannot watch path");
-        let dir = output_dir.unwrap_or_else(|| Path::new("."));
 
         loop {
             let event = rx.recv().unwrap();
-            if let DebouncedEvent::NoticeWrite(file_path) = event {
-                let def = default_out(&file_path);
-                let out_path = dir.join(def);
-                import_file(&file_path, &out_path).expect("cannot import file");
+            if let DebouncedEvent::NoticeWrite(in_path) = event {
+                let out_path = create_out_path(&in_path, out_dir);
+                import_file(&in_path, &out_path).expect("cannot import file");
             }
         }
     }
@@ -139,7 +128,7 @@ fn import_file(in_path: &Path, out_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn default_out(in_path: &Path) -> PathBuf {
+fn create_out_path(in_path: &Path, out_dir: &Path) -> PathBuf {
     let ext = in_path
         .extension()
         .map(|s| s.to_str().unwrap_or("out"))
@@ -148,5 +137,8 @@ fn default_out(in_path: &Path) -> PathBuf {
         .file_stem()
         .map(|s| s.to_str().unwrap_or("output"))
         .unwrap_or("output");
-    PathBuf::from(format!("{}.{}", name, ext))
+    let default_out = format!("{}.{}", name, ext);
+    let default_path = Path::new(&default_out);
+
+    out_dir.join(default_path)
 }

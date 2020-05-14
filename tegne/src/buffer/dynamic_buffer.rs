@@ -3,8 +3,8 @@ use ash::vk::Buffer as VkBuffer;
 use ash::vk::DeviceMemory;
 use ash::vk::MemoryPropertyFlags;
 use std::mem;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use super::Buffer;
 use super::BufferType;
@@ -21,7 +21,7 @@ pub(crate) struct DynamicBuffer {
 }
 
 impl DynamicBuffer {
-    pub(crate) fn new<T: Copy>(device: &Rc<Device>, len: usize, buffer_type: BufferType) -> Self {
+    pub(crate) fn new<T: Copy>(device: &Arc<Device>, len: usize, buffer_type: BufferType) -> Self {
         let size = mem::size_of::<T>() * len;
 
         let (vk, memory) = alloc::buffer(
@@ -35,7 +35,7 @@ impl DynamicBuffer {
             vk,
             memory,
             size: size as u32,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -48,7 +48,7 @@ impl DynamicBuffer {
         self.size
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

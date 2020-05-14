@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::images::Font;
 use crate::instance::Device;
@@ -11,7 +11,7 @@ pub(crate) enum BuiltinFont {
 }
 
 pub(crate) fn builtin_fonts(
-    device: &Rc<Device>,
+    device: &Arc<Device>,
     uniforms: &ImageUniforms,
 ) -> HashMap<BuiltinFont, Font> {
     let mut map = HashMap::new();

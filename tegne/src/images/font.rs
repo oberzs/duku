@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::Read;
-use std::rc::Rc;
+use std::sync::Arc;
 use tar::Archive;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
@@ -38,7 +38,7 @@ struct JsonCharMetrics {
 }
 
 impl Font {
-    pub(crate) fn new(device: &Rc<Device>, image_uniforms: &ImageUniforms, source: &[u8]) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, image_uniforms: &ImageUniforms, source: &[u8]) -> Self {
         let mut archive: Archive<&[u8]> = Archive::new(source);
 
         let mut atlas_source = vec![];

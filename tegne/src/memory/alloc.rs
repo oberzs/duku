@@ -6,12 +6,13 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryAllocateInfo;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::SharingMode;
+use std::sync::Arc;
 
 use crate::instance::Device;
 use crate::utils::OrError;
 
 pub(crate) fn buffer(
-    device: &Device,
+    device: &Arc<Device>,
     usage: BufferUsageFlags,
     properties: MemoryPropertyFlags,
     size: usize,

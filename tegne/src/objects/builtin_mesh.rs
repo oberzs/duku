@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::rc::Rc;
+use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
@@ -14,14 +14,14 @@ pub(crate) enum BuiltinMesh {
     Sphere,
 }
 
-pub(crate) fn builtin_meshes(device: &Rc<Device>) -> HashMap<BuiltinMesh, Mesh> {
+pub(crate) fn builtin_meshes(device: &Arc<Device>) -> HashMap<BuiltinMesh, Mesh> {
     let mut map = HashMap::new();
     map.insert(BuiltinMesh::Cube, create_cube(device));
     map.insert(BuiltinMesh::Sphere, create_sphere(device, 2));
     map
 }
 
-fn create_cube(device: &Rc<Device>) -> Mesh {
+fn create_cube(device: &Arc<Device>) -> Mesh {
     let vertices = &[
         // bottom
         Vector3::new(-0.5, -0.5, -0.5),
@@ -64,7 +64,7 @@ fn create_cube(device: &Rc<Device>) -> Mesh {
     )
 }
 
-fn create_sphere(device: &Rc<Device>, detail_level: u32) -> Mesh {
+fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut triangles = vec![];
 

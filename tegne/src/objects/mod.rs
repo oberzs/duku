@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::images::Font;
 use crate::images::Texture;
@@ -61,7 +61,7 @@ pub struct Id<T>(u32, PhantomData<*const T>);
 
 impl Objects {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         passes: &HashMap<RenderPassType, RenderPass>,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,
@@ -156,7 +156,7 @@ impl Objects {
 
 impl Builtins {
     fn new(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         passes: &HashMap<RenderPassType, RenderPass>,
         layout: &ShaderLayout,
         uniforms: &ImageUniforms,

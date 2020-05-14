@@ -2,7 +2,7 @@ use ash::vk::AttachmentDescription;
 use ash::vk::AttachmentLoadOp;
 use ash::vk::AttachmentReference;
 use ash::vk::AttachmentStoreOp;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::images::ImageFormat;
 use crate::images::ImageLayout;
@@ -24,7 +24,7 @@ pub(crate) struct AttachmentOptions {
 }
 
 impl Attachment {
-    pub(crate) fn new(device: &Rc<Device>, options: AttachmentOptions) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: AttachmentOptions) -> Self {
         let format = match options.layout {
             ImageLayout::Color => ImageFormat::Bgra,
             ImageLayout::Depth => ImageFormat::Depth,

@@ -6,8 +6,8 @@ use ash::vk::Sampler as VkSampler;
 use ash::vk::SamplerAddressMode;
 use ash::vk::SamplerCreateInfo;
 use ash::vk::SamplerMipmapMode;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use crate::instance::Device;
 use crate::utils::OrError;
@@ -37,7 +37,7 @@ pub(crate) enum SamplerAddress {
 }
 
 impl Sampler {
-    pub(crate) fn new(device: &Rc<Device>, options: SamplerOptions) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Self {
         let info = SamplerCreateInfo::builder()
             .mag_filter(options.filter.flag())
             .min_filter(options.filter.flag())
@@ -64,7 +64,7 @@ impl Sampler {
 
         Self {
             vk,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -72,7 +72,7 @@ impl Sampler {
         self.vk
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

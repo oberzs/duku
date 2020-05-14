@@ -1,9 +1,17 @@
 use image::GenericImageView;
 use log::debug;
+use notify::DebouncedEvent;
+use notify::RecommendedWatcher;
+use notify::RecursiveMode;
+use notify::Watcher;
 use std::cell::RefMut;
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::mpsc::channel;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 use std::time::Instant;
 use tegne_math::Camera;
 
@@ -44,7 +52,7 @@ pub struct Tegne {
     image_uniforms: ImageUniforms,
     shader_layout: ShaderLayout,
     swapchain: Swapchain,
-    device: Rc<Device>,
+    device: Arc<Device>,
     _window_surface: WindowSurface,
     _validator: Option<Validator>,
     _vulkan: Vulkan,
@@ -277,6 +285,46 @@ impl Tegne {
             options,
         );
         self.objects.add_shader(shader)
+    }
+
+    pub fn create_shader_from_file_watch(
+        &self,
+        path: impl AsRef<Path>,
+        options: ShaderOptions,
+    ) -> Id<Shader> {
+        let p = path.as_ref();
+        let source = fs::read(p).or_error(format!("cannot open shader {}", p.display()));
+        let id = self.create_shader(&source, options);
+
+        // setup watcher
+        // let (tx, rx) = channel();
+        // let mut watcher: RecommendedWatcher =
+        //     Watcher::new(tx, Duration::from_secs(1)).or_error("cannot watch system");
+        // watcher
+        //     .watch(p, RecursiveMode::NonRecursive)
+        //     .expect("cannot watch shader");
+
+        // thread::spawn(move || loop {
+        //     let event = rx.recv().or_error("watch event error");
+        //     if let DebouncedEvent::NoticeWrite(new_path) = event {
+        //         let new_source = fs::read(&new_path)
+        //             .or_error(format!("cannot open shader {}", new_path.display()));
+        //         // let render_pass = self
+        //         //     .render_passes
+        //         //     .get(&RenderPassType::Color)
+        //         //     .or_error("render passes not setup");
+        //         // let shader = Shader::new(
+        //         //     &self.device,
+        //         //     render_pass,
+        //         //     &self.shader_layout,
+        //         //     &new_source,
+        //         //     options,
+        //         // );
+        //         println!("new shader");
+        //     }
+        // });
+
+        id
     }
 }
 

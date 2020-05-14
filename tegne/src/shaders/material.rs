@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::rc::Rc;
+use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 use tegne_math::Vector4;
@@ -43,7 +43,7 @@ pub struct MaterialOptions {
 
 impl Material {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         shader_layout: &ShaderLayout,
         options: MaterialOptions,
     ) -> Self {

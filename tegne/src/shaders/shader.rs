@@ -33,8 +33,8 @@ use ash::vk::StencilOpState;
 use ash::vk::Viewport;
 use std::io::Cursor;
 use std::io::Read;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 use tar::Archive;
 
 use super::RenderPass;
@@ -59,7 +59,7 @@ pub struct ShaderOptions {
 
 impl Shader {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Arc<Device>,
         pass: &RenderPass,
         layout: &ShaderLayout,
         source: &[u8],
@@ -255,7 +255,7 @@ impl Shader {
 
         Self {
             pipeline,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -263,7 +263,7 @@ impl Shader {
         self.pipeline
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }
@@ -288,7 +288,7 @@ impl Default for ShaderOptions {
     }
 }
 
-fn create_shader_module(device: &Rc<Device>, source: &[u8]) -> ShaderModule {
+fn create_shader_module(device: &Arc<Device>, source: &[u8]) -> ShaderModule {
     let words = read_spv(&mut Cursor::new(&source[..])).or_error("cannot read spv");
     let info = ShaderModuleCreateInfo::builder().code(&words).build();
     unsafe {

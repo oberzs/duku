@@ -23,8 +23,8 @@ use ash::vk::MemoryPropertyFlags;
 use ash::vk::Offset3D;
 use ash::vk::SharingMode;
 use std::cmp;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::sync::Arc;
+use std::sync::Weak;
 
 use crate::instance::CommandRecorder;
 use crate::instance::Device;
@@ -84,7 +84,7 @@ pub(crate) enum ImageLayout {
 }
 
 impl Image {
-    pub(crate) fn new(device: &Rc<Device>, options: ImageOptions<'_>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: ImageOptions<'_>) -> Self {
         let mip_levels = if options.has_mipmaps {
             (cmp::max(options.width, options.height) as f32)
                 .log2()
@@ -202,7 +202,7 @@ impl Image {
             memory,
             view,
             format: options.format,
-            device: Rc::downgrade(device),
+            device: Arc::downgrade(device),
         }
     }
 
@@ -319,7 +319,7 @@ impl Image {
         self.format == ImageFormat::Depth
     }
 
-    fn device(&self) -> Rc<Device> {
+    fn device(&self) -> Arc<Device> {
         self.device.upgrade().or_error("device has been dropped")
     }
 }

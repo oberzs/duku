@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::instance::Device;
 use crate::instance::RenderPassType;
@@ -26,7 +26,7 @@ pub(crate) enum BuiltinShader {
 }
 
 pub(crate) fn builtin_shaders(
-    device: &Rc<Device>,
+    device: &Arc<Device>,
     passes: &HashMap<RenderPassType, RenderPass>,
     layout: &ShaderLayout,
 ) -> HashMap<BuiltinShader, Shader> {

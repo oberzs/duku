@@ -2,7 +2,7 @@ mod vertex;
 
 use ash::vk::Buffer as VkBuffer;
 use std::cell::Cell;
-use std::rc::Rc;
+use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
@@ -33,7 +33,7 @@ pub struct MeshOptions<'slice> {
 }
 
 impl Mesh {
-    pub(crate) fn new(device: &Rc<Device>, options: MeshOptions<'_>) -> Self {
+    pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Self {
         if options.vertices.is_empty() {
             error("no vertices in mesh");
         }

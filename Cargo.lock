@@ -1247,6 +1247,7 @@ dependencies = [
  "image",
  "log",
  "metal",
+ "notify",
  "serde",
  "serde_json",
  "tar",
