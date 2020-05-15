@@ -11,15 +11,17 @@ use crate::error::Result;
 use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::objects::Id;
+use crate::objects::Objects;
 use crate::shaders::ImageUniforms;
 
 pub struct Font {
-    texture: Texture,
+    texture: Id<Texture>,
     char_data: HashMap<char, CharData>,
 }
 
 struct CharData {
-    mesh: Mesh,
+    mesh: Id<Mesh>,
     advance: f32,
 }
 
@@ -41,6 +43,7 @@ impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
         image_uniforms: &ImageUniforms,
+        objects: &Objects,
         source: &[u8],
     ) -> Result<Self> {
         let mut archive: Archive<&[u8]> = Archive::new(source);
@@ -63,13 +66,13 @@ impl Font {
 
         let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
-        let texture = Texture::from_raw_rgba(
+        let texture = objects.add_texture(Texture::from_raw_rgba(
             device,
             &image_source,
             atlas.atlas_size,
             atlas.atlas_size,
             image_uniforms,
-        )?;
+        )?);
 
         let mut char_data = HashMap::new();
         for (c, metrics) in atlas.char_metrics {
@@ -99,7 +102,7 @@ impl Font {
 
             let triangles = &[0, 2, 3, 0, 3, 1];
 
-            let mesh = Mesh::new(
+            let mesh = objects.add_mesh(Mesh::new(
                 device,
                 MeshOptions {
                     vertices,
@@ -107,7 +110,7 @@ impl Font {
                     uvs,
                     ..Default::default()
                 },
-            )?;
+            )?);
 
             let data = CharData { mesh, advance };
 
@@ -117,10 +120,10 @@ impl Font {
         Ok(Font { texture, char_data })
     }
 
-    pub(crate) fn char_mesh(&self, c: char) -> &Mesh {
+    pub(crate) fn char_mesh(&self, c: char) -> Id<Mesh> {
         match self.char_data.get(&c) {
-            Some(data) => &data.mesh,
-            None => &self.char_data.get(&'?').expect("'?' char not loaded").mesh,
+            Some(data) => data.mesh,
+            None => self.char_data.get(&'?').expect("'?' char not loaded").mesh,
         }
     }
 
@@ -136,7 +139,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn image_index(&self) -> i32 {
-        self.texture.image_index()
+    pub(crate) fn texture(&self) -> Id<Texture> {
+        self.texture
     }
 }

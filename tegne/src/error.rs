@@ -24,7 +24,6 @@ pub enum ErrorKind {
     UnsupportedMsaa,
     NoSuitableGpu,
     NoSuitableMemoryType,
-    NoBuiltins,
     InvalidMsaa,
 }
 

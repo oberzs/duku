@@ -1,10 +1,10 @@
-mod builtin_font;
-mod builtin_material;
-mod builtin_mesh;
-mod builtin_shader;
-mod builtin_texture;
+mod builtin_fonts;
+mod builtin_materials;
+mod builtin_meshes;
+mod builtin_shaders;
+mod builtin_textures;
+mod builtins;
 
-use log::debug;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::cell::RefMut;
@@ -12,31 +12,20 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
-use crate::error::Result;
 use crate::images::Font;
 use crate::images::Texture;
-use crate::instance::Device;
 use crate::mesh::Mesh;
-use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
-use crate::shaders::RenderPasses;
 use crate::shaders::Shader;
-use crate::shaders::ShaderLayout;
-use builtin_font::builtin_fonts;
-pub(crate) use builtin_font::BuiltinFont;
-use builtin_material::builtin_materials;
-pub(crate) use builtin_material::BuiltinMaterial;
-use builtin_mesh::builtin_meshes;
-pub(crate) use builtin_mesh::BuiltinMesh;
-use builtin_shader::builtin_shaders;
-pub(crate) use builtin_shader::BuiltinShader;
-use builtin_texture::builtin_textures;
-pub(crate) use builtin_texture::BuiltinTexture;
+use builtin_fonts::BuiltinFonts;
+use builtin_materials::BuiltinMaterials;
+use builtin_meshes::BuiltinMeshes;
+use builtin_shaders::BuiltinShaders;
+use builtin_textures::BuiltinTextures;
+pub(crate) use builtins::Builtins;
 
 pub(crate) struct Objects {
-    builtins: Builtins,
     textures: RefCell<HashMap<Id<Texture>, Texture>>,
     max_texture_id: Cell<u32>,
     materials: RefCell<HashMap<Id<Material>, Material>>,
@@ -45,30 +34,16 @@ pub(crate) struct Objects {
     max_mesh_id: Cell<u32>,
     shaders: RefCell<HashMap<Id<Shader>, Shader>>,
     max_shader_id: Cell<u32>,
-}
-
-pub(crate) struct Builtins {
-    textures: HashMap<BuiltinTexture, Texture>,
-    shaders: HashMap<BuiltinShader, Shader>,
-    materials: HashMap<BuiltinMaterial, Material>,
-    meshes: HashMap<BuiltinMesh, Mesh>,
-    fonts: HashMap<BuiltinFont, Font>,
+    fonts: RefCell<HashMap<Id<Font>, Font>>,
+    max_font_id: Cell<u32>,
 }
 
 #[derive(Debug)]
 pub struct Id<T>(u32, PhantomData<*const T>);
 
 impl Objects {
-    pub(crate) fn new(
-        device: &Arc<Device>,
-        passes: &RenderPasses,
-        layout: &ShaderLayout,
-        uniforms: &ImageUniforms,
-    ) -> Result<Self> {
-        let builtins = Builtins::new(device, passes, layout, uniforms)?;
-
-        Ok(Self {
-            builtins,
+    pub(crate) fn new() -> Self {
+        Self {
             textures: RefCell::new(HashMap::new()),
             max_texture_id: Cell::new(0),
             materials: RefCell::new(HashMap::new()),
@@ -77,7 +52,9 @@ impl Objects {
             max_mesh_id: Cell::new(0),
             shaders: RefCell::new(HashMap::new()),
             max_shader_id: Cell::new(0),
-        })
+            fonts: RefCell::new(HashMap::new()),
+            max_font_id: Cell::new(0),
+        }
     }
 
     pub(crate) fn add_texture(&self, texture: Texture) -> Id<Texture> {
@@ -140,60 +117,18 @@ impl Objects {
         ref_mut_filter_map(self.shaders.borrow_mut(), |ss| ss.get_mut(&id))
     }
 
-    pub(crate) fn builtins(&self) -> &Builtins {
-        &self.builtins
-    }
-}
+    pub(crate) fn add_font(&self, font: Font) -> Id<Font> {
+        let max_id = self.max_font_id.get();
+        let id = Id(max_id, PhantomData);
 
-impl Builtins {
-    fn new(
-        device: &Arc<Device>,
-        passes: &RenderPasses,
-        layout: &ShaderLayout,
-        uniforms: &ImageUniforms,
-    ) -> Result<Self> {
-        debug!("creating builtin meshes");
-        let meshes = builtin_meshes(device)?;
+        self.fonts.borrow_mut().insert(id, font);
+        self.max_font_id.set(max_id + 1);
 
-        debug!("creating builtin shaders");
-        let shaders = builtin_shaders(device, passes, layout)?;
-
-        debug!("creating builtin textures");
-        let textures = builtin_textures(device, uniforms)?;
-
-        debug!("creating builtin materials");
-        let materials = builtin_materials(device, layout)?;
-
-        debug!("creating builtin fonts");
-        let fonts = builtin_fonts(device, uniforms)?;
-
-        Ok(Self {
-            meshes,
-            shaders,
-            textures,
-            materials,
-            fonts,
-        })
+        id
     }
 
-    pub(crate) fn mesh(&self, mesh: BuiltinMesh) -> Option<&Mesh> {
-        self.meshes.get(&mesh)
-    }
-
-    pub(crate) fn material(&self, material: BuiltinMaterial) -> Option<&Material> {
-        self.materials.get(&material)
-    }
-
-    pub(crate) fn shader(&self, shader: BuiltinShader) -> Option<&Shader> {
-        self.shaders.get(&shader)
-    }
-
-    pub(crate) fn texture(&self, texture: BuiltinTexture) -> Option<&Texture> {
-        self.textures.get(&texture)
-    }
-
-    pub(crate) fn font(&self, font: BuiltinFont) -> Option<&Font> {
-        self.fonts.get(&font)
+    pub(crate) fn font(&self, id: Id<Font>) -> Option<RefMut<'_, Font>> {
+        ref_mut_filter_map(self.fonts.borrow_mut(), |ms| ms.get_mut(&id))
     }
 }
 

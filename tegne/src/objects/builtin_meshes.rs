@@ -4,22 +4,25 @@ use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
+use super::Id;
+use super::Objects;
 use crate::error::Result;
 use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 
-#[derive(Hash, Eq, PartialEq, Copy, Clone)]
-pub(crate) enum BuiltinMesh {
-    Cube,
-    Sphere,
+pub(crate) struct BuiltinMeshes {
+    pub(crate) cube: Id<Mesh>,
+    pub(crate) sphere: Id<Mesh>,
 }
 
-pub(crate) fn builtin_meshes(device: &Arc<Device>) -> Result<HashMap<BuiltinMesh, Mesh>> {
-    let mut map = HashMap::new();
-    map.insert(BuiltinMesh::Cube, create_cube(device)?);
-    map.insert(BuiltinMesh::Sphere, create_sphere(device, 2)?);
-    Ok(map)
+impl BuiltinMeshes {
+    pub(crate) fn new(device: &Arc<Device>, objects: &Objects) -> Result<Self> {
+        let cube = objects.add_mesh(create_cube(device)?);
+        let sphere = objects.add_mesh(create_sphere(device, 2)?);
+
+        Ok(Self { cube, sphere })
+    }
 }
 
 fn create_cube(device: &Arc<Device>) -> Result<Mesh> {

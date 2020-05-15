@@ -1,158 +1,107 @@
-use ash::vk::Buffer;
-use ash::vk::Pipeline;
 use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;
 
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::images::Font;
 use crate::images::Texture;
 use crate::mesh::Mesh;
-use crate::objects::BuiltinFont;
-use crate::objects::BuiltinMaterial;
-use crate::objects::BuiltinMesh;
-use crate::objects::BuiltinShader;
-use crate::objects::BuiltinTexture;
+use crate::objects::Builtins;
 use crate::objects::Id;
 use crate::objects::Objects;
-use crate::shaders::Descriptor;
 use crate::shaders::Light;
 use crate::shaders::Material;
 use crate::shaders::Shader;
-use crate::utils::OrError;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
     wireframe_orders: Vec<Order>,
     clear: [f32; 3],
     lights: Vec<Light>,
-    current_shader: Pipeline,
-    current_material: Descriptor,
-    current_albedo: i32,
-    current_font: &'a Font,
+    current_shader: Id<Shader>,
+    current_material: Id<Material>,
+    current_albedo: Id<Texture>,
+    current_font: Id<Font>,
     draw_wireframes: bool,
+    builtins: &'a Builtins,
     objects: &'a Objects,
 }
 
 pub(crate) struct OrdersByShader {
-    shader: Pipeline,
+    shader: Id<Shader>,
     orders_by_material: Vec<OrdersByMaterial>,
 }
 
 pub(crate) struct OrdersByMaterial {
-    material: Descriptor,
+    material: Id<Material>,
     orders: Vec<Order>,
 }
 
 #[derive(Copy, Clone)]
 pub(crate) struct Order {
+    pub(crate) mesh: Id<Mesh>,
+    pub(crate) albedo: Id<Texture>,
     pub(crate) model: Matrix4,
-    pub(crate) vertex_buffer: Buffer,
-    pub(crate) index_buffer: Buffer,
-    pub(crate) index_count: u32,
-    pub(crate) albedo_index: i32,
     pub(crate) has_shadows: bool,
 }
 
 impl<'a> Target<'a> {
-    pub(crate) fn new(objects: &'a Objects) -> Result<Self> {
-        let material = objects
-            .builtins()
-            .material(BuiltinMaterial::White)
-            .ok_or(ErrorKind::NoBuiltins)?;
-        let shader = objects
-            .builtins()
-            .shader(BuiltinShader::Phong)
-            .ok_or(ErrorKind::NoBuiltins)?;
-        let texture = objects
-            .builtins()
-            .texture(BuiltinTexture::White)
-            .ok_or(ErrorKind::NoBuiltins)?;
-        let font = objects
-            .builtins()
-            .font(BuiltinFont::NotoSans)
-            .ok_or(ErrorKind::NoBuiltins)?;
-
+    pub(crate) fn new(builtins: &'a Builtins, objects: &'a Objects) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7],
             lights: vec![],
-            current_shader: shader.pipeline(),
-            current_material: material.descriptor()?,
-            current_albedo: texture.image_index(),
-            current_font: font,
+            current_shader: builtins.shaders.phong,
+            current_material: builtins.materials.white,
+            current_albedo: builtins.textures.white,
+            current_font: builtins.fonts.roboto_mono,
             draw_wireframes: false,
+            builtins,
             objects,
         })
     }
 
     pub fn draw(&mut self, mesh: Id<Mesh>, transform: impl Into<Transform>) {
-        if let Some(m) = self.objects.mesh(mesh) {
-            self.add_order(Order {
-                model: transform.into().as_matrix(),
-                vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
-                index_buffer: m.vk_index_buffer(),
-                index_count: m.drawn_triangles() * 3,
-                albedo_index: self.current_albedo,
-                has_shadows: true,
-            });
-        }
+        self.add_order(Order {
+            mesh,
+            albedo: self.current_albedo,
+            model: transform.into().as_matrix(),
+            has_shadows: true,
+        });
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        if let Some(m) = self.objects.builtins().mesh(BuiltinMesh::Cube) {
-            self.add_order(Order {
-                model: transform.into().as_matrix(),
-                vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
-                index_buffer: m.vk_index_buffer(),
-                index_count: m.drawn_triangles() * 3,
-                albedo_index: self.current_albedo,
-                has_shadows: true,
-            });
-        }
+        self.draw(self.builtins.meshes.cube, transform);
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        if let Some(m) = self.objects.builtins().mesh(BuiltinMesh::Sphere) {
-            self.add_order(Order {
-                model: transform.into().as_matrix(),
-                vertex_buffer: m.vk_vertex_buffer().or_error("cannot get vertex buffer"),
-                index_buffer: m.vk_index_buffer(),
-                index_count: m.drawn_triangles() * 3,
-                albedo_index: self.current_albedo,
-                has_shadows: true,
-            });
-        }
+        self.draw(self.builtins.meshes.sphere, transform);
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let temp_shader = self.current_shader;
-
-        if let Some(shader) = self.objects.builtins().shader(BuiltinShader::Font) {
-            self.current_shader = shader.pipeline();
-
+        if let Some(font) = self.objects.font(self.current_font) {
+            let temp_shader = self.current_shader;
+            self.current_shader = self.builtins.shaders.font;
             let mut current_transform = transform.into();
+            let albedo = font.texture();
 
             for c in text.as_ref().chars() {
                 if c == ' ' {
-                    let space_advance = self.current_font.char_advance('_');
+                    let space_advance = font.char_advance('_');
                     current_transform.position.x += space_advance;
                     continue;
                 }
 
-                let mesh = self.current_font.char_mesh(c);
+                let mesh = font.char_mesh(c);
                 self.add_order(Order {
+                    mesh,
+                    albedo,
                     model: current_transform.as_matrix(),
-                    vertex_buffer: mesh.vk_vertex_buffer().or_error("cannot get vertex buffer"),
-                    index_buffer: mesh.vk_index_buffer(),
-                    index_count: mesh.drawn_triangles() * 3,
-                    albedo_index: self.current_font.image_index(),
                     has_shadows: false,
                 });
 
-                current_transform.position.x += self.current_font.char_advance(c);
+                current_transform.position.x += font.char_advance(c);
             }
 
             self.current_shader = temp_shader;
@@ -171,33 +120,23 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material(&mut self, material: Id<Material>) {
-        if let Some(mat) = self.objects.material(material) {
-            self.current_material = mat.descriptor().or_error("cannot update descriptor");
-        }
+        self.current_material = material;
     }
 
     pub fn set_material_white(&mut self) {
-        if let Some(mat) = self.objects.builtins().material(BuiltinMaterial::White) {
-            self.current_material = mat.descriptor().or_error("cannot update descriptor");
-        }
+        self.current_material = self.builtins.materials.white;
     }
 
-    pub fn set_texture(&mut self, texture: Id<Texture>) {
-        if let Some(tex) = self.objects.texture(texture) {
-            self.current_albedo = tex.image_index();
-        }
+    pub fn set_albedo(&mut self, texture: Id<Texture>) {
+        self.current_albedo = texture;
     }
 
     pub fn set_shader(&mut self, shader: Id<Shader>) {
-        if let Some(sh) = self.objects.shader(shader) {
-            self.current_shader = sh.pipeline();
-        }
+        self.current_shader = shader;
     }
 
     pub fn set_shader_phong(&mut self) {
-        if let Some(sh) = self.objects.builtins().shader(BuiltinShader::Phong) {
-            self.current_shader = sh.pipeline();
-        }
+        self.current_shader = self.builtins.shaders.phong;
     }
 
     pub fn set_clear_color(&mut self, clear: [f32; 3]) {
@@ -262,7 +201,7 @@ impl<'a> Target<'a> {
 }
 
 impl OrdersByShader {
-    pub(crate) fn shader(&self) -> Pipeline {
+    pub(crate) fn shader(&self) -> Id<Shader> {
         self.shader
     }
 
@@ -272,7 +211,7 @@ impl OrdersByShader {
 }
 
 impl OrdersByMaterial {
-    pub(crate) fn material(&self) -> Descriptor {
+    pub(crate) fn material(&self) -> Id<Material> {
         self.material
     }
 

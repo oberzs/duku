@@ -26,6 +26,7 @@ use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::objects::Builtins;
 use crate::objects::Id;
 use crate::objects::Objects;
 use crate::renderer::ForwardDrawOptions;
@@ -45,6 +46,7 @@ use tegne_utils::Window;
 pub struct Tegne {
     start_time: Instant,
     forward_renderer: ForwardRenderer,
+    builtins: Builtins,
     objects: Objects,
     window_framebuffers: Vec<Framebuffer>,
     render_passes: RenderPasses,
@@ -90,8 +92,16 @@ impl Tegne {
 
         let render_passes = RenderPasses::new(&device).or_error("cannot create render passes");
 
-        let objects = Objects::new(&device, &render_passes, &shader_layout, &image_uniforms)
-            .or_error("cannot create object storage");
+        let objects = Objects::new();
+
+        let builtins = Builtins::new(
+            &device,
+            &render_passes,
+            &shader_layout,
+            &image_uniforms,
+            &objects,
+        )
+        .or_error("cannot create builtins");
 
         let window_framebuffers = Framebuffer::window(
             &device,
@@ -109,6 +119,7 @@ impl Tegne {
         Self {
             start_time: Instant::now(),
             forward_renderer,
+            builtins,
             objects,
             window_framebuffers,
             render_passes,
@@ -176,7 +187,8 @@ impl Tegne {
     }
 
     pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
-        let mut target = Target::new(&self.objects).or_error("cannot create target");
+        let mut target =
+            Target::new(&self.builtins, &self.objects).or_error("cannot create target");
         draw_callback(&mut target);
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
@@ -190,6 +202,7 @@ impl Tegne {
                 shader_layout: &self.shader_layout,
                 camera,
                 objects: &self.objects,
+                builtins: &self.builtins,
                 target,
                 time: self.start_time.elapsed().as_secs_f32(),
             })

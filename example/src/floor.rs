@@ -22,7 +22,7 @@ impl Floor {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_texture(self.texture);
+        target.set_albedo(self.texture);
         target.draw(self.mesh, Transform::default());
     }
 }

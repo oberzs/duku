@@ -1,4 +1,3 @@
-use ash::vk::Pipeline;
 use std::cell::Ref;
 use std::sync::Arc;
 use std::sync::Weak;
@@ -13,13 +12,15 @@ use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Order;
 use crate::instance::Target;
-use crate::objects::BuiltinShader;
+use crate::objects::Builtins;
+use crate::objects::Id;
 use crate::objects::Objects;
-use crate::shaders::Descriptor;
 use crate::shaders::ImageUniforms;
+use crate::shaders::Material;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::shaders::RenderPasses;
+use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::shaders::WorldObject;
 
@@ -35,6 +36,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
     pub(crate) objects: &'a Objects,
+    pub(crate) builtins: &'a Builtins,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
 }
@@ -93,13 +95,7 @@ impl ForwardRenderer {
         self.setup_pass(&cmd, &self.shadow_framebuffer)?;
         self.bind_world(&cmd, &self.shadow_framebuffer, world_object, &options)?;
 
-        let shadow_shader = options
-            .objects
-            .builtins()
-            .shader(BuiltinShader::Shadow)
-            .ok_or(ErrorKind::NoBuiltins)?;
-        self.bind_shader(&cmd, shadow_shader.pipeline())?;
-
+        self.bind_shader(&cmd, options.builtins.shaders.shadow, &options)?;
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
                 self.bind_material(&cmd, m_order.material(), &options)?;
@@ -120,7 +116,7 @@ impl ForwardRenderer {
         self.bind_world(&cmd, options.framebuffer, world_object, &options)?;
 
         for s_order in options.target.orders_by_shader() {
-            self.bind_shader(&cmd, s_order.shader())?;
+            self.bind_shader(&cmd, s_order.shader(), &options)?;
             for m_order in s_order.orders_by_material() {
                 self.bind_material(&cmd, m_order.material(), &options)?;
                 for order in m_order.orders() {
@@ -130,12 +126,7 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        let wireframe_shader = options
-            .objects
-            .builtins()
-            .shader(BuiltinShader::Wireframe)
-            .ok_or(ErrorKind::NoBuiltins)?;
-        self.bind_shader(&cmd, wireframe_shader.pipeline())?;
+        self.bind_shader(&cmd, options.builtins.shaders.wireframe, &options)?;
         for order in options.target.wireframe_orders() {
             self.draw_order(&cmd, order, &options)?;
         }
@@ -166,18 +157,27 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn bind_shader(&self, cmd: &Ref<'_, Commands>, shader: Pipeline) -> Result<()> {
-        cmd.bind_pipeline(shader)?;
+    fn bind_shader(
+        &self,
+        cmd: &Ref<'_, Commands>,
+        shader: Id<Shader>,
+        options: &ForwardDrawOptions<'_>,
+    ) -> Result<()> {
+        if let Some(sh) = options.objects.shader(shader) {
+            cmd.bind_pipeline(sh.pipeline())?;
+        }
         Ok(())
     }
 
     fn bind_material(
         &self,
         cmd: &Ref<'_, Commands>,
-        descriptor: Descriptor,
+        material: Id<Material>,
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
-        cmd.bind_descriptor(descriptor, options.shader_layout.pipeline())?;
+        if let Some(mat) = options.objects.material(material) {
+            cmd.bind_descriptor(mat.descriptor()?, options.shader_layout.pipeline())?;
+        }
         Ok(())
     }
 
@@ -187,16 +187,20 @@ impl ForwardRenderer {
         order: Order,
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
-        cmd.set_push_constant(
-            PushConstants {
-                model_mat: order.model,
-                albedo_index: order.albedo_index,
-            },
-            options.shader_layout.pipeline(),
-        )?;
-        cmd.bind_vertex_buffer(order.vertex_buffer)?;
-        cmd.bind_index_buffer(order.index_buffer)?;
-        cmd.draw(order.index_count)?;
+        if let Some(albedo) = options.objects.texture(order.albedo) {
+            if let Some(mesh) = options.objects.mesh(order.mesh) {
+                cmd.set_push_constant(
+                    PushConstants {
+                        model_mat: order.model,
+                        albedo_index: albedo.image_index(),
+                    },
+                    options.shader_layout.pipeline(),
+                )?;
+                cmd.bind_vertex_buffer(mesh.vk_vertex_buffer()?)?;
+                cmd.bind_index_buffer(mesh.vk_index_buffer())?;
+                cmd.draw(mesh.drawn_triangles() * 3)?;
+            }
+        }
         Ok(())
     }
 }
