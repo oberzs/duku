@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::ffi;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
@@ -9,6 +10,7 @@ pub type Result<T> = std::result::Result<T, ErrorType>;
 pub enum ErrorType {
     // External error
     Io(io::Error),
+    Nul(ffi::NulError),
     Json(serde_json::Error),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -25,6 +27,10 @@ pub enum ErrorKind {
     NoSuitableGpu,
     NoSuitableMemoryType,
     InvalidMsaa,
+    NoVertices,
+    NoTriangles,
+    TooManyUvs,
+    TooManyNormals,
 }
 
 impl Error for ErrorType {}
@@ -33,6 +39,7 @@ impl fmt::Display for ErrorType {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
             ErrorType::Io(ref e) => write!(fmt, "{:?}", e),
+            ErrorType::Nul(ref e) => write!(fmt, "{:?}", e),
             ErrorType::Json(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanInstance(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanLoad(ref e) => write!(fmt, "{:?}", e),
@@ -45,6 +52,12 @@ impl fmt::Display for ErrorType {
 impl From<io::Error> for ErrorType {
     fn from(e: io::Error) -> Self {
         Self::Io(e)
+    }
+}
+
+impl From<ffi::NulError> for ErrorType {
+    fn from(e: ffi::NulError) -> Self {
+        Self::Nul(e)
     }
 }
 

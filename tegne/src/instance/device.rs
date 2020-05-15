@@ -30,6 +30,7 @@ use std::cell::Ref;
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::sync::Arc;
+use tegne_math::clamp;
 
 use super::Commands;
 use super::Extensions;
@@ -40,7 +41,6 @@ use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
-use crate::utils::clamp;
 
 const IN_FLIGHT_FRAME_COUNT: u32 = 2;
 

@@ -12,7 +12,6 @@
 )]
 
 mod controller;
-mod utils;
 mod window;
 
 pub use controller::Controller;

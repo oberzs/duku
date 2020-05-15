@@ -8,7 +8,6 @@ use std::ffi::CString;
 use super::Vulkan;
 use crate::error::ErrorKind;
 use crate::error::Result;
-use crate::utils::cstring;
 
 #[derive(Default)]
 pub(crate) struct Extensions {
@@ -18,29 +17,29 @@ pub(crate) struct Extensions {
 }
 
 impl Extensions {
-    pub(crate) fn new() -> Self {
-        let mut instance = vec![cstring("VK_KHR_surface")];
+    pub(crate) fn new() -> Result<Self> {
+        let mut instance = vec![CString::new("VK_KHR_surface")?];
         #[cfg(target_os = "windows")]
-        instance.push(cstring("VK_KHR_win32_surface"));
+        instance.push(CString::new("VK_KHR_win32_surface")?);
         #[cfg(target_os = "linux")]
-        instance.push(cstring("VK_KHR_xlib_surface"));
+        instance.push(CString::new("VK_KHR_xlib_surface")?);
         #[cfg(target_os = "macos")]
-        instance.push(cstring("VK_EXT_metal_surface"));
+        instance.push(CString::new("VK_EXT_metal_surface")?);
         #[cfg(debug_assertions)]
-        instance.push(cstring("VK_EXT_debug_utils"));
+        instance.push(CString::new("VK_EXT_debug_utils")?);
 
-        let device = vec![cstring("VK_KHR_swapchain")];
+        let device = vec![CString::new("VK_KHR_swapchain")?];
 
         #[cfg(debug_assertions)]
-        let layers = vec![cstring("VK_LAYER_KHRONOS_validation")];
+        let layers = vec![CString::new("VK_LAYER_KHRONOS_validation")?];
         #[cfg(not(debug_assertions))]
         let layers = vec![];
 
-        Self {
+        Ok(Self {
             instance,
             device,
             layers,
-        }
+        })
     }
 
     pub(crate) fn supports_instance(&self, entry: &Entry) -> Result<()> {

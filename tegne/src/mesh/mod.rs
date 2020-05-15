@@ -10,9 +10,9 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
 use crate::buffer::FixedBuffer;
+use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::utils::error;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {
@@ -36,20 +36,20 @@ pub struct MeshOptions<'slice> {
 impl Mesh {
     pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Result<Self> {
         if options.vertices.is_empty() {
-            error("no vertices in mesh");
+            return Err(ErrorKind::NoVertices.into());
         }
         if options.triangles.is_empty() {
-            error("no triangles in mesh");
+            return Err(ErrorKind::NoTriangles.into());
         }
 
         let vertex_count = options.vertices.len();
         let index_count = options.triangles.len();
 
         if options.uvs.len() > vertex_count {
-            error("too many uvs");
+            return Err(ErrorKind::TooManyUvs.into());
         }
         if options.normals.len() > vertex_count {
-            error("too many normals");
+            return Err(ErrorKind::TooManyNormals.into());
         }
 
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;

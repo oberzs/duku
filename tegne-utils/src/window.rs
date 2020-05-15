@@ -1,6 +1,7 @@
-use crate::utils::OrError;
+use log::error;
 use log::info;
 use std::collections::HashSet;
+use std::process::exit;
 use std::time::Instant;
 use winit::dpi::PhysicalPosition;
 use winit::dpi::PhysicalSize;
@@ -15,6 +16,18 @@ use winit::event_loop::EventLoop;
 use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
+
+macro_rules! check {
+    ($result:expr) => {
+        match $result {
+            Ok(value) => value,
+            Err(err) => {
+                error!("{}", err);
+                exit(1);
+            }
+        }
+    };
+}
 
 pub struct Window {
     event_loop: EventLoop<()>,
@@ -48,11 +61,10 @@ impl Window {
         let size = PhysicalSize::new(options.width, options.height);
 
         info!("creating window");
-        let window = WindowBuilder::new()
+        let window = check!(WindowBuilder::new()
             .with_inner_size(size)
             .with_title(options.title)
-            .build(&event_loop)
-            .or_error("cannot create window");
+            .build(&event_loop));
 
         Self { event_loop, window }
     }
@@ -124,13 +136,13 @@ impl Window {
     #[cfg(target_os = "linux")]
     pub fn xlib_window(&self) -> std::os::raw::c_ulong {
         use winit::platform::unix::WindowExtUnix;
-        self.window.xlib_window().or_error("no xlib support")
+        check!(self.window.xlib_window())
     }
 
     #[cfg(target_os = "linux")]
     pub fn xlib_display(&self) -> *mut std::ffi::c_void {
         use winit::platform::unix::WindowExtUnix;
-        self.window.xlib_display().or_error("no xlib support")
+        check!(self.window.xlib_display())
     }
 
     #[cfg(target_os = "macos")]
@@ -184,15 +196,11 @@ impl Events {
     }
 
     pub fn set_mouse_position(&self, x: u32, y: u32) {
-        self.window
-            .set_cursor_position(PhysicalPosition::new(x, y))
-            .or_error("cannot change mouse position on iOS");
+        check!(self.window.set_cursor_position(PhysicalPosition::new(x, y)));
     }
 
     pub fn set_mouse_grab(&self, grab: bool) {
-        self.window
-            .set_cursor_grab(grab)
-            .or_error("cannot grab mouse on iOS");
+        check!(self.window.set_cursor_grab(grab));
     }
 
     pub fn set_mouse_visible(&self, visible: bool) {

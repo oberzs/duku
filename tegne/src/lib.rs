@@ -18,7 +18,6 @@ mod objects;
 mod renderer;
 mod shaders;
 mod sync;
-mod utils;
 
 pub use images::Texture;
 pub use instance::Target;

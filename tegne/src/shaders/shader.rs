@@ -31,6 +31,7 @@ use ash::vk::ShaderStageFlags;
 use ash::vk::StencilOp;
 use ash::vk::StencilOpState;
 use ash::vk::Viewport;
+use std::ffi::CString;
 use std::io::Cursor;
 use std::io::Read;
 use std::sync::Arc;
@@ -44,7 +45,6 @@ use crate::error::Result;
 use crate::instance::Device;
 use crate::instance::Samples;
 use crate::mesh::Vertex;
-use crate::utils::cstring;
 
 pub struct Shader {
     pipeline: Pipeline,
@@ -98,7 +98,7 @@ impl Shader {
 
         let vert_module = create_shader_module(device, &vert_source)?;
         let frag_module = create_shader_module(device, &frag_source)?;
-        let entry_point = cstring("main");
+        let entry_point = CString::new("main")?;
 
         let vs_stage_info = PipelineShaderStageCreateInfo::builder()
             .stage(ShaderStageFlags::VERTEX)
