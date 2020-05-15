@@ -21,12 +21,14 @@ mod shader;
 
 use clap::App;
 use clap::Arg;
+use log::error;
 use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::exit;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -34,7 +36,21 @@ use error::Result;
 use font::import_font;
 use shader::import_shader;
 
+macro_rules! check {
+    ($result:expr) => {
+        match $result {
+            Ok(value) => value,
+            Err(err) => {
+                error!("{}", err);
+                exit(1);
+            }
+        }
+    };
+}
+
 fn main() {
+    pretty_env_logger::init();
+
     let opts = App::new("Tegne importer")
         .version("0.1.0")
         .author("Oliver Berzs <oliver.berzs@gmail.com>")
@@ -77,18 +93,19 @@ fn main() {
     match (input, dir) {
         (Some(in_path), None) => {
             if !in_path.is_file() {
-                panic!("input is not a file");
+                error!("input is not a file");
+                exit(0);
             }
             let out_path = create_out_path(in_path, out_dir);
-            import_file(in_path, &out_path).expect("cannot import file");
+            check!(import_file(in_path, &out_path));
         }
         (None, Some(in_dir)) => {
-            for entry in in_dir.read_dir().expect("dir is not a directory") {
+            for entry in check!(in_dir.read_dir()) {
                 if let Ok(entry) = entry {
                     let in_path = entry.path();
                     if in_path.is_file() {
                         let out_path = create_out_path(&in_path, out_dir);
-                        import_file(&in_path, &out_path).expect("cannot import file");
+                        check!(import_file(&in_path, &out_path));
                     }
                 }
             }
@@ -98,20 +115,17 @@ fn main() {
 
     // watch for changes
     if watch {
-        let path = input.or(dir).expect("no path given");
+        let path = input.or(dir).unwrap();
         let (tx, rx) = channel();
 
-        let mut watcher: RecommendedWatcher =
-            Watcher::new(tx, Duration::from_secs(1)).expect("cannot watch system");
-        watcher
-            .watch(path, RecursiveMode::NonRecursive)
-            .expect("cannot watch path");
+        let mut watcher: RecommendedWatcher = check!(Watcher::new(tx, Duration::from_secs(1)));
+        check!(watcher.watch(path, RecursiveMode::NonRecursive));
 
         loop {
             let event = rx.recv().unwrap();
             if let DebouncedEvent::NoticeWrite(in_path) = event {
                 let out_path = create_out_path(&in_path, out_dir);
-                import_file(&in_path, &out_path).expect("cannot import file");
+                check!(import_file(&in_path, &out_path));
             }
         }
     }

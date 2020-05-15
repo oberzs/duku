@@ -123,19 +123,14 @@ impl Font {
     pub(crate) fn char_mesh(&self, c: char) -> Id<Mesh> {
         match self.char_data.get(&c) {
             Some(data) => data.mesh,
-            None => self.char_data.get(&'?').expect("'?' char not loaded").mesh,
+            None => self.char_data.get(&'?').unwrap().mesh,
         }
     }
 
     pub(crate) fn char_advance(&self, c: char) -> f32 {
         match self.char_data.get(&c) {
             Some(data) => data.advance,
-            None => {
-                self.char_data
-                    .get(&'?')
-                    .expect("'?' char not loaded")
-                    .advance
-            }
+            None => self.char_data.get(&'?').unwrap().advance,
         }
     }
 

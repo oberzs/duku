@@ -211,7 +211,7 @@ impl RenderPass {
     }
 
     fn new(device: &Arc<Device>, options: RenderPassOptions) -> Result<Self> {
-        let dependencies = [options.dependency.expect("subpass dependency not set")];
+        let dependencies = [options.dependency.unwrap()];
         let mut attachments = vec![];
         let mut subpass_builder =
             SubpassDescription::builder().pipeline_bind_point(PipelineBindPoint::GRAPHICS);

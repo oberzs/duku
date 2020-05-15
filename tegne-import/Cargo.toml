@@ -19,3 +19,5 @@ serde = { version = "1.0.106", features = ["derive"] }
 serde_json = "1.0.52"
 indicatif = "0.14.0"
 notify = "4.0.15"
+log = "0.4.8"
+pretty_env_logger = "0.4.0"
