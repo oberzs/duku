@@ -24,7 +24,7 @@ impl Cube {
             color.as_ref()
         ));
         let shader =
-            tegne.create_shader_from_file_watch("example/assets/test.Shader", Default::default());
+            tegne.create_shader_from_file_watch("example/assets/test.shader", Default::default());
         let transform = Transform::from(pos.into());
 
         Self {

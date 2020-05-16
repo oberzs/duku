@@ -5,6 +5,7 @@ mod surface;
 mod swapchain;
 mod target;
 mod tegne;
+mod thread_kill;
 mod validator;
 mod vulkan;
 
@@ -20,5 +21,6 @@ pub(crate) use target::Order;
 pub use target::Target;
 pub use tegne::Tegne;
 pub use tegne::TegneOptions;
+use thread_kill::ThreadKill;
 use validator::Validator;
 use vulkan::Vulkan;

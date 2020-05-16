@@ -152,8 +152,9 @@ impl ForwardRenderer {
 
     fn bind_shader(&self, shader: Id<Shader>, options: &ForwardDrawOptions<'_>) {
         let cmd = options.cmd;
-        if let Some(sh) = options.objects.shader(shader) {
-            cmd.bind_pipeline(sh.pipeline());
+        let objects = options.objects;
+        if let Some(pipeline) = objects.with_shader(shader, |s| s.pipeline()) {
+            cmd.bind_pipeline(pipeline);
         }
     }
 
@@ -163,26 +164,34 @@ impl ForwardRenderer {
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
         let cmd = options.cmd;
-        if let Some(mat) = options.objects.material(material) {
-            cmd.bind_descriptor(mat.descriptor()?, options.shader_layout.pipeline());
+        let objects = options.objects;
+        if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
+            cmd.bind_descriptor(descriptor?, options.shader_layout.pipeline());
         }
         Ok(())
     }
 
     fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) -> Result<()> {
         let cmd = options.cmd;
-        if let Some(albedo) = options.objects.texture(order.albedo) {
-            if let Some(mesh) = options.objects.mesh(order.mesh) {
+        let objects = options.objects;
+        if let Some(albedo_index) = objects.with_texture(order.albedo, |t| t.image_index()) {
+            if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
+                (
+                    m.vk_vertex_buffer(),
+                    m.vk_index_buffer(),
+                    m.drawn_triangles() * 3,
+                )
+            }) {
                 cmd.set_push_constant(
                     PushConstants {
                         model_mat: order.model,
-                        albedo_index: albedo.image_index(),
+                        albedo_index,
                     },
                     options.shader_layout.pipeline(),
                 );
-                cmd.bind_vertex_buffer(mesh.vk_vertex_buffer()?);
-                cmd.bind_index_buffer(mesh.vk_index_buffer());
-                cmd.draw(mesh.drawn_triangles() * 3);
+                cmd.bind_vertex_buffer(vb?);
+                cmd.bind_index_buffer(ib);
+                cmd.draw(n);
             }
         }
         Ok(())

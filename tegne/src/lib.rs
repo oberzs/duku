@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_hygiene, drain_filter)]
 #![warn(
     rust_2018_idioms,
     unused,

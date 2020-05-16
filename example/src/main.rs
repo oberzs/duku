@@ -54,9 +54,9 @@ fn main() {
         controller.update(&mut camera, events);
 
         color_value = start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5;
-        if let Some(mut material) = tegne.get_material(text_material) {
-            material.set_albedo_tint([0.0, color_value, 1.0 - color_value]);
-        }
+        tegne.with_material(text_material, |m| {
+            m.set_albedo_tint([0.0, color_value, 1.0 - color_value]);
+        });
 
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {

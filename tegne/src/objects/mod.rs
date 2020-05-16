@@ -5,13 +5,13 @@ mod builtin_shaders;
 mod builtin_textures;
 mod builtins;
 
-use std::cell::Cell;
-use std::cell::RefCell;
-use std::cell::RefMut;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering;
+use std::sync::Mutex;
 
 use crate::images::Font;
 use crate::images::Texture;
@@ -25,17 +25,15 @@ use builtin_shaders::BuiltinShaders;
 use builtin_textures::BuiltinTextures;
 pub(crate) use builtins::Builtins;
 
+type Storage<T> = Mutex<HashMap<Id<T>, T>>;
+
 pub(crate) struct Objects {
-    textures: RefCell<HashMap<Id<Texture>, Texture>>,
-    max_texture_id: Cell<u32>,
-    materials: RefCell<HashMap<Id<Material>, Material>>,
-    max_material_id: Cell<u32>,
-    meshes: RefCell<HashMap<Id<Mesh>, Mesh>>,
-    max_mesh_id: Cell<u32>,
-    shaders: RefCell<HashMap<Id<Shader>, Shader>>,
-    max_shader_id: Cell<u32>,
-    fonts: RefCell<HashMap<Id<Font>, Font>>,
-    max_font_id: Cell<u32>,
+    textures: Storage<Texture>,
+    materials: Storage<Material>,
+    meshes: Storage<Mesh>,
+    shaders: Storage<Shader>,
+    fonts: Storage<Font>,
+    max_id: AtomicU32,
 }
 
 #[derive(Debug)]
@@ -44,91 +42,103 @@ pub struct Id<T>(u32, PhantomData<*const T>);
 impl Objects {
     pub(crate) fn new() -> Self {
         Self {
-            textures: RefCell::new(HashMap::new()),
-            max_texture_id: Cell::new(0),
-            materials: RefCell::new(HashMap::new()),
-            max_material_id: Cell::new(0),
-            meshes: RefCell::new(HashMap::new()),
-            max_mesh_id: Cell::new(0),
-            shaders: RefCell::new(HashMap::new()),
-            max_shader_id: Cell::new(0),
-            fonts: RefCell::new(HashMap::new()),
-            max_font_id: Cell::new(0),
+            textures: Mutex::new(HashMap::new()),
+            materials: Mutex::new(HashMap::new()),
+            meshes: Mutex::new(HashMap::new()),
+            shaders: Mutex::new(HashMap::new()),
+            fonts: Mutex::new(HashMap::new()),
+            max_id: AtomicU32::new(0),
         }
     }
 
     pub(crate) fn add_texture(&self, texture: Texture) -> Id<Texture> {
-        let max_id = self.max_texture_id.get();
-        let id = Id(max_id, PhantomData);
-
-        self.textures.borrow_mut().insert(id, texture);
-        self.max_texture_id.set(max_id + 1);
-
+        let id = Id(self.get_id(), PhantomData);
+        self.textures.lock().unwrap().insert(id, texture);
         id
-    }
-
-    pub(crate) fn texture(&self, id: Id<Texture>) -> Option<RefMut<'_, Texture>> {
-        ref_mut_filter_map(self.textures.borrow_mut(), |ts| ts.get_mut(&id))
     }
 
     pub(crate) fn add_material(&self, material: Material) -> Id<Material> {
-        let max_id = self.max_material_id.get();
-        let id = Id(max_id, PhantomData);
-
-        self.materials.borrow_mut().insert(id, material);
-        self.max_material_id.set(max_id + 1);
-
+        let id = Id(self.get_id(), PhantomData);
+        self.materials.lock().unwrap().insert(id, material);
         id
-    }
-
-    pub(crate) fn material(&self, id: Id<Material>) -> Option<RefMut<'_, Material>> {
-        ref_mut_filter_map(self.materials.borrow_mut(), |ms| ms.get_mut(&id))
     }
 
     pub(crate) fn add_mesh(&self, mesh: Mesh) -> Id<Mesh> {
-        let max_id = self.max_mesh_id.get();
-        let id = Id(max_id, PhantomData);
-
-        self.meshes.borrow_mut().insert(id, mesh);
-        self.max_mesh_id.set(max_id + 1);
-
+        let id = Id(self.get_id(), PhantomData);
+        self.meshes.lock().unwrap().insert(id, mesh);
         id
-    }
-
-    pub(crate) fn mesh(&self, id: Id<Mesh>) -> Option<RefMut<'_, Mesh>> {
-        ref_mut_filter_map(self.meshes.borrow_mut(), |ms| ms.get_mut(&id))
     }
 
     pub(crate) fn add_shader(&self, shader: Shader) -> Id<Shader> {
-        let max_id = self.max_shader_id.get();
-        let id = Id(max_id, PhantomData);
-
-        self.shaders.borrow_mut().insert(id, shader);
-        self.max_shader_id.set(max_id + 1);
-
+        let id = Id(self.get_id(), PhantomData);
+        self.shaders.lock().unwrap().insert(id, shader);
         id
-    }
-
-    // pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) {
-    //     self.shaders.borrow_mut().insert(id, shader);
-    // }
-
-    pub(crate) fn shader(&self, id: Id<Shader>) -> Option<RefMut<'_, Shader>> {
-        ref_mut_filter_map(self.shaders.borrow_mut(), |ss| ss.get_mut(&id))
     }
 
     pub(crate) fn add_font(&self, font: Font) -> Id<Font> {
-        let max_id = self.max_font_id.get();
-        let id = Id(max_id, PhantomData);
-
-        self.fonts.borrow_mut().insert(id, font);
-        self.max_font_id.set(max_id + 1);
-
+        let id = Id(self.get_id(), PhantomData);
+        self.fonts.lock().unwrap().insert(id, font);
         id
     }
 
-    pub(crate) fn font(&self, id: Id<Font>) -> Option<RefMut<'_, Font>> {
-        ref_mut_filter_map(self.fonts.borrow_mut(), |ms| ms.get_mut(&id))
+    pub(crate) fn with_texture<F, R>(&self, id: Id<Texture>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&Texture) -> R,
+    {
+        match self.textures.lock().unwrap().get(&id) {
+            Some(texture) => Some(fun(texture)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn with_material<F, R>(&self, id: Id<Material>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&mut Material) -> R,
+    {
+        match self.materials.lock().unwrap().get_mut(&id) {
+            Some(material) => Some(fun(material)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn with_mesh<F, R>(&self, id: Id<Mesh>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&Mesh) -> R,
+    {
+        match self.meshes.lock().unwrap().get(&id) {
+            Some(mesh) => Some(fun(mesh)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn with_shader<F, R>(&self, id: Id<Shader>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&Shader) -> R,
+    {
+        match self.shaders.lock().unwrap().get(&id) {
+            Some(shader) => Some(fun(shader)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn with_font<F, R>(&self, id: Id<Font>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&Font) -> R,
+    {
+        match self.fonts.lock().unwrap().get(&id) {
+            Some(font) => Some(fun(font)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) -> Option<Shader> {
+        self.shaders.lock().unwrap().insert(id, shader)
+    }
+
+    fn get_id(&self) -> u32 {
+        let id = self.max_id.load(Ordering::Relaxed);
+        self.max_id.store(id + 1, Ordering::Relaxed);
+        id
     }
 }
 
@@ -153,13 +163,4 @@ impl<T> Clone for Id<T> {
 
 impl<T> Eq for Id<T> {}
 impl<T> Copy for Id<T> {}
-
-// temporary
-fn ref_mut_filter_map<T: ?Sized, U: ?Sized, F: FnOnce(&mut T) -> Option<&mut U>>(
-    mut orig: RefMut<'_, T>,
-    f: F,
-) -> Option<RefMut<'_, U>> {
-    f(&mut orig)
-        .map(|new| new as *mut U)
-        .map(|raw| RefMut::map(orig, |_| unsafe { &mut *raw }))
-}
+unsafe impl<T> Send for Id<T> {}

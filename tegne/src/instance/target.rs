@@ -80,9 +80,10 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        if let Some(font) = self.objects.font(self.current_font) {
-            let temp_shader = self.current_shader;
-            self.current_shader = self.builtins.shaders.font;
+        let temp_shader = self.current_shader;
+        self.current_shader = self.builtins.shaders.font;
+
+        self.objects.with_font(self.current_font, |font| {
             let mut current_transform = transform.into();
             let albedo = font.texture();
 
@@ -103,9 +104,9 @@ impl<'a> Target<'a> {
 
                 current_transform.position.x += font.char_advance(c);
             }
+        });
 
-            self.current_shader = temp_shader;
-        }
+        self.current_shader = temp_shader;
     }
 
     pub fn add_directional_light(

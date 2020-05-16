@@ -25,8 +25,9 @@ use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
 use log::info;
-use std::cell::Cell;
 use std::ffi::CStr;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tegne_math::clamp;
 
@@ -39,7 +40,7 @@ use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
 
-pub(crate) const IN_FLIGHT_FRAME_COUNT: u32 = 2;
+pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     logical: LogicalDevice,
@@ -50,7 +51,7 @@ pub(crate) struct Device {
     sync_acquire_image: Vec<Semaphore>,
     sync_release_image: Vec<Semaphore>,
     sync_queue_submit: Vec<Fence>,
-    current_frame: Cell<u32>,
+    current_frame: AtomicUsize,
 }
 
 pub(crate) struct DeviceProperties {
@@ -162,7 +163,7 @@ impl Device {
                     sync_acquire_image,
                     sync_release_image,
                     sync_queue_submit,
-                    current_frame: Cell::new(0),
+                    current_frame: AtomicUsize::new(0),
                 });
 
                 return Ok(device);
@@ -172,10 +173,13 @@ impl Device {
         Err(ErrorKind::NoSuitableGpu.into())
     }
 
+    pub(crate) fn current_frame(&self) -> usize {
+        self.current_frame.load(Ordering::Relaxed)
+    }
+
     pub(crate) fn next_frame(&self, swapchain: &Swapchain) -> Result<()> {
-        self.current_frame
-            .set((self.current_frame.get() + 1) % IN_FLIGHT_FRAME_COUNT);
-        let current = self.current_frame.get() as usize;
+        let mut current = self.current_frame();
+        current = (current + 1) % IN_FLIGHT_FRAME_COUNT;
 
         swapchain.next(self.sync_acquire_image[current])?;
 
@@ -184,11 +188,9 @@ impl Device {
         fence::wait_for(&self.logical, wait)?;
         fence::reset(&self.logical, wait)?;
 
-        Ok(())
-    }
+        self.current_frame.store(current, Ordering::Release);
 
-    pub(crate) fn current_frame(&self) -> usize {
-        self.current_frame.get() as usize
+        Ok(())
     }
 
     pub(crate) fn submit_and_wait(&self, buffer: CommandBuffer) -> Result<()> {
@@ -205,7 +207,7 @@ impl Device {
     }
 
     pub(crate) fn submit(&self, buffer: CommandBuffer) -> Result<()> {
-        let current = self.current_frame.get() as usize;
+        let current = self.current_frame();
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
         let done = self.sync_queue_submit[current];
@@ -226,9 +228,8 @@ impl Device {
     }
 
     pub(crate) fn present(&self, swapchain: &Swapchain) -> Result<()> {
-        let current = self.current_frame.get() as usize;
+        let current = self.current_frame();
         let wait = self.sync_release_image[current];
-
         swapchain.present(self.present_queue, wait)?;
         Ok(())
     }

@@ -3,6 +3,7 @@ use std::ffi;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
+use std::sync::mpsc;
 
 pub type Result<T> = std::result::Result<T, ErrorType>;
 
@@ -12,6 +13,7 @@ pub enum ErrorType {
     Io(io::Error),
     Nul(ffi::NulError),
     Json(serde_json::Error),
+    Signal(mpsc::SendError<()>),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
     VulkanCode(i32),
@@ -40,6 +42,7 @@ impl fmt::Display for ErrorType {
             ErrorType::Io(ref e) => write!(fmt, "{:?}", e),
             ErrorType::Nul(ref e) => write!(fmt, "{:?}", e),
             ErrorType::Json(ref e) => write!(fmt, "{:?}", e),
+            ErrorType::Signal(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanInstance(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanLoad(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanCode(e) => write!(fmt, "vulkan code {:?}", e),
@@ -63,6 +66,12 @@ impl From<ffi::NulError> for ErrorType {
 impl From<serde_json::Error> for ErrorType {
     fn from(e: serde_json::Error) -> Self {
         Self::Json(e)
+    }
+}
+
+impl From<mpsc::SendError<()>> for ErrorType {
+    fn from(e: mpsc::SendError<()>) -> Self {
+        Self::Signal(e)
     }
 }
 

@@ -1,16 +1,15 @@
 use image::GenericImageView;
 use log::debug;
 use log::error;
-use log::info;
 use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
-use std::cell::RefMut;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
-use std::sync::mpsc::channel;
+use std::sync::mpsc;
+use std::sync::mpsc::TryRecvError;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -23,6 +22,7 @@ use super::Extensions;
 use super::Surface;
 use super::Swapchain;
 use super::Target;
+use super::ThreadKill;
 use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
@@ -60,10 +60,11 @@ macro_rules! check {
 use tegne_utils::Window;
 
 pub struct Tegne {
+    thread_kill: ThreadKill,
     start_time: Instant,
     forward_renderer: ForwardRenderer,
     builtins: Builtins,
-    objects: Objects,
+    objects: Arc<Objects>,
     window_framebuffers: Vec<Framebuffer>,
     commands: Vec<Commands>,
     render_passes: Arc<RenderPasses>,
@@ -146,10 +147,11 @@ impl Tegne {
         ));
 
         Self {
+            thread_kill: ThreadKill::new(),
             start_time: Instant::now(),
             forward_renderer,
             builtins,
-            objects,
+            objects: Arc::new(objects),
             window_framebuffers,
             commands,
             render_passes: Arc::new(render_passes),
@@ -275,8 +277,11 @@ impl Tegne {
         self.objects.add_material(material)
     }
 
-    pub fn get_material(&self, material: Id<Material>) -> Option<RefMut<'_, Material>> {
-        self.objects.material(material)
+    pub fn with_material<F, R>(&self, material: Id<Material>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&mut Material) -> R,
+    {
+        self.objects.with_material(material, fun)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {
@@ -322,26 +327,42 @@ impl Tegne {
         let id = self.create_shader_from_file(&path_buf, options);
 
         // setup watcher
-        let _render_passes = self.render_passes.clone();
-        let _shader_layout = self.shader_layout.clone();
-        let _device = self.device.clone();
+        let render_passes = self.render_passes.clone();
+        let shader_layout = self.shader_layout.clone();
+        let device = self.device.clone();
+        let objects = self.objects.clone();
+        let kill_recv = self.thread_kill.receiver();
         thread::spawn(move || {
-            let (tx, rx) = channel();
+            let (tx, rx) = mpsc::channel();
             let mut watcher: RecommendedWatcher = check!(Watcher::new(tx, Duration::from_secs(1)));
             check!(watcher.watch(&path_buf, RecursiveMode::NonRecursive));
             loop {
-                let event = check!(rx.recv());
-                if let DebouncedEvent::NoticeWrite(_) = event {
-                    info!("reloaded shader {:?}", &path_buf);
-                    let _source = check!(fs::read(&path_buf));
-                    // let color_pass = render_passes.color();
-                    // let shader = check!(Shader::new(
-                    //     &device,
-                    //     &color_pass,
-                    //     &shader_layout,
-                    //     &source,
-                    //     options,
-                    // ));
+                // check for thread kill
+                match kill_recv.lock().unwrap().try_recv() {
+                    Ok(_) | Err(TryRecvError::Disconnected) => break,
+                    Err(TryRecvError::Empty) => {}
+                }
+
+                // check for file change
+                if let Ok(event) = rx.try_recv() {
+                    if let DebouncedEvent::Write(_) = event {
+                        let source = check!(fs::read(&path_buf));
+                        let color_pass = render_passes.color();
+                        let shader = check!(Shader::new(
+                            &device,
+                            &color_pass,
+                            &shader_layout,
+                            &source,
+                            options,
+                        ));
+                        let replaced = objects.replace_shader(id, shader);
+
+                        // cleanup replaced shader after some time
+                        thread::spawn(move || {
+                            let _ = replaced;
+                            thread::sleep(Duration::from_secs(1));
+                        });
+                    }
                 }
             }
         });
@@ -352,6 +373,7 @@ impl Tegne {
 
 impl Drop for Tegne {
     fn drop(&mut self) {
+        self.thread_kill.kill().unwrap();
         self.device.wait_for_idle().unwrap();
     }
 }
