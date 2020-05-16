@@ -1266,6 +1266,7 @@ dependencies = [
  "log",
  "notify",
  "pretty_env_logger",
+ "regex",
  "rusttype 0.9.1",
  "serde",
  "serde_json",

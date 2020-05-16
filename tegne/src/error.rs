@@ -14,6 +14,7 @@ pub enum ErrorType {
     Nul(ffi::NulError),
     Json(serde_json::Error),
     Signal(mpsc::SendError<()>),
+    Image(image::ImageError),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
     VulkanCode(i32),
@@ -43,6 +44,7 @@ impl fmt::Display for ErrorType {
             ErrorType::Nul(ref e) => write!(fmt, "{:?}", e),
             ErrorType::Json(ref e) => write!(fmt, "{:?}", e),
             ErrorType::Signal(ref e) => write!(fmt, "{:?}", e),
+            ErrorType::Image(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanInstance(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanLoad(ref e) => write!(fmt, "{:?}", e),
             ErrorType::VulkanCode(e) => write!(fmt, "vulkan code {:?}", e),
@@ -72,6 +74,12 @@ impl From<serde_json::Error> for ErrorType {
 impl From<mpsc::SendError<()>> for ErrorType {
     fn from(e: mpsc::SendError<()>) -> Self {
         Self::Signal(e)
+    }
+}
+
+impl From<image::ImageError> for ErrorType {
+    fn from(e: image::ImageError) -> Self {
+        Self::Image(e)
     }
 }
 

@@ -13,6 +13,7 @@ pub enum ErrorType {
     Image(ImageError),
     Json(serde_json::Error),
     Shader(shaderc::Error),
+    Regex(regex::Error),
     // Internal error
     Internal(ErrorKind),
 }
@@ -33,6 +34,7 @@ impl fmt::Display for ErrorType {
             ErrorType::Image(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Json(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Shader(ref err) => write!(fmt, "{:?}", err),
+            ErrorType::Regex(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Internal(ref err) => write!(fmt, "{:?}", err),
         }
     }
@@ -59,5 +61,11 @@ impl From<serde_json::Error> for ErrorType {
 impl From<shaderc::Error> for ErrorType {
     fn from(err: shaderc::Error) -> Self {
         Self::Shader(err)
+    }
+}
+
+impl From<regex::Error> for ErrorType {
+    fn from(err: regex::Error) -> Self {
+        Self::Regex(err)
     }
 }

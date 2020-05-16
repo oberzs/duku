@@ -1,7 +1,6 @@
 mod cube;
 mod floor;
 
-use std::time::Instant;
 use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
@@ -36,9 +35,6 @@ fn main() {
     let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, "blue1");
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
 
-    let mut color_value = 1.0;
-    let text_material = tegne.create_material(Default::default());
-
     let mut controller = Controller::default();
 
     let mut camera = Camera::perspective(width, height, 90);
@@ -48,15 +44,8 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let start_time = Instant::now();
-
     window.start_loop(|events| {
         controller.update(&mut camera, events);
-
-        color_value = start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5;
-        tegne.with_material(text_material, |m| {
-            m.set_albedo_tint([0.0, color_value, 1.0 - color_value]);
-        });
 
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
@@ -66,9 +55,6 @@ fn main() {
             cube_1.draw(target);
             cube_2.draw(target);
             cube_3.draw(target);
-
-            target.set_material(text_material);
-            target.draw_text("Test ABC. yes. no.", [5.0, 5.0, 5.0]);
         });
         tegne.end_draw();
     });

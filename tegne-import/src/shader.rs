@@ -1,4 +1,5 @@
 use indicatif::ProgressBar;
+use regex::Regex;
 use shaderc::CompilationArtifact;
 use shaderc::CompileOptions;
 use shaderc::Compiler;
@@ -14,7 +15,7 @@ use crate::error::ErrorType;
 use crate::error::Result;
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
-    println!("Converting {:?}", in_path);
+    println!("Converting {:?}", in_path.file_name().unwrap_or_default());
 
     let progress = ProgressBar::new(6);
 
@@ -75,6 +76,13 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
 fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     let frag_glsl = include_str!("../glsl/frag.glsl");
     let objects_glsl = include_str!("../glsl/objects.glsl");
+    let phong_glsl = include_str!("../glsl/phong.glsl");
+
+    let define_regex = Regex::new(r"(#define [A-Z]+\s+)*")?;
+    let defines = match define_regex.find(src) {
+        Some(m) => &src[m.start()..m.end()],
+        None => "",
+    };
 
     // create real glsl code
     let is_depth_frag = src.find("out_color").is_none();
@@ -85,8 +93,8 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     };
 
     let real_src = format!(
-        "#version 450\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
-        objects_glsl, frag_glsl, out_color, src
+        "#version 450\n{}\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
+        objects_glsl, frag_glsl, out_color, defines, phong_glsl, src
     );
 
     // compile glsl to spirv

@@ -27,6 +27,7 @@ use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
 use super::IN_FLIGHT_FRAME_COUNT;
+use crate::error::Result;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
@@ -258,11 +259,11 @@ impl Tegne {
         self.objects.add_texture(texture)
     }
 
-    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Id<Texture> {
-        let img = check!(image::open(path.as_ref()));
+    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Id<Texture>> {
+        let img = image::open(path.as_ref())?;
         let (width, height) = img.dimensions();
         let data = img.to_rgba().into_raw();
-        self.create_texture_rgba(&data, width, height)
+        Ok(self.create_texture_rgba(&data, width, height))
     }
 
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
@@ -313,18 +314,18 @@ impl Tegne {
         &self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
-    ) -> Id<Shader> {
-        let source = check!(fs::read(path.as_ref()));
-        self.create_shader(&source, options)
+    ) -> Result<Id<Shader>> {
+        let source = fs::read(path.as_ref())?;
+        Ok(self.create_shader(&source, options))
     }
 
     pub fn create_shader_from_file_watch(
         &self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
-    ) -> Id<Shader> {
+    ) -> Result<Id<Shader>> {
         let path_buf = path.as_ref().to_path_buf();
-        let id = self.create_shader_from_file(&path_buf, options);
+        let id = self.create_shader_from_file(&path_buf, options)?;
 
         // setup watcher
         let render_passes = self.render_passes.clone();
@@ -367,7 +368,7 @@ impl Tegne {
             }
         });
 
-        id
+        Ok(id)
     }
 }
 
