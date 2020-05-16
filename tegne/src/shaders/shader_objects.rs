@@ -9,7 +9,6 @@ use log::info;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::sync::Arc;
-use std::sync::Weak;
 use tegne_math::Matrix4;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
@@ -18,7 +17,6 @@ use tegne_math::Vector4;
 use super::ShaderLayout;
 use crate::buffer::BufferType;
 use crate::buffer::DynamicBuffer;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::images::Sampler;
@@ -85,7 +83,7 @@ pub(crate) struct ImageUniforms {
     nearest_repeat_sampler: Sampler,
     images: RefCell<Vec<ImageView>>,
     should_update: Cell<bool>,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -171,7 +169,7 @@ impl ImageUniforms {
             nearest_repeat_sampler,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
@@ -184,9 +182,7 @@ impl ImageUniforms {
         self.should_update.set(true);
     }
 
-    pub(crate) fn update_if_needed(&self) -> Result<()> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
-
+    pub(crate) fn update_if_needed(&self) {
         if self.should_update.get() {
             let image_infos = (0..100)
                 .map(|i| {
@@ -230,13 +226,11 @@ impl ImageUniforms {
 
             let writes = [image_write, sampler_write];
             unsafe {
-                device.logical().update_descriptor_sets(&writes, &[]);
+                self.device.logical().update_descriptor_sets(&writes, &[]);
             }
 
             self.should_update.set(false);
         }
-
-        Ok(())
     }
 
     pub(crate) fn descriptor(&self) -> Descriptor {

@@ -17,12 +17,10 @@ use ash::vk::WriteDescriptorSet;
 use log::debug;
 use std::mem;
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::PushConstants;
 use crate::buffer::Buffer;
 use crate::buffer::DynamicBuffer;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
 
@@ -32,7 +30,7 @@ pub(crate) struct ShaderLayout {
     material_layout: DescriptorSetLayout,
     image_layout: DescriptorSetLayout,
     descriptor_pool: DescriptorPool,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 impl ShaderLayout {
@@ -152,18 +150,21 @@ impl ShaderLayout {
             material_layout,
             image_layout,
             descriptor_pool,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
     pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<DescriptorSet> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.world_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
+        let set = unsafe {
+            self.device
+                .logical()
+                .allocate_descriptor_sets(&set_alloc_info)?[0]
+        };
 
         let buffer_info = DescriptorBufferInfo::builder()
             .buffer(buffer.vk_buffer())
@@ -182,7 +183,7 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            device
+            self.device
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
@@ -191,13 +192,16 @@ impl ShaderLayout {
     }
 
     pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<DescriptorSet> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.material_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts);
 
-        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
+        let set = unsafe {
+            self.device
+                .logical()
+                .allocate_descriptor_sets(&set_alloc_info)?[0]
+        };
 
         let buffer_info = DescriptorBufferInfo::builder()
             .buffer(buffer.vk_buffer())
@@ -216,7 +220,7 @@ impl ShaderLayout {
         let descriptor_writes = [descriptor_write];
 
         unsafe {
-            device
+            self.device
                 .logical()
                 .update_descriptor_sets(&descriptor_writes, &[]);
         }
@@ -225,14 +229,17 @@ impl ShaderLayout {
     }
 
     pub(crate) fn image_set(&self) -> Result<DescriptorSet> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
         let set_layouts = [self.image_layout];
         let set_alloc_info = DescriptorSetAllocateInfo::builder()
             .descriptor_pool(self.descriptor_pool)
             .set_layouts(&set_layouts)
             .build();
 
-        let set = unsafe { device.logical().allocate_descriptor_sets(&set_alloc_info)?[0] };
+        let set = unsafe {
+            self.device
+                .logical()
+                .allocate_descriptor_sets(&set_alloc_info)?[0]
+        };
         Ok(set)
     }
 
@@ -243,25 +250,20 @@ impl ShaderLayout {
 
 impl Drop for ShaderLayout {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device
+            self.device
                 .logical()
                 .destroy_pipeline_layout(self.pipeline_layout, None);
-            device
+            self.device
                 .logical()
                 .destroy_descriptor_set_layout(self.world_layout, None);
-            device
+            self.device
                 .logical()
                 .destroy_descriptor_set_layout(self.material_layout, None);
-            device
+            self.device
                 .logical()
                 .destroy_descriptor_set_layout(self.image_layout, None);
-            device
+            self.device
                 .logical()
                 .destroy_descriptor_pool(self.descriptor_pool, None);
         }

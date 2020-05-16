@@ -21,7 +21,6 @@ pub enum ErrorType {
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ErrorKind {
-    DeviceDropped,
     UnsupportedExtension,
     UnsupportedMsaa,
     NoSuitableGpu,

@@ -4,11 +4,9 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryPropertyFlags;
 use std::mem;
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::Buffer;
 use super::BufferType;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
 use crate::memory::alloc;
@@ -18,7 +16,7 @@ pub(crate) struct DynamicBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
     size: u32,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 impl DynamicBuffer {
@@ -40,14 +38,13 @@ impl DynamicBuffer {
             vk,
             memory,
             size: size as u32,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
     pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
         let size = mem::size_of::<T>() * data.len();
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
-        copy::data_to_buffer(&device, data, self.memory, size)?;
+        copy::data_to_buffer(&self.device, data, self.memory, size)?;
         Ok(())
     }
 
@@ -58,15 +55,10 @@ impl DynamicBuffer {
 
 impl Drop for DynamicBuffer {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device.wait_for_idle().unwrap();
-            device.logical().destroy_buffer(self.vk, None);
-            device.logical().free_memory(self.memory, None);
+            self.device.wait_for_idle().unwrap();
+            self.device.logical().destroy_buffer(self.vk, None);
+            self.device.logical().free_memory(self.memory, None);
         }
     }
 }

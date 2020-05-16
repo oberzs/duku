@@ -5,11 +5,9 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryPropertyFlags;
 use std::mem;
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::Buffer;
 use super::BufferType;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
 use crate::memory::alloc;
@@ -18,7 +16,7 @@ use crate::memory::copy;
 pub(crate) struct FixedBuffer {
     vk: VkBuffer,
     memory: DeviceMemory,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 impl FixedBuffer {
@@ -55,7 +53,7 @@ impl FixedBuffer {
         Ok(Self {
             vk,
             memory,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 }
@@ -68,15 +66,10 @@ impl Buffer for FixedBuffer {
 
 impl Drop for FixedBuffer {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device.wait_for_idle().unwrap();
-            device.logical().destroy_buffer(self.vk, None);
-            device.logical().free_memory(self.memory, None);
+            self.device.wait_for_idle().unwrap();
+            self.device.logical().destroy_buffer(self.vk, None);
+            self.device.logical().free_memory(self.memory, None);
         }
     }
 }

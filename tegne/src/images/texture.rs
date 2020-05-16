@@ -79,8 +79,8 @@ impl Texture {
         cmd.change_image_layout(&image)
             .with_mips(0, mip_levels)
             .change_to_write()
-            .record()?;
-        device.submit_buffer(cmd.end()?)?;
+            .record();
+        device.submit_and_wait(cmd.end()?)?;
 
         image.copy_data_from(staging_buffer)?;
         image.generate_mipmaps()?;

@@ -24,9 +24,7 @@ use ash::vk::Offset3D;
 use ash::vk::SharingMode;
 use std::cmp;
 use std::sync::Arc;
-use std::sync::Weak;
 
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
@@ -40,7 +38,7 @@ pub(crate) struct Image {
     memory: Option<DeviceMemory>,
     view: Option<ImageView>,
     format: ImageFormat,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -118,7 +116,7 @@ impl Image {
                     .initial_layout(ImageLayout::Undefined.flag())
                     .usage(ImageUsage::combine(options.usage))
                     .sharing_mode(SharingMode::EXCLUSIVE)
-                    .samples(samples.flag()?);
+                    .samples(samples.flag());
 
                 let vk = unsafe { device.logical().create_image(&image_info, None)? };
 
@@ -183,13 +181,11 @@ impl Image {
             memory,
             view,
             format: options.format,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
     pub(crate) fn copy_data_from(&self, src: Buffer) -> Result<()> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
-
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)
@@ -210,20 +206,18 @@ impl Image {
             })
             .build();
 
-        let cmd = Commands::new(&device)?;
+        let cmd = Commands::new(&self.device)?;
         cmd.begin_one_time()?;
-        cmd.copy_buffer_to_image(src, self.vk, region)?;
-        device.submit_buffer(cmd.end()?)?;
+        cmd.copy_buffer_to_image(src, self.vk, region);
+        self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
     }
 
     pub(crate) fn generate_mipmaps(&self) -> Result<()> {
-        let device = self.device.upgrade().ok_or(ErrorKind::DeviceDropped)?;
-
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let cmd = Commands::new(&device)?;
+        let cmd = Commands::new(&self.device)?;
         cmd.begin_one_time()?;
 
         for i in 1..self.mip_levels {
@@ -231,7 +225,7 @@ impl Image {
                 .with_mips(i - 1, 1)
                 .change_from_write()
                 .change_to_read()
-                .record()?;
+                .record();
 
             let src_offsets = [
                 Offset3D { x: 0, y: 0, z: 0 },
@@ -272,22 +266,22 @@ impl Image {
                 .dst_subresource(dst_subresource)
                 .build();
 
-            cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR)?;
+            cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
 
             cmd.change_image_layout(self)
                 .with_mips(i - 1, 1)
                 .change_from_read()
                 .change_to_shader_read()
-                .record()?;
+                .record();
         }
 
         cmd.change_image_layout(self)
             .with_mips(self.mip_levels - 1, 1)
             .change_from_write()
             .change_to_shader_read()
-            .record()?;
+            .record();
 
-        device.submit_buffer(cmd.end()?)?;
+        self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
     }
 
@@ -306,18 +300,13 @@ impl Image {
 
 impl Drop for Image {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
             if let Some(view) = self.view {
-                device.logical().destroy_image_view(view, None);
+                self.device.logical().destroy_image_view(view, None);
             }
             if let Some(memory) = self.memory {
-                device.logical().destroy_image(self.vk, None);
-                device.logical().free_memory(memory, None);
+                self.device.logical().destroy_image(self.vk, None);
+                self.device.logical().free_memory(memory, None);
             }
         }
     }

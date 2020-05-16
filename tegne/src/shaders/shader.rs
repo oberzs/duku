@@ -35,12 +35,10 @@ use std::ffi::CString;
 use std::io::Cursor;
 use std::io::Read;
 use std::sync::Arc;
-use std::sync::Weak;
 use tar::Archive;
 
 use super::RenderPass;
 use super::ShaderLayout;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
 use crate::instance::Samples;
@@ -48,7 +46,7 @@ use crate::mesh::Vertex;
 
 pub struct Shader {
     pipeline: Pipeline,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -164,7 +162,7 @@ impl Shader {
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
-            .rasterization_samples(samples.flag()?);
+            .rasterization_samples(samples.flag());
 
         let stencil = StencilOpState::builder()
             .fail_op(StencilOp::KEEP)
@@ -252,7 +250,7 @@ impl Shader {
 
         Ok(Self {
             pipeline,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
@@ -263,13 +261,8 @@ impl Shader {
 
 impl Drop for Shader {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device.logical().destroy_pipeline(self.pipeline, None);
+            self.device.logical().destroy_pipeline(self.pipeline, None);
         }
     }
 }

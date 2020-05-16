@@ -7,15 +7,12 @@ use ash::vk::ImageBlit;
 use ash::vk::ImageSubresourceLayers;
 use ash::vk::Offset3D;
 use log::debug;
-use std::cell::Ref;
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::Image;
 use super::ImageFormat;
 use super::ImageOptions;
 use super::ImageUsage;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
@@ -34,7 +31,7 @@ pub struct Framebuffer {
     shader_image: Image,
     shader_index: i32,
     world_uniforms: WorldUniforms,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 impl Framebuffer {
@@ -242,8 +239,8 @@ impl Framebuffer {
         cmd.begin_one_time()?;
         cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
-            .record()?;
-        device.submit_buffer(cmd.end()?)?;
+            .record();
+        device.submit_and_wait(cmd.end()?)?;
 
         let shader_index = image_uniforms.image_count() as i32;
         if let Some(view) = shader_image.view() {
@@ -272,11 +269,11 @@ impl Framebuffer {
             shader_index,
             attachment_images: images,
             world_uniforms,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
-    pub(crate) fn blit_to_shader_image(&self, cmd: &Ref<'_, Commands>) -> Result<()> {
+    pub(crate) fn blit_to_shader_image(&self, cmd: &Commands) {
         let image = &self.attachment_images[self.attachment_images.len() - 1];
         let is_depth = image.is_depth_format();
 
@@ -284,17 +281,17 @@ impl Framebuffer {
             cmd.change_image_layout(image)
                 .change_from_depth_write()
                 .change_to_read()
-                .record()?;
+                .record();
         } else {
             cmd.change_image_layout(image)
                 .change_from_color_write()
                 .change_to_read()
-                .record()?;
+                .record();
         }
         cmd.change_image_layout(&self.shader_image)
             .change_from_shader_read()
             .change_to_write()
-            .record()?;
+            .record();
 
         let offsets = [
             Offset3D::default(),
@@ -329,25 +326,23 @@ impl Framebuffer {
             Filter::LINEAR
         };
 
-        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter)?;
+        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
 
         if is_depth {
             cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_depth_write()
-                .record()?;
+                .record();
         } else {
             cmd.change_image_layout(image)
                 .change_from_read()
                 .change_to_color_write()
-                .record()?;
+                .record();
         }
         cmd.change_image_layout(&self.shader_image)
             .change_from_write()
             .change_to_shader_read()
-            .record()?;
-
-        Ok(())
+            .record();
     }
 
     pub(crate) fn vk(&self) -> VkFramebuffer {
@@ -377,13 +372,8 @@ impl Framebuffer {
 
 impl Drop for Framebuffer {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device.logical().destroy_framebuffer(self.vk, None);
+            self.device.logical().destroy_framebuffer(self.vk, None);
         }
     }
 }

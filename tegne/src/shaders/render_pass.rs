@@ -8,11 +8,9 @@ use ash::vk::SubpassDependency;
 use ash::vk::SubpassDescription;
 use ash::vk::SUBPASS_EXTERNAL;
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::Attachment;
 use super::AttachmentOptions;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::instance::Device;
@@ -26,7 +24,7 @@ pub(crate) struct RenderPasses {
 pub(crate) struct RenderPass {
     vk: VkRenderPass,
     has_msaa_attachment: bool,
-    device: Weak<Device>,
+    device: Arc<Device>,
 }
 
 #[derive(Default)]
@@ -77,7 +75,7 @@ impl RenderPass {
                 has_clear: true,
                 ..Default::default()
             },
-        )?);
+        ));
 
         // color
         options.color_attachment = Some(Attachment::new(
@@ -89,7 +87,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        )?);
+        ));
 
         // msaa
         if device.is_msaa() {
@@ -102,7 +100,7 @@ impl RenderPass {
                     has_samples: true,
                     ..Default::default()
                 },
-            )?);
+            ));
         }
 
         options.dependency = Some(
@@ -134,7 +132,7 @@ impl RenderPass {
                 has_samples: true,
                 ..Default::default()
             },
-        )?);
+        ));
 
         // color
         options.color_attachment = Some(Attachment::new(
@@ -146,7 +144,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        )?);
+        ));
 
         // msaa
         if device.is_msaa() {
@@ -159,7 +157,7 @@ impl RenderPass {
                     has_samples: true,
                     ..Default::default()
                 },
-            )?);
+            ));
         }
 
         options.dependency = Some(
@@ -191,7 +189,7 @@ impl RenderPass {
                 has_store: true,
                 ..Default::default()
             },
-        )?);
+        ));
 
         options.dependency = Some(
             SubpassDependency::builder()
@@ -260,7 +258,7 @@ impl RenderPass {
         Ok(Self {
             vk,
             has_msaa_attachment,
-            device: Arc::downgrade(device),
+            device: Arc::clone(device),
         })
     }
 
@@ -275,13 +273,8 @@ impl RenderPass {
 
 impl Drop for RenderPass {
     fn drop(&mut self) {
-        let device = self
-            .device
-            .upgrade()
-            .ok_or(ErrorKind::DeviceDropped)
-            .unwrap();
         unsafe {
-            device.logical().destroy_render_pass(self.vk, None);
+            self.device.logical().destroy_render_pass(self.vk, None);
         }
     }
 }

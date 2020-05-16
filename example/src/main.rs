@@ -23,7 +23,7 @@ fn main() {
         width,
         height,
     });
-    let tegne = Tegne::from_window(
+    let mut tegne = Tegne::from_window(
         &window,
         TegneOptions {
             anisotropy: 16.0,

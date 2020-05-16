@@ -26,13 +26,10 @@ use ash::vk::SurfaceFormatKHR;
 use ash::Device as LogicalDevice;
 use log::info;
 use std::cell::Cell;
-use std::cell::Ref;
-use std::cell::RefCell;
 use std::ffi::CStr;
 use std::sync::Arc;
 use tegne_math::clamp;
 
-use super::Commands;
 use super::Extensions;
 use super::Surface;
 use super::Swapchain;
@@ -42,7 +39,7 @@ use crate::error::Result;
 use crate::sync::fence;
 use crate::sync::semaphore;
 
-const IN_FLIGHT_FRAME_COUNT: u32 = 2;
+pub(crate) const IN_FLIGHT_FRAME_COUNT: u32 = 2;
 
 pub(crate) struct Device {
     logical: LogicalDevice,
@@ -53,7 +50,6 @@ pub(crate) struct Device {
     sync_acquire_image: Vec<Semaphore>,
     sync_release_image: Vec<Semaphore>,
     sync_queue_submit: Vec<Fence>,
-    commands: RefCell<Vec<Commands>>,
     current_frame: Cell<u32>,
 }
 
@@ -166,13 +162,8 @@ impl Device {
                     sync_acquire_image,
                     sync_release_image,
                     sync_queue_submit,
-                    commands: RefCell::new(vec![]),
                     current_frame: Cell::new(0),
                 });
-
-                for _ in 0..IN_FLIGHT_FRAME_COUNT {
-                    device.commands.borrow_mut().push(Commands::new(&device)?);
-                }
 
                 return Ok(device);
             }
@@ -193,20 +184,14 @@ impl Device {
         fence::wait_for(&self.logical, wait)?;
         fence::reset(&self.logical, wait)?;
 
-        // reset command recorder
-        let cmd = &mut self.commands.borrow_mut()[current];
-        cmd.reset()?;
-        cmd.begin()?;
         Ok(())
     }
 
-    pub(crate) fn commands(&self) -> Ref<'_, Commands> {
-        Ref::map(self.commands.borrow(), |rs| {
-            &rs[self.current_frame.get() as usize]
-        })
+    pub(crate) fn current_frame(&self) -> usize {
+        self.current_frame.get() as usize
     }
 
-    pub(crate) fn submit_buffer(&self, buffer: CommandBuffer) -> Result<()> {
+    pub(crate) fn submit_and_wait(&self, buffer: CommandBuffer) -> Result<()> {
         let buffers = [buffer];
         let info = SubmitInfo::builder().command_buffers(&buffers).build();
         let infos = [info];
@@ -219,12 +204,12 @@ impl Device {
         Ok(())
     }
 
-    pub(crate) fn submit(&self) -> Result<()> {
+    pub(crate) fn submit(&self, buffer: CommandBuffer) -> Result<()> {
         let current = self.current_frame.get() as usize;
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
         let done = self.sync_queue_submit[current];
-        let buffers = [self.commands.borrow()[current].end()?];
+        let buffers = [buffer];
         let stage_mask = [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let info = [SubmitInfo::builder()
@@ -316,18 +301,14 @@ impl Drop for Device {
             self.sync_queue_submit
                 .iter()
                 .for_each(|f| fence::destroy(&self.logical, *f));
-            self.commands
-                .borrow_mut()
-                .iter_mut()
-                .for_each(|r| r.manual_drop(&self.logical));
             self.logical.destroy_device(None);
         }
     }
 }
 
 impl Samples {
-    pub(crate) fn flag(&self) -> Result<SampleCountFlags> {
-        let flag = match self.0 {
+    pub(crate) fn flag(&self) -> SampleCountFlags {
+        match self.0 {
             1 => SampleCountFlags::TYPE_1,
             2 => SampleCountFlags::TYPE_2,
             4 => SampleCountFlags::TYPE_4,
@@ -335,9 +316,8 @@ impl Samples {
             16 => SampleCountFlags::TYPE_16,
             32 => SampleCountFlags::TYPE_32,
             64 => SampleCountFlags::TYPE_64,
-            _ => return Err(ErrorKind::InvalidMsaa.into()),
-        };
-        Ok(flag)
+            _ => SampleCountFlags::TYPE_1,
+        }
     }
 }
 
@@ -426,7 +406,9 @@ fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Result<Sample
 
     let samples = Samples(msaa);
 
-    if !counts.contains(samples.flag()?) {
+    if samples.flag() == SampleCountFlags::TYPE_1 && msaa != 1 {
+        Err(ErrorKind::InvalidMsaa.into())
+    } else if !counts.contains(samples.flag()) {
         Err(ErrorKind::UnsupportedMsaa.into())
     } else {
         Ok(samples)

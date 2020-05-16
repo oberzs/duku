@@ -1,6 +1,7 @@
 use image::GenericImageView;
 use log::debug;
 use log::error;
+use log::info;
 use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
@@ -16,6 +17,7 @@ use std::time::Duration;
 use std::time::Instant;
 use tegne_math::Camera;
 
+use super::Commands;
 use super::Device;
 use super::Extensions;
 use super::Surface;
@@ -24,6 +26,7 @@ use super::Target;
 use super::Validator;
 use super::Vulkan;
 use super::WindowArgs;
+use super::IN_FLIGHT_FRAME_COUNT;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
@@ -62,9 +65,10 @@ pub struct Tegne {
     builtins: Builtins,
     objects: Objects,
     window_framebuffers: Vec<Framebuffer>,
-    render_passes: RenderPasses,
+    commands: Vec<Commands>,
+    render_passes: Arc<RenderPasses>,
     image_uniforms: ImageUniforms,
-    shader_layout: ShaderLayout,
+    shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
     device: Arc<Device>,
     _surface: Surface,
@@ -130,6 +134,10 @@ impl Tegne {
             &shader_layout,
         ));
 
+        let commands = (0..IN_FLIGHT_FRAME_COUNT)
+            .map(|_| check!(Commands::new(&device)))
+            .collect::<Vec<_>>();
+
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
             &render_passes,
@@ -143,9 +151,10 @@ impl Tegne {
             builtins,
             objects,
             window_framebuffers,
-            render_passes,
+            commands,
+            render_passes: Arc::new(render_passes),
             image_uniforms,
-            shader_layout,
+            shader_layout: Arc::new(shader_layout),
             swapchain,
             device,
             _surface: surface,
@@ -184,17 +193,21 @@ impl Tegne {
         Self::new(args, options)
     }
 
-    pub fn begin_draw(&self) {
+    pub fn begin_draw(&mut self) {
         check!(self.device.next_frame(&self.swapchain));
-        check!(self.image_uniforms.update_if_needed());
-        check!(self.device.commands().bind_descriptor(
+        self.image_uniforms.update_if_needed();
+        let cmd = &mut self.commands[self.device.current_frame()];
+        check!(cmd.reset());
+        check!(cmd.begin());
+        cmd.bind_descriptor(
             self.image_uniforms.descriptor(),
             self.shader_layout.pipeline(),
-        ));
+        );
     }
 
     pub fn end_draw(&self) {
-        check!(self.device.submit());
+        let buffer = check!(self.commands[self.device.current_frame()].end());
+        check!(self.device.submit(buffer));
         check!(self.device.present(&self.swapchain));
     }
 
@@ -213,6 +226,7 @@ impl Tegne {
             camera,
             objects: &self.objects,
             builtins: &self.builtins,
+            cmd: &self.commands[self.device.current_frame()],
             target,
             time: self.start_time.elapsed().as_secs_f32(),
         }));
@@ -290,26 +304,44 @@ impl Tegne {
         self.objects.add_shader(shader)
     }
 
+    pub fn create_shader_from_file(
+        &self,
+        path: impl AsRef<Path>,
+        options: ShaderOptions,
+    ) -> Id<Shader> {
+        let source = check!(fs::read(path.as_ref()));
+        self.create_shader(&source, options)
+    }
+
     pub fn create_shader_from_file_watch(
         &self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
     ) -> Id<Shader> {
         let path_buf = path.as_ref().to_path_buf();
-        let source = check!(fs::read(&path_buf));
-        let id = self.create_shader(&source, options);
+        let id = self.create_shader_from_file(&path_buf, options);
 
         // setup watcher
-        let arc_path_buf = path_buf;
+        let _render_passes = self.render_passes.clone();
+        let _shader_layout = self.shader_layout.clone();
+        let _device = self.device.clone();
         thread::spawn(move || {
             let (tx, rx) = channel();
             let mut watcher: RecommendedWatcher = check!(Watcher::new(tx, Duration::from_secs(1)));
-            check!(watcher.watch(&arc_path_buf, RecursiveMode::NonRecursive));
+            check!(watcher.watch(&path_buf, RecursiveMode::NonRecursive));
             loop {
                 let event = check!(rx.recv());
                 if let DebouncedEvent::NoticeWrite(_) = event {
-                    println!("new shader {:?}", &arc_path_buf);
-                    // let new_source = check!(fs::read(&new_path));
+                    info!("reloaded shader {:?}", &path_buf);
+                    let _source = check!(fs::read(&path_buf));
+                    // let color_pass = render_passes.color();
+                    // let shader = check!(Shader::new(
+                    //     &device,
+                    //     &color_pass,
+                    //     &shader_layout,
+                    //     &source,
+                    //     options,
+                    // ));
                 }
             }
         });
