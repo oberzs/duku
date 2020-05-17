@@ -21,17 +21,17 @@ mod shader;
 
 use clap::App;
 use clap::Arg;
+use crossbeam_channel::unbounded;
 use log::error;
 use log::warn;
-use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
-use std::sync::mpsc;
-use std::time::Duration;
+use std::time::Instant;
 
 use error::Result;
 use font::import_font;
@@ -117,17 +117,26 @@ fn main() {
     // watch for changes
     if watch {
         let path = input.or(dir).unwrap();
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = unbounded();
 
-        let mut watcher: RecommendedWatcher = check!(Watcher::new(sender, Duration::from_secs(1)));
+        let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| sender
+            .send(check!(res))
+            .unwrap()));
         check!(watcher.watch(path, RecursiveMode::NonRecursive));
 
+        let start_time = Instant::now();
+        let mut same_events = HashSet::new();
         loop {
             let event = receiver.recv().unwrap();
-            if let DebouncedEvent::NoticeWrite(in_path) = event {
+            let in_path = event.paths[0].clone();
+            let time = start_time.elapsed().as_secs();
+
+            // "debounce" events
+            if !same_events.contains(&(in_path.clone(), time)) {
+                same_events.insert((in_path.clone(), time));
                 let out_path = create_out_path(&in_path, out_dir);
                 if let Err(err) = import_file(&in_path, &out_path) {
-                    warn!("{}", err);
+                    error!("{}", err);
                 }
             }
         }

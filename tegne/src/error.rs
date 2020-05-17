@@ -3,7 +3,6 @@ use std::ffi;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
-use std::sync::mpsc;
 
 pub type Result<T> = std::result::Result<T, ErrorType>;
 
@@ -13,7 +12,7 @@ pub enum ErrorType {
     Io(io::Error),
     Nul(ffi::NulError),
     Json(serde_json::Error),
-    Signal(mpsc::SendError<()>),
+    Signal(crossbeam_channel::SendError<()>),
     Image(image::ImageError),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -71,8 +70,8 @@ impl From<serde_json::Error> for ErrorType {
     }
 }
 
-impl From<mpsc::SendError<()>> for ErrorType {
-    fn from(e: mpsc::SendError<()>) -> Self {
+impl From<crossbeam_channel::SendError<()>> for ErrorType {
+    fn from(e: crossbeam_channel::SendError<()>) -> Self {
         Self::Signal(e)
     }
 }

@@ -1,15 +1,15 @@
+use crossbeam_channel::select;
+use crossbeam_channel::unbounded;
 use image::GenericImageView;
 use log::debug;
 use log::error;
-use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::exit;
-use std::sync::mpsc;
-use std::sync::mpsc::TryRecvError;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -333,36 +333,46 @@ impl Tegne {
         let device = self.device.clone();
         let objects = self.objects.clone();
         let kill_recv = self.thread_kill.receiver();
+
         thread::spawn(move || {
-            let (tx, rx) = mpsc::channel();
-            let mut watcher: RecommendedWatcher = check!(Watcher::new(tx, Duration::from_secs(1)));
+            let (sender, receiver) = unbounded();
+            let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| sender
+                .send(check!(res))
+                .unwrap()));
             check!(watcher.watch(&path_buf, RecursiveMode::NonRecursive));
+
+            let start_time = Instant::now();
+            let mut same_events = HashSet::new();
             loop {
-                // check for thread kill
-                match kill_recv.lock().unwrap().try_recv() {
-                    Ok(_) | Err(TryRecvError::Disconnected) => break,
-                    Err(TryRecvError::Empty) => {}
-                }
+                select! {
+                    recv(kill_recv) -> _ => break,
+                    recv(receiver) -> signal => if signal.is_ok() {
+                        let time = start_time.elapsed().as_secs();
 
-                // check for file change
-                if let Ok(event) = rx.try_recv() {
-                    if let DebouncedEvent::Write(_) = event {
-                        let source = check!(fs::read(&path_buf));
-                        let color_pass = render_passes.color();
-                        let shader = check!(Shader::new(
-                            &device,
-                            &color_pass,
-                            &shader_layout,
-                            &source,
-                            options,
-                        ));
-                        let replaced = objects.replace_shader(id, shader);
+                        // "debounce" events
+                        if !same_events.contains(&time) {
+                            same_events.insert(time);
 
-                        // cleanup replaced shader after some time
-                        thread::spawn(move || {
-                            let _ = replaced;
-                            thread::sleep(Duration::from_secs(1));
-                        });
+                            // wait to commit
+                            thread::sleep(Duration::from_millis(500));
+
+                            let source = check!(fs::read(&path_buf));
+                            let color_pass = render_passes.color();
+                            let shader = check!(Shader::new(
+                                &device,
+                                &color_pass,
+                                &shader_layout,
+                                &source,
+                                options,
+                            ));
+                            let replaced = objects.replace_shader(id, shader);
+
+                            // cleanup replaced shader after some time
+                            thread::spawn(move || {
+                                let _ = replaced;
+                                thread::sleep(Duration::from_secs(1));
+                            });
+                        }
                     }
                 }
             }

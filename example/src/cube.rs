@@ -23,7 +23,7 @@ impl Cube {
             .create_texture_from_file(format!("example/assets/images/{}.png", color.as_ref()))
             .expect("cannot create cube texture");
         let shader = tegne
-            .create_shader_from_file("example/assets/test.shader", Default::default())
+            .create_shader_from_file_watch("example/assets/test.shader", Default::default())
             .expect("cannot create cube shader");
         let transform = Transform::from(pos.into());
 
