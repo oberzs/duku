@@ -22,6 +22,7 @@ mod shader;
 use clap::App;
 use clap::Arg;
 use log::error;
+use log::warn;
 use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
@@ -29,7 +30,7 @@ use notify::Watcher;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
-use std::sync::mpsc::channel;
+use std::sync::mpsc;
 use std::time::Duration;
 
 use error::Result;
@@ -116,16 +117,18 @@ fn main() {
     // watch for changes
     if watch {
         let path = input.or(dir).unwrap();
-        let (tx, rx) = channel();
+        let (sender, receiver) = mpsc::channel();
 
-        let mut watcher: RecommendedWatcher = check!(Watcher::new(tx, Duration::from_secs(1)));
+        let mut watcher: RecommendedWatcher = check!(Watcher::new(sender, Duration::from_secs(1)));
         check!(watcher.watch(path, RecursiveMode::NonRecursive));
 
         loop {
-            let event = rx.recv().unwrap();
+            let event = receiver.recv().unwrap();
             if let DebouncedEvent::NoticeWrite(in_path) = event {
                 let out_path = create_out_path(&in_path, out_dir);
-                check!(import_file(&in_path, &out_path));
+                if let Err(err) = import_file(&in_path, &out_path) {
+                    warn!("{}", err);
+                }
             }
         }
     }
