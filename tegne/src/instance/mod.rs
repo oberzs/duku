@@ -17,6 +17,7 @@ use extensions::Extensions;
 use surface::Surface;
 use surface::WindowArgs;
 pub(crate) use swapchain::Swapchain;
+pub(crate) use target::Albedo;
 pub(crate) use target::Order;
 pub use target::Target;
 pub use tegne::Tegne;

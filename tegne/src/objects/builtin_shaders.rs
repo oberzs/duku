@@ -18,7 +18,7 @@ macro_rules! include_shader {
 pub(crate) struct BuiltinShaders {
     pub(crate) phong: Id<Shader>,
     // pub(crate) unshaded: Id<Shader>,
-    // pub(crate) passthru: Id<Shader>,
+    pub(crate) passthru: Id<Shader>,
     pub(crate) wireframe: Id<Shader>,
     pub(crate) shadow: Id<Shader>,
     pub(crate) font: Id<Shader>,
@@ -73,7 +73,7 @@ impl BuiltinShaders {
             Default::default(),
         )?);
 
-        let _passthru = objects.add_shader(Shader::new(
+        let passthru = objects.add_shader(Shader::new(
             device,
             color_pass,
             layout,
@@ -101,7 +101,7 @@ impl BuiltinShaders {
             // unshaded,
             shadow,
             font,
-            // passthru,
+            passthru,
             wireframe,
         })
     }

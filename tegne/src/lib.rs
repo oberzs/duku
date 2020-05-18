@@ -19,6 +19,7 @@ mod renderer;
 mod shaders;
 mod sync;
 
+pub use images::Framebuffer;
 pub use images::Texture;
 pub use instance::Target;
 pub use instance::Tegne;

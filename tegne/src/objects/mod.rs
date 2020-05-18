@@ -14,6 +14,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
 use crate::images::Font;
+use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::shaders::Material;
@@ -33,6 +34,7 @@ pub(crate) struct Objects {
     meshes: Storage<Mesh>,
     shaders: Storage<Shader>,
     fonts: Storage<Font>,
+    framebuffers: Storage<Framebuffer>,
     max_id: AtomicU32,
 }
 
@@ -47,6 +49,7 @@ impl Objects {
             meshes: Mutex::new(HashMap::new()),
             shaders: Mutex::new(HashMap::new()),
             fonts: Mutex::new(HashMap::new()),
+            framebuffers: Mutex::new(HashMap::new()),
             max_id: AtomicU32::new(0),
         }
     }
@@ -78,6 +81,12 @@ impl Objects {
     pub(crate) fn add_font(&self, font: Font) -> Id<Font> {
         let id = Id(self.get_id(), PhantomData);
         self.fonts.lock().unwrap().insert(id, font);
+        id
+    }
+
+    pub(crate) fn add_framebuffer(&self, framebuffer: Framebuffer) -> Id<Framebuffer> {
+        let id = Id(self.get_id(), PhantomData);
+        self.framebuffers.lock().unwrap().insert(id, framebuffer);
         id
     }
 
@@ -127,6 +136,16 @@ impl Objects {
     {
         match self.fonts.lock().unwrap().get(&id) {
             Some(font) => Some(fun(font)),
+            None => None,
+        }
+    }
+
+    pub(crate) fn with_framebuffer<F, R>(&self, id: Id<Framebuffer>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&Framebuffer) -> R,
+    {
+        match self.framebuffers.lock().unwrap().get(&id) {
+            Some(framebuffer) => Some(fun(framebuffer)),
             None => None,
         }
     }

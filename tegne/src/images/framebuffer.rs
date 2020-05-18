@@ -7,6 +7,7 @@ use ash::vk::ImageBlit;
 use ash::vk::ImageSubresourceLayers;
 use ash::vk::Offset3D;
 use log::debug;
+use std::cmp;
 use std::sync::Arc;
 
 use super::Image;
@@ -274,7 +275,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn blit_to_shader_image(&self, cmd: &Commands) {
-        let image = &self.attachment_images[self.attachment_images.len() - 1];
+        let image = &self.attachment_images[cmp::min(self.attachment_images.len() - 1, 1)];
         let is_depth = image.is_depth_format();
 
         if is_depth {

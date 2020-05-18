@@ -11,7 +11,7 @@ pub(crate) use self::image::ImageLayout;
 pub(crate) use self::image::ImageOptions;
 pub(crate) use self::image::ImageUsage;
 pub use font::Font;
-pub(crate) use framebuffer::Framebuffer;
+pub use framebuffer::Framebuffer;
 pub(crate) use layout_change::LayoutChange;
 pub(crate) use sampler::Sampler;
 pub(crate) use sampler::SamplerAddress;

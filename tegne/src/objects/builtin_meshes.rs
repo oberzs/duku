@@ -12,17 +12,49 @@ use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 
 pub(crate) struct BuiltinMeshes {
+    pub(crate) surface: Id<Mesh>,
     pub(crate) cube: Id<Mesh>,
     pub(crate) sphere: Id<Mesh>,
 }
 
 impl BuiltinMeshes {
     pub(crate) fn new(device: &Arc<Device>, objects: &Objects) -> Result<Self> {
+        let surface = objects.add_mesh(create_surface(device)?);
         let cube = objects.add_mesh(create_cube(device)?);
         let sphere = objects.add_mesh(create_sphere(device, 2)?);
 
-        Ok(Self { cube, sphere })
+        Ok(Self {
+            surface,
+            cube,
+            sphere,
+        })
     }
+}
+
+fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
+    let vertices = &[
+        Vector3::new(-1.0, 1.0, 0.0),
+        Vector3::new(1.0, 1.0, 0.0),
+        Vector3::new(1.0, -1.0, 0.0),
+        Vector3::new(-1.0, -1.0, 0.0),
+    ];
+    let uvs = &[
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 0.0),
+    ];
+    let triangles = &[0, 2, 1, 0, 3, 2];
+
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices,
+            triangles,
+            uvs,
+            ..Default::default()
+        },
+    )
 }
 
 fn create_cube(device: &Arc<Device>) -> Result<Mesh> {

@@ -149,7 +149,7 @@ impl Default for MaterialOptions {
             font_width: 0.5,
             font_edge: 0.1,
             font_border_width: 0.0,
-            font_border_edge: 0.1,
+            font_border_edge: 0.0,
             font_border_tint: Vector3::default(),
             font_border_offset: Vector2::default(),
             arg_1: Vector4::default(),

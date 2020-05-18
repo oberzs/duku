@@ -4,6 +4,7 @@ use tegne_math::Vector3;
 
 use crate::error::Result;
 use crate::images::Font;
+use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::objects::Builtins;
@@ -16,15 +17,21 @@ use crate::shaders::Shader;
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
     wireframe_orders: Vec<Order>,
-    clear: [f32; 3],
+    clear: [f32; 4],
     lights: Vec<Light>,
     current_shader: Id<Shader>,
     current_material: Id<Material>,
-    current_albedo: Id<Texture>,
+    current_albedo: Albedo,
     current_font: Id<Font>,
     draw_wireframes: bool,
     builtins: &'a Builtins,
     objects: &'a Objects,
+}
+
+#[derive(Copy, Clone)]
+pub(crate) enum Albedo {
+    Texture(Id<Texture>),
+    Framebuffer(Id<Framebuffer>),
 }
 
 pub(crate) struct OrdersByShader {
@@ -40,7 +47,7 @@ pub(crate) struct OrdersByMaterial {
 #[derive(Copy, Clone)]
 pub(crate) struct Order {
     pub(crate) mesh: Id<Mesh>,
-    pub(crate) albedo: Id<Texture>,
+    pub(crate) albedo: Albedo,
     pub(crate) model: Matrix4,
     pub(crate) has_shadows: bool,
 }
@@ -50,11 +57,11 @@ impl<'a> Target<'a> {
         Ok(Self {
             orders_by_shader: vec![],
             wireframe_orders: vec![],
-            clear: [0.7, 0.7, 0.7],
+            clear: [0.7, 0.7, 0.7, 1.0],
             lights: vec![],
             current_shader: builtins.shaders.phong,
             current_material: builtins.materials.white,
-            current_albedo: builtins.textures.white,
+            current_albedo: Albedo::Texture(builtins.textures.white),
             current_font: builtins.fonts.roboto_mono,
             draw_wireframes: false,
             builtins,
@@ -79,30 +86,47 @@ impl<'a> Target<'a> {
         self.draw(self.builtins.meshes.sphere, transform);
     }
 
+    pub fn draw_surface(&mut self) {
+        self.draw(self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+    }
+
+    pub fn blit_framebuffer(&mut self, framebuffer: Id<Framebuffer>) {
+        let temp_shader = self.current_shader;
+        let temp_albedo = self.current_albedo;
+        self.current_shader = self.builtins.shaders.passthru;
+        self.current_albedo = Albedo::Framebuffer(framebuffer);
+
+        self.draw(self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+
+        self.current_shader = temp_shader;
+        self.current_albedo = temp_albedo;
+    }
+
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
         self.current_shader = self.builtins.shaders.font;
 
         self.objects.with_font(self.current_font, |font| {
             let mut current_transform = transform.into();
+            let x_scale = current_transform.scale.x;
             let albedo = font.texture();
 
             for c in text.as_ref().chars() {
                 if c == ' ' {
                     let space_advance = font.char_advance('_');
-                    current_transform.position.x += space_advance;
+                    current_transform.position.x += space_advance * x_scale;
                     continue;
                 }
 
                 let mesh = font.char_mesh(c);
                 self.add_order(Order {
                     mesh,
-                    albedo,
+                    albedo: Albedo::Texture(albedo),
                     model: current_transform.as_matrix(),
                     has_shadows: false,
                 });
 
-                current_transform.position.x += font.char_advance(c);
+                current_transform.position.x += font.char_advance(c) * x_scale;
             }
         });
 
@@ -128,8 +152,12 @@ impl<'a> Target<'a> {
         self.current_material = self.builtins.materials.white;
     }
 
-    pub fn set_albedo(&mut self, texture: Id<Texture>) {
-        self.current_albedo = texture;
+    pub fn set_albedo_texture(&mut self, texture: Id<Texture>) {
+        self.current_albedo = Albedo::Texture(texture);
+    }
+
+    pub fn set_albedo_framebuffer(&mut self, framebuffer: Id<Framebuffer>) {
+        self.current_albedo = Albedo::Framebuffer(framebuffer);
     }
 
     pub fn set_shader(&mut self, shader: Id<Shader>) {
@@ -140,16 +168,16 @@ impl<'a> Target<'a> {
         self.current_shader = self.builtins.shaders.phong;
     }
 
-    pub fn set_clear_color(&mut self, clear: [f32; 3]) {
+    pub fn set_clear_color(&mut self, clear: [f32; 4]) {
         self.clear = clear;
     }
 
-    pub fn set_draw_wireframes(&mut self, draw: bool) {
+    pub fn set_wireframes(&mut self, draw: bool) {
         self.draw_wireframes = draw;
     }
 
     pub(crate) fn clear(&self) -> [f32; 4] {
-        [self.clear[0], self.clear[1], self.clear[2], 1.0]
+        [self.clear[0], self.clear[1], self.clear[2], self.clear[3]]
     }
 
     pub(crate) fn orders_by_shader(&self) -> impl Iterator<Item = &OrdersByShader> {

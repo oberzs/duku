@@ -5,6 +5,7 @@ use tegne_math::Vector3;
 
 use crate::error::Result;
 use crate::images::Framebuffer;
+use crate::instance::Albedo;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Order;
@@ -36,6 +37,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) cmd: &'a Commands,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
+    pub(crate) blit: bool,
 }
 
 impl ForwardRenderer {
@@ -125,6 +127,9 @@ impl ForwardRenderer {
         }
 
         cmd.end_render_pass();
+        if options.blit {
+            options.framebuffer.blit_to_shader_image(cmd);
+        }
 
         Ok(())
     }
@@ -174,7 +179,11 @@ impl ForwardRenderer {
     fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) -> Result<()> {
         let cmd = options.cmd;
         let objects = options.objects;
-        if let Some(albedo_index) = objects.with_texture(order.albedo, |t| t.image_index()) {
+        let albedo = match order.albedo {
+            Albedo::Texture(id) => objects.with_texture(id, |t| t.image_index()),
+            Albedo::Framebuffer(id) => objects.with_framebuffer(id, |f| f.image_index()),
+        };
+        if let Some(albedo_index) = albedo {
             if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
                 (
                     m.vk_vertex_buffer(),

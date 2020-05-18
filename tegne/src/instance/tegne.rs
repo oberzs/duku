@@ -232,7 +232,36 @@ impl Tegne {
             cmd: &self.commands[self.device.current_frame()],
             target,
             time: self.start_time.elapsed().as_secs_f32(),
+            blit: false,
         }));
+    }
+
+    pub fn draw(
+        &self,
+        framebuffer: Id<Framebuffer>,
+        camera: &Camera,
+        draw_callback: impl Fn(&mut Target<'_>),
+    ) {
+        let mut target = check!(Target::new(&self.builtins, &self.objects));
+        draw_callback(&mut target);
+
+        self.objects.with_framebuffer(framebuffer, |f| {
+            let color_pass = self.render_passes.color();
+
+            check!(self.forward_renderer.draw(ForwardDrawOptions {
+                framebuffer: f,
+                color_pass,
+                render_passes: &self.render_passes,
+                shader_layout: &self.shader_layout,
+                camera,
+                objects: &self.objects,
+                builtins: &self.builtins,
+                cmd: &self.commands[self.device.current_frame()],
+                target,
+                time: self.start_time.elapsed().as_secs_f32(),
+                blit: true,
+            }));
+        });
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
@@ -285,16 +314,17 @@ impl Tegne {
         self.objects.with_material(material, fun)
     }
 
-    pub fn create_framebuffer(&self, width: u32, height: u32) -> Framebuffer {
+    pub fn create_framebuffer(&self, width: u32, height: u32) -> Id<Framebuffer> {
         debug!("creating framebuffer");
-        check!(Framebuffer::color(
+        let framebuffer = check!(Framebuffer::color(
             &self.device,
             &self.render_passes,
             &self.image_uniforms,
             &self.shader_layout,
             width,
             height,
-        ))
+        ));
+        self.objects.add_framebuffer(framebuffer)
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
