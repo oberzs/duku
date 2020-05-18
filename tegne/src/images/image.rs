@@ -350,8 +350,8 @@ impl ImageUsage {
 impl ImageFormat {
     pub(crate) fn flag(&self) -> Format {
         match *self {
-            Self::Rgba => Format::R8G8B8A8_UNORM,
-            Self::Bgra => Format::B8G8R8A8_UNORM,
+            Self::Rgba => Format::R8G8B8A8_SRGB,
+            Self::Bgra => Format::B8G8R8A8_SRGB,
             Self::Depth => Format::D32_SFLOAT_S8_UINT,
         }
     }
