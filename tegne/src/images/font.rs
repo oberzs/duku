@@ -17,18 +17,21 @@ use crate::shaders::ImageUniforms;
 
 pub struct Font {
     texture: Id<Texture>,
+    _margin: f32,
     char_data: HashMap<char, CharData>,
 }
 
 struct CharData {
     mesh: Id<Mesh>,
     advance: f32,
+    bearing: f32,
 }
 
 #[derive(Deserialize)]
 struct JsonAtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
+    margin: u32,
     char_metrics: HashMap<char, JsonCharMetrics>,
 }
 
@@ -37,6 +40,7 @@ struct JsonCharMetrics {
     x: u32,
     y: u32,
     advance: u32,
+    bearing: u32,
 }
 
 impl Font {
@@ -74,6 +78,8 @@ impl Font {
             image_uniforms,
         )?);
 
+        let margin = atlas.margin as f32 / atlas.sdf_size as f32;
+
         let mut char_data = HashMap::new();
         for (c, metrics) in atlas.char_metrics {
             // uv relative
@@ -85,6 +91,7 @@ impl Font {
 
             // vertex relative
             let advance = metrics.advance as f32 / atlas.sdf_size as f32;
+            let bearing = metrics.bearing as f32 / atlas.sdf_size as f32;
 
             let vertices = &[
                 Vector3::new(0.0, 0.0, 0.0),
@@ -112,12 +119,20 @@ impl Font {
                 },
             )?);
 
-            let data = CharData { mesh, advance };
+            let data = CharData {
+                mesh,
+                advance,
+                bearing,
+            };
 
             char_data.insert(c, data);
         }
 
-        Ok(Font { texture, char_data })
+        Ok(Font {
+            texture,
+            _margin: margin,
+            char_data,
+        })
     }
 
     pub(crate) fn char_mesh(&self, c: char) -> Id<Mesh> {
@@ -131,6 +146,13 @@ impl Font {
         match self.char_data.get(&c) {
             Some(data) => data.advance,
             None => self.char_data.get(&'?').unwrap().advance,
+        }
+    }
+
+    pub(crate) fn char_bearing(&self, c: char) -> f32 {
+        match self.char_data.get(&c) {
+            Some(data) => data.bearing,
+            None => self.char_data.get(&'?').unwrap().bearing,
         }
     }
 

@@ -105,13 +105,16 @@ impl<'a> Target<'a> {
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
         self.current_shader = self.builtins.shaders.font;
+        let text_str = text.as_ref();
 
         self.objects.with_font(self.current_font, |font| {
             let mut current_transform = transform.into();
             let x_scale = current_transform.scale.x;
+            current_transform.position.x -=
+                font.char_bearing(text_str.chars().next().unwrap()) * x_scale;
             let albedo = font.texture();
 
-            for c in text.as_ref().chars() {
+            for c in text_str.chars() {
                 if c == ' ' {
                     let space_advance = font.char_advance('_');
                     current_transform.position.x += space_advance * x_scale;

@@ -1,5 +1,7 @@
 use image::DynamicImage;
 use image::GenericImage;
+use image::ImageBuffer;
+use image::Rgba;
 use indicatif::ProgressBar;
 use rusttype::Font;
 use serde::Serialize;
@@ -21,6 +23,7 @@ use crate::sdf::SdfOptions;
 struct AtlasMetrics {
     sdf_size: u32,
     atlas_size: u32,
+    margin: u32,
     char_metrics: HashMap<char, CharMetrics>,
 }
 
@@ -28,11 +31,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     println!("Converting {:?}", in_path);
 
     let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,?!:-_+=@#(){}[]/";
-    let options = SdfOptions {
-        font_size: 1024,
-        font_margin: 50,
-        sdf_size: 256,
-    };
+    let options = SdfOptions::default();
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
     let tile_size = options.sdf_size;
     let atlas_size = tile_count * tile_size;
@@ -46,6 +45,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     let mut atlas_metrics = AtlasMetrics {
         sdf_size: options.sdf_size,
         atlas_size,
+        margin: options.scale_to_sdf(options.font_margin as f32),
         char_metrics: HashMap::new(),
     };
 
@@ -61,13 +61,41 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
 
         char_data.metrics.x = x;
         char_data.metrics.y = y;
+        // let advance = char_data.metrics.advance;
+        // let bearing = char_data.metrics.bearing;
 
         atlas_metrics.char_metrics.insert(c, char_data.metrics);
 
         atlas.copy_from(&char_data.image, x, y)?;
+        // draw_rect(
+        //     &mut atlas,
+        //     Rgba([255, 0, 0, 255]),
+        //     x,
+        //     y,
+        //     x + tile_size,
+        //     y + tile_size,
+        // );
+        // draw_rect(
+        //     &mut atlas,
+        //     Rgba([0, 255, 0, 255]),
+        //     x,
+        //     y + 31,
+        //     x + advance,
+        //     y + 32,
+        // );
+        // draw_rect(
+        //     &mut atlas,
+        //     Rgba([0, 0, 255, 255]),
+        //     x,
+        //     y + 32,
+        //     x + bearing,
+        //     y + 33,
+        // );
 
         progress.inc(1);
     }
+
+    atlas.save("test.png")?;
 
     let img_raw = atlas.into_raw();
     let json = serde_json::to_string_pretty(&atlas_metrics)?.into_bytes();
@@ -92,4 +120,22 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
 
     progress.finish_with_message("done");
     Ok(())
+}
+
+fn _draw_rect(
+    img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>,
+    color: Rgba<u8>,
+    x0: u32,
+    y0: u32,
+    x1: u32,
+    y1: u32,
+) {
+    for x in x0..x1 {
+        img.put_pixel(x, y0, color);
+        img.put_pixel(x, y1 - 1, color);
+    }
+    for y in y0..y1 {
+        img.put_pixel(x0, y, color);
+        img.put_pixel(x1 - 1, y, color);
+    }
 }

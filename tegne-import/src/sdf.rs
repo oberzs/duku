@@ -16,6 +16,7 @@ pub struct SdfOptions {
     pub font_size: u32,
     pub font_margin: u32,
     pub sdf_size: u32,
+    pub sdf_max: u16,
 }
 
 pub struct CharData {
@@ -27,16 +28,25 @@ pub struct CharData {
 pub struct CharMetrics {
     pub x: u32,
     pub y: u32,
-    advance: u32,
+    pub advance: u32,
+    pub bearing: u32,
 }
 
 impl Default for SdfOptions {
     fn default() -> Self {
         Self {
-            font_size: 64,
-            font_margin: 8,
-            sdf_size: 32,
+            font_size: 4096,
+            font_margin: 0,
+            sdf_size: 64,
+            sdf_max: 400,
         }
+    }
+}
+
+impl SdfOptions {
+    pub fn scale_to_sdf(&self, value: f32) -> u32 {
+        let rescale = self.sdf_size as f32 / (self.font_size + self.font_margin * 2) as f32;
+        (value * rescale).round() as u32
     }
 }
 
@@ -54,17 +64,14 @@ pub fn generate_sdf(font: &Font<'_>, c: char, options: SdfOptions) -> Result<Cha
         .ok_or(ErrorType::Internal(ErrorKind::NoBounds))?;
     let ascent = font.v_metrics(scale).ascent.round() as i32;
     let h_metrics = glyph.unpositioned().h_metrics();
-    let bearing = h_metrics.left_side_bearing.round() as i32;
-    let min_x = (bounds.min.x - bearing) as u32;
+    let min_x = bounds.min.x as u32;
     let min_y = (bounds.max.y + (ascent - bounds.height())) as u32;
-
-    let rescale = options.sdf_size as f32 / image_size as f32;
-    let rescaled_advance = h_metrics.advance_width * rescale;
 
     let metrics = CharMetrics {
         x: 0,
         y: 0,
-        advance: rescaled_advance.round() as u32,
+        advance: options.scale_to_sdf(h_metrics.advance_width),
+        bearing: options.scale_to_sdf(h_metrics.left_side_bearing),
     };
 
     let mut img = DynamicImage::new_rgba8(image_size, image_size).to_rgba();
@@ -105,8 +112,8 @@ fn distance_to_zone(
 
     let is_inside = img.get_pixel(mid_x, mid_y)[0] > threshold;
 
-    let mut closest_distance = options.font_margin as f32;
-    for (x, y) in ManhattanIterator::new(mid_x as i32, mid_y as i32, options.font_margin as u16) {
+    let mut closest_distance = options.sdf_max as f32;
+    for (x, y) in ManhattanIterator::new(mid_x as i32, mid_y as i32, options.sdf_max) {
         if x < 0 || y < 0 || x >= img.width() as i32 || y >= img.height() as i32 {
             continue;
         }
@@ -124,9 +131,9 @@ fn distance_to_zone(
 
     // outside = [0.0, 0.5], inside = [0.5, 1.0]
     let distance = if is_inside {
-        0.5 + (closest_distance / 2.0) / options.font_margin as f32
+        0.5 + (closest_distance / 2.0) / options.sdf_max as f32
     } else {
-        0.5 - (closest_distance / 2.0) / options.font_margin as f32
+        0.5 - (closest_distance / 2.0) / options.sdf_max as f32
     };
 
     (distance * 255.0) as u8
