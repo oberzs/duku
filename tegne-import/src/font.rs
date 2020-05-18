@@ -30,7 +30,7 @@ struct AtlasMetrics {
 pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     println!("Converting {:?}", in_path);
 
-    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,?!:-_+=@#(){}[]/";
+    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?!:-_+=@#(){}[]/";
     let options = SdfOptions::default();
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
     let tile_size = options.sdf_size;
@@ -95,7 +95,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
         progress.inc(1);
     }
 
-    atlas.save("test.png")?;
+    // atlas.save("test.png")?;
 
     let img_raw = atlas.into_raw();
     let json = serde_json::to_string_pretty(&atlas_metrics)?.into_bytes();

@@ -52,7 +52,7 @@ fn main() {
 
         tegne.begin_draw();
 
-        ui.draw_ui(&tegne);
+        ui.draw_ui(&tegne, events);
 
         tegne.draw_on_window(&camera, |target| {
             target.add_directional_light([-1.0, -2.0, -1.0], [1.0, 1.0, 1.0]);

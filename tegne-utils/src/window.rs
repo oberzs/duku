@@ -45,6 +45,7 @@ pub struct Events {
     mouse_delta: (f32, f32),
     keys: Keys,
     delta_time: f32,
+    fps: u32,
     window: WinitWindow,
 }
 
@@ -54,6 +55,8 @@ struct Keys {
     released: HashSet<Key>,
     typed: HashSet<Key>,
 }
+
+const FPS_SAMPLE_COUNT: usize = 64;
 
 impl Window {
     pub fn new(options: WindowOptions<'_>) -> Self {
@@ -78,10 +81,13 @@ impl Window {
             mouse_delta: (0.0, 0.0),
             keys: Keys::default(),
             delta_time: 0.0,
+            fps: 0,
             window,
         };
 
         let mut frame_time = Instant::now();
+        let mut frame_count = 0;
+        let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
 
         info!("staring event loop");
         event_loop.run_return(|event, _, control_flow| {
@@ -117,10 +123,17 @@ impl Window {
                 }
                 Event::MainEventsCleared => {
                     draw(&events);
+                    let delta_time = frame_time.elapsed();
+                    frame_time = Instant::now();
+                    fps_samples[frame_count % FPS_SAMPLE_COUNT] =
+                        1_000_000 / delta_time.as_micros() as u32;
+                    frame_count += 1;
+
                     events.keys.clear_typed();
                     events.mouse_delta = (0.0, 0.0);
-                    events.delta_time = frame_time.elapsed().as_secs_f32();
-                    frame_time = Instant::now();
+                    events.delta_time = delta_time.as_secs_f32();
+                    events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
+                        .round() as u32;
                 }
                 _ => (),
             }
@@ -225,6 +238,10 @@ impl Events {
 
     pub fn delta_time(&self) -> f32 {
         self.delta_time
+    }
+
+    pub fn fps(&self) -> u32 {
+        self.fps
     }
 }
 
