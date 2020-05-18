@@ -1,0 +1,9 @@
+[package]
+name = "example-cubes"
+version = "0.1.0"
+authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+pretty_env_logger = "0.4.0"
+tegne = { path = "../../tegne", version = "0.1.0" }

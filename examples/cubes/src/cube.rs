@@ -20,10 +20,13 @@ impl Cube {
     pub fn new(tegne: &Tegne, pos: impl Into<Vector3>, size: f32, color: impl AsRef<str>) -> Self {
         let mesh = cube(tegne, size);
         let texture = tegne
-            .create_texture_from_file(format!("example/assets/images/{}.png", color.as_ref()))
+            .create_texture_from_file(format!(
+                "examples/cubes/assets/images/{}.png",
+                color.as_ref()
+            ))
             .expect("cannot create cube texture");
         let shader = tegne
-            .create_shader_from_file_watch("example/assets/test.shader", Default::default())
+            .create_shader_from_file_watch("examples/cubes/assets/test.shader", Default::default())
             .expect("cannot create cube shader");
         let transform = Transform::from(pos.into());
 

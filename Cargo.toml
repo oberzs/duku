@@ -1,2 +1,9 @@
 [workspace]
-members = ["tegne", "tegne-math", "tegne-utils", "tegne-import", "example"]
+members = [
+  "tegne", 
+  "tegne-math", 
+  "tegne-utils", 
+  "tegne-import", 
+  "examples/cubes", 
+  "examples/surface"
+]

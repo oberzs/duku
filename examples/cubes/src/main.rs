@@ -20,7 +20,7 @@ fn main() {
     let (width, height) = (720, 640);
 
     let window = Window::new(WindowOptions {
-        title: "Tegne example",
+        title: "Tegne example: Cubes",
         width,
         height,
     });
