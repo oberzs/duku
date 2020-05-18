@@ -27,7 +27,7 @@ impl Ui {
         let scale = 40.0;
         let transform = Transform {
             position: Vector3::new(-(width as f32) / 2.0, ((height as f32) / 2.0) - scale, 1.0),
-            scale: Vector3::new(scale, scale, 1.0),
+            scale: Vector3::new(scale, scale, scale),
             ..Default::default()
         };
 
