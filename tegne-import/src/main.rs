@@ -31,6 +31,8 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
+use std::thread;
+use std::time::Duration;
 use std::time::Instant;
 
 use error::Result;
@@ -134,6 +136,10 @@ fn main() {
             // "debounce" events
             if !same_events.contains(&(in_path.clone(), time)) {
                 same_events.insert((in_path.clone(), time));
+
+                // wait to commit
+                thread::sleep(Duration::from_millis(500));
+
                 let out_path = create_out_path(&in_path, out_dir);
                 if let Err(err) = import_file(&in_path, &out_path) {
                     error!("{}", err);

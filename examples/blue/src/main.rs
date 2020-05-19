@@ -1,6 +1,5 @@
 use tegne::Camera;
 use tegne::Tegne;
-use tegne::TegneOptions;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -12,13 +11,7 @@ fn main() {
         width,
         height,
     });
-    let mut tegne = Tegne::from_window(
-        &window,
-        TegneOptions {
-            vsync: true,
-            ..Default::default()
-        },
-    );
+    let mut tegne = Tegne::from_window(&window, Default::default());
 
     let camera = Camera::orthographic(width, height);
 

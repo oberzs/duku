@@ -18,6 +18,7 @@ pub(crate) struct Attachment {
 pub(crate) struct AttachmentOptions {
     pub(crate) index: u32,
     pub(crate) layout: ImageLayout,
+    pub(crate) format: ImageFormat,
     pub(crate) has_samples: bool,
     pub(crate) has_clear: bool,
     pub(crate) has_store: bool,
@@ -25,13 +26,6 @@ pub(crate) struct AttachmentOptions {
 
 impl Attachment {
     pub(crate) fn new(device: &Arc<Device>, options: AttachmentOptions) -> Self {
-        let format = match options.layout {
-            ImageLayout::Color => ImageFormat::Bgra,
-            ImageLayout::Depth => ImageFormat::Depth,
-            ImageLayout::Present => ImageFormat::Bgra,
-            _ => ImageFormat::Bgra,
-        };
-
         let layout = if options.layout == ImageLayout::Present {
             ImageLayout::Color
         } else {
@@ -57,7 +51,7 @@ impl Attachment {
         };
 
         let vk = AttachmentDescription::builder()
-            .format(format.flag())
+            .format(options.format.flag())
             .samples(samples.flag())
             .load_op(clear)
             .store_op(store)
@@ -89,6 +83,7 @@ impl Default for AttachmentOptions {
         Self {
             index: 0,
             layout: ImageLayout::Undefined,
+            format: ImageFormat::Depth,
             has_samples: false,
             has_clear: false,
             has_store: false,

@@ -12,6 +12,7 @@ use std::sync::Arc;
 use super::Attachment;
 use super::AttachmentOptions;
 use crate::error::Result;
+use crate::images::ImageFormat;
 use crate::images::ImageLayout;
 use crate::instance::Device;
 
@@ -71,6 +72,7 @@ impl RenderPass {
             AttachmentOptions {
                 index: 0,
                 layout: ImageLayout::Depth,
+                format: ImageFormat::Depth,
                 has_samples: true,
                 has_clear: true,
                 ..Default::default()
@@ -83,6 +85,7 @@ impl RenderPass {
             AttachmentOptions {
                 index: 1,
                 layout: ImageLayout::Present,
+                format: ImageFormat::Bgra,
                 has_clear: !device.is_msaa(),
                 has_store: true,
                 ..Default::default()
@@ -96,6 +99,7 @@ impl RenderPass {
                 AttachmentOptions {
                     index: 2,
                     layout: ImageLayout::Color,
+                    format: ImageFormat::Bgra,
                     has_clear: true,
                     has_samples: true,
                     ..Default::default()
@@ -128,6 +132,7 @@ impl RenderPass {
             AttachmentOptions {
                 index: 0,
                 layout: ImageLayout::Depth,
+                format: ImageFormat::Depth,
                 has_clear: true,
                 has_samples: true,
                 ..Default::default()
@@ -140,6 +145,7 @@ impl RenderPass {
             AttachmentOptions {
                 index: 1,
                 layout: ImageLayout::Color,
+                format: ImageFormat::Bgra,
                 has_clear: !device.is_msaa(),
                 has_store: true,
                 ..Default::default()
@@ -153,6 +159,7 @@ impl RenderPass {
                 AttachmentOptions {
                     index: 2,
                     layout: ImageLayout::Color,
+                    format: ImageFormat::Bgra,
                     has_clear: true,
                     has_samples: true,
                     ..Default::default()
@@ -185,6 +192,7 @@ impl RenderPass {
             AttachmentOptions {
                 index: 0,
                 layout: ImageLayout::Depth,
+                format: ImageFormat::Depth,
                 has_clear: true,
                 has_store: true,
                 ..Default::default()

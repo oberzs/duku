@@ -423,7 +423,7 @@ impl Default for TegneOptions {
     fn default() -> Self {
         Self {
             anisotropy: 0.0,
-            vsync: false,
+            vsync: true,
             msaa: 1,
         }
     }

@@ -5,6 +5,7 @@ members = [
   "tegne-utils", 
   "tegne-import", 
   "examples/blue",
+  "examples/gradient",
   "examples/cubes", 
   "examples/surface"
 ]

@@ -29,7 +29,7 @@ fn main() {
         TegneOptions {
             anisotropy: 16.0,
             msaa: 4,
-            vsync: true,
+            ..Default::default()
         },
     );
     let floor = Floor::new(&tegne);

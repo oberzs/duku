@@ -9,7 +9,6 @@ use simplelog::WriteLogger;
 use std::fs::File;
 use tegne::Camera;
 use tegne::Tegne;
-use tegne::TegneOptions;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -26,21 +25,14 @@ fn main() {
     ])
     .unwrap();
 
-    let (width, height) = (500, 500);
+    let (width, height) = (900, 900);
 
     let window = Window::new(WindowOptions {
         title: "Tegne example: Surface",
         width,
         height,
     });
-    let mut tegne = Tegne::from_window(
-        &window,
-        TegneOptions {
-            anisotropy: 16.0,
-            msaa: 4,
-            vsync: true,
-        },
-    );
+    let mut tegne = Tegne::from_window(&window, Default::default());
 
     let camera = Camera::orthographic(width, height);
 

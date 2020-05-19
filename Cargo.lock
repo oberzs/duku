@@ -420,6 +420,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-gradient"
+version = "0.1.0"
+dependencies = [
+ "tegne",
+]
+
+[[package]]
 name = "example-surface"
 version = "0.1.0"
 dependencies = [

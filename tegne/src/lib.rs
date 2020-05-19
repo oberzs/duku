@@ -46,3 +46,4 @@ pub use tegne_math::Camera;
 pub use tegne_math::Transform;
 pub use tegne_math::Vector2;
 pub use tegne_math::Vector3;
+pub use tegne_math::Vector4;
