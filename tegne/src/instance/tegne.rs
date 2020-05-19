@@ -366,20 +366,19 @@ impl Tegne {
 
         thread::spawn(move || {
             let (sender, receiver) = unbounded();
-            let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| sender
-                .send(check!(res))
-                .unwrap()));
+            let start_time = Instant::now();
+            let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
+                let time = start_time.elapsed().as_secs();
+                sender.send((check!(res), time)).unwrap()
+            }));
             check!(watcher.watch(&path_buf, RecursiveMode::NonRecursive));
 
-            let start_time = Instant::now();
             let mut same_events = HashSet::new();
             loop {
                 select! {
                     recv(kill_recv) -> _ => break,
-                    recv(receiver) -> signal => if signal.is_ok() {
-                        let time = start_time.elapsed().as_secs();
-
-                        // "debounce" events
+                    recv(receiver) -> signal => if let Ok((_, time)) = signal {
+                        // limit events
                         if !same_events.contains(&time) {
                             same_events.insert(time);
 

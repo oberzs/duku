@@ -120,20 +120,20 @@ fn main() {
     if watch {
         let path = input.or(dir).unwrap();
         let (sender, receiver) = unbounded();
+        let start_time = Instant::now();
 
-        let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| sender
-            .send(check!(res))
-            .unwrap()));
+        let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
+            let time = start_time.elapsed().as_secs();
+            sender.send((check!(res), time)).unwrap()
+        }));
         check!(watcher.watch(path, RecursiveMode::NonRecursive));
 
-        let start_time = Instant::now();
         let mut same_events = HashSet::new();
         loop {
-            let event = receiver.recv().unwrap();
+            let (event, time) = receiver.recv().unwrap();
             let in_path = event.paths[0].clone();
-            let time = start_time.elapsed().as_secs();
 
-            // "debounce" events
+            // limit events
             if !same_events.contains(&(in_path.clone(), time)) {
                 same_events.insert((in_path.clone(), time));
 

@@ -36,8 +36,8 @@ fn main() {
 
     let camera = Camera::orthographic(width, height);
 
-    let raymarch_shader = tegne
-        .create_shader_from_file(
+    let shader = tegne
+        .create_shader_from_file_watch(
             "examples/surface/assets/raymarch.shader",
             Default::default(),
         )
@@ -50,7 +50,7 @@ fn main() {
         ui.draw_ui(&tegne, &events);
 
         tegne.draw_on_window(&camera, |target| {
-            target.set_shader(raymarch_shader);
+            target.set_shader(shader);
             target.draw_surface();
             target.blit_framebuffer(ui.framebuffer());
         });

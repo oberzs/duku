@@ -33,7 +33,7 @@ impl fmt::Display for ErrorType {
             ErrorType::Io(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Image(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Json(ref err) => write!(fmt, "{:?}", err),
-            ErrorType::Shader(ref err) => write!(fmt, "{:?}", err),
+            ErrorType::Shader(ref err) => write!(fmt, "{}", err),
             ErrorType::Regex(ref err) => write!(fmt, "{:?}", err),
             ErrorType::Internal(ref err) => write!(fmt, "{:?}", err),
         }
