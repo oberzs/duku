@@ -405,6 +405,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-blue"
+version = "0.1.0"
+dependencies = [
+ "tegne",
+]
+
+[[package]]
 name = "example-cubes"
 version = "0.1.0"
 dependencies = [

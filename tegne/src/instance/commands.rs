@@ -71,25 +71,19 @@ impl Commands {
 
     pub(crate) fn reset(&mut self) -> Result<()> {
         unsafe {
+            let buffers = [self.buffer];
             self.device
                 .logical()
-                .reset_command_pool(self.pool, CommandPoolResetFlags::empty())?;
+                .reset_command_pool(self.pool, CommandPoolResetFlags::RELEASE_RESOURCES)?;
+            self.device
+                .logical()
+                .free_command_buffers(self.pool, &buffers);
         }
         self.buffer = create_buffer(&self.device, self.pool)?;
         Ok(())
     }
 
     pub(crate) fn begin(&self) -> Result<()> {
-        let begin_info = CommandBufferBeginInfo::builder();
-        unsafe {
-            self.device
-                .logical()
-                .begin_command_buffer(self.buffer, &begin_info)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn begin_one_time(&self) -> Result<()> {
         let begin_info =
             CommandBufferBeginInfo::builder().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
         unsafe {

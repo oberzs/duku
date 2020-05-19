@@ -207,7 +207,7 @@ impl Image {
             .build();
 
         let cmd = Commands::new(&self.device)?;
-        cmd.begin_one_time()?;
+        cmd.begin()?;
         cmd.copy_buffer_to_image(src, self.vk, region);
         self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
@@ -218,7 +218,7 @@ impl Image {
         let mut mip_height = self.height as i32;
 
         let cmd = Commands::new(&self.device)?;
-        cmd.begin_one_time()?;
+        cmd.begin()?;
 
         for i in 1..self.mip_levels {
             cmd.change_image_layout(self)

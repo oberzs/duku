@@ -45,7 +45,7 @@ fn main() {
     let camera = Camera::orthographic(width, height);
 
     let raymarch_shader = tegne
-        .create_shader_from_file_watch(
+        .create_shader_from_file(
             "examples/surface/assets/raymarch.shader",
             Default::default(),
         )

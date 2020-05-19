@@ -75,7 +75,7 @@ impl Texture {
         )?;
 
         let cmd = Commands::new(device)?;
-        cmd.begin_one_time()?;
+        cmd.begin()?;
         cmd.change_image_layout(&image)
             .with_mips(0, mip_levels)
             .change_to_write()

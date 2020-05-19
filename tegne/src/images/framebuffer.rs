@@ -237,7 +237,7 @@ impl Framebuffer {
         )?;
 
         let cmd = Commands::new(device)?;
-        cmd.begin_one_time()?;
+        cmd.begin()?;
         cmd.change_image_layout(&shader_image)
             .change_to_shader_read()
             .record();
