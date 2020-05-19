@@ -149,13 +149,25 @@ impl Window {
     #[cfg(target_os = "linux")]
     pub fn xlib_window(&self) -> std::os::raw::c_ulong {
         use winit::platform::unix::WindowExtUnix;
-        check!(self.window.xlib_window())
+        match self.window.xlib_window() {
+            Some(w) => w,
+            None => {
+                error!("this is not an xlib window");
+                exit(1);
+            }
+        }
     }
 
     #[cfg(target_os = "linux")]
     pub fn xlib_display(&self) -> *mut std::ffi::c_void {
         use winit::platform::unix::WindowExtUnix;
-        check!(self.window.xlib_display())
+        match self.window.xlib_display() {
+            Some(d) => d,
+            None => {
+                error!("this is not an xlib window");
+                exit(1);
+            }
+        }
     }
 
     #[cfg(target_os = "macos")]
