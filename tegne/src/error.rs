@@ -1,8 +1,10 @@
+use crossbeam::channel;
 use std::error::Error;
 use std::ffi;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
+use std::sync;
 
 pub type Result<T> = std::result::Result<T, ErrorType>;
 
@@ -12,7 +14,8 @@ pub enum ErrorType {
     Io(io::Error),
     Nul(ffi::NulError),
     Json(serde_json::Error),
-    Signal(crossbeam_channel::SendError<()>),
+    Signal(channel::SendError<()>),
+    Poison(sync::PoisonError<()>),
     Image(image::ImageError),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -39,15 +42,8 @@ impl Error for ErrorType {}
 impl fmt::Display for ErrorType {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
-            ErrorType::Io(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::Nul(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::Json(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::Signal(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::Image(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::VulkanInstance(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::VulkanLoad(ref e) => write!(fmt, "{:?}", e),
-            ErrorType::VulkanCode(e) => write!(fmt, "vulkan code {:?}", e),
-            ErrorType::Internal(ref e) => write!(fmt, "{:?}", e),
+            ErrorType::VulkanCode(e) => write!(fmt, "vulkan code {}", e),
+            ref e => write!(fmt, "{:?}", e),
         }
     }
 }
@@ -70,8 +66,14 @@ impl From<serde_json::Error> for ErrorType {
     }
 }
 
-impl From<crossbeam_channel::SendError<()>> for ErrorType {
-    fn from(e: crossbeam_channel::SendError<()>) -> Self {
+impl From<sync::PoisonError<()>> for ErrorType {
+    fn from(e: sync::PoisonError<()>) -> Self {
+        Self::Poison(e)
+    }
+}
+
+impl From<channel::SendError<()>> for ErrorType {
+    fn from(e: channel::SendError<()>) -> Self {
         Self::Signal(e)
     }
 }

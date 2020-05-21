@@ -38,6 +38,7 @@ pub struct WindowOptions<'title> {
     pub width: u32,
     pub height: u32,
     pub title: &'title str,
+    pub resizable: bool,
 }
 
 pub struct Events {
@@ -46,6 +47,7 @@ pub struct Events {
     keys: Keys,
     delta_time: f32,
     fps: u32,
+    resized: bool,
     window: WinitWindow,
 }
 
@@ -67,6 +69,7 @@ impl Window {
         let window = check!(WindowBuilder::new()
             .with_inner_size(size)
             .with_title(options.title)
+            .with_resizable(options.resizable)
             .build(&event_loop));
 
         Self { event_loop, window }
@@ -82,12 +85,14 @@ impl Window {
             keys: Keys::default(),
             delta_time: 0.0,
             fps: 0,
+            resized: false,
             window,
         };
 
         let mut frame_time = Instant::now();
         let mut frame_count = 0;
         let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
+        let mut resized = false;
 
         info!("staring event loop");
         event_loop.run_return(|event, _, control_flow| {
@@ -98,6 +103,11 @@ impl Window {
                 } => match win_event {
                     WindowEvent::CursorMoved { position: pos, .. } => {
                         events.mouse_position = (pos.x as u32, pos.y as u32);
+                    }
+                    WindowEvent::Resized(size) => {
+                        if size.width != 0 && size.height != 0 {
+                            resized = true;
+                        }
                     }
                     WindowEvent::KeyboardInput {
                         input:
@@ -122,7 +132,12 @@ impl Window {
                     }
                 }
                 Event::MainEventsCleared => {
-                    draw(&events);
+                    events.resized = resized;
+
+                    if events.size() != (0, 0) {
+                        draw(&events);
+                    }
+
                     let delta_time = frame_time.elapsed();
                     frame_time = Instant::now();
                     fps_samples[frame_count % FPS_SAMPLE_COUNT] =
@@ -134,6 +149,7 @@ impl Window {
                     events.delta_time = delta_time.as_secs_f32();
                     events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
                         .round() as u32;
+                    resized = false;
                 }
                 _ => (),
             }
@@ -194,6 +210,7 @@ impl Default for WindowOptions<'_> {
             width: 500,
             height: 500,
             title: "Tegne window",
+            resizable: false,
         }
     }
 }
@@ -210,6 +227,10 @@ impl Events {
 
     pub fn mouse_delta(&self) -> (f32, f32) {
         self.mouse_delta
+    }
+
+    pub fn is_resized(&self) -> bool {
+        self.resized
     }
 
     pub fn set_title(&self, title: impl AsRef<str>) {

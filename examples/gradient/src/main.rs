@@ -14,6 +14,7 @@ fn main() {
         title: "Tegne example: Surface",
         width,
         height,
+        ..Default::default()
     });
     let mut tegne = Tegne::from_window(&window, Default::default());
 

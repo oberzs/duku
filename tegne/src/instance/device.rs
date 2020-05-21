@@ -23,12 +23,15 @@ use ash::vk::Semaphore;
 use ash::vk::SubmitInfo;
 use ash::vk::SurfaceCapabilitiesKHR;
 use ash::vk::SurfaceFormatKHR;
+use ash::vk::SurfaceTransformFlagsKHR;
 use ash::Device as LogicalDevice;
 use log::info;
+use log::warn;
 use std::ffi::CStr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tegne_math::clamp;
 
 use super::Extensions;
@@ -44,8 +47,8 @@ pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     logical: LogicalDevice,
-    _physical: PhysicalDevice,
-    properties: DeviceProperties,
+    physical: PhysicalDevice,
+    properties: Mutex<DeviceProperties>,
     graphics_queue: Queue,
     present_queue: Queue,
     sync_acquire_image: Vec<Semaphore>,
@@ -97,7 +100,7 @@ impl Device {
             let mem_props = unsafe { instance.get_physical_device_memory_properties(physical) };
             let surface_capabilities = surface.gpu_capabilities(physical)?;
 
-            let samples = pick_samples(device_props, msaa)?;
+            let samples = pick_samples(device_props, msaa);
             let extent = pick_extent(surface_capabilities, surface.width(), surface.height());
             let present_mode = pick_present_mode(vsync);
             let image_count = pick_image_count(surface_capabilities);
@@ -156,8 +159,8 @@ impl Device {
 
                 let device = Arc::new(Self {
                     logical,
-                    _physical: physical,
-                    properties: props,
+                    physical,
+                    properties: Mutex::new(props),
                     graphics_queue,
                     present_queue,
                     sync_acquire_image,
@@ -171,6 +174,20 @@ impl Device {
         }
 
         Err(ErrorKind::NoSuitableGpu.into())
+    }
+
+    pub(crate) fn refresh_for_surface(&self, surface: &Surface) -> Result<()> {
+        let mut props = self.properties.lock().unwrap();
+        props.surface_formats = surface.gpu_formats(self.physical)?;
+        props.surface_capabilities = surface.gpu_capabilities(self.physical)?;
+        props.surface_present_modes = surface.gpu_present_modes(self.physical)?;
+        props.extent = pick_extent(
+            props.surface_capabilities,
+            surface.width(),
+            surface.height(),
+        );
+        props.image_count = pick_image_count(props.surface_capabilities);
+        Ok(())
     }
 
     pub(crate) fn current_frame(&self) -> usize {
@@ -247,13 +264,13 @@ impl Device {
         Ok(())
     }
 
-    pub(crate) fn pick_memory_type(
+    pub(crate) fn find_memory_type(
         &self,
         type_filter: u32,
         props: MemoryPropertyFlags,
-    ) -> Result<u32> {
-        let mem_type = self
-            .properties
+    ) -> Option<u32> {
+        let properties = self.properties.lock().unwrap();
+        properties
             .memory_properties
             .memory_types
             .iter()
@@ -262,31 +279,53 @@ impl Device {
                 let byte: u32 = 1 << i;
                 (type_filter & byte != 0) && (mem_type.property_flags & props) == props
             })
-            .ok_or(ErrorKind::NoSuitableMemoryType)?;
-        Ok(mem_type.0 as u32)
-    }
-
-    pub(crate) fn is_msaa(&self) -> bool {
-        self.properties.samples != Samples(1)
+            .map(|t| t.0 as u32)
     }
 
     pub(crate) fn logical(&self) -> &LogicalDevice {
         &self.logical
     }
 
-    pub(crate) fn properties(&self) -> &DeviceProperties {
-        &self.properties
+    pub(crate) fn extent(&self) -> Extent2D {
+        self.properties.lock().unwrap().extent
+    }
+
+    pub(crate) fn samples(&self) -> Samples {
+        self.properties.lock().unwrap().samples
+    }
+
+    pub(crate) fn is_msaa(&self) -> bool {
+        self.samples() != Samples(1)
+    }
+
+    pub(crate) fn graphics_index(&self) -> u32 {
+        self.properties.lock().unwrap().graphics_index
     }
 
     pub(crate) fn are_indices_unique(&self) -> bool {
-        self.properties.graphics_index != self.properties.present_index
+        let props = self.properties.lock().unwrap();
+        props.graphics_index != props.present_index
     }
 
-    pub(crate) fn indices(&self) -> Vec<u32> {
-        vec![
-            self.properties.graphics_index,
-            self.properties.present_index,
-        ]
+    pub(crate) fn indices(&self) -> [u32; 2] {
+        let props = self.properties.lock().unwrap();
+        [props.graphics_index, props.present_index]
+    }
+
+    pub(crate) fn surface_transform(&self) -> SurfaceTransformFlagsKHR {
+        self.properties
+            .lock()
+            .unwrap()
+            .surface_capabilities
+            .current_transform
+    }
+
+    pub(crate) fn image_count(&self) -> u32 {
+        self.properties.lock().unwrap().image_count
+    }
+
+    pub(crate) fn present_mode(&self) -> PresentModeKHR {
+        self.properties.lock().unwrap().present_mode
     }
 }
 
@@ -401,18 +440,20 @@ fn open_device(
     Ok(logical)
 }
 
-fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Result<Samples> {
+fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Samples {
     let counts = properties.limits.framebuffer_color_sample_counts
         & properties.limits.framebuffer_depth_sample_counts;
 
     let samples = Samples(msaa);
 
     if samples.flag() == SampleCountFlags::TYPE_1 && msaa != 1 {
-        Err(ErrorKind::InvalidMsaa.into())
+        warn!("invalid MSAA value: {}", msaa);
+        Samples(1)
     } else if !counts.contains(samples.flag()) {
-        Err(ErrorKind::UnsupportedMsaa.into())
+        warn!("unsupported MSAA value: {}", msaa);
+        Samples(1)
     } else {
-        Ok(samples)
+        samples
     }
 }
 

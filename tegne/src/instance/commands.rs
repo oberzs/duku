@@ -55,7 +55,7 @@ impl Commands {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
         let pool_info = CommandPoolCreateInfo::builder()
             .flags(CommandPoolCreateFlags::TRANSIENT)
-            .queue_family_index(device.properties().graphics_index)
+            .queue_family_index(device.graphics_index())
             .build();
 
         let pool = unsafe { device.logical().create_command_pool(&pool_info, None)? };

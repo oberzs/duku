@@ -179,6 +179,11 @@ impl Surface {
         Ok(support)
     }
 
+    pub(crate) fn resize(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+    }
+
     pub(crate) fn width(&self) -> u32 {
         self.width
     }

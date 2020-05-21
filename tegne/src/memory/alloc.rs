@@ -6,6 +6,7 @@ use ash::vk::DeviceMemory;
 use ash::vk::MemoryAllocateInfo;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::SharingMode;
+use log::error;
 use std::sync::Arc;
 
 use crate::error::Result;
@@ -28,7 +29,11 @@ pub(crate) fn buffer(
     // alloc memory
     let mem_requirements = unsafe { device.logical().get_buffer_memory_requirements(buffer) };
 
-    let mem_type = device.pick_memory_type(mem_requirements.memory_type_bits, properties)?;
+    let mem_type = device
+        .find_memory_type(mem_requirements.memory_type_bits, properties)
+        .unwrap_or_else(|| {
+            panic!(error!("device does not support buffer memory type"));
+        });
 
     let alloc_info = MemoryAllocateInfo::builder()
         .allocation_size(mem_requirements.size)

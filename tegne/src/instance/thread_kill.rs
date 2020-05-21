@@ -1,6 +1,6 @@
-use crossbeam_channel::bounded;
-use crossbeam_channel::Receiver;
-use crossbeam_channel::Sender;
+use crossbeam::channel;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 
 use crate::error::Result;
 
@@ -11,7 +11,7 @@ pub(crate) struct ThreadKill {
 
 impl ThreadKill {
     pub(crate) fn new() -> Self {
-        let (sender, receiver) = bounded(1);
+        let (sender, receiver) = channel::bounded(1);
         Self { sender, receiver }
     }
 

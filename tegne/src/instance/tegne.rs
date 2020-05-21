@@ -1,5 +1,5 @@
-use crossbeam_channel::select;
-use crossbeam_channel::unbounded;
+use crossbeam::channel;
+use crossbeam::channel::select;
 use image::GenericImageView;
 use log::debug;
 use log::error;
@@ -73,7 +73,7 @@ pub struct Tegne {
     shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
     device: Arc<Device>,
-    _surface: Surface,
+    surface: Surface,
     _validator: Option<Validator>,
     _vulkan: Vulkan,
 }
@@ -132,7 +132,6 @@ impl Tegne {
             &device,
             &swapchain,
             &render_passes,
-            &image_uniforms,
             &shader_layout,
         ));
 
@@ -160,7 +159,7 @@ impl Tegne {
             shader_layout: Arc::new(shader_layout),
             swapchain,
             device,
-            _surface: surface,
+            surface,
             _validator: validator,
             _vulkan: vulkan,
         }
@@ -194,6 +193,19 @@ impl Tegne {
         };
 
         Self::new(args, options)
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        check!(self.device.wait_for_idle());
+        self.surface.resize(width, height);
+        check!(self.device.refresh_for_surface(&self.surface));
+        check!(self.swapchain.recreate(&self.device, &self.surface));
+        self.window_framebuffers = check!(Framebuffer::window(
+            &self.device,
+            &self.swapchain,
+            &self.render_passes,
+            &self.shader_layout,
+        ));
     }
 
     pub fn begin_draw(&mut self) {
@@ -365,7 +377,7 @@ impl Tegne {
         let kill_recv = self.thread_kill.receiver();
 
         thread::spawn(move || {
-            let (sender, receiver) = unbounded();
+            let (sender, receiver) = channel::unbounded();
             let start_time = Instant::now();
             let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
                 let time = start_time.elapsed().as_secs();

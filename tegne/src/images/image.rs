@@ -22,6 +22,7 @@ use ash::vk::MemoryAllocateInfo;
 use ash::vk::MemoryPropertyFlags;
 use ash::vk::Offset3D;
 use ash::vk::SharingMode;
+use log::error;
 use std::cmp;
 use std::sync::Arc;
 
@@ -93,7 +94,7 @@ impl Image {
             1
         };
         let samples = if options.has_samples {
-            device.properties().samples
+            device.samples()
         } else {
             Samples(1)
         };
@@ -124,10 +125,14 @@ impl Image {
                 let mem_requirements =
                     unsafe { device.logical().get_image_memory_requirements(vk) };
 
-                let mem_type = device.pick_memory_type(
-                    mem_requirements.memory_type_bits,
-                    MemoryPropertyFlags::DEVICE_LOCAL,
-                )?;
+                let mem_type = device
+                    .find_memory_type(
+                        mem_requirements.memory_type_bits,
+                        MemoryPropertyFlags::DEVICE_LOCAL,
+                    )
+                    .unwrap_or_else(|| {
+                        panic!(error!("device does not support device local image memory"));
+                    });
 
                 let alloc_info = MemoryAllocateInfo::builder()
                     .allocation_size(mem_requirements.size)

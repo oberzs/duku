@@ -7,6 +7,7 @@ use ash::vk::ImageBlit;
 use ash::vk::ImageSubresourceLayers;
 use ash::vk::Offset3D;
 use log::debug;
+use log::warn;
 use std::cmp;
 use std::sync::Arc;
 
@@ -29,8 +30,8 @@ pub struct Framebuffer {
     width: u32,
     height: u32,
     attachment_images: Vec<Image>,
-    shader_image: Image,
-    shader_index: i32,
+    shader_image: Option<Image>,
+    shader_index: Option<i32>,
     world_uniforms: WorldUniforms,
     device: Arc<Device>,
 }
@@ -40,12 +41,11 @@ impl Framebuffer {
         device: &Arc<Device>,
         swapchain: &Swapchain,
         render_passes: &RenderPasses,
-        image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
     ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
-        let extent = device.properties().extent;
+        let extent = device.extent();
         let render_pass = render_passes.window();
 
         swapchain
@@ -96,15 +96,21 @@ impl Framebuffer {
                     )?);
                 }
 
-                Self::from_images(
-                    device,
-                    images,
-                    image_uniforms,
-                    render_pass,
-                    shader_layout,
-                    extent.width,
-                    extent.height,
-                )
+                let vk =
+                    create_framebuffer(device, render_pass, &images, extent.width, extent.height)?;
+
+                let world_uniforms = WorldUniforms::new(device, shader_layout)?;
+
+                Ok(Self {
+                    vk,
+                    width: extent.width,
+                    height: extent.height,
+                    shader_image: None,
+                    shader_index: None,
+                    attachment_images: images,
+                    world_uniforms,
+                    device: Arc::clone(device),
+                })
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -163,15 +169,23 @@ impl Framebuffer {
             )?);
         }
 
-        Self::from_images(
-            device,
-            images,
-            image_uniforms,
-            render_pass,
-            shader_layout,
+        let (shader_image, shader_index) =
+            create_shader_image(device, image_uniforms, width, height, ImageFormat::Bgra)?;
+
+        let vk = create_framebuffer(device, render_pass, &images, width, height)?;
+
+        let world_uniforms = WorldUniforms::new(device, shader_layout)?;
+
+        Ok(Self {
+            vk,
             width,
             height,
-        )
+            shader_image: Some(shader_image),
+            shader_index: Some(shader_index),
+            attachment_images: images,
+            world_uniforms,
+            device: Arc::clone(device),
+        })
     }
 
     pub(crate) fn depth(
@@ -199,66 +213,10 @@ impl Framebuffer {
             },
         )?);
 
-        Self::from_images(
-            device,
-            images,
-            image_uniforms,
-            render_pass,
-            shader_layout,
-            width,
-            height,
-        )
-    }
+        let (shader_image, shader_index) =
+            create_shader_image(device, image_uniforms, width, height, ImageFormat::Depth)?;
 
-    fn from_images(
-        device: &Arc<Device>,
-        images: Vec<Image>,
-        image_uniforms: &ImageUniforms,
-        render_pass: &RenderPass,
-        shader_layout: &ShaderLayout,
-        width: u32,
-        height: u32,
-    ) -> Result<Self> {
-        let format = if images[images.len() - 1].is_depth_format() {
-            ImageFormat::Depth
-        } else {
-            ImageFormat::Bgra
-        };
-        let shader_image = Image::new(
-            device,
-            ImageOptions {
-                width,
-                height,
-                format,
-                usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
-                has_view: true,
-                ..Default::default()
-            },
-        )?;
-
-        let cmd = Commands::new(device)?;
-        cmd.begin()?;
-        cmd.change_image_layout(&shader_image)
-            .change_to_shader_read()
-            .record();
-        device.submit_and_wait(cmd.end()?)?;
-
-        let shader_index = image_uniforms.image_count() as i32;
-        if let Some(view) = shader_image.view() {
-            image_uniforms.add(view);
-        }
-
-        let attachments = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
-
-        let info = FramebufferCreateInfo::builder()
-            .render_pass(render_pass.vk())
-            .attachments(&attachments)
-            .width(width)
-            .height(height)
-            .layers(1)
-            .build();
-
-        let vk = unsafe { device.logical().create_framebuffer(&info, None)? };
+        let vk = create_framebuffer(device, render_pass, &images, width, height)?;
 
         let world_uniforms = WorldUniforms::new(device, shader_layout)?;
 
@@ -266,8 +224,8 @@ impl Framebuffer {
             vk,
             width,
             height,
-            shader_image,
-            shader_index,
+            shader_image: Some(shader_image),
+            shader_index: Some(shader_index),
             attachment_images: images,
             world_uniforms,
             device: Arc::clone(device),
@@ -275,75 +233,79 @@ impl Framebuffer {
     }
 
     pub(crate) fn blit_to_shader_image(&self, cmd: &Commands) {
-        let image = &self.attachment_images[cmp::min(self.attachment_images.len() - 1, 1)];
-        let is_depth = image.is_depth_format();
+        if let Some(shader_image) = &self.shader_image {
+            let image = &self.attachment_images[cmp::min(self.attachment_images.len() - 1, 1)];
+            let is_depth = image.is_depth_format();
 
-        if is_depth {
-            cmd.change_image_layout(image)
-                .change_from_depth_write()
-                .change_to_read()
+            if is_depth {
+                cmd.change_image_layout(image)
+                    .change_from_depth_write()
+                    .change_to_read()
+                    .record();
+            } else {
+                cmd.change_image_layout(image)
+                    .change_from_color_write()
+                    .change_to_read()
+                    .record();
+            }
+            cmd.change_image_layout(shader_image)
+                .change_from_shader_read()
+                .change_to_write()
+                .record();
+
+            let offsets = [
+                Offset3D::default(),
+                Offset3D {
+                    x: self.width as i32,
+                    y: self.height as i32,
+                    z: 1,
+                },
+            ];
+            let aspect_mask = if is_depth {
+                ImageAspectFlags::DEPTH
+            } else {
+                ImageAspectFlags::COLOR
+            };
+            let subresource = ImageSubresourceLayers::builder()
+                .aspect_mask(aspect_mask)
+                .mip_level(0)
+                .base_array_layer(0)
+                .layer_count(1)
+                .build();
+
+            let blit = ImageBlit::builder()
+                .src_offsets(offsets)
+                .src_subresource(subresource)
+                .dst_offsets(offsets)
+                .dst_subresource(subresource)
+                .build();
+
+            let filter = if is_depth {
+                Filter::NEAREST
+            } else {
+                Filter::LINEAR
+            };
+
+            cmd.blit_image(image.vk(), shader_image.vk(), blit, filter);
+
+            if is_depth {
+                cmd.change_image_layout(image)
+                    .change_from_read()
+                    .change_to_depth_write()
+                    .record();
+            } else {
+                cmd.change_image_layout(image)
+                    .change_from_read()
+                    .change_to_color_write()
+                    .record();
+            }
+            cmd.change_image_layout(shader_image)
+                .change_from_write()
+                .change_to_shader_read()
                 .record();
         } else {
-            cmd.change_image_layout(image)
-                .change_from_color_write()
-                .change_to_read()
-                .record();
+            warn!("trying to blit framebuffer without a shader image");
         }
-        cmd.change_image_layout(&self.shader_image)
-            .change_from_shader_read()
-            .change_to_write()
-            .record();
-
-        let offsets = [
-            Offset3D::default(),
-            Offset3D {
-                x: self.width as i32,
-                y: self.height as i32,
-                z: 1,
-            },
-        ];
-        let aspect_mask = if is_depth {
-            ImageAspectFlags::DEPTH
-        } else {
-            ImageAspectFlags::COLOR
-        };
-        let subresource = ImageSubresourceLayers::builder()
-            .aspect_mask(aspect_mask)
-            .mip_level(0)
-            .base_array_layer(0)
-            .layer_count(1)
-            .build();
-
-        let blit = ImageBlit::builder()
-            .src_offsets(offsets)
-            .src_subresource(subresource)
-            .dst_offsets(offsets)
-            .dst_subresource(subresource)
-            .build();
-
-        let filter = if is_depth {
-            Filter::NEAREST
-        } else {
-            Filter::LINEAR
-        };
-
-        cmd.blit_image(image.vk(), self.shader_image.vk(), blit, filter);
-
-        if is_depth {
-            cmd.change_image_layout(image)
-                .change_from_read()
-                .change_to_depth_write()
-                .record();
-        } else {
-            cmd.change_image_layout(image)
-                .change_from_read()
-                .change_to_color_write()
-                .record();
-        }
-        cmd.change_image_layout(&self.shader_image)
-            .change_from_write()
-            .change_to_shader_read()
-            .record();
     }
 
     pub(crate) fn vk(&self) -> VkFramebuffer {
@@ -359,7 +321,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn image_index(&self) -> i32 {
-        self.shader_index
+        self.shader_index.unwrap_or(0)
     }
 
     pub(crate) fn iter_attachments(&self) -> impl Iterator<Item = &Image> {
@@ -381,6 +343,56 @@ impl Drop for Framebuffer {
 
 impl PartialEq for Framebuffer {
     fn eq(&self, other: &Self) -> bool {
-        self.shader_image.vk() == other.shader_image.vk()
+        self.shader_image.as_ref().map(|i| i.vk()) == other.shader_image.as_ref().map(|i| i.vk())
     }
+}
+
+fn create_shader_image(
+    device: &Arc<Device>,
+    uniforms: &ImageUniforms,
+    width: u32,
+    height: u32,
+    format: ImageFormat,
+) -> Result<(Image, i32)> {
+    let image = Image::new(
+        device,
+        ImageOptions {
+            width,
+            height,
+            format,
+            usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
+            has_view: true,
+            ..Default::default()
+        },
+    )?;
+    let cmd = Commands::new(device)?;
+    cmd.begin()?;
+    cmd.change_image_layout(&image)
+        .change_to_shader_read()
+        .record();
+    device.submit_and_wait(cmd.end()?)?;
+    let index = uniforms.image_count() as i32;
+    if let Some(view) = image.view() {
+        uniforms.add(view);
+    }
+    Ok((image, index))
+}
+
+fn create_framebuffer(
+    device: &Arc<Device>,
+    render_pass: &RenderPass,
+    images: &[Image],
+    width: u32,
+    height: u32,
+) -> Result<VkFramebuffer> {
+    let attachments = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+
+    let info = FramebufferCreateInfo::builder()
+        .render_pass(render_pass.vk())
+        .attachments(&attachments)
+        .width(width)
+        .height(height)
+        .layers(1);
+
+    Ok(unsafe { device.logical().create_framebuffer(&info, None)? })
 }

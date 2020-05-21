@@ -10,12 +10,18 @@ fn main() {
         title: "Tegne example: Blue",
         width,
         height,
+        resizable: true,
     });
     let mut tegne = Tegne::from_window(&window, Default::default());
+    let mut camera = Camera::orthographic(width, height);
 
-    let camera = Camera::orthographic(width, height);
+    window.start_loop(|events| {
+        if events.is_resized() {
+            let (new_width, new_height) = events.size();
+            tegne.resize(new_width, new_height);
+            camera.resize(new_width, new_height);
+        }
 
-    window.start_loop(|_| {
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.0, 0.0, 1.0, 1.0]);

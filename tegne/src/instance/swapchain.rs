@@ -29,39 +29,26 @@ impl Swapchain {
     pub(crate) fn new(vulkan: &Vulkan, device: &Arc<Device>, surface: &Surface) -> Result<Self> {
         debug!("creating window swapchain");
 
-        let props = device.properties();
-        let transform = props.surface_capabilities.current_transform;
-
-        let mut create_info = SwapchainCreateInfoKHR::builder()
-            .surface(surface.vk())
-            .image_format(ImageFormat::Bgra.flag())
-            .image_color_space(ColorSpaceKHR::SRGB_NONLINEAR)
-            .image_extent(props.extent)
-            .image_array_layers(1)
-            .image_usage(ImageUsage::Color.flag())
-            .pre_transform(transform)
-            .min_image_count(props.image_count)
-            .composite_alpha(CompositeAlphaFlagsKHR::OPAQUE)
-            .present_mode(props.present_mode)
-            .clipped(true);
-
-        let indices = device.indices();
-        if device.are_indices_unique() {
-            create_info = create_info
-                .image_sharing_mode(SharingMode::CONCURRENT)
-                .queue_family_indices(&indices);
-        } else {
-            create_info = create_info.image_sharing_mode(SharingMode::EXCLUSIVE);
-        }
+        let info = swapchain_info(device, surface);
 
         let ext = Extension::new(vulkan.instance_ref(), device.logical());
-        let vk = unsafe { ext.create_swapchain(&create_info, None)? };
+        let vk = unsafe { ext.create_swapchain(&info, None)? };
 
         Ok(Self {
             ext,
             vk,
             current_image: Cell::new(0),
         })
+    }
+
+    pub(crate) fn recreate(&mut self, device: &Arc<Device>, surface: &Surface) -> Result<()> {
+        unsafe {
+            self.ext.destroy_swapchain(self.vk, None);
+        }
+        let info = swapchain_info(device, surface);
+        self.vk = unsafe { self.ext.create_swapchain(&info, None)? };
+        self.current_image.set(0);
+        Ok(())
     }
 
     pub(crate) fn iter_images(&self) -> Result<impl Iterator<Item = Image>> {
@@ -103,4 +90,34 @@ impl Drop for Swapchain {
             self.ext.destroy_swapchain(self.vk, None);
         }
     }
+}
+
+fn swapchain_info(device: &Arc<Device>, surface: &Surface) -> SwapchainCreateInfoKHR {
+    let transform = device.surface_transform();
+    let image_count = device.image_count();
+    let present_mode = device.present_mode();
+
+    let mut info = SwapchainCreateInfoKHR::builder()
+        .surface(surface.vk())
+        .image_format(ImageFormat::Bgra.flag())
+        .image_color_space(ColorSpaceKHR::SRGB_NONLINEAR)
+        .image_extent(device.extent())
+        .image_array_layers(1)
+        .image_usage(ImageUsage::Color.flag())
+        .pre_transform(transform)
+        .min_image_count(image_count)
+        .composite_alpha(CompositeAlphaFlagsKHR::OPAQUE)
+        .present_mode(present_mode)
+        .clipped(true);
+
+    let indices = device.indices();
+    if device.are_indices_unique() {
+        info = info
+            .image_sharing_mode(SharingMode::CONCURRENT)
+            .queue_family_indices(&indices);
+    } else {
+        info = info.image_sharing_mode(SharingMode::EXCLUSIVE);
+    }
+
+    info.build()
 }

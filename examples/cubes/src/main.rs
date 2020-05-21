@@ -23,6 +23,7 @@ fn main() {
         title: "Tegne example: Cubes",
         width,
         height,
+        ..Default::default()
     });
     let mut tegne = Tegne::from_window(
         &window,
