@@ -15,8 +15,8 @@ use tegne_math::Vector3;
 use tegne_math::Vector4;
 
 use super::ShaderLayout;
-use crate::buffer::BufferType;
-use crate::buffer::DynamicBuffer;
+use crate::buffers::BufferType;
+use crate::buffers::DynamicBuffer;
 use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::images::Sampler;

@@ -1,6 +1,4 @@
-use ash::version::DeviceV1_0;
 use ash::vk::Buffer as VkBuffer;
-use ash::vk::DeviceMemory;
 use ash::vk::MemoryPropertyFlags;
 use std::mem;
 use std::sync::Arc;
@@ -9,14 +7,10 @@ use super::Buffer;
 use super::BufferType;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::memory::alloc;
-use crate::memory::copy;
 
 pub(crate) struct DynamicBuffer {
-    vk: VkBuffer,
-    memory: DeviceMemory,
+    buffer: Buffer,
     size: u32,
-    device: Arc<Device>,
 }
 
 impl DynamicBuffer {
@@ -27,7 +21,7 @@ impl DynamicBuffer {
     ) -> Result<Self> {
         let size = mem::size_of::<T>() * len;
 
-        let (vk, memory) = alloc::buffer(
+        let buffer = Buffer::new(
             device,
             buffer_type.into(),
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
@@ -35,36 +29,22 @@ impl DynamicBuffer {
         )?;
 
         Ok(Self {
-            vk,
-            memory,
+            buffer,
             size: size as u32,
-            device: Arc::clone(device),
         })
     }
 
     pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
         let size = mem::size_of::<T>() * data.len();
-        copy::data_to_buffer(&self.device, data, self.memory, size)?;
+        self.buffer.copy_from_data(data, size)?;
         Ok(())
     }
 
     pub(crate) fn size(&self) -> u32 {
         self.size
     }
-}
 
-impl Drop for DynamicBuffer {
-    fn drop(&mut self) {
-        unsafe {
-            self.device.wait_for_idle().unwrap();
-            self.device.logical().destroy_buffer(self.vk, None);
-            self.device.logical().free_memory(self.memory, None);
-        }
-    }
-}
-
-impl Buffer for DynamicBuffer {
-    fn vk_buffer(&self) -> VkBuffer {
-        self.vk
+    pub(crate) fn vk(&self) -> VkBuffer {
+        self.buffer.vk()
     }
 }

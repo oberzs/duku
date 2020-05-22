@@ -1,4 +1,3 @@
-use ash::version::DeviceV1_0;
 use ash::vk::BufferUsageFlags;
 use ash::vk::MemoryPropertyFlags;
 use std::cmp;
@@ -9,12 +8,11 @@ use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageOptions;
 use super::ImageUsage;
+use crate::buffers::Buffer;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::LayoutChangeOptions;
-use crate::memory::alloc;
-use crate::memory::copy;
 use crate::shaders::ImageUniforms;
 
 pub struct Texture {
@@ -50,14 +48,13 @@ impl Texture {
 
         let size = width * height * 4;
 
-        let (staging_buffer, staging_memory) = alloc::buffer(
+        let staging_buffer = Buffer::new(
             device,
             BufferUsageFlags::TRANSFER_SRC,
             MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
             size as usize,
         )?;
-
-        copy::data_to_buffer(&device, data, staging_memory, size as usize)?;
+        staging_buffer.copy_from_data(data, size as usize)?;
 
         let image = Image::new(
             device,
@@ -89,13 +86,8 @@ impl Texture {
         );
         device.submit_and_wait(cmd.end()?)?;
 
-        image.copy_data_from(staging_buffer)?;
+        image.copy_from_buffer(&staging_buffer)?;
         image.generate_mipmaps()?;
-
-        unsafe {
-            device.logical().destroy_buffer(staging_buffer, None);
-            device.logical().free_memory(staging_memory, None);
-        }
 
         let image_index = image_uniforms.image_count() as i32;
         if let Some(view) = image.view() {

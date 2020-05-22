@@ -8,11 +8,10 @@
     unused_qualifications,
 )]
 
-mod buffer;
+mod buffers;
 mod error;
 mod images;
 mod instance;
-mod memory;
 mod mesh;
 mod objects;
 mod renderer;

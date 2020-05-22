@@ -1,5 +1,4 @@
 use ash::version::DeviceV1_0;
-use ash::vk::Buffer;
 use ash::vk::BufferImageCopy;
 use ash::vk::DeviceMemory;
 use ash::vk::Extent3D;
@@ -26,6 +25,7 @@ use log::error;
 use std::cmp;
 use std::sync::Arc;
 
+use crate::buffers::Buffer;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
@@ -191,7 +191,7 @@ impl Image {
         })
     }
 
-    pub(crate) fn copy_data_from(&self, src: Buffer) -> Result<()> {
+    pub(crate) fn copy_from_buffer(&self, buffer: &Buffer) -> Result<()> {
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)
@@ -214,7 +214,7 @@ impl Image {
 
         let cmd = Commands::new(&self.device)?;
         cmd.begin()?;
-        cmd.copy_buffer_to_image(src, self.vk, region);
+        cmd.copy_buffer_to_image(buffer.vk(), self.vk, region);
         self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
     }

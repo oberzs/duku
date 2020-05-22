@@ -6,10 +6,9 @@ use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
-use crate::buffer::Buffer;
-use crate::buffer::BufferType;
-use crate::buffer::DynamicBuffer;
-use crate::buffer::FixedBuffer;
+use crate::buffers::Buffer;
+use crate::buffers::BufferType;
+use crate::buffers::DynamicBuffer;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
@@ -20,7 +19,7 @@ pub struct Mesh {
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
     vertex_buffer: DynamicBuffer,
-    index_buffer: FixedBuffer,
+    index_buffer: Buffer,
     should_update: Cell<bool>,
     drawn_triangles: u32,
 }
@@ -53,7 +52,8 @@ impl Mesh {
         }
 
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;
-        let index_buffer = FixedBuffer::new::<u32>(device, options.triangles, BufferType::Index)?;
+        let index_buffer =
+            Buffer::device_local::<u32>(device, options.triangles, BufferType::Index)?;
 
         let vertices = options.vertices.to_vec();
 
@@ -128,11 +128,11 @@ impl Mesh {
             self.vertex_buffer.update_data(&vertices)?;
             self.should_update.set(false);
         }
-        Ok(self.vertex_buffer.vk_buffer())
+        Ok(self.vertex_buffer.vk())
     }
 
     pub(crate) fn vk_index_buffer(&self) -> VkBuffer {
-        self.index_buffer.vk_buffer()
+        self.index_buffer.vk()
     }
 
     pub(crate) fn drawn_triangles(&self) -> u32 {
