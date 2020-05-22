@@ -211,8 +211,10 @@ impl Tegne {
     pub fn begin_draw(&mut self) {
         check!(self.device.next_frame(&self.swapchain));
         self.image_uniforms.update_if_needed();
-        let cmd = &mut self.commands[self.device.current_frame()];
+        let current = self.device.current_frame();
+        let cmd = &mut self.commands[current];
         check!(cmd.reset());
+        self.objects.clean_unused(current);
         check!(cmd.begin());
         cmd.bind_descriptor(
             self.image_uniforms.descriptor(),
@@ -406,13 +408,7 @@ impl Tegne {
                                 &source,
                                 options,
                             ));
-                            let replaced = objects.replace_shader(id, shader);
-
-                            // cleanup replaced shader after some time
-                            thread::spawn(move || {
-                                let _ = replaced;
-                                thread::sleep(Duration::from_secs(1));
-                            });
+                            objects.replace_shader(id, shader, device.current_frame());
                         }
                     }
                 }

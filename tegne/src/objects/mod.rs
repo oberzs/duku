@@ -16,6 +16,7 @@ use std::sync::Mutex;
 use crate::images::Font;
 use crate::images::Framebuffer;
 use crate::images::Texture;
+use crate::instance::IN_FLIGHT_FRAME_COUNT;
 use crate::mesh::Mesh;
 use crate::shaders::Material;
 use crate::shaders::Shader;
@@ -35,6 +36,7 @@ pub(crate) struct Objects {
     shaders: Storage<Shader>,
     fonts: Storage<Font>,
     framebuffers: Storage<Framebuffer>,
+    unused_shaders: Mutex<Vec<Vec<Shader>>>,
     max_id: AtomicU32,
 }
 
@@ -43,6 +45,10 @@ pub struct Id<T>(u32, PhantomData<*const T>);
 
 impl Objects {
     pub(crate) fn new() -> Self {
+        let unused_shaders = (0..IN_FLIGHT_FRAME_COUNT)
+            .map(|_| vec![])
+            .collect::<Vec<_>>();
+
         Self {
             textures: Mutex::new(HashMap::new()),
             materials: Mutex::new(HashMap::new()),
@@ -50,6 +56,7 @@ impl Objects {
             shaders: Mutex::new(HashMap::new()),
             fonts: Mutex::new(HashMap::new()),
             framebuffers: Mutex::new(HashMap::new()),
+            unused_shaders: Mutex::new(unused_shaders),
             max_id: AtomicU32::new(0),
         }
     }
@@ -150,8 +157,14 @@ impl Objects {
         }
     }
 
-    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader) -> Option<Shader> {
-        self.shaders.lock().unwrap().insert(id, shader)
+    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader, frame: usize) {
+        if let Some(replaced) = self.shaders.lock().unwrap().insert(id, shader) {
+            self.unused_shaders.lock().unwrap()[frame].push(replaced);
+        }
+    }
+
+    pub(crate) fn clean_unused(&self, frame: usize) {
+        self.unused_shaders.lock().unwrap()[frame].clear();
     }
 
     fn get_id(&self) -> u32 {
