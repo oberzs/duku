@@ -9,7 +9,6 @@ use notify::Watcher;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
-use std::process::exit;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -49,10 +48,7 @@ macro_rules! check {
     ($result:expr) => {
         match $result {
             Ok(value) => value,
-            Err(err) => {
-                error!("{}", err);
-                exit(1);
-            }
+            Err(err) => panic!(error!("{}", err)),
         }
     };
 }
@@ -61,6 +57,7 @@ macro_rules! check {
 use tegne_utils::Window;
 
 pub struct Tegne {
+    render_stage: RenderStage,
     thread_kill: ThreadKill,
     start_time: Instant,
     forward_renderer: ForwardRenderer,
@@ -83,6 +80,12 @@ pub struct TegneOptions {
     pub anisotropy: f32,
     pub vsync: bool,
     pub msaa: u8,
+}
+
+#[derive(Copy, Clone)]
+enum RenderStage {
+    Before,
+    During,
 }
 
 impl Tegne {
@@ -147,6 +150,7 @@ impl Tegne {
         ));
 
         Self {
+            render_stage: RenderStage::Before,
             thread_kill: ThreadKill::new(),
             start_time: Instant::now(),
             forward_renderer,
@@ -209,6 +213,12 @@ impl Tegne {
     }
 
     pub fn begin_draw(&mut self) {
+        if let RenderStage::During = self.render_stage {
+            panic!(error!("cannot begin draw stage during draw stage"));
+        } else {
+            self.render_stage = RenderStage::During;
+        }
+
         check!(self.device.next_frame(&self.swapchain));
         self.image_uniforms.update_if_needed();
         let current = self.device.current_frame();
@@ -222,13 +232,23 @@ impl Tegne {
         );
     }
 
-    pub fn end_draw(&self) {
+    pub fn end_draw(&mut self) {
+        if let RenderStage::Before = self.render_stage {
+            panic!(error!("cannot end draw stage before draw stage"));
+        } else {
+            self.render_stage = RenderStage::Before;
+        }
+
         let buffer = check!(self.commands[self.device.current_frame()].end());
         check!(self.device.submit(buffer));
         check!(self.device.present(&self.swapchain));
     }
 
-    pub fn draw_on_window(&self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
+    pub fn draw_on_window(&mut self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
+        if let RenderStage::Before = self.render_stage {
+            panic!(error!("cannot draw before draw stage"));
+        }
+
         let mut target = check!(Target::new(&self.builtins, &self.objects));
         draw_callback(&mut target);
 
@@ -256,6 +276,10 @@ impl Tegne {
         camera: &Camera,
         draw_callback: impl Fn(&mut Target<'_>),
     ) {
+        if let RenderStage::Before = self.render_stage {
+            panic!(error!("cannot draw before draw stage"));
+        }
+
         let mut target = check!(Target::new(&self.builtins, &self.objects));
         draw_callback(&mut target);
 
