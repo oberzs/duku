@@ -6,11 +6,13 @@ use std::sync::Arc;
 
 use super::Image;
 use super::ImageFormat;
+use super::ImageLayout;
 use super::ImageOptions;
 use super::ImageUsage;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
+use crate::instance::LayoutChangeOptions;
 use crate::memory::alloc;
 use crate::memory::copy;
 use crate::shaders::ImageUniforms;
@@ -76,10 +78,15 @@ impl Texture {
 
         let cmd = Commands::new(device)?;
         cmd.begin()?;
-        cmd.change_image_layout(&image)
-            .with_mips(0, mip_levels)
-            .change_to_write()
-            .record();
+        cmd.change_image_layout(
+            &image,
+            LayoutChangeOptions {
+                base_mip: 0,
+                mip_count: mip_levels,
+                new_layout: ImageLayout::TransferDst,
+                ..Default::default()
+            },
+        );
         device.submit_and_wait(cmd.end()?)?;
 
         image.copy_data_from(staging_buffer)?;

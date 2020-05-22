@@ -13,11 +13,13 @@ use std::sync::Arc;
 
 use super::Image;
 use super::ImageFormat;
+use super::ImageLayout;
 use super::ImageOptions;
 use super::ImageUsage;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
+use crate::instance::LayoutChangeOptions;
 use crate::instance::Swapchain;
 use crate::shaders::ImageUniforms;
 use crate::shaders::RenderPass;
@@ -238,20 +240,32 @@ impl Framebuffer {
             let is_depth = image.is_depth_format();
 
             if is_depth {
-                cmd.change_image_layout(image)
-                    .change_from_depth_write()
-                    .change_to_read()
-                    .record();
+                cmd.change_image_layout(
+                    image,
+                    LayoutChangeOptions {
+                        old_layout: ImageLayout::Depth,
+                        new_layout: ImageLayout::TransferSrc,
+                        ..Default::default()
+                    },
+                );
             } else {
-                cmd.change_image_layout(image)
-                    .change_from_color_write()
-                    .change_to_read()
-                    .record();
+                cmd.change_image_layout(
+                    image,
+                    LayoutChangeOptions {
+                        old_layout: ImageLayout::Color,
+                        new_layout: ImageLayout::TransferSrc,
+                        ..Default::default()
+                    },
+                );
             }
-            cmd.change_image_layout(shader_image)
-                .change_from_shader_read()
-                .change_to_write()
-                .record();
+            cmd.change_image_layout(
+                shader_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::Shader,
+                    new_layout: ImageLayout::TransferDst,
+                    ..Default::default()
+                },
+            );
 
             let offsets = [
                 Offset3D::default(),
@@ -289,20 +303,32 @@ impl Framebuffer {
             cmd.blit_image(image.vk(), shader_image.vk(), blit, filter);
 
             if is_depth {
-                cmd.change_image_layout(image)
-                    .change_from_read()
-                    .change_to_depth_write()
-                    .record();
+                cmd.change_image_layout(
+                    image,
+                    LayoutChangeOptions {
+                        old_layout: ImageLayout::TransferSrc,
+                        new_layout: ImageLayout::Depth,
+                        ..Default::default()
+                    },
+                );
             } else {
-                cmd.change_image_layout(image)
-                    .change_from_read()
-                    .change_to_color_write()
-                    .record();
+                cmd.change_image_layout(
+                    image,
+                    LayoutChangeOptions {
+                        old_layout: ImageLayout::TransferSrc,
+                        new_layout: ImageLayout::Color,
+                        ..Default::default()
+                    },
+                );
             }
-            cmd.change_image_layout(shader_image)
-                .change_from_write()
-                .change_to_shader_read()
-                .record();
+            cmd.change_image_layout(
+                shader_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::TransferDst,
+                    new_layout: ImageLayout::Shader,
+                    ..Default::default()
+                },
+            );
         } else {
             warn!("trying to blit framebuffer without a shader image");
         }
@@ -367,9 +393,13 @@ fn create_shader_image(
     )?;
     let cmd = Commands::new(device)?;
     cmd.begin()?;
-    cmd.change_image_layout(&image)
-        .change_to_shader_read()
-        .record();
+    cmd.change_image_layout(
+        &image,
+        LayoutChangeOptions {
+            new_layout: ImageLayout::Shader,
+            ..Default::default()
+        },
+    );
     device.submit_and_wait(cmd.end()?)?;
     let index = uniforms.image_count() as i32;
     if let Some(view) = image.view() {

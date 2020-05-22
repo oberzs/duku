@@ -10,6 +10,7 @@ mod validator;
 mod vulkan;
 
 pub(crate) use commands::Commands;
+pub(crate) use commands::LayoutChangeOptions;
 pub(crate) use device::Device;
 pub(crate) use device::Samples;
 pub(crate) use device::IN_FLIGHT_FRAME_COUNT;

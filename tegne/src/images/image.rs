@@ -29,6 +29,7 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
+use crate::instance::LayoutChangeOptions;
 use crate::instance::Samples;
 
 pub(crate) struct Image {
@@ -226,11 +227,15 @@ impl Image {
         cmd.begin()?;
 
         for i in 1..self.mip_levels {
-            cmd.change_image_layout(self)
-                .with_mips(i - 1, 1)
-                .change_from_write()
-                .change_to_read()
-                .record();
+            cmd.change_image_layout(
+                self,
+                LayoutChangeOptions {
+                    base_mip: i - 1,
+                    mip_count: 1,
+                    old_layout: ImageLayout::TransferDst,
+                    new_layout: ImageLayout::TransferSrc,
+                },
+            );
 
             let src_offsets = [
                 Offset3D { x: 0, y: 0, z: 0 },
@@ -273,18 +278,26 @@ impl Image {
 
             cmd.blit_image(self.vk, self.vk, blit, Filter::LINEAR);
 
-            cmd.change_image_layout(self)
-                .with_mips(i - 1, 1)
-                .change_from_read()
-                .change_to_shader_read()
-                .record();
+            cmd.change_image_layout(
+                self,
+                LayoutChangeOptions {
+                    base_mip: i - 1,
+                    mip_count: 1,
+                    old_layout: ImageLayout::TransferSrc,
+                    new_layout: ImageLayout::Shader,
+                },
+            );
         }
 
-        cmd.change_image_layout(self)
-            .with_mips(self.mip_levels - 1, 1)
-            .change_from_write()
-            .change_to_shader_read()
-            .record();
+        cmd.change_image_layout(
+            self,
+            LayoutChangeOptions {
+                base_mip: self.mip_levels - 1,
+                mip_count: 1,
+                old_layout: ImageLayout::TransferDst,
+                new_layout: ImageLayout::Shader,
+            },
+        );
 
         self.device.submit_and_wait(cmd.end()?)?;
         Ok(())

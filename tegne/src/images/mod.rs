@@ -1,7 +1,6 @@
 mod font;
 mod framebuffer;
 mod image;
-mod layout_change;
 mod sampler;
 mod texture;
 
@@ -12,7 +11,6 @@ pub(crate) use self::image::ImageOptions;
 pub(crate) use self::image::ImageUsage;
 pub use font::Font;
 pub use framebuffer::Framebuffer;
-pub(crate) use layout_change::LayoutChange;
 pub(crate) use sampler::Sampler;
 pub(crate) use sampler::SamplerAddress;
 pub(crate) use sampler::SamplerFilter;

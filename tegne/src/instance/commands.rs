@@ -1,4 +1,5 @@
 use ash::version::DeviceV1_0;
+use ash::vk::AccessFlags;
 use ash::vk::Buffer;
 use ash::vk::BufferCopy;
 use ash::vk::BufferImageCopy;
@@ -18,8 +19,10 @@ use ash::vk::DependencyFlags;
 use ash::vk::Extent2D;
 use ash::vk::Filter;
 use ash::vk::Image as VkImage;
+use ash::vk::ImageAspectFlags;
 use ash::vk::ImageBlit;
 use ash::vk::ImageMemoryBarrier;
+use ash::vk::ImageSubresourceRange;
 use ash::vk::IndexType;
 use ash::vk::Offset2D;
 use ash::vk::Pipeline;
@@ -31,6 +34,7 @@ use ash::vk::RenderPassBeginInfo;
 use ash::vk::ShaderStageFlags;
 use ash::vk::SubpassContents;
 use ash::vk::Viewport;
+use ash::vk::QUEUE_FAMILY_IGNORED;
 use std::mem;
 use std::slice;
 use std::sync::Arc;
@@ -40,7 +44,6 @@ use crate::error::Result;
 use crate::images::Framebuffer;
 use crate::images::Image;
 use crate::images::ImageLayout;
-use crate::images::LayoutChange;
 use crate::shaders::Descriptor;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
@@ -49,6 +52,13 @@ pub(crate) struct Commands {
     buffer: CommandBuffer,
     pool: CommandPool,
     device: Arc<Device>,
+}
+
+pub(crate) struct LayoutChangeOptions {
+    pub(crate) old_layout: ImageLayout,
+    pub(crate) new_layout: ImageLayout,
+    pub(crate) base_mip: u32,
+    pub(crate) mip_count: u32,
 }
 
 impl Commands {
@@ -317,8 +327,68 @@ impl Commands {
         }
     }
 
-    pub(crate) fn change_image_layout<'a>(&'a self, image: &'a Image) -> LayoutChange<'a> {
-        LayoutChange::new(self, image)
+    pub(crate) fn change_image_layout(&self, image: &Image, options: LayoutChangeOptions) {
+        let src_access = match options.old_layout {
+            ImageLayout::TransferSrc => AccessFlags::TRANSFER_READ,
+            ImageLayout::TransferDst => AccessFlags::TRANSFER_WRITE,
+            ImageLayout::Shader => AccessFlags::SHADER_READ,
+            ImageLayout::Color => AccessFlags::COLOR_ATTACHMENT_WRITE,
+            ImageLayout::Depth => AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+            _ => AccessFlags::TRANSFER_READ,
+        };
+        let dst_access = match options.new_layout {
+            ImageLayout::TransferSrc => AccessFlags::TRANSFER_READ,
+            ImageLayout::TransferDst => AccessFlags::TRANSFER_WRITE,
+            ImageLayout::Shader => AccessFlags::SHADER_READ,
+            ImageLayout::Color => AccessFlags::COLOR_ATTACHMENT_WRITE,
+            ImageLayout::Depth => AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+            _ => AccessFlags::TRANSFER_READ,
+        };
+        let src_stage = match options.old_layout {
+            ImageLayout::TransferSrc => PipelineStageFlags::TRANSFER,
+            ImageLayout::TransferDst => PipelineStageFlags::TRANSFER,
+            ImageLayout::Shader => PipelineStageFlags::FRAGMENT_SHADER,
+            ImageLayout::Color => PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+            ImageLayout::Depth => {
+                PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS
+            }
+            _ => PipelineStageFlags::TRANSFER,
+        };
+        let dst_stage = match options.new_layout {
+            ImageLayout::TransferSrc => PipelineStageFlags::TRANSFER,
+            ImageLayout::TransferDst => PipelineStageFlags::TRANSFER,
+            ImageLayout::Shader => PipelineStageFlags::FRAGMENT_SHADER,
+            ImageLayout::Color => PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+            ImageLayout::Depth => {
+                PipelineStageFlags::EARLY_FRAGMENT_TESTS | PipelineStageFlags::LATE_FRAGMENT_TESTS
+            }
+            _ => PipelineStageFlags::TRANSFER,
+        };
+        let aspect_mask = if image.is_depth_format() {
+            ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL
+        } else {
+            ImageAspectFlags::COLOR
+        };
+
+        let subresource = ImageSubresourceRange::builder()
+            .aspect_mask(aspect_mask)
+            .base_array_layer(0)
+            .base_mip_level(options.base_mip)
+            .layer_count(1)
+            .level_count(options.mip_count)
+            .build();
+        let barrier = ImageMemoryBarrier::builder()
+            .src_queue_family_index(QUEUE_FAMILY_IGNORED)
+            .dst_queue_family_index(QUEUE_FAMILY_IGNORED)
+            .subresource_range(subresource)
+            .image(image.vk())
+            .old_layout(options.old_layout.flag())
+            .new_layout(options.new_layout.flag())
+            .src_access_mask(src_access)
+            .dst_access_mask(dst_access)
+            .build();
+
+        self.set_pipeline_barrier(barrier, src_stage, dst_stage);
     }
 }
 
@@ -326,6 +396,17 @@ impl Drop for Commands {
     fn drop(&mut self) {
         unsafe {
             self.device.logical().destroy_command_pool(self.pool, None);
+        }
+    }
+}
+
+impl Default for LayoutChangeOptions {
+    fn default() -> Self {
+        Self {
+            old_layout: ImageLayout::Undefined,
+            new_layout: ImageLayout::Undefined,
+            base_mip: 0,
+            mip_count: 1,
         }
     }
 }
