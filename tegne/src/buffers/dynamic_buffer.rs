@@ -42,7 +42,21 @@ impl DynamicBuffer {
 
     pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
         let size = mem::size_of::<T>() * data.len();
-        self.buffer.borrow().copy_from_data(data, size)?;
+
+        if size <= self.size.get() {
+            self.buffer.borrow().copy_from_data(data, size)?;
+        } else {
+            let mut buffer = self.buffer.borrow_mut();
+            *buffer = Buffer::new(
+                &self.device,
+                self.buffer_type.flag(),
+                MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
+                size,
+            )?;
+            buffer.copy_from_data(data, size)?;
+            self.size.set(size);
+        }
+
         Ok(())
     }
 
