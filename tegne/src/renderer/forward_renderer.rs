@@ -186,7 +186,7 @@ impl ForwardRenderer {
                 (
                     m.vk_vertex_buffer(),
                     m.vk_index_buffer(),
-                    m.drawn_triangles() * 3,
+                    m.triangle_count() * 3,
                 )
             }) {
                 cmd.set_push_constant(
@@ -197,7 +197,7 @@ impl ForwardRenderer {
                     options.shader_layout.pipeline(),
                 );
                 cmd.bind_vertex_buffer(vb?);
-                cmd.bind_index_buffer(ib);
+                cmd.bind_index_buffer(ib?);
                 cmd.draw(n);
             }
         }

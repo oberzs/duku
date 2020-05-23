@@ -6,7 +6,6 @@ use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
-use crate::buffers::Buffer;
 use crate::buffers::BufferType;
 use crate::buffers::DynamicBuffer;
 use crate::error::ErrorKind;
@@ -18,10 +17,12 @@ pub struct Mesh {
     vertices: Vec<Vector3>,
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
+    triangles: Vec<u32>,
     vertex_buffer: DynamicBuffer,
-    index_buffer: Buffer,
-    should_update: Cell<bool>,
-    drawn_triangles: u32,
+    index_buffer: DynamicBuffer,
+    should_update_vertices: Cell<bool>,
+    should_update_triangles: Cell<bool>,
+    triangle_count: u32,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -52,9 +53,9 @@ impl Mesh {
         }
 
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;
-        let index_buffer =
-            Buffer::device_local::<u32>(device, options.triangles, BufferType::Index)?;
+        let index_buffer = DynamicBuffer::new::<u32>(device, index_count, BufferType::Index)?;
 
+        let triangles = options.triangles.to_vec();
         let vertices = options.vertices.to_vec();
 
         let mut uvs = vec![Vector2::default(); vertex_count];
@@ -86,34 +87,37 @@ impl Mesh {
             vertices,
             uvs,
             normals,
+            triangles,
             vertex_buffer,
             index_buffer,
-            should_update: Cell::new(true),
-            drawn_triangles: index_count as u32 / 3,
+            should_update_vertices: Cell::new(true),
+            should_update_triangles: Cell::new(true),
+            triangle_count: index_count as u32 / 3,
         })
     }
 
     pub fn set_vertices(&mut self, vertices: &[Vector3]) {
         self.vertices = vertices.to_owned();
-        self.should_update.set(true);
+        self.should_update_vertices.set(true);
     }
 
     pub fn set_uvs(&mut self, uvs: &[Vector2]) {
         self.uvs = uvs.to_owned();
-        self.should_update.set(true);
+        self.should_update_vertices.set(true);
     }
 
     pub fn set_normals(&mut self, normals: &[Vector3]) {
         self.normals = normals.to_owned();
-        self.should_update.set(true);
+        self.should_update_vertices.set(true);
     }
 
-    pub fn set_drawn_triangles(&mut self, count: u32) {
-        self.drawn_triangles = count;
+    pub fn set_triangles(&mut self, triangles: &[u32]) {
+        self.triangles = triangles.to_owned();
+        self.should_update_triangles.set(true);
     }
 
     pub(crate) fn vk_vertex_buffer(&self) -> Result<VkBuffer> {
-        if self.should_update.get() {
+        if self.should_update_vertices.get() {
             let vertices = self
                 .vertices
                 .iter()
@@ -126,16 +130,20 @@ impl Mesh {
                 })
                 .collect::<Vec<_>>();
             self.vertex_buffer.update_data(&vertices)?;
-            self.should_update.set(false);
+            self.should_update_vertices.set(false);
         }
         Ok(self.vertex_buffer.vk())
     }
 
-    pub(crate) fn vk_index_buffer(&self) -> VkBuffer {
-        self.index_buffer.vk()
+    pub(crate) fn vk_index_buffer(&self) -> Result<VkBuffer> {
+        if self.should_update_triangles.get() {
+            self.index_buffer.update_data(&self.triangles)?;
+            self.should_update_triangles.set(false);
+        }
+        Ok(self.index_buffer.vk())
     }
 
-    pub(crate) fn drawn_triangles(&self) -> u32 {
-        self.drawn_triangles
+    pub(crate) fn triangle_count(&self) -> u32 {
+        self.triangle_count
     }
 }

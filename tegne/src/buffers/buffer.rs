@@ -69,7 +69,7 @@ impl Buffer {
         })
     }
 
-    pub(crate) fn device_local<T: Copy>(
+    pub(crate) fn _device_local<T: Copy>(
         device: &Arc<Device>,
         data: &[T],
         buffer_type: BufferType,
@@ -92,7 +92,7 @@ impl Buffer {
             size,
         )?;
 
-        buffer.copy_from_buffer(&staging_buffer, size)?;
+        buffer._copy_from_buffer(&staging_buffer, size)?;
 
         Ok(buffer)
     }
@@ -111,10 +111,10 @@ impl Buffer {
         Ok(())
     }
 
-    pub(crate) fn copy_from_buffer(&self, buffer: &Buffer, size: usize) -> Result<()> {
+    pub(crate) fn _copy_from_buffer(&self, buffer: &Buffer, size: usize) -> Result<()> {
         let cmd = Commands::new(&self.device)?;
         cmd.begin()?;
-        cmd.copy_buffer(buffer.vk(), self.vk, size);
+        cmd._copy_buffer(buffer.vk(), self.vk, size);
         self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
     }

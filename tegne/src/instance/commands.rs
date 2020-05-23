@@ -228,7 +228,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) {
+    pub(crate) fn _copy_buffer(&self, src: Buffer, dst: Buffer, size: usize) {
         let region = BufferCopy::builder()
             .src_offset(0)
             .dst_offset(0)
