@@ -351,6 +351,13 @@ impl Tegne {
         self.objects.with_material(material.id_ref(), fun)
     }
 
+    pub fn with_mesh<F, R>(&self, mesh: &Id<Mesh>, fun: F) -> Option<R>
+    where
+        F: FnOnce(&mut Mesh) -> R,
+    {
+        self.objects.with_mesh(mesh.id_ref(), fun)
+    }
+
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Id<Framebuffer> {
         debug!("creating framebuffer");
         let framebuffer = check!(Framebuffer::color(

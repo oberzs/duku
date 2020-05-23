@@ -127,11 +127,11 @@ impl Objects {
 
     pub(crate) fn with_mesh<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
-        F: FnOnce(&Mesh) -> R,
+        F: FnOnce(&mut Mesh) -> R,
     {
-        let map = self.meshes.lock().unwrap();
+        let mut map = self.meshes.lock().unwrap();
         find_key(&map, id)
-            .map(|k| map.get(&k).unwrap())
+            .map(|k| map.get_mut(&k).unwrap())
             .map(|v| fun(v))
     }
 

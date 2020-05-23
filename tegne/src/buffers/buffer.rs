@@ -12,6 +12,7 @@ use std::ffi::c_void;
 use std::mem;
 use std::ptr;
 use std::sync::Arc;
+use std::thread;
 
 use crate::error::Result;
 use crate::instance::Commands;

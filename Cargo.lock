@@ -434,6 +434,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-dynamic"
+version = "0.1.0"
+dependencies = [
+ "pretty_env_logger",
+ "tegne",
+]
+
+[[package]]
 name = "example-gradient"
 version = "0.1.0"
 dependencies = [
