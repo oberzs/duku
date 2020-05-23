@@ -108,7 +108,7 @@ impl Font {
                 Vector2::new(u_max, v_min),
             ];
 
-            let triangles = &[0, 2, 3, 0, 3, 1];
+            let triangles = &[[0, 2, 3], [0, 3, 1]];
 
             let mesh = objects.add_mesh(Mesh::new(
                 device,

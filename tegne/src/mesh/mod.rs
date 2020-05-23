@@ -8,7 +8,6 @@ use tegne_math::Vector3;
 
 use crate::buffers::BufferType;
 use crate::buffers::DynamicBuffer;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::instance::Device;
 pub(crate) use vertex::Vertex;
@@ -17,12 +16,12 @@ pub struct Mesh {
     vertices: Vec<Vector3>,
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
-    triangles: Vec<u32>,
+    triangles: Vec<[u32; 3]>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
     should_update_vertices: Cell<bool>,
     should_update_triangles: Cell<bool>,
-    triangle_count: u32,
+    index_count: u32,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -30,33 +29,18 @@ pub struct MeshOptions<'slice> {
     pub vertices: &'slice [Vector3],
     pub uvs: &'slice [Vector2],
     pub normals: &'slice [Vector3],
-    pub triangles: &'slice [u32],
+    pub triangles: &'slice [[u32; 3]],
 }
 
 impl Mesh {
     pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Result<Self> {
-        if options.vertices.is_empty() {
-            return Err(ErrorKind::NoVertices.into());
-        }
-        if options.triangles.is_empty() {
-            return Err(ErrorKind::NoTriangles.into());
-        }
-
-        let vertex_count = options.vertices.len();
-        let index_count = options.triangles.len();
-
-        if options.uvs.len() > vertex_count {
-            return Err(ErrorKind::TooManyUvs.into());
-        }
-        if options.normals.len() > vertex_count {
-            return Err(ErrorKind::TooManyNormals.into());
-        }
+        let vertices = options.vertices.to_vec();
+        let triangles = options.triangles.to_vec();
+        let vertex_count = vertices.len();
+        let index_count = triangles.len() * 3;
 
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;
         let index_buffer = DynamicBuffer::new::<u32>(device, index_count, BufferType::Index)?;
-
-        let triangles = options.triangles.to_vec();
-        let vertices = options.vertices.to_vec();
 
         let mut uvs = vec![Vector2::default(); vertex_count];
         uvs[..options.uvs.len()].clone_from_slice(options.uvs);
@@ -66,7 +50,7 @@ impl Mesh {
 
         // calculate smooth normals
         if options.normals.is_empty() {
-            for tri in options.triangles.chunks(3) {
+            for tri in options.triangles {
                 let a = tri[0] as usize;
                 let b = tri[1] as usize;
                 let c = tri[2] as usize;
@@ -92,7 +76,7 @@ impl Mesh {
             index_buffer,
             should_update_vertices: Cell::new(true),
             should_update_triangles: Cell::new(true),
-            triangle_count: index_count as u32 / 3,
+            index_count: index_count as u32,
         })
     }
 
@@ -111,7 +95,7 @@ impl Mesh {
         self.should_update_vertices.set(true);
     }
 
-    pub fn set_triangles(&mut self, triangles: &[u32]) {
+    pub fn set_triangles(&mut self, triangles: &[[u32; 3]]) {
         self.triangles = triangles.to_owned();
         self.should_update_triangles.set(true);
     }
@@ -137,13 +121,19 @@ impl Mesh {
 
     pub(crate) fn vk_index_buffer(&self) -> Result<VkBuffer> {
         if self.should_update_triangles.get() {
-            self.index_buffer.update_data(&self.triangles)?;
+            let indices = self
+                .triangles
+                .iter()
+                .flatten()
+                .cloned()
+                .collect::<Vec<u32>>();
+            self.index_buffer.update_data(&indices)?;
             self.should_update_triangles.set(false);
         }
         Ok(self.index_buffer.vk())
     }
 
-    pub(crate) fn triangle_count(&self) -> u32 {
-        self.triangle_count
+    pub(crate) fn index_count(&self) -> u32 {
+        self.index_count
     }
 }

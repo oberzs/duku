@@ -43,7 +43,7 @@ fn plane(tegne: &Tegne, size: f32) -> Id<Mesh> {
         Vector2::new(size, size),
         Vector2::new(0.0, size),
     ];
-    let triangles = &[0, 1, 2, 0, 2, 3];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     tegne.create_mesh(MeshOptions {
         vertices,

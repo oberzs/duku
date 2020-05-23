@@ -44,7 +44,7 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
     ];
-    let triangles = &[0, 2, 1, 0, 3, 2];
+    let triangles = &[[0, 2, 1], [0, 3, 2]];
 
     Mesh::new(
         device,
@@ -81,12 +81,18 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 0.0),
     ];
     let triangles = &[
-        0, 1, 2, 0, 2, 3, // bottom
-        4, 7, 6, 4, 6, 5, // top
-        4, 5, 1, 4, 1, 0, // front
-        7, 3, 2, 7, 2, 6, // back
-        5, 6, 2, 5, 2, 1, // right
-        7, 4, 0, 7, 0, 3, // left
+        [0, 1, 2],
+        [0, 2, 3], // bottom
+        [4, 7, 6],
+        [4, 6, 5], // top
+        [4, 5, 1],
+        [4, 1, 0], // front
+        [7, 3, 2],
+        [7, 2, 6], // back
+        [5, 6, 2],
+        [5, 2, 1], // right
+        [7, 4, 0],
+        [7, 0, 3], // left
     ];
 
     Mesh::new(
@@ -123,45 +129,45 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     vertices.push(Vector3::new(-t, 0.0, 1.0).unit());
 
     // 20 icosahedron triangles
-    triangles.extend(&[0, 11, 5]);
-    triangles.extend(&[0, 5, 1]);
-    triangles.extend(&[0, 1, 7]);
-    triangles.extend(&[0, 7, 10]);
-    triangles.extend(&[0, 10, 11]);
+    triangles.push([0, 11, 5]);
+    triangles.push([0, 5, 1]);
+    triangles.push([0, 1, 7]);
+    triangles.push([0, 7, 10]);
+    triangles.push([0, 10, 11]);
 
-    triangles.extend(&[1, 5, 9]);
-    triangles.extend(&[5, 11, 4]);
-    triangles.extend(&[11, 10, 2]);
-    triangles.extend(&[10, 7, 6]);
-    triangles.extend(&[7, 1, 8]);
+    triangles.push([1, 5, 9]);
+    triangles.push([5, 11, 4]);
+    triangles.push([11, 10, 2]);
+    triangles.push([10, 7, 6]);
+    triangles.push([7, 1, 8]);
 
-    triangles.extend(&[3, 9, 4]);
-    triangles.extend(&[3, 4, 2]);
-    triangles.extend(&[3, 2, 6]);
-    triangles.extend(&[3, 6, 8]);
-    triangles.extend(&[3, 8, 9]);
+    triangles.push([3, 9, 4]);
+    triangles.push([3, 4, 2]);
+    triangles.push([3, 2, 6]);
+    triangles.push([3, 6, 8]);
+    triangles.push([3, 8, 9]);
 
-    triangles.extend(&[4, 9, 5]);
-    triangles.extend(&[2, 4, 11]);
-    triangles.extend(&[6, 2, 10]);
-    triangles.extend(&[8, 6, 7]);
-    triangles.extend(&[9, 8, 1]);
+    triangles.push([4, 9, 5]);
+    triangles.push([2, 4, 11]);
+    triangles.push([6, 2, 10]);
+    triangles.push([8, 6, 7]);
+    triangles.push([9, 8, 1]);
 
     // refine triangles
     let mut midpoints = HashMap::new();
     for _ in 0..detail_level {
         let mut new_triangles = vec![];
-        triangles.chunks(3).for_each(|tri| {
+        for tri in triangles {
             // replace triangle with 4 triangles
             let a = get_middle_point(&mut vertices, tri[0], tri[1], &mut midpoints);
             let b = get_middle_point(&mut vertices, tri[1], tri[2], &mut midpoints);
             let c = get_middle_point(&mut vertices, tri[2], tri[0], &mut midpoints);
 
-            new_triangles.extend(&[tri[0], a, c]);
-            new_triangles.extend(&[tri[1], b, a]);
-            new_triangles.extend(&[tri[2], c, b]);
-            new_triangles.extend(&[a, b, c]);
-        });
+            new_triangles.push([tri[0], a, c]);
+            new_triangles.push([tri[1], b, a]);
+            new_triangles.push([tri[2], c, b]);
+            new_triangles.push([a, b, c]);
+        }
         triangles = new_triangles;
     }
 

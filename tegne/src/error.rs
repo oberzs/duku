@@ -31,10 +31,6 @@ pub enum ErrorKind {
     NoSuitableGpu,
     NoSuitableMemoryType,
     InvalidMsaa,
-    NoVertices,
-    NoTriangles,
-    TooManyUvs,
-    TooManyNormals,
 }
 
 impl Error for ErrorType {}
