@@ -146,7 +146,8 @@ impl Tegne {
             &device,
             &render_passes,
             &image_uniforms,
-            &shader_layout
+            &shader_layout,
+            &builtins
         ));
 
         Self {
@@ -262,7 +263,6 @@ impl Tegne {
             shader_layout: &self.shader_layout,
             camera,
             objects: &self.objects,
-            builtins: &self.builtins,
             cmd: &self.commands[self.device.current_frame()],
             target,
             time: self.start_time.elapsed().as_secs_f32(),
@@ -293,7 +293,6 @@ impl Tegne {
                 shader_layout: &self.shader_layout,
                 camera,
                 objects: &self.objects,
-                builtins: &self.builtins,
                 cmd: &self.commands[self.device.current_frame()],
                 target,
                 time: self.start_time.elapsed().as_secs_f32(),

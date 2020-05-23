@@ -21,6 +21,8 @@ use crate::shaders::WorldObject;
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffer: Framebuffer,
+    shadow_shader: IdRef,
+    wireframe_shader: IdRef,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
@@ -30,7 +32,6 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
     pub(crate) objects: &'a Objects,
-    pub(crate) builtins: &'a Builtins,
     pub(crate) cmd: &'a Commands,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
@@ -43,6 +44,7 @@ impl ForwardRenderer {
         render_passes: &RenderPasses,
         image_uniforms: &ImageUniforms,
         shader_layout: &ShaderLayout,
+        builtins: &Builtins,
     ) -> Result<Self> {
         let shadow_framebuffer = Framebuffer::depth(
             device,
@@ -53,7 +55,11 @@ impl ForwardRenderer {
             2048,
         )?;
 
-        Ok(Self { shadow_framebuffer })
+        Ok(Self {
+            shadow_framebuffer,
+            shadow_shader: builtins.shaders.shadow.id_ref(),
+            wireframe_shader: builtins.shaders.wireframe.id_ref(),
+        })
     }
 
     pub fn draw(&self, options: ForwardDrawOptions<'_>) -> Result<()> {
@@ -87,7 +93,7 @@ impl ForwardRenderer {
         self.setup_pass(&self.shadow_framebuffer, &options);
         self.bind_world(&self.shadow_framebuffer, world_object, &options)?;
 
-        self.bind_shader(options.builtins.shaders.shadow.id_ref(), &options);
+        self.bind_shader(self.shadow_shader, &options);
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
                 self.bind_material(m_order.material(), &options)?;
@@ -118,7 +124,7 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        self.bind_shader(options.builtins.shaders.wireframe.id_ref(), &options);
+        self.bind_shader(self.wireframe_shader, &options);
         for order in options.target.wireframe_orders() {
             self.draw_order(order, &options)?;
         }
