@@ -50,7 +50,7 @@ fn main() {
         ui.draw_ui(&tegne, &events);
 
         tegne.draw_on_window(&camera, |target| {
-            target.set_shader(shader);
+            target.set_shader(&shader);
             target.draw_surface();
             target.blit_framebuffer(ui.framebuffer());
         });

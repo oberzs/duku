@@ -401,9 +401,9 @@ fn create_shader_image(
         },
     );
     device.submit_and_wait(cmd.end()?)?;
-    let index = uniforms.image_count() as i32;
+    let mut index = 0;
     if let Some(view) = image.view() {
-        uniforms.add(view);
+        index = uniforms.add(view);
     }
     Ok((image, index))
 }

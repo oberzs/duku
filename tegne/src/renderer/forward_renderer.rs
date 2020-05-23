@@ -5,20 +5,17 @@ use tegne_math::Vector3;
 
 use crate::error::Result;
 use crate::images::Framebuffer;
-use crate::instance::Albedo;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Order;
 use crate::instance::Target;
 use crate::objects::Builtins;
-use crate::objects::Id;
+use crate::objects::IdRef;
 use crate::objects::Objects;
 use crate::shaders::ImageUniforms;
-use crate::shaders::Material;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
 use crate::shaders::RenderPasses;
-use crate::shaders::Shader;
 use crate::shaders::ShaderLayout;
 use crate::shaders::WorldObject;
 
@@ -90,7 +87,7 @@ impl ForwardRenderer {
         self.setup_pass(&self.shadow_framebuffer, &options);
         self.bind_world(&self.shadow_framebuffer, world_object, &options)?;
 
-        self.bind_shader(options.builtins.shaders.shadow, &options);
+        self.bind_shader(options.builtins.shaders.shadow.id_ref(), &options);
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
                 self.bind_material(m_order.material(), &options)?;
@@ -121,7 +118,7 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        self.bind_shader(options.builtins.shaders.wireframe, &options);
+        self.bind_shader(options.builtins.shaders.wireframe.id_ref(), &options);
         for order in options.target.wireframe_orders() {
             self.draw_order(order, &options)?;
         }
@@ -155,7 +152,7 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn bind_shader(&self, shader: Id<Shader>, options: &ForwardDrawOptions<'_>) {
+    fn bind_shader(&self, shader: IdRef, options: &ForwardDrawOptions<'_>) {
         let cmd = options.cmd;
         let objects = options.objects;
         if let Some(pipeline) = objects.with_shader(shader, |s| s.pipeline()) {
@@ -163,11 +160,7 @@ impl ForwardRenderer {
         }
     }
 
-    fn bind_material(
-        &self,
-        material: Id<Material>,
-        options: &ForwardDrawOptions<'_>,
-    ) -> Result<()> {
+    fn bind_material(&self, material: IdRef, options: &ForwardDrawOptions<'_>) -> Result<()> {
         let cmd = options.cmd;
         let objects = options.objects;
         if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
@@ -179,10 +172,9 @@ impl ForwardRenderer {
     fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) -> Result<()> {
         let cmd = options.cmd;
         let objects = options.objects;
-        let albedo = match order.albedo {
-            Albedo::Texture(id) => objects.with_texture(id, |t| t.image_index()),
-            Albedo::Framebuffer(id) => objects.with_framebuffer(id, |f| f.image_index()),
-        };
+        let albedo = objects
+            .with_texture(order.albedo, |t| t.image_index())
+            .or_else(|| objects.with_framebuffer(order.albedo, |f| f.image_index()));
         if let Some(albedo_index) = albedo {
             if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
                 (

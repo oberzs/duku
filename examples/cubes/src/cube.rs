@@ -39,10 +39,10 @@ impl Cube {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_shader(self.shader);
-        target.set_albedo_texture(self.texture);
+        target.set_shader(&self.shader);
+        target.set_albedo_texture(&self.texture);
         for mesh in self.mesh.iter() {
-            target.draw(*mesh, self.transform);
+            target.draw(mesh, self.transform);
         }
         target.set_shader_phong();
     }

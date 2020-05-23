@@ -173,12 +173,16 @@ impl ImageUniforms {
         })
     }
 
-    pub(crate) fn image_count(&self) -> u32 {
-        self.images.borrow().len() as u32
+    pub(crate) fn add(&self, image: ImageView) -> i32 {
+        let mut images = self.images.borrow_mut();
+        let index = images.len() as i32;
+        images.push(image);
+        self.should_update.set(true);
+        index
     }
 
-    pub(crate) fn add(&self, image: ImageView) {
-        self.images.borrow_mut().push(image);
+    pub(crate) fn remove(&self, index: i32) {
+        self.images.borrow_mut().remove(index as usize);
         self.should_update.set(true);
     }
 

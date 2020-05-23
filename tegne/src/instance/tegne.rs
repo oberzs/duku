@@ -224,7 +224,7 @@ impl Tegne {
         let current = self.device.current_frame();
         let cmd = &mut self.commands[current];
         check!(cmd.reset());
-        self.objects.clean_unused(current);
+        self.objects.clean_unused(&self.image_uniforms, current);
         check!(cmd.begin());
         cmd.bind_descriptor(
             self.image_uniforms.descriptor(),
@@ -272,7 +272,7 @@ impl Tegne {
 
     pub fn draw(
         &self,
-        framebuffer: Id<Framebuffer>,
+        framebuffer: &Id<Framebuffer>,
         camera: &Camera,
         draw_callback: impl Fn(&mut Target<'_>),
     ) {
@@ -283,7 +283,7 @@ impl Tegne {
         let mut target = check!(Target::new(&self.builtins, &self.objects));
         draw_callback(&mut target);
 
-        self.objects.with_framebuffer(framebuffer, |f| {
+        self.objects.with_framebuffer(framebuffer.id_ref(), |f| {
             let color_pass = self.render_passes.color();
 
             check!(self.forward_renderer.draw(ForwardDrawOptions {
@@ -345,11 +345,11 @@ impl Tegne {
         self.objects.add_material(material)
     }
 
-    pub fn with_material<F, R>(&self, material: Id<Material>, fun: F) -> Option<R>
+    pub fn with_material<F, R>(&self, material: &Id<Material>, fun: F) -> Option<R>
     where
         F: FnOnce(&mut Material) -> R,
     {
-        self.objects.with_material(material, fun)
+        self.objects.with_material(material.id_ref(), fun)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Id<Framebuffer> {
@@ -401,6 +401,7 @@ impl Tegne {
         let device = self.device.clone();
         let objects = self.objects.clone();
         let kill_recv = self.thread_kill.receiver();
+        let id_ref = id.id_ref();
 
         thread::spawn(move || {
             let (sender, receiver) = channel::unbounded();
@@ -432,7 +433,7 @@ impl Tegne {
                                 &source,
                                 options,
                             ));
-                            objects.replace_shader(id, shader, device.current_frame());
+                            objects.replace_shader(id_ref, shader, device.current_frame());
                         }
                     }
                 }

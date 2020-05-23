@@ -45,14 +45,14 @@ impl Ui {
     }
 
     pub fn draw_ui(&self, tegne: &Tegne, events: &Events) {
-        tegne.draw(self.framebuffer, &self.camera, |target| {
+        tegne.draw(&self.framebuffer, &self.camera, |target| {
             target.set_clear_color([0.0, 0.0, 0.0, 0.0]);
-            target.set_material(self.material);
+            target.set_material(&self.material);
             target.draw_text(format!("fps: {}", events.fps()), self.transform);
         });
     }
 
-    pub fn framebuffer(&self) -> Id<Framebuffer> {
-        self.framebuffer
+    pub fn framebuffer(&self) -> &Id<Framebuffer> {
+        &self.framebuffer
     }
 }

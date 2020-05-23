@@ -3,12 +3,12 @@ use tegne_math::Transform;
 use tegne_math::Vector3;
 
 use crate::error::Result;
-use crate::images::Font;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::mesh::Mesh;
 use crate::objects::Builtins;
 use crate::objects::Id;
+use crate::objects::IdRef;
 use crate::objects::Objects;
 use crate::shaders::Light;
 use crate::shaders::Material;
@@ -19,35 +19,29 @@ pub struct Target<'a> {
     wireframe_orders: Vec<Order>,
     clear: [f32; 4],
     lights: Vec<Light>,
-    current_shader: Id<Shader>,
-    current_material: Id<Material>,
-    current_albedo: Albedo,
-    current_font: Id<Font>,
+    current_shader: IdRef,
+    current_material: IdRef,
+    current_albedo: IdRef,
+    current_font: IdRef,
     draw_wireframes: bool,
     builtins: &'a Builtins,
     objects: &'a Objects,
 }
 
-#[derive(Copy, Clone)]
-pub(crate) enum Albedo {
-    Texture(Id<Texture>),
-    Framebuffer(Id<Framebuffer>),
-}
-
 pub(crate) struct OrdersByShader {
-    shader: Id<Shader>,
+    shader: IdRef,
     orders_by_material: Vec<OrdersByMaterial>,
 }
 
 pub(crate) struct OrdersByMaterial {
-    material: Id<Material>,
+    material: IdRef,
     orders: Vec<Order>,
 }
 
 #[derive(Copy, Clone)]
 pub(crate) struct Order {
-    pub(crate) mesh: Id<Mesh>,
-    pub(crate) albedo: Albedo,
+    pub(crate) mesh: IdRef,
+    pub(crate) albedo: IdRef,
     pub(crate) model: Matrix4,
     pub(crate) has_shadows: bool,
 }
@@ -59,19 +53,19 @@ impl<'a> Target<'a> {
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7, 1.0],
             lights: vec![],
-            current_shader: builtins.shaders.phong,
-            current_material: builtins.materials.white,
-            current_albedo: Albedo::Texture(builtins.textures.white),
-            current_font: builtins.fonts.roboto_mono,
+            current_shader: builtins.shaders.phong.id_ref(),
+            current_material: builtins.materials.white.id_ref(),
+            current_albedo: builtins.textures.white.id_ref(),
+            current_font: builtins.fonts.roboto_mono.id_ref(),
             draw_wireframes: false,
             builtins,
             objects,
         })
     }
 
-    pub fn draw(&mut self, mesh: Id<Mesh>, transform: impl Into<Transform>) {
+    pub fn draw(&mut self, mesh: &Id<Mesh>, transform: impl Into<Transform>) {
         self.add_order(Order {
-            mesh,
+            mesh: mesh.id_ref(),
             albedo: self.current_albedo,
             model: transform.into().as_matrix(),
             has_shadows: true,
@@ -79,24 +73,24 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.builtins.meshes.cube, transform);
+        self.draw(&self.builtins.meshes.cube, transform);
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        self.draw(self.builtins.meshes.sphere, transform);
+        self.draw(&self.builtins.meshes.sphere, transform);
     }
 
     pub fn draw_surface(&mut self) {
-        self.draw(self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
     }
 
-    pub fn blit_framebuffer(&mut self, framebuffer: Id<Framebuffer>) {
+    pub fn blit_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
         let temp_shader = self.current_shader;
         let temp_albedo = self.current_albedo;
-        self.current_shader = self.builtins.shaders.passthru;
-        self.current_albedo = Albedo::Framebuffer(framebuffer);
+        self.current_shader = self.builtins.shaders.passthru.id_ref();
+        self.current_albedo = framebuffer.id_ref();
 
-        self.draw(self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
 
         self.current_shader = temp_shader;
         self.current_albedo = temp_albedo;
@@ -104,7 +98,7 @@ impl<'a> Target<'a> {
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
-        self.current_shader = self.builtins.shaders.font;
+        self.current_shader = self.builtins.shaders.font.id_ref();
         let text_str = text.as_ref();
 
         self.objects.with_font(self.current_font, |font| {
@@ -124,7 +118,7 @@ impl<'a> Target<'a> {
                 let mesh = font.char_mesh(c);
                 self.add_order(Order {
                     mesh,
-                    albedo: Albedo::Texture(albedo),
+                    albedo,
                     model: current_transform.as_matrix(),
                     has_shadows: false,
                 });
@@ -147,28 +141,28 @@ impl<'a> Target<'a> {
         });
     }
 
-    pub fn set_material(&mut self, material: Id<Material>) {
-        self.current_material = material;
+    pub fn set_material(&mut self, material: &Id<Material>) {
+        self.current_material = material.id_ref();
     }
 
     pub fn set_material_white(&mut self) {
-        self.current_material = self.builtins.materials.white;
+        self.current_material = self.builtins.materials.white.id_ref();
     }
 
-    pub fn set_albedo_texture(&mut self, texture: Id<Texture>) {
-        self.current_albedo = Albedo::Texture(texture);
+    pub fn set_albedo_texture(&mut self, texture: &Id<Texture>) {
+        self.current_albedo = texture.id_ref();
     }
 
-    pub fn set_albedo_framebuffer(&mut self, framebuffer: Id<Framebuffer>) {
-        self.current_albedo = Albedo::Framebuffer(framebuffer);
+    pub fn set_albedo_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
+        self.current_albedo = framebuffer.id_ref();
     }
 
-    pub fn set_shader(&mut self, shader: Id<Shader>) {
-        self.current_shader = shader;
+    pub fn set_shader(&mut self, shader: &Id<Shader>) {
+        self.current_shader = shader.id_ref();
     }
 
     pub fn set_shader_phong(&mut self) {
-        self.current_shader = self.builtins.shaders.phong;
+        self.current_shader = self.builtins.shaders.phong.id_ref();
     }
 
     pub fn set_clear_color(&mut self, clear: [f32; 4]) {
@@ -233,7 +227,7 @@ impl<'a> Target<'a> {
 }
 
 impl OrdersByShader {
-    pub(crate) fn shader(&self) -> Id<Shader> {
+    pub(crate) fn shader(&self) -> IdRef {
         self.shader
     }
 
@@ -243,7 +237,7 @@ impl OrdersByShader {
 }
 
 impl OrdersByMaterial {
-    pub(crate) fn material(&self) -> Id<Material> {
+    pub(crate) fn material(&self) -> IdRef {
         self.material
     }
 

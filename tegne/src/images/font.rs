@@ -12,6 +12,7 @@ use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::objects::Id;
+use crate::objects::IdRef;
 use crate::objects::Objects;
 use crate::shaders::ImageUniforms;
 
@@ -135,10 +136,10 @@ impl Font {
         })
     }
 
-    pub(crate) fn char_mesh(&self, c: char) -> Id<Mesh> {
+    pub(crate) fn char_mesh(&self, c: char) -> IdRef {
         match self.char_data.get(&c) {
-            Some(data) => data.mesh,
-            None => self.char_data.get(&'?').unwrap().mesh,
+            Some(data) => data.mesh.id_ref(),
+            None => self.char_data.get(&'?').unwrap().mesh.id_ref(),
         }
     }
 
@@ -156,7 +157,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn texture(&self) -> Id<Texture> {
-        self.texture
+    pub(crate) fn texture(&self) -> IdRef {
+        self.texture.id_ref()
     }
 }

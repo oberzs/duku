@@ -11,13 +11,16 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use crate::images::Font;
 use crate::images::Framebuffer;
 use crate::images::Texture;
 use crate::instance::IN_FLIGHT_FRAME_COUNT;
 use crate::mesh::Mesh;
+use crate::shaders::ImageUniforms;
 use crate::shaders::Material;
 use crate::shaders::Shader;
 use builtin_fonts::BuiltinFonts;
@@ -41,7 +44,9 @@ pub(crate) struct Objects {
 }
 
 #[derive(Debug)]
-pub struct Id<T>(u32, PhantomData<*const T>);
+pub struct Id<T>(Arc<u32>, PhantomData<*const T>);
+
+pub(crate) type IdRef = u32;
 
 impl Objects {
     pub(crate) fn new() -> Self {
@@ -63,136 +68,175 @@ impl Objects {
 
     pub(crate) fn add_texture(&self, texture: Texture) -> Id<Texture> {
         let id = Id(self.get_id(), PhantomData);
-        self.textures.lock().unwrap().insert(id, texture);
+        self.textures.lock().unwrap().insert(id.clone(), texture);
         id
     }
 
     pub(crate) fn add_material(&self, material: Material) -> Id<Material> {
         let id = Id(self.get_id(), PhantomData);
-        self.materials.lock().unwrap().insert(id, material);
+        self.materials.lock().unwrap().insert(id.clone(), material);
         id
     }
 
     pub(crate) fn add_mesh(&self, mesh: Mesh) -> Id<Mesh> {
         let id = Id(self.get_id(), PhantomData);
-        self.meshes.lock().unwrap().insert(id, mesh);
+        self.meshes.lock().unwrap().insert(id.clone(), mesh);
         id
     }
 
     pub(crate) fn add_shader(&self, shader: Shader) -> Id<Shader> {
         let id = Id(self.get_id(), PhantomData);
-        self.shaders.lock().unwrap().insert(id, shader);
+        self.shaders.lock().unwrap().insert(id.clone(), shader);
         id
     }
 
     pub(crate) fn add_font(&self, font: Font) -> Id<Font> {
         let id = Id(self.get_id(), PhantomData);
-        self.fonts.lock().unwrap().insert(id, font);
+        self.fonts.lock().unwrap().insert(id.clone(), font);
         id
     }
 
     pub(crate) fn add_framebuffer(&self, framebuffer: Framebuffer) -> Id<Framebuffer> {
         let id = Id(self.get_id(), PhantomData);
-        self.framebuffers.lock().unwrap().insert(id, framebuffer);
+        self.framebuffers
+            .lock()
+            .unwrap()
+            .insert(id.clone(), framebuffer);
         id
     }
 
-    pub(crate) fn with_texture<F, R>(&self, id: Id<Texture>, fun: F) -> Option<R>
+    pub(crate) fn with_texture<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&Texture) -> R,
     {
-        match self.textures.lock().unwrap().get(&id) {
-            Some(texture) => Some(fun(texture)),
-            None => None,
-        }
+        let map = self.textures.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get(&k).unwrap())
+            .map(|v| fun(v))
     }
 
-    pub(crate) fn with_material<F, R>(&self, id: Id<Material>, fun: F) -> Option<R>
+    pub(crate) fn with_material<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&mut Material) -> R,
     {
-        match self.materials.lock().unwrap().get_mut(&id) {
-            Some(material) => Some(fun(material)),
-            None => None,
-        }
+        let mut map = self.materials.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get_mut(&k).unwrap())
+            .map(|v| fun(v))
     }
 
-    pub(crate) fn with_mesh<F, R>(&self, id: Id<Mesh>, fun: F) -> Option<R>
+    pub(crate) fn with_mesh<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&Mesh) -> R,
     {
-        match self.meshes.lock().unwrap().get(&id) {
-            Some(mesh) => Some(fun(mesh)),
-            None => None,
-        }
+        let map = self.meshes.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get(&k).unwrap())
+            .map(|v| fun(v))
     }
 
-    pub(crate) fn with_shader<F, R>(&self, id: Id<Shader>, fun: F) -> Option<R>
+    pub(crate) fn with_shader<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&Shader) -> R,
     {
-        match self.shaders.lock().unwrap().get(&id) {
-            Some(shader) => Some(fun(shader)),
-            None => None,
-        }
+        let map = self.shaders.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get(&k).unwrap())
+            .map(|v| fun(v))
     }
 
-    pub(crate) fn with_font<F, R>(&self, id: Id<Font>, fun: F) -> Option<R>
+    pub(crate) fn with_font<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&Font) -> R,
     {
-        match self.fonts.lock().unwrap().get(&id) {
-            Some(font) => Some(fun(font)),
-            None => None,
-        }
+        let map = self.fonts.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get(&k).unwrap())
+            .map(|v| fun(v))
     }
 
-    pub(crate) fn with_framebuffer<F, R>(&self, id: Id<Framebuffer>, fun: F) -> Option<R>
+    pub(crate) fn with_framebuffer<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
         F: FnOnce(&Framebuffer) -> R,
     {
-        match self.framebuffers.lock().unwrap().get(&id) {
-            Some(framebuffer) => Some(fun(framebuffer)),
-            None => None,
+        let map = self.framebuffers.lock().unwrap();
+        find_key(&map, id)
+            .map(|k| map.get(&k).unwrap())
+            .map(|v| fun(v))
+    }
+
+    pub(crate) fn replace_shader(&self, id: IdRef, shader: Shader, frame: usize) {
+        let mut map = self.shaders.lock().unwrap();
+        if let Some(key) = find_key(&map, id) {
+            if let Some(replaced) = map.insert(key, shader) {
+                self.unused_shaders.lock().unwrap()[frame].push(replaced);
+            }
         }
     }
 
-    pub(crate) fn replace_shader(&self, id: Id<Shader>, shader: Shader, frame: usize) {
-        if let Some(replaced) = self.shaders.lock().unwrap().insert(id, shader) {
-            self.unused_shaders.lock().unwrap()[frame].push(replaced);
-        }
-    }
-
-    pub(crate) fn clean_unused(&self, frame: usize) {
+    pub(crate) fn clean_unused(&self, uniforms: &ImageUniforms, frame: usize) {
         self.unused_shaders.lock().unwrap()[frame].clear();
+
+        remove_unused(&mut self.framebuffers.lock().unwrap());
+        remove_unused(&mut self.fonts.lock().unwrap());
+        remove_unused(&mut self.meshes.lock().unwrap());
+        remove_unused(&mut self.materials.lock().unwrap());
+        remove_unused(&mut self.shaders.lock().unwrap());
+        remove_unused(&mut self.textures.lock().unwrap())
+            .iter()
+            .for_each(|tex| uniforms.remove(tex.image_index()));
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> Arc<u32> {
         let id = self.max_id.load(Ordering::Relaxed);
         self.max_id.store(id + 1, Ordering::Relaxed);
-        id
+        Arc::new(id)
+    }
+}
+
+impl<T> Id<T> {
+    pub(crate) fn id_ref(&self) -> IdRef {
+        *self.0
     }
 }
 
 impl<T> Hash for Id<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u32(self.0);
+        state.write_u32(*self.0);
         state.finish();
     }
 }
 
 impl<T> PartialEq for Id<T> {
     fn eq(&self, other: &Id<T>) -> bool {
-        self.0 == other.0
+        *self.0 == *other.0
     }
 }
 
 impl<T> Clone for Id<T> {
     fn clone(&self) -> Self {
-        Id(self.0, PhantomData)
+        Id(self.0.clone(), PhantomData)
     }
 }
 
 impl<T> Eq for Id<T> {}
-impl<T> Copy for Id<T> {}
 unsafe impl<T> Send for Id<T> {}
+
+fn find_key<T>(map: &MutexGuard<'_, HashMap<Id<T>, T>>, id: IdRef) -> Option<Id<T>> {
+    for key in map.keys() {
+        if *key.0 == id {
+            return Some(key.clone());
+        }
+    }
+    None
+}
+
+fn remove_unused<T>(map: &mut MutexGuard<'_, HashMap<Id<T>, T>>) -> Vec<T> {
+    let unused = map
+        .keys()
+        .filter(|key| Arc::strong_count(&key.0) == 1)
+        .cloned()
+        .collect::<Vec<_>>();
+
+    unused.iter().map(|key| map.remove(&key).unwrap()).collect()
+}

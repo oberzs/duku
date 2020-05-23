@@ -35,8 +35,8 @@ fn main() {
     window.start_loop(|_| {
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
-            target.set_shader(shader);
-            target.set_material(material);
+            target.set_shader(&shader);
+            target.set_material(&material);
             target.draw_surface();
         });
         tegne.end_draw();

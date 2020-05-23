@@ -89,9 +89,9 @@ impl Texture {
         image.copy_from_buffer(&staging_buffer)?;
         image.generate_mipmaps()?;
 
-        let image_index = image_uniforms.image_count() as i32;
+        let mut image_index = 0;
         if let Some(view) = image.view() {
-            image_uniforms.add(view);
+            image_index = image_uniforms.add(view);
         }
 
         Ok(Self {
