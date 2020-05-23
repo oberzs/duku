@@ -87,7 +87,7 @@ impl Buffer {
 
         let buffer = Self::new(
             device,
-            BufferUsageFlags::TRANSFER_DST | buffer_type.into(),
+            BufferUsageFlags::TRANSFER_DST | buffer_type.flag(),
             MemoryPropertyFlags::DEVICE_LOCAL,
             size,
         )?;
@@ -134,9 +134,9 @@ impl Drop for Buffer {
     }
 }
 
-impl Into<BufferUsageFlags> for BufferType {
-    fn into(self) -> BufferUsageFlags {
-        match self {
+impl BufferType {
+    pub(crate) fn flag(&self) -> BufferUsageFlags {
+        match *self {
             Self::Vertex => BufferUsageFlags::VERTEX_BUFFER,
             Self::Index => BufferUsageFlags::INDEX_BUFFER,
             Self::Uniform => BufferUsageFlags::UNIFORM_BUFFER,
