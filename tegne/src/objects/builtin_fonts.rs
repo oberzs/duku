@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::Id;
 use super::Objects;
 use crate::error::Result;
-use crate::images::Font;
+use crate::font::Font;
 use crate::instance::Device;
 use crate::shaders::ImageUniforms;
 

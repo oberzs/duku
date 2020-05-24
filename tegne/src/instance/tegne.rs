@@ -1,11 +1,11 @@
 use crossbeam::channel;
 use crossbeam::channel::select;
-use image::GenericImageView;
 use log::debug;
 use log::error;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
+use png::GenericImageView;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -27,8 +27,8 @@ use super::Vulkan;
 use super::WindowArgs;
 use super::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
-use crate::images::Framebuffer;
-use crate::images::Texture;
+use crate::image::Framebuffer;
+use crate::image::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::objects::Builtins;
@@ -305,10 +305,10 @@ impl Tegne {
         debug!("creating rgba texture");
         let texture = check!(Texture::from_raw_rgba(
             &self.device,
+            &self.image_uniforms,
             raw,
             width,
             height,
-            &self.image_uniforms
         ));
         self.objects.add_texture(texture)
     }
@@ -317,18 +317,18 @@ impl Tegne {
         debug!("creating rgb texture");
         let texture = check!(Texture::from_raw_rgb(
             &self.device,
+            &self.image_uniforms,
             raw,
             width,
             height,
-            &self.image_uniforms
         ));
         self.objects.add_texture(texture)
     }
 
     pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Id<Texture>> {
-        let img = image::open(path.as_ref())?;
-        let (width, height) = img.dimensions();
-        let data = img.to_rgba().into_raw();
+        let image = png::open(path.as_ref())?;
+        let (width, height) = image.dimensions();
+        let data = image.to_rgba().into_raw();
         Ok(self.create_texture_rgba(&data, width, height))
     }
 

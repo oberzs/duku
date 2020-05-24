@@ -3,8 +3,8 @@ use tegne_math::Transform;
 use tegne_math::Vector3;
 
 use crate::error::Result;
-use crate::images::Framebuffer;
-use crate::images::Texture;
+use crate::image::Framebuffer;
+use crate::image::Texture;
 use crate::mesh::Mesh;
 use crate::objects::Builtins;
 use crate::objects::Id;

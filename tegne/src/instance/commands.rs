@@ -41,9 +41,9 @@ use std::sync::Arc;
 
 use super::Device;
 use crate::error::Result;
-use crate::images::Framebuffer;
-use crate::images::Image;
-use crate::images::ImageLayout;
+use crate::image::Framebuffer;
+use crate::image::ImageLayout;
+use crate::image::ImageMemory;
 use crate::shaders::Descriptor;
 use crate::shaders::PushConstants;
 use crate::shaders::RenderPass;
@@ -118,9 +118,9 @@ impl Commands {
         clear: [f32; 4],
     ) {
         let clear_values = framebuffer
-            .iter_attachments()
+            .iter_images()
             .map(|image| {
-                if image.is_depth_format() {
+                if image.has_depth_format() {
                     ClearValue {
                         depth_stencil: ClearDepthStencilValue {
                             depth: 1.0,
@@ -137,7 +137,7 @@ impl Commands {
 
         let info = RenderPassBeginInfo::builder()
             .render_pass(render_pass.vk())
-            .framebuffer(framebuffer.vk())
+            .framebuffer(framebuffer.handle())
             .render_area(Rect2D {
                 offset: Offset2D { x: 0, y: 0 },
                 extent: Extent2D {
@@ -327,7 +327,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn change_image_layout(&self, image: &Image, options: LayoutChangeOptions) {
+    pub(crate) fn change_image_layout(&self, image: &ImageMemory, options: LayoutChangeOptions) {
         let src_access = match options.old_layout {
             ImageLayout::TransferSrc => AccessFlags::TRANSFER_READ,
             ImageLayout::TransferDst => AccessFlags::TRANSFER_WRITE,
@@ -364,7 +364,7 @@ impl Commands {
             }
             _ => PipelineStageFlags::TRANSFER,
         };
-        let aspect_mask = if image.is_depth_format() {
+        let aspect_mask = if image.has_depth_format() {
             ImageAspectFlags::DEPTH | ImageAspectFlags::STENCIL
         } else {
             ImageAspectFlags::COLOR
@@ -381,7 +381,7 @@ impl Commands {
             .src_queue_family_index(QUEUE_FAMILY_IGNORED)
             .dst_queue_family_index(QUEUE_FAMILY_IGNORED)
             .subresource_range(subresource)
-            .image(image.vk())
+            .image(image.handle())
             .old_layout(options.old_layout.flag())
             .new_layout(options.new_layout.flag())
             .src_access_mask(src_access)

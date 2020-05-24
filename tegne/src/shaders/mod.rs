@@ -1,6 +1,7 @@
 mod attachment;
 mod material;
 mod render_pass;
+mod sampler;
 mod shader;
 mod shader_layout;
 mod shader_objects;
@@ -11,6 +12,10 @@ pub use material::Material;
 pub use material::MaterialOptions;
 pub(crate) use render_pass::RenderPass;
 pub(crate) use render_pass::RenderPasses;
+use sampler::Sampler;
+use sampler::SamplerAddress;
+use sampler::SamplerFilter;
+use sampler::SamplerOptions;
 pub use shader::Shader;
 pub use shader::ShaderOptions;
 pub(crate) use shader_layout::ShaderLayout;

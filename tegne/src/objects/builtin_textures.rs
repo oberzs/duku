@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::Id;
 use super::Objects;
 use crate::error::Result;
-use crate::images::Texture;
+use crate::image::Texture;
 use crate::instance::Device;
 use crate::shaders::ImageUniforms;
 
@@ -19,10 +19,10 @@ impl BuiltinTextures {
     ) -> Result<Self> {
         let white = objects.add_texture(Texture::from_raw_rgba(
             device,
+            uniforms,
             &[255, 255, 255, 255],
             1,
             1,
-            uniforms,
         )?);
 
         Ok(Self { white })

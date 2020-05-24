@@ -4,7 +4,7 @@ use tegne_math::Matrix4;
 use tegne_math::Vector3;
 
 use crate::error::Result;
-use crate::images::Framebuffer;
+use crate::image::Framebuffer;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::Order;
@@ -106,7 +106,7 @@ impl ForwardRenderer {
         }
 
         cmd.end_render_pass();
-        self.shadow_framebuffer.blit_to_shader_image(cmd);
+        self.shadow_framebuffer.update_shader_image(cmd);
 
         // normal render
         cmd.begin_render_pass(options.framebuffer, options.color_pass, clear);
@@ -130,8 +130,10 @@ impl ForwardRenderer {
         }
 
         cmd.end_render_pass();
+
+        // TODO: add check based on framebuffer
         if options.blit {
-            options.framebuffer.blit_to_shader_image(cmd);
+            options.framebuffer.update_shader_image(cmd);
         }
 
         Ok(())

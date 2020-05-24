@@ -14,15 +14,15 @@ use tegne_math::Vector2;
 use tegne_math::Vector3;
 use tegne_math::Vector4;
 
+use super::Sampler;
+use super::SamplerAddress;
+use super::SamplerFilter;
+use super::SamplerOptions;
 use super::ShaderLayout;
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::error::Result;
-use crate::images::ImageLayout;
-use crate::images::Sampler;
-use crate::images::SamplerAddress;
-use crate::images::SamplerFilter;
-use crate::images::SamplerOptions;
+use crate::image::ImageLayout;
 use crate::instance::Device;
 
 #[derive(Default, Copy, Clone)]

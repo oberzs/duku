@@ -1,10 +1,15 @@
-use std::cmp;
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Texture - simple image that can be used for rendering
+
 use std::sync::Arc;
 
-use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
-use super::ImageOptions;
+use super::ImageMemory;
+use super::ImageMemoryOptions;
+use super::ImageMips;
 use super::ImageUsage;
 use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
@@ -16,86 +21,82 @@ use crate::instance::LayoutChangeOptions;
 use crate::shaders::ImageUniforms;
 
 pub struct Texture {
-    _image: Image,
+    _memory: ImageMemory,
     image_index: i32,
 }
 
 impl Texture {
     pub(crate) fn from_raw_rgb(
         device: &Arc<Device>,
+        uniforms: &ImageUniforms,
         data: &[u8],
         width: u32,
         height: u32,
-        image_uniforms: &ImageUniforms,
     ) -> Result<Self> {
+        // convert image to RGBA format
         let mut rgba = vec![];
         rgba.reserve(data.len() + data.len() / 3);
         for c in data.chunks(3) {
             rgba.extend(c.iter());
             rgba.push(255);
         }
-        Self::from_raw_rgba(device, &rgba, width, height, image_uniforms)
+        Self::from_raw_rgba(device, uniforms, &rgba, width, height)
     }
 
     pub(crate) fn from_raw_rgba(
         device: &Arc<Device>,
+        uniforms: &ImageUniforms,
         data: &[u8],
         width: u32,
         height: u32,
-        image_uniforms: &ImageUniforms,
     ) -> Result<Self> {
-        let mip_levels = (cmp::max(width, height) as f32).log2().floor() as u32 + 1;
+        let size = (width * height) as usize * 4;
 
-        let size = width * height * 4;
+        let staging_memory =
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
+        staging_memory.copy_from_data(data, size)?;
 
-        let staging_memory = BufferMemory::new(
+        let memory = ImageMemory::new(
             device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            size as usize,
-        )?;
-        staging_memory.copy_from_data(data, size as usize)?;
-
-        let image = Image::new(
-            device,
-            ImageOptions {
+            ImageMemoryOptions {
                 width,
                 height,
                 format: ImageFormat::Rgba,
+                mips: ImageMips::Log2,
                 usage: &[
                     ImageUsage::Sampled,
                     ImageUsage::TransferSrc,
                     ImageUsage::TransferDst,
                 ],
-                has_view: true,
-                has_mipmaps: true,
+                create_view: true,
                 ..Default::default()
             },
         )?;
 
+        // prepare image for data copy
         let cmd = Commands::new(device)?;
         cmd.begin()?;
         cmd.change_image_layout(
-            &image,
+            &memory,
             LayoutChangeOptions {
                 base_mip: 0,
-                mip_count: mip_levels,
+                mip_count: memory.mip_count(),
                 new_layout: ImageLayout::TransferDst,
                 ..Default::default()
             },
         );
         device.submit_and_wait(cmd.end()?)?;
 
-        image.copy_from_memory(&staging_memory)?;
-        image.generate_mipmaps()?;
+        memory.copy_from_memory(&staging_memory)?;
+        memory.generate_mipmaps()?;
 
         let mut image_index = 0;
-        if let Some(view) = image.view() {
-            image_index = image_uniforms.add(view);
+        if let Some(view) = memory.view() {
+            image_index = uniforms.add(view);
         }
 
         Ok(Self {
-            _image: image,
+            _memory: memory,
             image_index,
         })
     }

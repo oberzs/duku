@@ -12,8 +12,8 @@ use std::sync::Arc;
 use super::Attachment;
 use super::AttachmentOptions;
 use crate::error::Result;
-use crate::images::ImageFormat;
-use crate::images::ImageLayout;
+use crate::image::ImageFormat;
+use crate::image::ImageLayout;
 use crate::instance::Device;
 
 pub(crate) struct RenderPasses {

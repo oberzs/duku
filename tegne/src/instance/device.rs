@@ -40,6 +40,7 @@ use super::Swapchain;
 use super::Vulkan;
 use crate::error::ErrorKind;
 use crate::error::Result;
+use crate::image::ImageSamples;
 use crate::sync::fence;
 use crate::sync::semaphore;
 
@@ -66,14 +67,11 @@ pub(crate) struct DeviceProperties {
     pub(crate) memory_properties: PhysicalDeviceMemoryProperties,
     pub(crate) graphics_index: u32,
     pub(crate) present_index: u32,
-    pub(crate) samples: Samples,
+    pub(crate) samples: ImageSamples,
     pub(crate) extent: Extent2D,
     pub(crate) present_mode: PresentModeKHR,
     pub(crate) image_count: u32,
 }
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) struct Samples(pub(crate) u8);
 
 impl Device {
     pub(crate) fn new(
@@ -290,12 +288,12 @@ impl Device {
         self.properties.lock().unwrap().extent
     }
 
-    pub(crate) fn samples(&self) -> Samples {
+    pub(crate) fn samples(&self) -> ImageSamples {
         self.properties.lock().unwrap().samples
     }
 
     pub(crate) fn is_msaa(&self) -> bool {
-        self.samples() != Samples(1)
+        self.samples() != ImageSamples(1)
     }
 
     pub(crate) fn graphics_index(&self) -> u32 {
@@ -342,21 +340,6 @@ impl Drop for Device {
                 .iter()
                 .for_each(|f| fence::destroy(&self.logical, *f));
             self.logical.destroy_device(None);
-        }
-    }
-}
-
-impl Samples {
-    pub(crate) fn flag(&self) -> SampleCountFlags {
-        match self.0 {
-            1 => SampleCountFlags::TYPE_1,
-            2 => SampleCountFlags::TYPE_2,
-            4 => SampleCountFlags::TYPE_4,
-            8 => SampleCountFlags::TYPE_8,
-            16 => SampleCountFlags::TYPE_16,
-            32 => SampleCountFlags::TYPE_32,
-            64 => SampleCountFlags::TYPE_64,
-            _ => SampleCountFlags::TYPE_1,
         }
     }
 }
@@ -440,18 +423,18 @@ fn open_device(
     Ok(logical)
 }
 
-fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> Samples {
+fn pick_samples(properties: PhysicalDeviceProperties, msaa: u8) -> ImageSamples {
     let counts = properties.limits.framebuffer_color_sample_counts
         & properties.limits.framebuffer_depth_sample_counts;
 
-    let samples = Samples(msaa);
+    let samples = ImageSamples(msaa);
 
     if samples.flag() == SampleCountFlags::TYPE_1 && msaa != 1 {
         warn!("invalid MSAA value: {}", msaa);
-        Samples(1)
+        ImageSamples(1)
     } else if !counts.contains(samples.flag()) {
         warn!("unsupported MSAA value: {}", msaa);
-        Samples(1)
+        ImageSamples(1)
     } else {
         samples
     }

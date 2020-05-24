@@ -10,7 +10,8 @@
 
 mod buffer;
 mod error;
-mod images;
+mod font;
+mod image;
 mod instance;
 mod mesh;
 mod objects;
@@ -18,8 +19,8 @@ mod renderer;
 mod shaders;
 mod sync;
 
-pub use images::Framebuffer;
-pub use images::Texture;
+pub use image::Framebuffer;
+pub use image::Texture;
 pub use instance::Target;
 pub use instance::Tegne;
 pub use instance::TegneOptions;

@@ -4,10 +4,10 @@ use ash::vk::AttachmentReference;
 use ash::vk::AttachmentStoreOp;
 use std::sync::Arc;
 
-use crate::images::ImageFormat;
-use crate::images::ImageLayout;
+use crate::image::ImageFormat;
+use crate::image::ImageLayout;
+use crate::image::ImageSamples;
 use crate::instance::Device;
-use crate::instance::Samples;
 
 pub(crate) struct Attachment {
     vk: AttachmentDescription,
@@ -47,7 +47,7 @@ impl Attachment {
         let samples = if options.has_samples {
             device.samples()
         } else {
-            Samples(1)
+            ImageSamples(1)
         };
 
         let vk = AttachmentDescription::builder()

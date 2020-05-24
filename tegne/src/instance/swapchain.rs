@@ -16,8 +16,8 @@ use super::Device;
 use super::Surface;
 use super::Vulkan;
 use crate::error::Result;
-use crate::images::ImageFormat;
-use crate::images::ImageUsage;
+use crate::image::ImageFormat;
+use crate::image::ImageUsage;
 
 pub(crate) struct Swapchain {
     ext: Extension,

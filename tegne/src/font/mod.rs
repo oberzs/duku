@@ -1,4 +1,10 @@
-use serde::Deserialize;
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Font - struct for a renderable SDF font
+
+mod json;
+
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
@@ -15,6 +21,7 @@ use crate::objects::Id;
 use crate::objects::IdRef;
 use crate::objects::Objects;
 use crate::shaders::ImageUniforms;
+use json::JsonAtlasMetrics;
 
 pub struct Font {
     texture: Id<Texture>,
@@ -28,29 +35,14 @@ struct CharData {
     bearing: f32,
 }
 
-#[derive(Deserialize)]
-struct JsonAtlasMetrics {
-    sdf_size: u32,
-    atlas_size: u32,
-    margin: u32,
-    char_metrics: HashMap<char, JsonCharMetrics>,
-}
-
-#[derive(Deserialize)]
-struct JsonCharMetrics {
-    x: u32,
-    y: u32,
-    advance: u32,
-    bearing: u32,
-}
-
 impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
-        image_uniforms: &ImageUniforms,
+        uniforms: &ImageUniforms,
         objects: &Objects,
         source: &[u8],
     ) -> Result<Self> {
+        // read font data from archive
         let mut archive: Archive<&[u8]> = Archive::new(source);
 
         let mut atlas_source = vec![];
@@ -69,28 +61,31 @@ impl Font {
             }
         }
 
+        // decode font atlas metrics
         let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
+        // create font atlas texture
         let texture = objects.add_texture(Texture::from_raw_rgba(
             device,
+            uniforms,
             &image_source,
             atlas.atlas_size,
             atlas.atlas_size,
-            image_uniforms,
         )?);
 
         let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
+        // generate mesh for each character in atlas
         let mut char_data = HashMap::new();
         for (c, metrics) in atlas.char_metrics {
-            // uv relative
+            // UV relative metrics
             let size_norm = atlas.sdf_size as f32 / atlas.atlas_size as f32;
             let u_min = metrics.x as f32 / atlas.atlas_size as f32;
             let v_min = metrics.y as f32 / atlas.atlas_size as f32;
             let u_max = u_min + size_norm;
             let v_max = v_min + size_norm;
 
-            // vertex relative
+            // vertex relative metrics
             let advance = metrics.advance as f32 / atlas.sdf_size as f32;
             let bearing = metrics.bearing as f32 / atlas.sdf_size as f32;
 

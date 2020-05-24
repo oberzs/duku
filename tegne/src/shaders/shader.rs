@@ -40,8 +40,8 @@ use tar::Archive;
 use super::RenderPass;
 use super::ShaderLayout;
 use crate::error::Result;
+use crate::image::ImageSamples;
 use crate::instance::Device;
-use crate::instance::Samples;
 use crate::mesh::Vertex;
 
 pub struct Shader {
@@ -157,7 +157,7 @@ impl Shader {
         let samples = if pass.has_msaa_attachment() {
             device.samples()
         } else {
-            Samples(1)
+            ImageSamples(1)
         };
 
         let multisampling = PipelineMultisampleStateCreateInfo::builder()
