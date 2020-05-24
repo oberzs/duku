@@ -1,5 +1,3 @@
-use ash::vk::BufferUsageFlags;
-use ash::vk::MemoryPropertyFlags;
 use std::cmp;
 use std::sync::Arc;
 
@@ -8,7 +6,9 @@ use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageOptions;
 use super::ImageUsage;
-use crate::buffers::Buffer;
+use crate::buffer::BufferAccess;
+use crate::buffer::BufferMemory;
+use crate::buffer::BufferUsage;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
@@ -48,13 +48,13 @@ impl Texture {
 
         let size = width * height * 4;
 
-        let staging_buffer = Buffer::new(
+        let staging_memory = BufferMemory::new(
             device,
-            BufferUsageFlags::TRANSFER_SRC,
-            MemoryPropertyFlags::HOST_VISIBLE | MemoryPropertyFlags::HOST_COHERENT,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
             size as usize,
         )?;
-        staging_buffer.copy_from_data(data, size as usize)?;
+        staging_memory.copy_from_data(data, size as usize)?;
 
         let image = Image::new(
             device,
@@ -86,7 +86,7 @@ impl Texture {
         );
         device.submit_and_wait(cmd.end()?)?;
 
-        image.copy_from_buffer(&staging_buffer)?;
+        image.copy_from_memory(&staging_memory)?;
         image.generate_mipmaps()?;
 
         let mut image_index = 0;

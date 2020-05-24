@@ -19,7 +19,7 @@ use std::mem;
 use std::sync::Arc;
 
 use super::PushConstants;
-use crate::buffers::DynamicBuffer;
+use crate::buffer::DynamicBuffer;
 use crate::error::Result;
 use crate::instance::Device;
 
@@ -166,7 +166,7 @@ impl ShaderLayout {
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
-            .buffer(buffer.vk())
+            .buffer(buffer.handle())
             .offset(0)
             .range(buffer.size().into())
             .build();
@@ -203,7 +203,7 @@ impl ShaderLayout {
         };
 
         let buffer_info = DescriptorBufferInfo::builder()
-            .buffer(buffer.vk())
+            .buffer(buffer.handle())
             .offset(0)
             .range(buffer.size().into())
             .build();

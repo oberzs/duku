@@ -25,7 +25,7 @@ use log::error;
 use std::cmp;
 use std::sync::Arc;
 
-use crate::buffers::Buffer;
+use crate::buffer::BufferMemory;
 use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
@@ -191,7 +191,7 @@ impl Image {
         })
     }
 
-    pub(crate) fn copy_from_buffer(&self, buffer: &Buffer) -> Result<()> {
+    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory) -> Result<()> {
         let subresource = ImageSubresourceLayers::builder()
             .aspect_mask(ImageAspectFlags::COLOR)
             .base_array_layer(0)
@@ -214,7 +214,7 @@ impl Image {
 
         let cmd = Commands::new(&self.device)?;
         cmd.begin()?;
-        cmd.copy_buffer_to_image(buffer.vk(), self.vk, region);
+        cmd.copy_buffer_to_image(memory.handle(), self.vk, region);
         self.device.submit_and_wait(cmd.end()?)?;
         Ok(())
     }

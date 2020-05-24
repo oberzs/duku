@@ -6,8 +6,8 @@ use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
 
-use crate::buffers::BufferType;
-use crate::buffers::DynamicBuffer;
+use crate::buffer::BufferUsage;
+use crate::buffer::DynamicBuffer;
 use crate::error::Result;
 use crate::instance::Device;
 pub(crate) use vertex::Vertex;
@@ -39,8 +39,9 @@ impl Mesh {
         let vertex_count = vertices.len();
         let index_count = triangles.len() * 3;
 
-        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, vertex_count, BufferType::Vertex)?;
-        let index_buffer = DynamicBuffer::new::<u32>(device, index_count, BufferType::Index)?;
+        let vertex_buffer =
+            DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, vertex_count)?;
+        let index_buffer = DynamicBuffer::new::<u32>(device, BufferUsage::Index, index_count)?;
 
         let mut uvs = vec![Vector2::default(); vertex_count];
         uvs[..options.uvs.len()].clone_from_slice(options.uvs);
@@ -116,7 +117,7 @@ impl Mesh {
             self.vertex_buffer.update_data(&vertices)?;
             self.should_update_vertices.set(false);
         }
-        Ok(self.vertex_buffer.vk())
+        Ok(self.vertex_buffer.handle())
     }
 
     pub(crate) fn vk_index_buffer(&self) -> Result<VkBuffer> {
@@ -130,7 +131,7 @@ impl Mesh {
             self.index_buffer.update_data(&indices)?;
             self.should_update_triangles.set(false);
         }
-        Ok(self.index_buffer.vk())
+        Ok(self.index_buffer.handle())
     }
 
     pub(crate) fn index_count(&self) -> u32 {

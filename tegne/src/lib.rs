@@ -8,7 +8,7 @@
     unused_qualifications,
 )]
 
-mod buffers;
+mod buffer;
 mod error;
 mod images;
 mod instance;

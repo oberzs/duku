@@ -15,8 +15,8 @@ use tegne_math::Vector3;
 use tegne_math::Vector4;
 
 use super::ShaderLayout;
-use crate::buffers::BufferType;
-use crate::buffers::DynamicBuffer;
+use crate::buffer::BufferUsage;
+use crate::buffer::DynamicBuffer;
 use crate::error::Result;
 use crate::images::ImageLayout;
 use crate::images::Sampler;
@@ -91,7 +91,7 @@ pub(crate) struct Descriptor(pub u32, pub DescriptorSet);
 
 impl WorldUniforms {
     pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<WorldObject>(device, 1, BufferType::Uniform)?;
+        let buffer = DynamicBuffer::new::<WorldObject>(device, BufferUsage::Uniform, 1)?;
 
         let descriptor_set = layout.world_set(&buffer)?;
         let descriptor = Descriptor(0, descriptor_set);
@@ -110,7 +110,7 @@ impl WorldUniforms {
 
 impl MaterialUniforms {
     pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<MaterialObject>(device, 1, BufferType::Uniform)?;
+        let buffer = DynamicBuffer::new::<MaterialObject>(device, BufferUsage::Uniform, 1)?;
 
         let descriptor_set = layout.material_set(&buffer)?;
         let descriptor = Descriptor(1, descriptor_set);
