@@ -1,7 +1,9 @@
-use ash::vk::Format;
-use ash::vk::VertexInputAttributeDescription;
-use ash::vk::VertexInputBindingDescription;
-use ash::vk::VertexInputRate;
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Vertex - struct representing a vertex for a mesh
+
+use ash::vk;
 use std::mem;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
@@ -15,36 +17,36 @@ pub(crate) struct Vertex {
 }
 
 impl Vertex {
-    pub(crate) fn binding_description() -> VertexInputBindingDescription {
-        VertexInputBindingDescription::builder()
+    pub(crate) fn binding_description() -> vk::VertexInputBindingDescription {
+        vk::VertexInputBindingDescription::builder()
             .binding(0)
             .stride(mem::size_of::<Self>() as u32)
-            .input_rate(VertexInputRate::VERTEX)
+            .input_rate(vk::VertexInputRate::VERTEX)
             .build()
     }
 
-    pub(crate) fn attribute_descriptions() -> [VertexInputAttributeDescription; 3] {
+    pub(crate) fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 3] {
         let pos_size = mem::size_of::<Vector3>() as u32;
         let norm_size = mem::size_of::<Vector3>() as u32;
 
-        let pos_desc = VertexInputAttributeDescription::builder()
+        let pos_desc = vk::VertexInputAttributeDescription::builder()
             .binding(0)
             .location(0)
-            .format(Format::R32G32B32_SFLOAT)
+            .format(vk::Format::R32G32B32_SFLOAT)
             .offset(0)
             .build();
 
-        let norm_desc = VertexInputAttributeDescription::builder()
+        let norm_desc = vk::VertexInputAttributeDescription::builder()
             .binding(0)
             .location(1)
-            .format(Format::R32G32B32_SFLOAT)
+            .format(vk::Format::R32G32B32_SFLOAT)
             .offset(pos_size)
             .build();
 
-        let uv_desc = VertexInputAttributeDescription::builder()
+        let uv_desc = vk::VertexInputAttributeDescription::builder()
             .binding(0)
             .location(2)
-            .format(Format::R32G32_SFLOAT)
+            .format(vk::Format::R32G32_SFLOAT)
             .offset(pos_size + norm_size)
             .build();
 

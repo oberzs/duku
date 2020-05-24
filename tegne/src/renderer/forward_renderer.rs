@@ -183,7 +183,7 @@ impl ForwardRenderer {
             .or_else(|| objects.with_framebuffer(order.albedo, |f| f.image_index()));
         if let Some(albedo_index) = albedo {
             if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
-                (m.vk_vertex_buffer(), m.vk_index_buffer(), m.index_count())
+                (m.vertex_buffer(), m.index_buffer(), m.index_count())
             }) {
                 cmd.set_push_constant(
                     PushConstants {

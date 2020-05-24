@@ -1,6 +1,11 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Mesh - struct representing a renderable object
+
 mod vertex;
 
-use ash::vk::Buffer as VkBuffer;
+use ash::vk;
 use std::cell::Cell;
 use std::sync::Arc;
 use tegne_math::Vector2;
@@ -43,9 +48,11 @@ impl Mesh {
             DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, vertex_count)?;
         let index_buffer = DynamicBuffer::new::<u32>(device, BufferUsage::Index, index_count)?;
 
+        // fill in missing default UVs for all vertices
         let mut uvs = vec![Vector2::default(); vertex_count];
         uvs[..options.uvs.len()].clone_from_slice(options.uvs);
 
+        // fill in missing default normals for all vertices
         let mut normals = vec![Vector3::default(); vertex_count];
         normals[..options.normals.len()].clone_from_slice(options.normals);
 
@@ -101,7 +108,8 @@ impl Mesh {
         self.should_update_triangles.set(true);
     }
 
-    pub(crate) fn vk_vertex_buffer(&self) -> Result<VkBuffer> {
+    pub(crate) fn vertex_buffer(&self) -> Result<vk::Buffer> {
+        // if vertex data has changed, update buffer
         if self.should_update_vertices.get() {
             let vertices = self
                 .vertices
@@ -120,7 +128,8 @@ impl Mesh {
         Ok(self.vertex_buffer.handle())
     }
 
-    pub(crate) fn vk_index_buffer(&self) -> Result<VkBuffer> {
+    pub(crate) fn index_buffer(&self) -> Result<vk::Buffer> {
+        // if index data has changed, update buffer
         if self.should_update_triangles.get() {
             let indices = self
                 .triangles
