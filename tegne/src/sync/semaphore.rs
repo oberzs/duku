@@ -1,17 +1,21 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// semaphore is a GPU synchronization object
+
 use ash::version::DeviceV1_0;
-use ash::vk::Semaphore;
-use ash::vk::SemaphoreCreateInfo;
+use ash::vk;
 use ash::Device as LogicalDevice;
 
 use crate::error::Result;
 
-pub(crate) fn create(logical: &LogicalDevice) -> Result<Semaphore> {
-    let info = SemaphoreCreateInfo::builder();
+pub(crate) fn create(logical: &LogicalDevice) -> Result<vk::Semaphore> {
+    let info = vk::SemaphoreCreateInfo::builder();
     let sem = unsafe { logical.create_semaphore(&info, None)? };
     Ok(sem)
 }
 
-pub(crate) fn destroy(logical: &LogicalDevice, s: Semaphore) {
+pub(crate) fn destroy(logical: &LogicalDevice, s: vk::Semaphore) {
     unsafe {
         logical.destroy_semaphore(s, None);
     }
