@@ -5,7 +5,7 @@ use super::Objects;
 use crate::error::Result;
 use crate::image::Texture;
 use crate::instance::Device;
-use crate::shaders::ImageUniforms;
+use crate::pipeline::ImageUniform;
 
 pub(crate) struct BuiltinTextures {
     pub(crate) white: Id<Texture>,
@@ -14,12 +14,12 @@ pub(crate) struct BuiltinTextures {
 impl BuiltinTextures {
     pub(crate) fn new(
         device: &Arc<Device>,
-        uniforms: &ImageUniforms,
+        uniform: &ImageUniform,
         objects: &Objects,
     ) -> Result<Self> {
         let white = objects.add_texture(Texture::from_raw_rgba(
             device,
-            uniforms,
+            uniform,
             &[255, 255, 255, 255],
             1,
             1,

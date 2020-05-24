@@ -20,9 +20,9 @@ use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::instance::IN_FLIGHT_FRAME_COUNT;
 use crate::mesh::Mesh;
-use crate::shaders::ImageUniforms;
-use crate::shaders::Material;
-use crate::shaders::Shader;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::Material;
+use crate::pipeline::Shader;
 use builtin_fonts::BuiltinFonts;
 use builtin_materials::BuiltinMaterials;
 use builtin_meshes::BuiltinMeshes;
@@ -174,7 +174,7 @@ impl Objects {
         }
     }
 
-    pub(crate) fn clean_unused(&self, uniforms: &ImageUniforms, frame: usize) {
+    pub(crate) fn clean_unused(&self, uniform: &ImageUniform, frame: usize) {
         self.unused_shaders.lock().unwrap()[frame].clear();
 
         remove_unused(&mut self.framebuffers.lock().unwrap());
@@ -184,7 +184,7 @@ impl Objects {
         remove_unused(&mut self.shaders.lock().unwrap());
         remove_unused(&mut self.textures.lock().unwrap())
             .iter()
-            .for_each(|tex| uniforms.remove(tex.image_index()));
+            .for_each(|tex| uniform.remove(tex.image_index()));
     }
 
     fn get_id(&self) -> Arc<u32> {

@@ -10,9 +10,9 @@ use crate::objects::Builtins;
 use crate::objects::Id;
 use crate::objects::IdRef;
 use crate::objects::Objects;
-use crate::shaders::Light;
-use crate::shaders::Material;
-use crate::shaders::Shader;
+use crate::pipeline::Light;
+use crate::pipeline::Material;
+use crate::pipeline::Shader;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,

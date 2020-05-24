@@ -20,7 +20,7 @@ use crate::mesh::MeshOptions;
 use crate::objects::Id;
 use crate::objects::IdRef;
 use crate::objects::Objects;
-use crate::shaders::ImageUniforms;
+use crate::pipeline::ImageUniform;
 use json::JsonAtlasMetrics;
 
 pub struct Font {
@@ -38,7 +38,7 @@ struct CharData {
 impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
-        uniforms: &ImageUniforms,
+        uniform: &ImageUniform,
         objects: &Objects,
         source: &[u8],
     ) -> Result<Self> {
@@ -67,7 +67,7 @@ impl Font {
         // create font atlas texture
         let texture = objects.add_texture(Texture::from_raw_rgba(
             device,
-            uniforms,
+            uniform,
             &image_source,
             atlas.atlas_size,
             atlas.atlas_size,

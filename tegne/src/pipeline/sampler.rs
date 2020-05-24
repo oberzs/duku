@@ -1,18 +1,19 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Sampler - struct that provides image access in shader
+
 use ash::version::DeviceV1_0;
-use ash::vk::BorderColor;
-use ash::vk::CompareOp;
-use ash::vk::Filter;
-use ash::vk::Sampler as VkSampler;
-use ash::vk::SamplerAddressMode;
-use ash::vk::SamplerCreateInfo;
-use ash::vk::SamplerMipmapMode;
+use ash::vk;
 use std::sync::Arc;
 
+use super::SamplerAddress;
+use super::SamplerFilter;
 use crate::error::Result;
 use crate::instance::Device;
 
 pub(crate) struct Sampler {
-    vk: VkSampler,
+    handle: vk::Sampler,
     device: Arc<Device>,
 }
 
@@ -23,21 +24,9 @@ pub(crate) struct SamplerOptions {
     pub(crate) filter: SamplerFilter,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum SamplerFilter {
-    Linear,
-    Nearest,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum SamplerAddress {
-    Repeat,
-    Clamp,
-}
-
 impl Sampler {
     pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Result<Self> {
-        let info = SamplerCreateInfo::builder()
+        let info = vk::SamplerCreateInfo::builder()
             .mag_filter(options.filter.flag())
             .min_filter(options.filter.flag())
             .address_mode_u(options.address.flag())
@@ -45,32 +34,32 @@ impl Sampler {
             .address_mode_w(options.address.flag())
             .anisotropy_enable(options.anisotropy != 0.0)
             .max_anisotropy(options.anisotropy)
-            .border_color(BorderColor::FLOAT_OPAQUE_WHITE)
+            .border_color(vk::BorderColor::FLOAT_OPAQUE_WHITE)
             .unnormalized_coordinates(false)
             .compare_enable(false)
-            .compare_op(CompareOp::ALWAYS)
-            .mipmap_mode(SamplerMipmapMode::LINEAR)
+            .compare_op(vk::CompareOp::ALWAYS)
+            .mipmap_mode(vk::SamplerMipmapMode::LINEAR)
             .mip_lod_bias(0.0)
             .min_lod(0.0)
             .max_lod(16.0);
 
-        let vk = unsafe { device.logical().create_sampler(&info, None)? };
+        let handle = unsafe { device.logical().create_sampler(&info, None)? };
 
         Ok(Self {
-            vk,
+            handle,
             device: Arc::clone(device),
         })
     }
 
-    pub(crate) fn vk(&self) -> VkSampler {
-        self.vk
+    pub(crate) fn handle(&self) -> vk::Sampler {
+        self.handle
     }
 }
 
 impl Drop for Sampler {
     fn drop(&mut self) {
         unsafe {
-            self.device.logical().destroy_sampler(self.vk, None);
+            self.device.logical().destroy_sampler(self.handle, None);
         }
     }
 }
@@ -81,24 +70,6 @@ impl Default for SamplerOptions {
             anisotropy: 0.0,
             address: SamplerAddress::Repeat,
             filter: SamplerFilter::Linear,
-        }
-    }
-}
-
-impl SamplerAddress {
-    pub(crate) fn flag(&self) -> SamplerAddressMode {
-        match *self {
-            Self::Clamp => SamplerAddressMode::CLAMP_TO_BORDER,
-            Self::Repeat => SamplerAddressMode::REPEAT,
-        }
-    }
-}
-
-impl SamplerFilter {
-    pub(crate) fn flag(&self) -> Filter {
-        match *self {
-            Self::Linear => Filter::LINEAR,
-            Self::Nearest => Filter::NEAREST,
         }
     }
 }

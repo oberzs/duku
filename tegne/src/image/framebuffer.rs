@@ -21,11 +21,11 @@ use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::LayoutChangeOptions;
 use crate::instance::Swapchain;
-use crate::shaders::ImageUniforms;
-use crate::shaders::RenderPass;
-use crate::shaders::RenderPasses;
-use crate::shaders::ShaderLayout;
-use crate::shaders::WorldUniforms;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::RenderPass;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::ShaderLayout;
+use crate::pipeline::WorldUniform;
 
 pub struct Framebuffer {
     handle: vk::Framebuffer,
@@ -34,7 +34,7 @@ pub struct Framebuffer {
     images: Vec<ImageMemory>,
     shader_image: Option<ImageMemory>,
     shader_index: Option<i32>,
-    world_uniforms: WorldUniforms,
+    world_uniform: WorldUniform,
     device: Arc<Device>,
 }
 
@@ -102,7 +102,7 @@ impl Framebuffer {
                 let handle =
                     create_framebuffer(device, render_pass, &images, extent.width, extent.height)?;
 
-                let world_uniforms = WorldUniforms::new(device, shader_layout)?;
+                let world_uniform = WorldUniform::new(device, shader_layout)?;
 
                 Ok(Self {
                     handle,
@@ -111,7 +111,7 @@ impl Framebuffer {
                     shader_image: None,
                     shader_index: None,
                     images,
-                    world_uniforms,
+                    world_uniform,
                     device: Arc::clone(device),
                 })
             })
@@ -121,7 +121,7 @@ impl Framebuffer {
     pub(crate) fn color(
         device: &Arc<Device>,
         render_passes: &RenderPasses,
-        image_uniforms: &ImageUniforms,
+        image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
@@ -174,11 +174,11 @@ impl Framebuffer {
 
         // create image to be used in shaders
         let (shader_image, shader_index) =
-            create_shader_image(device, image_uniforms, width, height, ImageFormat::Bgra)?;
+            create_shader_image(device, image_uniform, width, height, ImageFormat::Bgra)?;
 
         let handle = create_framebuffer(device, render_pass, &images, width, height)?;
 
-        let world_uniforms = WorldUniforms::new(device, shader_layout)?;
+        let world_uniform = WorldUniform::new(device, shader_layout)?;
 
         Ok(Self {
             handle,
@@ -187,7 +187,7 @@ impl Framebuffer {
             shader_image: Some(shader_image),
             shader_index: Some(shader_index),
             images,
-            world_uniforms,
+            world_uniform,
             device: Arc::clone(device),
         })
     }
@@ -195,7 +195,7 @@ impl Framebuffer {
     pub(crate) fn depth(
         device: &Arc<Device>,
         render_passes: &RenderPasses,
-        image_uniforms: &ImageUniforms,
+        image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         width: u32,
         height: u32,
@@ -218,11 +218,11 @@ impl Framebuffer {
 
         // create image to be used in shaders
         let (shader_image, shader_index) =
-            create_shader_image(device, image_uniforms, width, height, ImageFormat::Depth)?;
+            create_shader_image(device, image_uniform, width, height, ImageFormat::Depth)?;
 
         let handle = create_framebuffer(device, render_pass, &images, width, height)?;
 
-        let world_uniforms = WorldUniforms::new(device, shader_layout)?;
+        let world_uniform = WorldUniform::new(device, shader_layout)?;
 
         Ok(Self {
             handle,
@@ -231,7 +231,7 @@ impl Framebuffer {
             shader_image: Some(shader_image),
             shader_index: Some(shader_index),
             images,
-            world_uniforms,
+            world_uniform,
             device: Arc::clone(device),
         })
     }
@@ -343,8 +343,8 @@ impl Framebuffer {
         self.images.iter()
     }
 
-    pub(crate) fn world_uniforms(&self) -> &WorldUniforms {
-        &self.world_uniforms
+    pub(crate) fn world_uniform(&self) -> &WorldUniform {
+        &self.world_uniform
     }
 }
 
@@ -365,7 +365,7 @@ impl PartialEq for Framebuffer {
 
 fn create_shader_image(
     device: &Arc<Device>,
-    uniforms: &ImageUniforms,
+    uniform: &ImageUniform,
     width: u32,
     height: u32,
     format: ImageFormat,
@@ -397,7 +397,7 @@ fn create_shader_image(
     // add image to uniform descriptor
     let mut index = 0;
     if let Some(view) = image.view() {
-        index = uniforms.add(view);
+        index = uniform.add(view);
     }
 
     Ok((image, index))
@@ -413,7 +413,7 @@ fn create_framebuffer(
     let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
 
     let info = vk::FramebufferCreateInfo::builder()
-        .render_pass(render_pass.vk())
+        .render_pass(render_pass.handle())
         .attachments(&views)
         .width(width)
         .height(height)

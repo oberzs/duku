@@ -12,12 +12,12 @@ use crate::instance::Target;
 use crate::objects::Builtins;
 use crate::objects::IdRef;
 use crate::objects::Objects;
-use crate::shaders::ImageUniforms;
-use crate::shaders::PushConstants;
-use crate::shaders::RenderPass;
-use crate::shaders::RenderPasses;
-use crate::shaders::ShaderLayout;
-use crate::shaders::WorldObject;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::PushConstants;
+use crate::pipeline::RenderPass;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::ShaderLayout;
+use crate::pipeline::WorldData;
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffer: Framebuffer,
@@ -42,14 +42,14 @@ impl ForwardRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         render_passes: &RenderPasses,
-        image_uniforms: &ImageUniforms,
+        image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         builtins: &Builtins,
     ) -> Result<Self> {
         let shadow_framebuffer = Framebuffer::depth(
             device,
             render_passes,
-            image_uniforms,
+            image_uniform,
             shader_layout,
             2048,
             2048,
@@ -75,7 +75,7 @@ impl ForwardRenderer {
             * Matrix4::look_rotation(light_mat_dir, Vector3::up())
             * Matrix4::translation(light_mat_pos);
 
-        let world_object = WorldObject {
+        let world_data = WorldData {
             cam_mat,
             cam_pos: options.camera.transform().position,
             lights: options.target.lights(),
@@ -91,7 +91,7 @@ impl ForwardRenderer {
         // shadow mapping
         cmd.begin_render_pass(&self.shadow_framebuffer, depth_pass, clear);
         self.setup_pass(&self.shadow_framebuffer, &options);
-        self.bind_world(&self.shadow_framebuffer, world_object, &options)?;
+        self.bind_world(&self.shadow_framebuffer, world_data, &options)?;
 
         self.bind_shader(self.shadow_shader, &options);
         for s_order in options.target.orders_by_shader() {
@@ -111,7 +111,7 @@ impl ForwardRenderer {
         // normal render
         cmd.begin_render_pass(options.framebuffer, options.color_pass, clear);
         self.setup_pass(options.framebuffer, &options);
-        self.bind_world(options.framebuffer, world_object, &options)?;
+        self.bind_world(options.framebuffer, world_data, &options)?;
 
         for s_order in options.target.orders_by_shader() {
             self.bind_shader(s_order.shader(), &options);
@@ -148,14 +148,14 @@ impl ForwardRenderer {
     fn bind_world(
         &self,
         framebuffer: &Framebuffer,
-        object: WorldObject,
+        data: WorldData,
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
         let cmd = options.cmd;
-        framebuffer.world_uniforms().update(object)?;
+        framebuffer.world_uniform().update(data)?;
         cmd.bind_descriptor(
-            framebuffer.world_uniforms().descriptor(),
-            options.shader_layout.pipeline(),
+            framebuffer.world_uniform().descriptor(),
+            options.shader_layout.handle(),
         );
         Ok(())
     }
@@ -163,7 +163,7 @@ impl ForwardRenderer {
     fn bind_shader(&self, shader: IdRef, options: &ForwardDrawOptions<'_>) {
         let cmd = options.cmd;
         let objects = options.objects;
-        if let Some(pipeline) = objects.with_shader(shader, |s| s.pipeline()) {
+        if let Some(pipeline) = objects.with_shader(shader, |s| s.handle()) {
             cmd.bind_pipeline(pipeline);
         }
     }
@@ -172,7 +172,7 @@ impl ForwardRenderer {
         let cmd = options.cmd;
         let objects = options.objects;
         if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
-            cmd.bind_descriptor(descriptor?, options.shader_layout.pipeline());
+            cmd.bind_descriptor(descriptor?, options.shader_layout.handle());
         }
         Ok(())
     }
@@ -192,7 +192,7 @@ impl ForwardRenderer {
                         model_mat: order.model,
                         albedo_index,
                     },
-                    options.shader_layout.pipeline(),
+                    options.shader_layout.handle(),
                 );
                 cmd.bind_vertex_buffer(vb?);
                 cmd.bind_index_buffer(ib?);

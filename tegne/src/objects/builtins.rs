@@ -9,9 +9,9 @@ use super::BuiltinTextures;
 use super::Objects;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::shaders::ImageUniforms;
-use crate::shaders::RenderPasses;
-use crate::shaders::ShaderLayout;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::ShaderLayout;
 
 pub(crate) struct Builtins {
     pub(crate) textures: BuiltinTextures,
@@ -26,7 +26,7 @@ impl Builtins {
         device: &Arc<Device>,
         passes: &RenderPasses,
         layout: &ShaderLayout,
-        uniforms: &ImageUniforms,
+        uniform: &ImageUniform,
         objects: &Objects,
     ) -> Result<Self> {
         debug!("creating builtin meshes");
@@ -36,13 +36,13 @@ impl Builtins {
         let shaders = BuiltinShaders::new(device, passes, layout, objects)?;
 
         debug!("creating builtin textures");
-        let textures = BuiltinTextures::new(device, uniforms, objects)?;
+        let textures = BuiltinTextures::new(device, uniform, objects)?;
 
         debug!("creating builtin materials");
         let materials = BuiltinMaterials::new(device, layout, objects)?;
 
         debug!("creating builtin fonts");
-        let fonts = BuiltinFonts::new(device, uniforms, objects)?;
+        let fonts = BuiltinFonts::new(device, uniform, objects)?;
 
         Ok(Self {
             meshes,

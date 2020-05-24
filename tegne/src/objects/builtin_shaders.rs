@@ -4,10 +4,10 @@ use super::Id;
 use super::Objects;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::shaders::RenderPasses;
-use crate::shaders::Shader;
-use crate::shaders::ShaderLayout;
-use crate::shaders::ShaderOptions;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::Shader;
+use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderOptions;
 
 macro_rules! include_shader {
     ($path:expr) => {
@@ -79,7 +79,7 @@ impl BuiltinShaders {
             layout,
             passthru_spv,
             ShaderOptions {
-                has_depth_test: false,
+                depth_test: false,
                 ..Default::default()
             },
         )?);
@@ -90,8 +90,8 @@ impl BuiltinShaders {
             layout,
             wireframe_spv,
             ShaderOptions {
-                has_lines: true,
-                has_depth_test: false,
+                lines: true,
+                depth_test: false,
                 ..Default::default()
             },
         )?);

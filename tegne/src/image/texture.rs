@@ -18,7 +18,7 @@ use crate::error::Result;
 use crate::instance::Commands;
 use crate::instance::Device;
 use crate::instance::LayoutChangeOptions;
-use crate::shaders::ImageUniforms;
+use crate::pipeline::ImageUniform;
 
 pub struct Texture {
     _memory: ImageMemory,
@@ -28,7 +28,7 @@ pub struct Texture {
 impl Texture {
     pub(crate) fn from_raw_rgb(
         device: &Arc<Device>,
-        uniforms: &ImageUniforms,
+        uniform: &ImageUniform,
         data: &[u8],
         width: u32,
         height: u32,
@@ -40,12 +40,12 @@ impl Texture {
             rgba.extend(c.iter());
             rgba.push(255);
         }
-        Self::from_raw_rgba(device, uniforms, &rgba, width, height)
+        Self::from_raw_rgba(device, uniform, &rgba, width, height)
     }
 
     pub(crate) fn from_raw_rgba(
         device: &Arc<Device>,
-        uniforms: &ImageUniforms,
+        uniform: &ImageUniform,
         data: &[u8],
         width: u32,
         height: u32,
@@ -92,7 +92,7 @@ impl Texture {
 
         let mut image_index = 0;
         if let Some(view) = memory.view() {
-            image_index = uniforms.add(view);
+            image_index = uniform.add(view);
         }
 
         Ok(Self {

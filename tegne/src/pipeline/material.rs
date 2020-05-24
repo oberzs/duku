@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Material - struct to pass additional data to shader
+
 use std::cell::Cell;
 use std::sync::Arc;
 use tegne_math::Vector2;
@@ -5,8 +10,8 @@ use tegne_math::Vector3;
 use tegne_math::Vector4;
 
 use super::Descriptor;
-use super::MaterialObject;
-use super::MaterialUniforms;
+use super::MaterialData;
+use super::MaterialUniform;
 use super::ShaderLayout;
 use crate::error::Result;
 use crate::instance::Device;
@@ -23,7 +28,7 @@ pub struct Material {
     arg_2: Vector4,
     arg_3: Vector4,
     arg_4: Vector4,
-    uniforms: MaterialUniforms,
+    uniform: MaterialUniform,
     should_update: Cell<bool>,
 }
 
@@ -48,7 +53,7 @@ impl Material {
         shader_layout: &ShaderLayout,
         options: MaterialOptions,
     ) -> Result<Self> {
-        let uniforms = MaterialUniforms::new(device, shader_layout)?;
+        let uniform = MaterialUniform::new(device, shader_layout)?;
 
         Ok(Self {
             albedo_tint: options.albedo_tint,
@@ -62,7 +67,7 @@ impl Material {
             arg_2: options.arg_2,
             arg_3: options.arg_3,
             arg_4: options.arg_4,
-            uniforms,
+            uniform,
             should_update: Cell::new(true),
         })
     }
@@ -123,8 +128,9 @@ impl Material {
     }
 
     pub(crate) fn descriptor(&self) -> Result<Descriptor> {
+        // update material uniform if data has changed
         if self.should_update.get() {
-            self.uniforms.update(MaterialObject {
+            self.uniform.update(MaterialData {
                 albedo_tint: self.albedo_tint,
                 font_width: self.font_width,
                 font_edge: self.font_edge,
@@ -138,7 +144,7 @@ impl Material {
                 arg_4: self.arg_4,
             })?;
         }
-        Ok(self.uniforms.descriptor())
+        Ok(self.uniform.descriptor())
     }
 }
 

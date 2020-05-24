@@ -44,9 +44,9 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
-use crate::shaders::Descriptor;
-use crate::shaders::PushConstants;
-use crate::shaders::RenderPass;
+use crate::pipeline::Descriptor;
+use crate::pipeline::PushConstants;
+use crate::pipeline::RenderPass;
 
 pub(crate) struct Commands {
     buffer: CommandBuffer,
@@ -136,7 +136,7 @@ impl Commands {
             .collect::<Vec<_>>();
 
         let info = RenderPassBeginInfo::builder()
-            .render_pass(render_pass.vk())
+            .render_pass(render_pass.handle())
             .framebuffer(framebuffer.handle())
             .render_area(Rect2D {
                 offset: Offset2D { x: 0, y: 0 },

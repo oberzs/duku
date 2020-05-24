@@ -34,15 +34,15 @@ use crate::mesh::MeshOptions;
 use crate::objects::Builtins;
 use crate::objects::Id;
 use crate::objects::Objects;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::Material;
+use crate::pipeline::MaterialOptions;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::Shader;
+use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderOptions;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
-use crate::shaders::ImageUniforms;
-use crate::shaders::Material;
-use crate::shaders::MaterialOptions;
-use crate::shaders::RenderPasses;
-use crate::shaders::Shader;
-use crate::shaders::ShaderLayout;
-use crate::shaders::ShaderOptions;
 
 macro_rules! check {
     ($result:expr) => {
@@ -66,7 +66,7 @@ pub struct Tegne {
     window_framebuffers: Vec<Framebuffer>,
     commands: Vec<Commands>,
     render_passes: Arc<RenderPasses>,
-    image_uniforms: ImageUniforms,
+    image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
     device: Arc<Device>,
@@ -113,7 +113,7 @@ impl Tegne {
 
         let shader_layout = check!(ShaderLayout::new(&device));
 
-        let image_uniforms = check!(ImageUniforms::new(
+        let image_uniform = check!(ImageUniform::new(
             &device,
             &shader_layout,
             options.anisotropy
@@ -127,7 +127,7 @@ impl Tegne {
             &device,
             &render_passes,
             &shader_layout,
-            &image_uniforms,
+            &image_uniform,
             &objects,
         ));
 
@@ -145,7 +145,7 @@ impl Tegne {
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
             &render_passes,
-            &image_uniforms,
+            &image_uniform,
             &shader_layout,
             &builtins
         ));
@@ -160,7 +160,7 @@ impl Tegne {
             window_framebuffers,
             commands,
             render_passes: Arc::new(render_passes),
-            image_uniforms,
+            image_uniform,
             shader_layout: Arc::new(shader_layout),
             swapchain,
             device,
@@ -221,16 +221,13 @@ impl Tegne {
         }
 
         check!(self.device.next_frame(&self.swapchain));
-        self.image_uniforms.update_if_needed();
+        self.image_uniform.update_if_needed();
         let current = self.device.current_frame();
         let cmd = &mut self.commands[current];
         check!(cmd.reset());
-        self.objects.clean_unused(&self.image_uniforms, current);
+        self.objects.clean_unused(&self.image_uniform, current);
         check!(cmd.begin());
-        cmd.bind_descriptor(
-            self.image_uniforms.descriptor(),
-            self.shader_layout.pipeline(),
-        );
+        cmd.bind_descriptor(self.image_uniform.descriptor(), self.shader_layout.handle());
     }
 
     pub fn end_draw(&mut self) {
@@ -305,7 +302,7 @@ impl Tegne {
         debug!("creating rgba texture");
         let texture = check!(Texture::from_raw_rgba(
             &self.device,
-            &self.image_uniforms,
+            &self.image_uniform,
             raw,
             width,
             height,
@@ -317,7 +314,7 @@ impl Tegne {
         debug!("creating rgb texture");
         let texture = check!(Texture::from_raw_rgb(
             &self.device,
-            &self.image_uniforms,
+            &self.image_uniform,
             raw,
             width,
             height,
@@ -363,7 +360,7 @@ impl Tegne {
         let framebuffer = check!(Framebuffer::color(
             &self.device,
             &self.render_passes,
-            &self.image_uniforms,
+            &self.image_uniform,
             &self.shader_layout,
             width,
             height,

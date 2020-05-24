@@ -4,8 +4,8 @@ use super::Id;
 use super::Objects;
 use crate::error::Result;
 use crate::instance::Device;
-use crate::shaders::Material;
-use crate::shaders::ShaderLayout;
+use crate::pipeline::Material;
+use crate::pipeline::ShaderLayout;
 
 pub(crate) struct BuiltinMaterials {
     pub(crate) white: Id<Material>,

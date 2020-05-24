@@ -15,8 +15,8 @@ mod image;
 mod instance;
 mod mesh;
 mod objects;
+mod pipeline;
 mod renderer;
-mod shaders;
 mod sync;
 
 pub use image::Framebuffer;
@@ -27,9 +27,9 @@ pub use instance::TegneOptions;
 pub use mesh::Mesh;
 pub use mesh::MeshOptions;
 pub use objects::Id;
-pub use shaders::Material;
-pub use shaders::MaterialOptions;
-pub use shaders::Shader;
+pub use pipeline::Material;
+pub use pipeline::MaterialOptions;
+pub use pipeline::Shader;
 
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Controller;
