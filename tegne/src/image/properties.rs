@@ -87,6 +87,31 @@ impl ImageLayout {
             Self::TransferDst => vk::ImageLayout::TRANSFER_DST_OPTIMAL,
         }
     }
+
+    pub(crate) fn access_flag(&self) -> vk::AccessFlags {
+        match *self {
+            Self::TransferSrc => vk::AccessFlags::TRANSFER_READ,
+            Self::TransferDst => vk::AccessFlags::TRANSFER_WRITE,
+            Self::Shader => vk::AccessFlags::SHADER_READ,
+            Self::Color => vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
+            Self::Depth => vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+            _ => vk::AccessFlags::TRANSFER_READ,
+        }
+    }
+
+    pub(crate) fn stage_flag(&self) -> vk::PipelineStageFlags {
+        match *self {
+            Self::TransferSrc => vk::PipelineStageFlags::TRANSFER,
+            Self::TransferDst => vk::PipelineStageFlags::TRANSFER,
+            Self::Shader => vk::PipelineStageFlags::FRAGMENT_SHADER,
+            Self::Color => vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+            Self::Depth => {
+                vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
+                    | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS
+            }
+            _ => vk::PipelineStageFlags::TRANSFER,
+        }
+    }
 }
 
 impl ImageSamples {

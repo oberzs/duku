@@ -235,7 +235,7 @@ impl Tegne {
         check!(cmd.reset());
         self.objects.clean_unused(&self.image_uniform, current);
         check!(cmd.begin());
-        cmd.bind_descriptor(self.image_uniform.descriptor(), self.shader_layout.handle());
+        cmd.bind_descriptor(self.image_uniform.descriptor(), &self.shader_layout);
     }
 
     pub fn end_draw(&mut self) {

@@ -13,6 +13,8 @@ use ash::version::DeviceV1_0;
 use ash::vk;
 use ash::Device as VkDevice;
 use std::ffi::c_void;
+use std::mem;
+use std::slice;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -25,9 +27,17 @@ use crate::buffer::BufferAccess;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
+use crate::image::Framebuffer;
+use crate::image::ImageLayout;
+use crate::image::ImageMemory;
 use crate::image::ImageSamples;
 use crate::instance::layer;
 use crate::instance::Instance;
+use crate::pipeline::Descriptor;
+use crate::pipeline::PushConstants;
+use crate::pipeline::RenderPass;
+use crate::pipeline::Shader;
+use crate::pipeline::ShaderLayout;
 use crate::sync::fence;
 use crate::sync::semaphore;
 use crate::window::SurfaceProperties;
@@ -309,6 +319,306 @@ impl Device {
             self.handle.unmap_memory(memory);
         }
         Ok(())
+    }
+
+    pub(crate) fn create_command_pool(&self) -> Result<vk::CommandPool> {
+        let info = vk::CommandPoolCreateInfo::builder()
+            .flags(vk::CommandPoolCreateFlags::TRANSIENT)
+            .queue_family_index(self.graphics_index());
+        Ok(unsafe { self.handle.create_command_pool(&info, None)? })
+    }
+
+    pub(crate) fn destroy_command_pool(&self, pool: vk::CommandPool) {
+        unsafe {
+            self.handle.destroy_command_pool(pool, None);
+        }
+    }
+
+    pub(crate) fn allocate_command_buffer(
+        &self,
+        info: &vk::CommandBufferAllocateInfo,
+    ) -> Result<vk::CommandBuffer> {
+        Ok(unsafe { self.handle.allocate_command_buffers(&info)?[0] })
+    }
+
+    pub(crate) fn free_command_buffer(
+        &self,
+        pool: vk::CommandPool,
+        buffer: vk::CommandBuffer,
+    ) -> Result<()> {
+        let buffers = [buffer];
+        unsafe {
+            self.handle
+                .reset_command_pool(pool, vk::CommandPoolResetFlags::RELEASE_RESOURCES)?;
+            self.handle.free_command_buffers(pool, &buffers);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn begin_command_buffer(&self, buffer: vk::CommandBuffer) -> Result<()> {
+        let info = vk::CommandBufferBeginInfo::builder()
+            .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
+        unsafe {
+            self.handle.begin_command_buffer(buffer, &info)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn end_command_buffer(&self, buffer: vk::CommandBuffer) -> Result<()> {
+        unsafe {
+            self.handle.end_command_buffer(buffer)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn cmd_begin_render_pass(
+        &self,
+        buffer: vk::CommandBuffer,
+        framebuffer: &Framebuffer,
+        render_pass: &RenderPass,
+        clear: [f32; 4],
+    ) {
+        // create clear values based on framebuffer image formats
+        let clear_values = framebuffer
+            .iter_images()
+            .map(|image| {
+                if image.has_depth_format() {
+                    vk::ClearValue {
+                        depth_stencil: vk::ClearDepthStencilValue {
+                            depth: 1.0,
+                            stencil: 0,
+                        },
+                    }
+                } else {
+                    vk::ClearValue {
+                        color: vk::ClearColorValue { float32: clear },
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let info = vk::RenderPassBeginInfo::builder()
+            .render_pass(render_pass.handle())
+            .framebuffer(framebuffer.handle())
+            .render_area(vk::Rect2D {
+                offset: vk::Offset2D { x: 0, y: 0 },
+                extent: vk::Extent2D {
+                    width: framebuffer.width(),
+                    height: framebuffer.height(),
+                },
+            })
+            .clear_values(&clear_values);
+        unsafe {
+            self.handle
+                .cmd_begin_render_pass(buffer, &info, vk::SubpassContents::INLINE);
+        }
+    }
+
+    pub(crate) fn cmd_end_render_pass(&self, buffer: vk::CommandBuffer) {
+        unsafe {
+            self.handle.cmd_end_render_pass(buffer);
+        }
+    }
+
+    pub(crate) fn cmd_bind_shader(&self, buffer: vk::CommandBuffer, shader: &Shader) {
+        unsafe {
+            self.handle
+                .cmd_bind_pipeline(buffer, vk::PipelineBindPoint::GRAPHICS, shader.handle());
+        }
+    }
+
+    pub(crate) fn cmd_bind_descriptor(
+        &self,
+        buffer: vk::CommandBuffer,
+        descriptor: Descriptor,
+        layout: &ShaderLayout,
+    ) {
+        let sets = [descriptor.1];
+        unsafe {
+            self.handle.cmd_bind_descriptor_sets(
+                buffer,
+                vk::PipelineBindPoint::GRAPHICS,
+                layout.handle(),
+                descriptor.0,
+                &sets,
+                &[],
+            );
+        }
+    }
+
+    pub(crate) fn cmd_bind_vertex_buffer(&self, buffer: vk::CommandBuffer, v_buffer: vk::Buffer) {
+        let buffers = [v_buffer];
+        let offsets = [0];
+        unsafe {
+            self.handle
+                .cmd_bind_vertex_buffers(buffer, 0, &buffers, &offsets);
+        }
+    }
+
+    pub(crate) fn cmd_bind_index_buffer(&self, buffer: vk::CommandBuffer, i_buffer: vk::Buffer) {
+        unsafe {
+            self.handle
+                .cmd_bind_index_buffer(buffer, i_buffer, 0, vk::IndexType::UINT32);
+        }
+    }
+
+    pub(crate) fn cmd_push_constants(
+        &self,
+        buffer: vk::CommandBuffer,
+        constants: PushConstants,
+        layout: &ShaderLayout,
+    ) {
+        unsafe {
+            let data: &[u8] = slice::from_raw_parts(
+                &constants as *const PushConstants as *const u8,
+                mem::size_of::<PushConstants>(),
+            );
+
+            self.handle.cmd_push_constants(
+                buffer,
+                layout.handle(),
+                vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT,
+                0,
+                data,
+            );
+        }
+    }
+
+    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u32) {
+        unsafe {
+            self.handle.cmd_draw_indexed(buffer, count, 1, 0, 0, 0);
+        }
+    }
+
+    pub(crate) fn cmd_copy_buffer(
+        &self,
+        buffer: vk::CommandBuffer,
+        src: vk::Buffer,
+        dst: vk::Buffer,
+        size: usize,
+    ) {
+        let region = [vk::BufferCopy::builder()
+            .src_offset(0)
+            .dst_offset(0)
+            .size((size as u32).into())
+            .build()];
+        unsafe {
+            self.handle.cmd_copy_buffer(buffer, src, dst, &region);
+        }
+    }
+
+    pub(crate) fn cmd_copy_buffer_to_image(
+        &self,
+        buffer: vk::CommandBuffer,
+        src: vk::Buffer,
+        dst: vk::Image,
+        region: vk::BufferImageCopy,
+    ) {
+        let regions = [region];
+        unsafe {
+            self.handle.cmd_copy_buffer_to_image(
+                buffer,
+                src,
+                dst,
+                ImageLayout::TransferDst.flag(),
+                &regions,
+            );
+        }
+    }
+
+    pub(crate) fn cmd_set_view(&self, buffer: vk::CommandBuffer, width: u32, height: u32) {
+        let viewport = [vk::Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: width as f32,
+            height: height as f32,
+            min_depth: 0.0,
+            max_depth: 1.0,
+        }];
+        let scissor = [vk::Rect2D {
+            offset: vk::Offset2D { x: 0, y: 0 },
+            extent: vk::Extent2D { width, height },
+        }];
+
+        unsafe {
+            self.handle.cmd_set_viewport(buffer, 0, &viewport);
+            self.handle.cmd_set_scissor(buffer, 0, &scissor);
+        }
+    }
+
+    pub(crate) fn cmd_set_line_width(&self, buffer: vk::CommandBuffer, width: f32) {
+        unsafe {
+            self.handle.cmd_set_line_width(buffer, width);
+        }
+    }
+
+    pub(crate) fn cmd_blit_image(
+        &self,
+        buffer: vk::CommandBuffer,
+        src: vk::Image,
+        dst: vk::Image,
+        blit: vk::ImageBlit,
+        filter: vk::Filter,
+    ) {
+        let regions = [blit];
+        unsafe {
+            self.handle.cmd_blit_image(
+                buffer,
+                src,
+                ImageLayout::TransferSrc.flag(),
+                dst,
+                ImageLayout::TransferDst.flag(),
+                &regions,
+                filter,
+            );
+        }
+    }
+
+    pub(crate) fn cmd_change_image_layout(
+        &self,
+        buffer: vk::CommandBuffer,
+        image: &ImageMemory,
+        options: LayoutChangeOptions,
+    ) {
+        let src_access = options.old_layout.access_flag();
+        let dst_access = options.new_layout.access_flag();
+        let src_stage = options.old_layout.stage_flag();
+        let dst_stage = options.new_layout.stage_flag();
+        let aspect_mask = if image.has_depth_format() {
+            vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
+        } else {
+            vk::ImageAspectFlags::COLOR
+        };
+
+        let subresource = vk::ImageSubresourceRange::builder()
+            .aspect_mask(aspect_mask)
+            .base_array_layer(0)
+            .base_mip_level(options.base_mip)
+            .layer_count(1)
+            .level_count(options.mip_count)
+            .build();
+        let barrier = [vk::ImageMemoryBarrier::builder()
+            .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
+            .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
+            .subresource_range(subresource)
+            .image(image.handle())
+            .old_layout(options.old_layout.flag())
+            .new_layout(options.new_layout.flag())
+            .src_access_mask(src_access)
+            .dst_access_mask(dst_access)
+            .build()];
+
+        unsafe {
+            self.handle.cmd_pipeline_barrier(
+                buffer,
+                src_stage,
+                dst_stage,
+                vk::DependencyFlags::default(),
+                &[],
+                &[],
+                &barrier,
+            );
+        }
     }
 
     pub(crate) fn logical(&self) -> &VkDevice {

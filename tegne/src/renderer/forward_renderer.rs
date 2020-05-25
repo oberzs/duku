@@ -155,7 +155,7 @@ impl ForwardRenderer {
         framebuffer.world_uniform().update(data)?;
         cmd.bind_descriptor(
             framebuffer.world_uniform().descriptor(),
-            options.shader_layout.handle(),
+            options.shader_layout,
         );
         Ok(())
     }
@@ -163,16 +163,14 @@ impl ForwardRenderer {
     fn bind_shader(&self, shader: IdRef, options: &ForwardDrawOptions<'_>) {
         let cmd = options.cmd;
         let objects = options.objects;
-        if let Some(pipeline) = objects.with_shader(shader, |s| s.handle()) {
-            cmd.bind_pipeline(pipeline);
-        }
+        objects.with_shader(shader, |s| cmd.bind_shader(s));
     }
 
     fn bind_material(&self, material: IdRef, options: &ForwardDrawOptions<'_>) -> Result<()> {
         let cmd = options.cmd;
         let objects = options.objects;
         if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
-            cmd.bind_descriptor(descriptor?, options.shader_layout.handle());
+            cmd.bind_descriptor(descriptor?, options.shader_layout);
         }
         Ok(())
     }
@@ -192,7 +190,7 @@ impl ForwardRenderer {
                         model_mat: order.model,
                         albedo_index,
                     },
-                    options.shader_layout.handle(),
+                    options.shader_layout,
                 );
                 cmd.bind_vertex_buffer(vb?);
                 cmd.bind_index_buffer(ib?);
