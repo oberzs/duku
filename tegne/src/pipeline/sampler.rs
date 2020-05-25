@@ -3,14 +3,13 @@
 
 // Sampler - struct that provides image access in shader
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 use std::sync::Arc;
 
 use super::SamplerAddress;
 use super::SamplerFilter;
-use crate::error::Result;
 use crate::device::Device;
+use crate::error::Result;
 
 pub(crate) struct Sampler {
     handle: vk::Sampler,
@@ -43,7 +42,7 @@ impl Sampler {
             .min_lod(0.0)
             .max_lod(16.0);
 
-        let handle = unsafe { device.logical().create_sampler(&info, None)? };
+        let handle = device.create_sampler(&info)?;
 
         Ok(Self {
             handle,
@@ -58,9 +57,7 @@ impl Sampler {
 
 impl Drop for Sampler {
     fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_sampler(self.handle, None);
-        }
+        self.device.destroy_sampler(self.handle);
     }
 }
 

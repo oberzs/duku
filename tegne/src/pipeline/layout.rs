@@ -3,7 +3,6 @@
 
 // ShaderLayout - struct that holds shader layout
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 use log::debug;
 use std::mem;
@@ -34,15 +33,7 @@ impl ShaderLayout {
             .descriptor_count(1)
             .binding(0)
             .build()];
-
-        let world_layout_info =
-            vk::DescriptorSetLayoutCreateInfo::builder().bindings(&world_binding);
-
-        let world_layout = unsafe {
-            device
-                .logical()
-                .create_descriptor_set_layout(&world_layout_info, None)?
-        };
+        let world_layout = device.create_descriptor_set_layout(&world_binding)?;
 
         let max_world_count = 100;
         let world_pool_size = vk::DescriptorPoolSize::builder()
@@ -57,15 +48,7 @@ impl ShaderLayout {
             .descriptor_count(1)
             .binding(0)
             .build()];
-
-        let material_layout_info =
-            vk::DescriptorSetLayoutCreateInfo::builder().bindings(&material_binding);
-
-        let material_layout = unsafe {
-            device
-                .logical()
-                .create_descriptor_set_layout(&material_layout_info, None)?
-        };
+        let material_layout = device.create_descriptor_set_layout(&material_binding)?;
 
         let max_material_count = 100;
         let material_pool_size = vk::DescriptorPoolSize::builder()
@@ -88,15 +71,8 @@ impl ShaderLayout {
             .descriptor_count(sampler_count)
             .binding(1)
             .build();
-
         let image_bindings = [image_binding, sampler_binding];
-        let image_layout_info =
-            vk::DescriptorSetLayoutCreateInfo::builder().bindings(&image_bindings);
-        let image_layout = unsafe {
-            device
-                .logical()
-                .create_descriptor_set_layout(&image_layout_info, None)?
-        };
+        let image_layout = device.create_descriptor_set_layout(&image_bindings)?;
 
         let image_pool_size = vk::DescriptorPoolSize::builder()
             .descriptor_count(1)
@@ -105,15 +81,8 @@ impl ShaderLayout {
 
         // descriptor pool
         let pool_sizes = [world_pool_size, image_pool_size, material_pool_size];
-        let descriptor_pool_info = vk::DescriptorPoolCreateInfo::builder()
-            .pool_sizes(&pool_sizes)
-            .max_sets(1 + max_world_count + max_material_count);
-
-        let descriptor_pool = unsafe {
-            device
-                .logical()
-                .create_descriptor_pool(&descriptor_pool_info, None)?
-        };
+        let descriptor_pool =
+            device.create_descriptor_pool(&pool_sizes, 1 + max_world_count + max_material_count)?;
 
         // push constants
         let push_constant = vk::PushConstantRange::builder()
@@ -128,11 +97,7 @@ impl ShaderLayout {
         let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder()
             .push_constant_ranges(&constant_ranges)
             .set_layouts(&set_layouts);
-        let handle = unsafe {
-            device
-                .logical()
-                .create_pipeline_layout(&pipeline_layout_info, None)?
-        };
+        let handle = device.create_pipeline_layout(&pipeline_layout_info)?;
 
         Ok(Self {
             handle,
@@ -145,16 +110,9 @@ impl ShaderLayout {
     }
 
     pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<vk::DescriptorSet> {
-        let set_layouts = [self.world_layout];
-        let set_alloc_info = vk::DescriptorSetAllocateInfo::builder()
-            .descriptor_pool(self.descriptor_pool)
-            .set_layouts(&set_layouts);
-
-        let set = unsafe {
-            self.device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)?[0]
-        };
+        let set = self
+            .device
+            .allocate_descriptor_set(self.world_layout, self.descriptor_pool)?;
 
         let buffer_info = vk::DescriptorBufferInfo::builder()
             .buffer(buffer.handle())
@@ -163,35 +121,23 @@ impl ShaderLayout {
             .build();
 
         let buffer_infos = [buffer_info];
-        let descriptor_write = vk::WriteDescriptorSet::builder()
+        let write = [vk::WriteDescriptorSet::builder()
             .dst_set(set)
             .dst_binding(0)
             .dst_array_element(0)
             .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
             .buffer_info(&buffer_infos)
-            .build();
-        let descriptor_writes = [descriptor_write];
+            .build()];
 
-        unsafe {
-            self.device
-                .logical()
-                .update_descriptor_sets(&descriptor_writes, &[]);
-        }
+        self.device.update_descriptor_sets(&write);
 
         Ok(set)
     }
 
     pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<vk::DescriptorSet> {
-        let set_layouts = [self.material_layout];
-        let set_alloc_info = vk::DescriptorSetAllocateInfo::builder()
-            .descriptor_pool(self.descriptor_pool)
-            .set_layouts(&set_layouts);
-
-        let set = unsafe {
-            self.device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)?[0]
-        };
+        let set = self
+            .device
+            .allocate_descriptor_set(self.material_layout, self.descriptor_pool)?;
 
         let buffer_info = vk::DescriptorBufferInfo::builder()
             .buffer(buffer.handle())
@@ -200,37 +146,22 @@ impl ShaderLayout {
             .build();
 
         let buffer_infos = [buffer_info];
-        let descriptor_write = vk::WriteDescriptorSet::builder()
+        let write = [vk::WriteDescriptorSet::builder()
             .dst_set(set)
             .dst_binding(0)
             .dst_array_element(0)
             .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
             .buffer_info(&buffer_infos)
-            .build();
-        let descriptor_writes = [descriptor_write];
+            .build()];
 
-        unsafe {
-            self.device
-                .logical()
-                .update_descriptor_sets(&descriptor_writes, &[]);
-        }
+        self.device.update_descriptor_sets(&write);
 
         Ok(set)
     }
 
     pub(crate) fn image_set(&self) -> Result<vk::DescriptorSet> {
-        let set_layouts = [self.image_layout];
-        let set_alloc_info = vk::DescriptorSetAllocateInfo::builder()
-            .descriptor_pool(self.descriptor_pool)
-            .set_layouts(&set_layouts)
-            .build();
-
-        let set = unsafe {
-            self.device
-                .logical()
-                .allocate_descriptor_sets(&set_alloc_info)?[0]
-        };
-        Ok(set)
+        self.device
+            .allocate_descriptor_set(self.image_layout, self.descriptor_pool)
     }
 
     pub(crate) fn handle(&self) -> vk::PipelineLayout {
@@ -240,22 +171,11 @@ impl ShaderLayout {
 
 impl Drop for ShaderLayout {
     fn drop(&mut self) {
-        unsafe {
-            self.device
-                .logical()
-                .destroy_pipeline_layout(self.handle, None);
-            self.device
-                .logical()
-                .destroy_descriptor_set_layout(self.world_layout, None);
-            self.device
-                .logical()
-                .destroy_descriptor_set_layout(self.material_layout, None);
-            self.device
-                .logical()
-                .destroy_descriptor_set_layout(self.image_layout, None);
-            self.device
-                .logical()
-                .destroy_descriptor_pool(self.descriptor_pool, None);
-        }
+        self.device.destroy_pipeline_layout(self.handle);
+        self.device.destroy_descriptor_set_layout(self.world_layout);
+        self.device
+            .destroy_descriptor_set_layout(self.material_layout);
+        self.device.destroy_descriptor_set_layout(self.image_layout);
+        self.device.destroy_descriptor_pool(self.descriptor_pool);
     }
 }

@@ -3,7 +3,6 @@
 
 // RenderPass - struct that structures a rendering pass
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 use std::sync::Arc;
 
@@ -245,7 +244,7 @@ impl RenderPass {
             .subpasses(&subpasses)
             .dependencies(&dependencies);
 
-        let handle = unsafe { device.logical().create_render_pass(&info, None)? };
+        let handle = device.create_render_pass(&info)?;
 
         Ok(Self {
             handle,
@@ -265,8 +264,6 @@ impl RenderPass {
 
 impl Drop for RenderPass {
     fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_render_pass(self.handle, None);
-        }
+        self.device.destroy_render_pass(self.handle);
     }
 }

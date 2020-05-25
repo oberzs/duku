@@ -3,7 +3,6 @@
 
 // uniform structs to manage shader accessible uniform data
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 use log::debug;
 use log::info;
@@ -191,10 +190,7 @@ impl ImageUniform {
 
             // write data to descriptor
             let writes = [image_write, sampler_write];
-            unsafe {
-                self.device.logical().update_descriptor_sets(&writes, &[]);
-            }
-
+            self.device.update_descriptor_sets(&writes);
             self.should_update.set(false);
         }
     }

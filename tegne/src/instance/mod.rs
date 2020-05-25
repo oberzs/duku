@@ -314,6 +314,7 @@ impl Instance {
 impl Drop for Instance {
     fn drop(&mut self) {
         unsafe {
+            #[cfg(debug_assertions)]
             self.debug_ext
                 .destroy_debug_utils_messenger(self.messenger, None);
             self.handle.destroy_instance(None);

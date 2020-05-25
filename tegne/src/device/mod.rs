@@ -9,10 +9,12 @@ mod pick;
 mod properties;
 
 use ash::extensions::khr::Swapchain as SwapchainExt;
+use ash::util;
 use ash::version::DeviceV1_0;
 use ash::vk;
 use ash::Device as VkDevice;
 use std::ffi::c_void;
+use std::io::Cursor;
 use std::mem;
 use std::slice;
 use std::sync::atomic::AtomicUsize;
@@ -304,6 +306,54 @@ impl Device {
         }
     }
 
+    pub(crate) fn allocate_image(
+        &self,
+        info: &vk::ImageCreateInfo,
+    ) -> Result<(vk::Image, vk::DeviceMemory)> {
+        // create image handle
+        let image = unsafe { self.handle.create_image(info, None)? };
+
+        // allocate memory
+        let requirements = unsafe { self.handle.get_image_memory_requirements(image) };
+        let mem_type = self
+            .find_memory_type(
+                requirements.memory_type_bits,
+                vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            )
+            .ok_or(ErrorType::Internal(ErrorKind::UnsupportedMemoryType))?;
+        let alloc_info = vk::MemoryAllocateInfo::builder()
+            .allocation_size(requirements.size)
+            .memory_type_index(mem_type);
+        let memory = unsafe { self.handle.allocate_memory(&alloc_info, None)? };
+
+        // bind memory
+        unsafe {
+            self.handle.bind_image_memory(image, memory, 0)?;
+        }
+
+        Ok((image, memory))
+    }
+
+    pub(crate) fn free_image(&self, handle: vk::Image, memory: vk::DeviceMemory) {
+        unsafe {
+            self.handle.destroy_image(handle, None);
+            self.handle.free_memory(memory, None);
+        }
+    }
+
+    pub(crate) fn create_image_view(
+        &self,
+        info: &vk::ImageViewCreateInfo,
+    ) -> Result<vk::ImageView> {
+        Ok(unsafe { self.handle.create_image_view(info, None)? })
+    }
+
+    pub(crate) fn destroy_image_view(&self, view: vk::ImageView) {
+        unsafe {
+            self.handle.destroy_image_view(view, None);
+        }
+    }
+
     pub(crate) fn map_memory(
         &self,
         memory: vk::DeviceMemory,
@@ -319,6 +369,135 @@ impl Device {
             self.handle.unmap_memory(memory);
         }
         Ok(())
+    }
+
+    pub(crate) fn create_framebuffer(
+        &self,
+        info: &vk::FramebufferCreateInfo,
+    ) -> Result<vk::Framebuffer> {
+        Ok(unsafe { self.handle.create_framebuffer(info, None)? })
+    }
+
+    pub(crate) fn destroy_framebuffer(&self, handle: vk::Framebuffer) {
+        unsafe {
+            self.handle.destroy_framebuffer(handle, None);
+        }
+    }
+
+    pub(crate) fn create_descriptor_set_layout(
+        &self,
+        bindings: &[vk::DescriptorSetLayoutBinding],
+    ) -> Result<vk::DescriptorSetLayout> {
+        let info = vk::DescriptorSetLayoutCreateInfo::builder().bindings(bindings);
+        Ok(unsafe { self.handle.create_descriptor_set_layout(&info, None)? })
+    }
+
+    pub(crate) fn destroy_descriptor_set_layout(&self, layout: vk::DescriptorSetLayout) {
+        unsafe {
+            self.handle.destroy_descriptor_set_layout(layout, None);
+        }
+    }
+
+    pub(crate) fn create_descriptor_pool(
+        &self,
+        pool_sizes: &[vk::DescriptorPoolSize],
+        max_sets: u32,
+    ) -> Result<vk::DescriptorPool> {
+        let info = vk::DescriptorPoolCreateInfo::builder()
+            .pool_sizes(pool_sizes)
+            .max_sets(max_sets);
+        Ok(unsafe { self.handle.create_descriptor_pool(&info, None)? })
+    }
+
+    pub(crate) fn destroy_descriptor_pool(&self, pool: vk::DescriptorPool) {
+        unsafe {
+            self.handle.destroy_descriptor_pool(pool, None);
+        }
+    }
+
+    pub(crate) fn create_pipeline_layout(
+        &self,
+        info: &vk::PipelineLayoutCreateInfo,
+    ) -> Result<vk::PipelineLayout> {
+        Ok(unsafe { self.handle.create_pipeline_layout(info, None)? })
+    }
+
+    pub(crate) fn destroy_pipeline_layout(&self, handle: vk::PipelineLayout) {
+        unsafe {
+            self.handle.destroy_pipeline_layout(handle, None);
+        }
+    }
+
+    pub(crate) fn allocate_descriptor_set(
+        &self,
+        layout: vk::DescriptorSetLayout,
+        pool: vk::DescriptorPool,
+    ) -> Result<vk::DescriptorSet> {
+        let layouts = [layout];
+        let info = vk::DescriptorSetAllocateInfo::builder()
+            .descriptor_pool(pool)
+            .set_layouts(&layouts);
+
+        Ok(unsafe { self.handle.allocate_descriptor_sets(&info)?[0] })
+    }
+
+    pub(crate) fn update_descriptor_sets(&self, writes: &[vk::WriteDescriptorSet]) {
+        unsafe {
+            self.handle.update_descriptor_sets(writes, &[]);
+        }
+    }
+
+    pub(crate) fn create_render_pass(
+        &self,
+        info: &vk::RenderPassCreateInfo,
+    ) -> Result<vk::RenderPass> {
+        Ok(unsafe { self.handle.create_render_pass(info, None)? })
+    }
+
+    pub(crate) fn destroy_render_pass(&self, handle: vk::RenderPass) {
+        unsafe {
+            self.handle.destroy_render_pass(handle, None);
+        }
+    }
+
+    pub(crate) fn create_sampler(&self, info: &vk::SamplerCreateInfo) -> Result<vk::Sampler> {
+        Ok(unsafe { self.handle.create_sampler(info, None)? })
+    }
+
+    pub(crate) fn destroy_sampler(&self, handle: vk::Sampler) {
+        unsafe {
+            self.handle.destroy_sampler(handle, None);
+        }
+    }
+
+    pub(crate) fn create_pipeline(
+        &self,
+        info: vk::GraphicsPipelineCreateInfo,
+    ) -> Result<vk::Pipeline> {
+        let infos = [info];
+        Ok(unsafe {
+            self.handle
+                .create_graphics_pipelines(vk::PipelineCache::null(), &infos, None)
+                .map_err(|err| err.1)?[0]
+        })
+    }
+
+    pub(crate) fn destroy_pipeline(&self, handle: vk::Pipeline) {
+        unsafe {
+            self.handle.destroy_pipeline(handle, None);
+        }
+    }
+
+    pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
+        let words = util::read_spv(&mut Cursor::new(&source[..]))?;
+        let info = vk::ShaderModuleCreateInfo::builder().code(&words).build();
+        Ok(unsafe { self.handle.create_shader_module(&info, None)? })
+    }
+
+    pub(crate) fn destroy_shader_module(&self, module: vk::ShaderModule) {
+        unsafe {
+            self.handle.destroy_shader_module(module, None);
+        }
     }
 
     pub(crate) fn create_command_pool(&self) -> Result<vk::CommandPool> {
@@ -619,10 +798,6 @@ impl Device {
                 &barrier,
             );
         }
-    }
-
-    pub(crate) fn logical(&self) -> &VkDevice {
-        &self.handle
     }
 }
 

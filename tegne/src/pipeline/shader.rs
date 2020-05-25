@@ -3,11 +3,8 @@
 
 // Shader - GPU program for execution in the renderer
 
-use ash::util::read_spv;
-use ash::version::DeviceV1_0;
 use ash::vk;
 use std::ffi::CString;
-use std::io::Cursor;
 use std::io::Read;
 use std::sync::Arc;
 use tar::Archive;
@@ -70,8 +67,8 @@ impl Shader {
             }
         }
 
-        let vert_module = create_shader_module(device, &vert_source)?;
-        let frag_module = create_shader_module(device, &frag_source)?;
+        let vert_module = device.create_shader_module(&vert_source)?;
+        let frag_module = device.create_shader_module(&frag_source)?;
         let entry_point = CString::new("main")?;
 
         // configure vertex stage
@@ -200,7 +197,7 @@ impl Shader {
 
         // create pipeline
         let stages = [vs_stage_info, fs_stage_info];
-        let pipeline_info = [vk::GraphicsPipelineCreateInfo::builder()
+        let pipeline_info = vk::GraphicsPipelineCreateInfo::builder()
             .stages(&stages)
             .vertex_input_state(&vertex_input_info)
             .input_assembly_state(&assembly_input_info)
@@ -213,23 +210,12 @@ impl Shader {
             .layout(layout.handle())
             .render_pass(pass.handle())
             .subpass(0)
-            .build()];
+            .build();
 
-        let handle = unsafe {
-            match device.logical().create_graphics_pipelines(
-                vk::PipelineCache::null(),
-                &pipeline_info,
-                None,
-            ) {
-                Ok(ps) => ps[0],
-                Err(err) => return Err(err.1.into()),
-            }
-        };
+        let handle = device.create_pipeline(pipeline_info)?;
 
-        unsafe {
-            device.logical().destroy_shader_module(vert_module, None);
-            device.logical().destroy_shader_module(frag_module, None);
-        }
+        device.destroy_shader_module(vert_module);
+        device.destroy_shader_module(frag_module);
 
         Ok(Self {
             handle,
@@ -244,9 +230,7 @@ impl Shader {
 
 impl Drop for Shader {
     fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_pipeline(self.handle, None);
-        }
+        self.device.destroy_pipeline(self.handle);
     }
 }
 
@@ -258,11 +242,4 @@ impl Default for ShaderOptions {
             front_cull: false,
         }
     }
-}
-
-fn create_shader_module(device: &Arc<Device>, source: &[u8]) -> Result<vk::ShaderModule> {
-    let words = read_spv(&mut Cursor::new(&source[..]))?;
-    let info = vk::ShaderModuleCreateInfo::builder().code(&words).build();
-    let module = unsafe { device.logical().create_shader_module(&info, None)? };
-    Ok(module)
 }

@@ -3,9 +3,7 @@
 
 // ImageMemory - struct that manages allocated image memory
 
-use ash::version::DeviceV1_0;
 use ash::vk;
-use log::error;
 use std::cmp;
 use std::sync::Arc;
 
@@ -78,32 +76,7 @@ impl ImageMemory {
                     .sharing_mode(vk::SharingMode::EXCLUSIVE)
                     .samples(options.samples.flag());
 
-                let handle = unsafe { device.logical().create_image(&image_info, None)? };
-
-                // alloc memory
-                let mem_requirements =
-                    unsafe { device.logical().get_image_memory_requirements(handle) };
-
-                let mem_type = device
-                    .find_memory_type(
-                        mem_requirements.memory_type_bits,
-                        vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                    )
-                    .unwrap_or_else(|| {
-                        panic!(error!("device does not support device local image memory"));
-                    });
-
-                let alloc_info = vk::MemoryAllocateInfo::builder()
-                    .allocation_size(mem_requirements.size)
-                    .memory_type_index(mem_type);
-
-                let memory = unsafe { device.logical().allocate_memory(&alloc_info, None)? };
-
-                // bind memory
-                unsafe {
-                    device.logical().bind_image_memory(handle, memory, 0)?;
-                }
-
+                let (handle, memory) = device.allocate_image(&image_info)?;
                 (handle, Some(memory))
             }
         };
@@ -134,7 +107,7 @@ impl ImageMemory {
                 .format(options.format.flag())
                 .subresource_range(subresource);
 
-            unsafe { Some(device.logical().create_image_view(&view_info, None)?) }
+            Some(device.create_image_view(&view_info)?)
         };
 
         Ok(Self {
@@ -280,14 +253,11 @@ impl ImageMemory {
 
 impl Drop for ImageMemory {
     fn drop(&mut self) {
-        unsafe {
-            if let Some(view) = self.view {
-                self.device.logical().destroy_image_view(view, None);
-            }
-            if let Some(memory) = self.memory {
-                self.device.logical().destroy_image(self.handle, None);
-                self.device.logical().free_memory(memory, None);
-            }
+        if let Some(view) = self.view {
+            self.device.destroy_image_view(view);
+        }
+        if let Some(memory) = self.memory {
+            self.device.free_image(self.handle, memory);
         }
     }
 }

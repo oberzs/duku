@@ -4,7 +4,6 @@
 // Framebuffer - image that can be used as a render target
 // also manages world uniforms
 
-use ash::version::DeviceV1_0;
 use ash::vk;
 use log::debug;
 use log::warn;
@@ -350,9 +349,7 @@ impl Framebuffer {
 
 impl Drop for Framebuffer {
     fn drop(&mut self) {
-        unsafe {
-            self.device.logical().destroy_framebuffer(self.handle, None);
-        }
+        self.device.destroy_framebuffer(self.handle);
     }
 }
 
@@ -419,5 +416,5 @@ fn create_framebuffer(
         .height(height)
         .layers(1);
 
-    Ok(unsafe { device.logical().create_framebuffer(&info, None)? })
+    device.create_framebuffer(&info)
 }
