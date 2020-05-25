@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use super::Id;
 use super::Objects;
+use crate::device::Device;
 use crate::error::Result;
 use crate::image::Texture;
-use crate::instance::Device;
 use crate::pipeline::ImageUniform;
 
 pub(crate) struct BuiltinTextures {

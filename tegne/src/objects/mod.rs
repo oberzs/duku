@@ -18,7 +18,7 @@ use std::sync::MutexGuard;
 use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
-use crate::instance::IN_FLIGHT_FRAME_COUNT;
+use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;

@@ -9,6 +9,7 @@
 )]
 
 mod buffer;
+mod device;
 mod error;
 mod font;
 mod image;
@@ -18,18 +19,21 @@ mod objects;
 mod pipeline;
 mod renderer;
 mod sync;
+mod tegne;
+mod thread_kill;
+mod window;
 
 pub use image::Framebuffer;
 pub use image::Texture;
-pub use instance::Target;
-pub use instance::Tegne;
-pub use instance::TegneOptions;
 pub use mesh::Mesh;
 pub use mesh::MeshOptions;
 pub use objects::Id;
 pub use pipeline::Material;
 pub use pipeline::MaterialOptions;
 pub use pipeline::Shader;
+pub use renderer::Target;
+pub use tegne::Tegne;
+pub use tegne::TegneOptions;
 
 #[cfg(feature = "tegne-utils")]
 pub use tegne_utils::Controller;

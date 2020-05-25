@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use super::PushConstants;
 use crate::buffer::DynamicBuffer;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 
 pub(crate) struct ShaderLayout {
     handle: vk::PipelineLayout,

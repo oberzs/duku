@@ -3,12 +3,12 @@ use tegne_math::Camera;
 use tegne_math::Matrix4;
 use tegne_math::Vector3;
 
+use super::Order;
+use super::Target;
+use crate::device::Commands;
+use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
-use crate::instance::Commands;
-use crate::instance::Device;
-use crate::instance::Order;
-use crate::instance::Target;
 use crate::objects::Builtins;
 use crate::objects::IdRef;
 use crate::objects::Objects;

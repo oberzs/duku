@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use super::BufferAccess;
 use super::BufferUsage;
+use crate::device::Commands;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Commands;
-use crate::instance::Device;
 
 pub(crate) struct BufferMemory {
     handle: vk::Buffer,

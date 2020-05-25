@@ -20,9 +20,9 @@ use super::ShaderLayout;
 use super::WorldData;
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
+use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
-use crate::instance::Device;
 
 pub(crate) struct WorldUniform {
     descriptor: Descriptor,

@@ -11,8 +11,8 @@ use std::sync::Arc;
 use super::BufferAccess;
 use super::BufferMemory;
 use super::BufferUsage;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 
 pub(crate) struct FixedBuffer {
     memory: BufferMemory,

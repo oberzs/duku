@@ -13,8 +13,8 @@ use tegne_math::Vector2;
 use tegne_math::Vector3;
 
 use super::Texture;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::objects::Id;

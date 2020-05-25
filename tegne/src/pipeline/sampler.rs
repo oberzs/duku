@@ -10,7 +10,7 @@ use std::sync::Arc;
 use super::SamplerAddress;
 use super::SamplerFilter;
 use crate::error::Result;
-use crate::instance::Device;
+use crate::device::Device;
 
 pub(crate) struct Sampler {
     handle: vk::Sampler,

@@ -1,6 +1,7 @@
 use crossbeam::channel;
 use std::error::Error;
 use std::ffi;
+use std::ffi::CString;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
@@ -13,6 +14,7 @@ pub enum ErrorType {
     // External error
     Io(io::Error),
     Nul(ffi::NulError),
+    NoNul(ffi::FromBytesWithNulError),
     Json(serde_json::Error),
     Signal(channel::SendError<()>),
     Poison(sync::PoisonError<()>),
@@ -24,9 +26,10 @@ pub enum ErrorType {
     Internal(ErrorKind),
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ErrorKind {
-    UnsupportedExtension,
+    UnsupportedExtension(CString),
+    UnsupportedValidation(CString),
     UnsupportedMsaa,
     NoSuitableGpu,
     NoSuitableMemoryType,
@@ -53,6 +56,12 @@ impl From<io::Error> for ErrorType {
 impl From<ffi::NulError> for ErrorType {
     fn from(e: ffi::NulError) -> Self {
         Self::Nul(e)
+    }
+}
+
+impl From<ffi::FromBytesWithNulError> for ErrorType {
+    fn from(e: ffi::FromBytesWithNulError) -> Self {
+        Self::NoNul(e)
     }
 }
 

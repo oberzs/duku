@@ -13,8 +13,8 @@ use tegne_math::Vector3;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {

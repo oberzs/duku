@@ -14,9 +14,10 @@ use tar::Archive;
 
 use super::RenderPass;
 use super::ShaderLayout;
+use crate::device::Device;
+use crate::device::DeviceProperties;
 use crate::error::Result;
 use crate::image::ImageSamples;
-use crate::instance::Device;
 use crate::mesh::Vertex;
 
 pub struct Shader {
@@ -34,6 +35,7 @@ pub struct ShaderOptions {
 impl Shader {
     pub(crate) fn new(
         device: &Arc<Device>,
+        device_properties: &DeviceProperties,
         pass: &RenderPass,
         layout: &ShaderLayout,
         source: &[u8],
@@ -136,7 +138,7 @@ impl Shader {
 
         // configure msaa state
         let samples = if pass.has_msaa_attachment() {
-            device.samples()
+            device_properties.samples
         } else {
             ImageSamples(1)
         };

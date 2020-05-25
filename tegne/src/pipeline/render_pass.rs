@@ -10,10 +10,11 @@ use std::sync::Arc;
 use super::Attachment;
 use super::AttachmentOptions;
 use super::DependencyType;
+use crate::device::Device;
+use crate::device::DeviceProperties;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
-use crate::instance::Device;
 
 pub(crate) struct RenderPasses {
     window: RenderPass,
@@ -35,9 +36,9 @@ struct RenderPassOptions {
 }
 
 impl RenderPasses {
-    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
-        let window = RenderPass::window(device)?;
-        let color = RenderPass::color(device)?;
+    pub(crate) fn new(device: &Arc<Device>, device_properties: &DeviceProperties) -> Result<Self> {
+        let window = RenderPass::window(device, device_properties)?;
+        let color = RenderPass::color(device, device_properties)?;
         let depth = RenderPass::depth(device)?;
 
         Ok(Self {
@@ -61,13 +62,16 @@ impl RenderPasses {
 }
 
 impl RenderPass {
-    pub(crate) fn window(device: &Arc<Device>) -> Result<Self> {
+    pub(crate) fn window(
+        device: &Arc<Device>,
+        device_properties: &DeviceProperties,
+    ) -> Result<Self> {
         // depth
         let depth_attachment = Some(Attachment::new(AttachmentOptions {
             index: 0,
             layout: ImageLayout::Depth,
             format: ImageFormat::Depth,
-            samples: device.samples(),
+            samples: device_properties.samples,
             clear: true,
             ..Default::default()
         }));
@@ -77,20 +81,20 @@ impl RenderPass {
             index: 1,
             layout: ImageLayout::Present,
             format: ImageFormat::Bgra,
-            clear: !device.is_msaa(),
+            clear: !device_properties.is_msaa(),
             store: true,
             ..Default::default()
         }));
 
         // msaa
-        let msaa_attachment = if !device.is_msaa() {
+        let msaa_attachment = if !device_properties.is_msaa() {
             None
         } else {
             Some(Attachment::new(AttachmentOptions {
                 index: 2,
                 layout: ImageLayout::Color,
                 format: ImageFormat::Bgra,
-                samples: device.samples(),
+                samples: device_properties.samples,
                 clear: true,
                 ..Default::default()
             }))
@@ -107,13 +111,16 @@ impl RenderPass {
         )
     }
 
-    pub(crate) fn color(device: &Arc<Device>) -> Result<Self> {
+    pub(crate) fn color(
+        device: &Arc<Device>,
+        device_properties: &DeviceProperties,
+    ) -> Result<Self> {
         // depth
         let depth_attachment = Some(Attachment::new(AttachmentOptions {
             index: 0,
             layout: ImageLayout::Depth,
             format: ImageFormat::Depth,
-            samples: device.samples(),
+            samples: device_properties.samples,
             clear: true,
             ..Default::default()
         }));
@@ -123,20 +130,20 @@ impl RenderPass {
             index: 1,
             layout: ImageLayout::Color,
             format: ImageFormat::Bgra,
-            clear: !device.is_msaa(),
+            clear: !device_properties.is_msaa(),
             store: true,
             ..Default::default()
         }));
 
         // msaa
-        let msaa_attachment = if !device.is_msaa() {
+        let msaa_attachment = if !device_properties.is_msaa() {
             None
         } else {
             Some(Attachment::new(AttachmentOptions {
                 index: 2,
                 layout: ImageLayout::Color,
                 format: ImageFormat::Bgra,
-                samples: device.samples(),
+                samples: device_properties.samples,
                 clear: true,
                 ..Default::default()
             }))

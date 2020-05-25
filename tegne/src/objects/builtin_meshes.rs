@@ -6,8 +6,8 @@ use tegne_math::Vector3;
 
 use super::Id;
 use super::Objects;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 

@@ -15,10 +15,10 @@ use super::ImageMips;
 use super::ImageSamples;
 use super::ImageUsage;
 use crate::buffer::BufferMemory;
+use crate::device::Commands;
+use crate::device::Device;
+use crate::device::LayoutChangeOptions;
 use crate::error::Result;
-use crate::instance::Commands;
-use crate::instance::Device;
-use crate::instance::LayoutChangeOptions;
 
 pub(crate) struct ImageMemory {
     handle: vk::Image,

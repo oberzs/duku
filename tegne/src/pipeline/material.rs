@@ -13,8 +13,8 @@ use super::Descriptor;
 use super::MaterialData;
 use super::MaterialUniform;
 use super::ShaderLayout;
+use crate::device::Device;
 use crate::error::Result;
-use crate::instance::Device;
 
 pub struct Material {
     albedo_tint: Vector3,
