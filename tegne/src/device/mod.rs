@@ -12,6 +12,7 @@ use ash::extensions::khr::Swapchain as SwapchainExt;
 use ash::version::DeviceV1_0;
 use ash::vk;
 use ash::Device as VkDevice;
+use std::ffi::c_void;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -20,6 +21,9 @@ pub(crate) use commands::LayoutChangeOptions;
 pub(crate) use pick::pick_gpu;
 pub(crate) use properties::DeviceProperties;
 
+use crate::buffer::BufferAccess;
+use crate::error::ErrorKind;
+use crate::error::ErrorType;
 use crate::error::Result;
 use crate::image::ImageSamples;
 use crate::instance::layer;
@@ -257,6 +261,54 @@ impl Device {
 
     pub(crate) fn is_msaa(&self) -> bool {
         self.samples() != ImageSamples(1)
+    }
+
+    pub(crate) fn allocate_buffer(
+        &self,
+        info: &vk::BufferCreateInfo,
+        access: BufferAccess,
+    ) -> Result<(vk::Buffer, vk::DeviceMemory)> {
+        // create buffer handle
+        let buffer = unsafe { self.handle.create_buffer(info, None)? };
+
+        // allocate memory
+        let requirements = unsafe { self.handle.get_buffer_memory_requirements(buffer) };
+        let mem_type = self
+            .find_memory_type(requirements.memory_type_bits, access.flag())
+            .ok_or(ErrorType::Internal(ErrorKind::UnsupportedMemoryType))?;
+        let alloc_info = vk::MemoryAllocateInfo::builder()
+            .allocation_size(requirements.size)
+            .memory_type_index(mem_type);
+        let memory = unsafe { self.handle.allocate_memory(&alloc_info, None)? };
+
+        // bind memory
+        unsafe { self.handle.bind_buffer_memory(buffer, memory, 0)? };
+
+        Ok((buffer, memory))
+    }
+
+    pub(crate) fn free_buffer(&self, handle: vk::Buffer, memory: vk::DeviceMemory) {
+        unsafe {
+            self.handle.destroy_buffer(handle, None);
+            self.handle.free_memory(memory, None);
+        }
+    }
+
+    pub(crate) fn map_memory(
+        &self,
+        memory: vk::DeviceMemory,
+        size: usize,
+        fun: impl Fn(*mut c_void),
+    ) -> Result<()> {
+        let mem = unsafe {
+            self.handle
+                .map_memory(memory, 0, (size as u32).into(), vk::MemoryMapFlags::empty())?
+        };
+        fun(mem);
+        unsafe {
+            self.handle.unmap_memory(memory);
+        }
+        Ok(())
     }
 
     pub(crate) fn logical(&self) -> &VkDevice {

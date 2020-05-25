@@ -30,6 +30,7 @@ pub enum ErrorType {
 pub enum ErrorKind {
     UnsupportedExtension(CString),
     UnsupportedValidation(CString),
+    UnsupportedMemoryType,
     UnsupportedMsaa,
     NoSuitableGpu,
     NoSuitableMemoryType,
