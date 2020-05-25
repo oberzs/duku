@@ -78,8 +78,6 @@ pub struct Tegne {
     device: Arc<Device>,
     surface: Surface,
     gpu_index: usize,
-    device_properties: DeviceProperties,
-    surface_properties: SurfaceProperties,
     instance: Arc<Instance>,
 }
 
@@ -114,11 +112,11 @@ impl Tegne {
         let device = Arc::new(check!(Device::new(
             &instance,
             &surface_properties,
-            &device_properties,
+            device_properties,
             gpu_index
         )));
 
-        let swapchain = check!(Swapchain::new(&device, &surface, &surface_properties));
+        let swapchain = check!(Swapchain::new(&device, &surface, surface_properties));
 
         let shader_layout = check!(ShaderLayout::new(&device));
 
@@ -128,13 +126,12 @@ impl Tegne {
             options.anisotropy
         ));
 
-        let render_passes = check!(RenderPasses::new(&device, &device_properties));
+        let render_passes = check!(RenderPasses::new(&device));
 
         let objects = Objects::new();
 
         let builtins = check!(Builtins::new(
             &device,
-            &device_properties,
             &render_passes,
             &shader_layout,
             &image_uniform,
@@ -143,8 +140,6 @@ impl Tegne {
 
         let window_framebuffers = check!(Framebuffer::window(
             &device,
-            &device_properties,
-            &surface_properties,
             &swapchain,
             &render_passes,
             &shader_layout,
@@ -178,8 +173,6 @@ impl Tegne {
             device,
             surface,
             gpu_index,
-            device_properties,
-            surface_properties,
             instance,
         }
     }
@@ -218,15 +211,10 @@ impl Tegne {
         check!(self.device.wait_for_idle());
         self.surface.resize(width, height);
         check!(self
-            .surface_properties
-            .refresh(&self.instance, &self.surface, self.gpu_index));
-        check!(self
             .swapchain
-            .recreate(&self.surface, &self.surface_properties));
+            .recreate(&self.instance, &self.surface, self.gpu_index));
         self.window_framebuffers = check!(Framebuffer::window(
             &self.device,
-            &self.device_properties,
-            &self.surface_properties,
             &self.swapchain,
             &self.render_passes,
             &self.shader_layout,
@@ -379,7 +367,6 @@ impl Tegne {
         debug!("creating framebuffer");
         let framebuffer = check!(Framebuffer::color(
             &self.device,
-            &self.device_properties,
             &self.render_passes,
             &self.image_uniform,
             &self.shader_layout,
@@ -394,7 +381,6 @@ impl Tegne {
         let render_pass = self.render_passes.color();
         let shader = check!(Shader::new(
             &self.device,
-            &self.device_properties,
             render_pass,
             &self.shader_layout,
             source,
@@ -424,7 +410,6 @@ impl Tegne {
         let render_passes = self.render_passes.clone();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
-        let device_properties = self.device_properties.clone();
         let objects = self.objects.clone();
         let kill_recv = self.thread_kill.receiver();
         let id_ref = id.id_ref();
@@ -454,7 +439,6 @@ impl Tegne {
                             let color_pass = render_passes.color();
                             let shader = check!(Shader::new(
                                 &device,
-                                &device_properties,
                                 &color_pass,
                                 &shader_layout,
                                 &source,

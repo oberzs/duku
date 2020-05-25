@@ -18,7 +18,6 @@ use super::ImageMemoryOptions;
 use super::ImageUsage;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::device::DeviceProperties;
 use crate::device::LayoutChangeOptions;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
@@ -26,7 +25,6 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
-use crate::window::SurfaceProperties;
 use crate::window::Swapchain;
 
 pub struct Framebuffer {
@@ -43,15 +41,13 @@ pub struct Framebuffer {
 impl Framebuffer {
     pub(crate) fn window(
         device: &Arc<Device>,
-        device_properties: &DeviceProperties,
-        surface_properties: &SurfaceProperties,
         swapchain: &Swapchain,
         render_passes: &RenderPasses,
         shader_layout: &ShaderLayout,
     ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
-        let extent = surface_properties.extent;
+        let extent = swapchain.extent();
         let render_pass = render_passes.window();
 
         // create a framebuffer for each image in the swapchain
@@ -68,7 +64,7 @@ impl Framebuffer {
                         height: extent.height,
                         format: ImageFormat::Depth,
                         usage: &[ImageUsage::Depth],
-                        samples: device_properties.samples,
+                        samples: device.samples(),
                         create_view: true,
                         ..Default::default()
                     },
@@ -88,7 +84,7 @@ impl Framebuffer {
                 )?);
 
                 // msaa
-                if device_properties.is_msaa() {
+                if device.is_msaa() {
                     images.push(ImageMemory::new(
                         device,
                         ImageMemoryOptions {
@@ -96,7 +92,7 @@ impl Framebuffer {
                             height: extent.height,
                             format: ImageFormat::Bgra,
                             usage: &[ImageUsage::Color, ImageUsage::Transient],
-                            samples: device_properties.samples,
+                            samples: device.samples(),
                             create_view: true,
                             ..Default::default()
                         },
@@ -124,7 +120,6 @@ impl Framebuffer {
 
     pub(crate) fn color(
         device: &Arc<Device>,
-        device_properties: &DeviceProperties,
         render_passes: &RenderPasses,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
@@ -142,7 +137,7 @@ impl Framebuffer {
                 height,
                 format: ImageFormat::Depth,
                 usage: &[ImageUsage::Depth],
-                samples: device_properties.samples,
+                samples: device.samples(),
                 create_view: true,
                 ..Default::default()
             },
@@ -162,7 +157,7 @@ impl Framebuffer {
         )?);
 
         // msaa
-        if device_properties.is_msaa() {
+        if device.is_msaa() {
             images.push(ImageMemory::new(
                 device,
                 ImageMemoryOptions {
@@ -170,7 +165,7 @@ impl Framebuffer {
                     height,
                     format: ImageFormat::Bgra,
                     usage: &[ImageUsage::Color, ImageUsage::Transient],
-                    samples: device_properties.samples,
+                    samples: device.samples(),
                     create_view: true,
                     ..Default::default()
                 },

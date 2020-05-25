@@ -21,6 +21,7 @@ pub(crate) use pick::pick_gpu;
 pub(crate) use properties::DeviceProperties;
 
 use crate::error::Result;
+use crate::image::ImageSamples;
 use crate::instance::layer;
 use crate::instance::Instance;
 use crate::sync::fence;
@@ -32,10 +33,10 @@ pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     handle: VkDevice,
+    device_properties: DeviceProperties,
     swapchain_ext: SwapchainExt,
     graphics_queue: (u32, vk::Queue),
     present_queue: (u32, vk::Queue),
-    memory_types: Vec<vk::MemoryType>,
     sync_acquire_image: Vec<vk::Semaphore>,
     sync_release_image: Vec<vk::Semaphore>,
     sync_queue_submit: Vec<vk::Fence>,
@@ -46,7 +47,7 @@ impl Device {
     pub(crate) fn new(
         instance: &Instance,
         surface_properties: &SurfaceProperties,
-        device_properties: &DeviceProperties,
+        device_properties: DeviceProperties,
         gpu_index: usize,
     ) -> Result<Self> {
         // configure device features
@@ -105,14 +106,12 @@ impl Device {
             sync_queue_submit.push(fence::create(&handle)?);
         }
 
-        let memory_types = device_properties.memory.memory_types.to_vec();
-
         Ok(Self {
             handle,
+            device_properties,
             swapchain_ext,
             graphics_queue: (g_index, graphics_queue),
             present_queue: (p_index, present_queue),
-            memory_types,
             sync_acquire_image,
             sync_release_image,
             sync_queue_submit,
@@ -240,7 +239,9 @@ impl Device {
         type_filter: u32,
         props: vk::MemoryPropertyFlags,
     ) -> Option<u32> {
-        self.memory_types
+        self.device_properties
+            .memory
+            .memory_types
             .iter()
             .enumerate()
             .find(|(i, mem_type)| {
@@ -248,6 +249,14 @@ impl Device {
                 (type_filter & byte != 0) && (mem_type.property_flags & props) == props
             })
             .map(|t| t.0 as u32)
+    }
+
+    pub(crate) fn samples(&self) -> ImageSamples {
+        self.device_properties.samples
+    }
+
+    pub(crate) fn is_msaa(&self) -> bool {
+        self.samples() != ImageSamples(1)
     }
 
     pub(crate) fn logical(&self) -> &VkDevice {

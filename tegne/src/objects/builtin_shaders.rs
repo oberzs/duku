@@ -3,7 +3,6 @@ use std::sync::Arc;
 use super::Id;
 use super::Objects;
 use crate::device::Device;
-use crate::device::DeviceProperties;
 use crate::error::Result;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::Shader;
@@ -28,7 +27,6 @@ pub(crate) struct BuiltinShaders {
 impl BuiltinShaders {
     pub(crate) fn new(
         device: &Arc<Device>,
-        device_properties: &DeviceProperties,
         passes: &RenderPasses,
         layout: &ShaderLayout,
         objects: &Objects,
@@ -45,7 +43,6 @@ impl BuiltinShaders {
 
         let phong = objects.add_shader(Shader::new(
             device,
-            device_properties,
             color_pass,
             layout,
             phong_spv,
@@ -54,7 +51,6 @@ impl BuiltinShaders {
 
         let _unshaded = objects.add_shader(Shader::new(
             device,
-            device_properties,
             color_pass,
             layout,
             unshaded_spv,
@@ -63,7 +59,6 @@ impl BuiltinShaders {
 
         let shadow = objects.add_shader(Shader::new(
             device,
-            device_properties,
             depth_pass,
             layout,
             shadow_spv,
@@ -72,7 +67,6 @@ impl BuiltinShaders {
 
         let font = objects.add_shader(Shader::new(
             device,
-            device_properties,
             color_pass,
             layout,
             font_spv,
@@ -81,7 +75,6 @@ impl BuiltinShaders {
 
         let passthru = objects.add_shader(Shader::new(
             device,
-            device_properties,
             color_pass,
             layout,
             passthru_spv,
@@ -93,7 +86,6 @@ impl BuiltinShaders {
 
         let wireframe = objects.add_shader(Shader::new(
             device,
-            device_properties,
             color_pass,
             layout,
             wireframe_spv,

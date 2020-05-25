@@ -14,9 +14,11 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
+use crate::instance::Instance;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
+    surface_properties: SurfaceProperties,
     current_image: Cell<u32>,
     device: Arc<Device>,
 }
@@ -25,15 +27,16 @@ impl Swapchain {
     pub(crate) fn new(
         device: &Arc<Device>,
         surface: &Surface,
-        surface_properties: &SurfaceProperties,
+        surface_properties: SurfaceProperties,
     ) -> Result<Self> {
         debug!("creating window swapchain");
 
-        let info = swapchain_info(surface, surface_properties);
+        let info = swapchain_info(surface, &surface_properties);
         let handle = device.create_swapchain(&info)?;
 
         Ok(Self {
             handle,
+            surface_properties,
             current_image: Cell::new(0),
             device: device.clone(),
         })
@@ -41,11 +44,14 @@ impl Swapchain {
 
     pub(crate) fn recreate(
         &mut self,
+        instance: &Instance,
         surface: &Surface,
-        surface_properties: &SurfaceProperties,
+        gpu_index: usize,
     ) -> Result<()> {
+        self.surface_properties
+            .refresh(instance, surface, gpu_index)?;
         self.device.destroy_swapchain(self.handle);
-        let info = swapchain_info(surface, surface_properties);
+        let info = swapchain_info(surface, &self.surface_properties);
         self.handle = self.device.create_swapchain(&info)?;
         self.current_image.set(0);
         Ok(())
@@ -76,6 +82,10 @@ impl Swapchain {
 
         self.device.present_queue(&info)?;
         Ok(())
+    }
+
+    pub(crate) fn extent(&self) -> vk::Extent2D {
+        self.surface_properties.extent
     }
 }
 

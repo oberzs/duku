@@ -51,10 +51,6 @@ impl DeviceProperties {
             })
             .collect())
     }
-
-    pub(crate) fn is_msaa(&self) -> bool {
-        self.samples != ImageSamples(1)
-    }
 }
 
 fn pick_samples(properties: vk::PhysicalDeviceProperties, msaa: u8) -> ImageSamples {
