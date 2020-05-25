@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// grid mesh struct with changing vertices
+
 use std::time::Instant;
 use tegne::Id;
 use tegne::Mesh;

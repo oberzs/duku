@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// example that draws a framebuffer with a custom ray-marching shader
+
 mod ui;
 
 use simplelog::CombinedLogger;

@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// BuiltinTextures - tegne textures that can be used without extra files
+
 use std::sync::Arc;
 
 use super::Id;

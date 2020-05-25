@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// BuiltinMeshes - tegne meshes that can be used without extra code
+
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;

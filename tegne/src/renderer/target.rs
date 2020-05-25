@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Target - struct that collects draw calls to be used in a renderer
+
 use tegne_math::Matrix4;
 use tegne_math::Transform;
 use tegne_math::Vector3;

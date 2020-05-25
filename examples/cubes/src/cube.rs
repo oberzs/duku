@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Cube mesh struct with custom shader
+
 use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;

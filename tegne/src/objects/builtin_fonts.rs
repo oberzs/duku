@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// BuiltinFonts - tegne fonts that can be used without extra files
+
 use std::sync::Arc;
 
 use super::Id;

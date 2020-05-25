@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// gradient example with custom shader arguments
+
 use tegne::Camera;
 use tegne::MaterialOptions;
 use tegne::Tegne;

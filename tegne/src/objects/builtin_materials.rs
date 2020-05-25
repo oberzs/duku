@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// BuiltinMaterials - tegne materials that can be used without extra code
+
 use std::sync::Arc;
 
 use super::Id;

@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// renderers define different/specific rendering paths
+
 mod forward_renderer;
 mod target;
 

@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// example with dynamicly changing mesh vertices
+
 mod square;
 
 use tegne::Camera;

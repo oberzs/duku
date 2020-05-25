@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// tegne error types
+
 use crossbeam::channel;
 use std::error::Error;
 use std::ffi;

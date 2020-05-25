@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Mesh drawing example
+
 mod cube;
 mod floor;
 mod ui;

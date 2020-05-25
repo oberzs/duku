@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// BuiltinShaders - tegne shaders that can be used without extra files
+
 use std::sync::Arc;
 
 use super::Id;

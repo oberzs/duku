@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Tegne is a Vulkan rendering engine
+
 #![feature(proc_macro_hygiene, drain_filter)]
 #![warn(
     rust_2018_idioms,

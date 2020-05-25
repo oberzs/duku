@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// UI struct with framebuffer that displays framerate
+
 use tegne::Camera;
 use tegne::Events;
 use tegne::Framebuffer;

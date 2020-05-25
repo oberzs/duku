@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// "Hello, World!" example to open a blue resizable window
+
 use tegne::Camera;
 use tegne::Tegne;
 use tegne::Window;

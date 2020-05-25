@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Builtins - builtin resource manager
+
 use log::debug;
 use std::sync::Arc;
 

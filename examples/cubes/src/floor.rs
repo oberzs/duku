@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Floor mesh struct with custom texture
+
 use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
