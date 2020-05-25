@@ -11,12 +11,11 @@ use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageMips;
 use super::ImageUsage;
+use super::LayoutChangeOptions;
 use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
-use crate::device::Commands;
 use crate::device::Device;
-use crate::device::LayoutChangeOptions;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
 
@@ -74,18 +73,19 @@ impl Texture {
         )?;
 
         // prepare image for data copy
-        let cmd = Commands::new(device)?;
-        cmd.begin()?;
-        cmd.change_image_layout(
-            &memory,
-            LayoutChangeOptions {
-                base_mip: 0,
-                mip_count: memory.mip_count(),
-                new_layout: ImageLayout::TransferDst,
-                ..Default::default()
-            },
-        );
-        device.submit_and_wait(cmd.end()?)?;
+        device.do_commands(|cmd| {
+            device.cmd_change_image_layout(
+                cmd,
+                &memory,
+                LayoutChangeOptions {
+                    base_mip: 0,
+                    mip_count: memory.mip_count(),
+                    new_layout: ImageLayout::TransferDst,
+                    ..Default::default()
+                },
+            );
+            Ok(())
+        })?;
 
         memory.copy_from_memory(&staging_memory)?;
         memory.generate_mipmaps()?;

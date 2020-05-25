@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// ForwardRenderer - renderer that renders shadowmap and then normal render pass
+
 use std::sync::Arc;
 use tegne_math::Camera;
 use tegne_math::Matrix4;
@@ -5,7 +10,6 @@ use tegne_math::Vector3;
 
 use super::Order;
 use super::Target;
-use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
@@ -32,7 +36,6 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
     pub(crate) objects: &'a Objects,
-    pub(crate) cmd: &'a Commands,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
     pub(crate) blit: bool,
@@ -62,7 +65,7 @@ impl ForwardRenderer {
         })
     }
 
-    pub fn draw(&self, options: ForwardDrawOptions<'_>) -> Result<()> {
+    pub fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
         let depth_pass = options.render_passes.depth();
 
         let cam_mat = options.camera.matrix();
@@ -86,50 +89,50 @@ impl ForwardRenderer {
 
         let clear = options.target.clear();
 
-        let cmd = options.cmd;
+        let cmd = device.command_buffer();
 
         // shadow mapping
-        cmd.begin_render_pass(&self.shadow_framebuffer, depth_pass, clear);
-        self.setup_pass(&self.shadow_framebuffer, &options);
-        self.bind_world(&self.shadow_framebuffer, world_data, &options)?;
+        device.cmd_begin_render_pass(cmd, &self.shadow_framebuffer, depth_pass, clear);
+        self.setup_pass(device, &self.shadow_framebuffer);
+        self.bind_world(device, &self.shadow_framebuffer, world_data, &options)?;
 
-        self.bind_shader(self.shadow_shader, &options);
+        self.bind_shader(device, self.shadow_shader, &options);
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
-                self.bind_material(m_order.material(), &options)?;
+                self.bind_material(device, m_order.material(), &options)?;
                 for order in m_order.orders() {
                     if order.has_shadows {
-                        self.draw_order(order, &options)?;
+                        self.draw_order(device, order, &options)?;
                     }
                 }
             }
         }
 
-        cmd.end_render_pass();
+        device.cmd_end_render_pass(cmd);
         self.shadow_framebuffer.update_shader_image(cmd);
 
         // normal render
-        cmd.begin_render_pass(options.framebuffer, options.color_pass, clear);
-        self.setup_pass(options.framebuffer, &options);
-        self.bind_world(options.framebuffer, world_data, &options)?;
+        device.cmd_begin_render_pass(cmd, options.framebuffer, options.color_pass, clear);
+        self.setup_pass(device, options.framebuffer);
+        self.bind_world(device, options.framebuffer, world_data, &options)?;
 
         for s_order in options.target.orders_by_shader() {
-            self.bind_shader(s_order.shader(), &options);
+            self.bind_shader(device, s_order.shader(), &options);
             for m_order in s_order.orders_by_material() {
-                self.bind_material(m_order.material(), &options)?;
+                self.bind_material(device, m_order.material(), &options)?;
                 for order in m_order.orders() {
-                    self.draw_order(order, &options)?;
+                    self.draw_order(device, order, &options)?;
                 }
             }
         }
 
         // wireframe render
-        self.bind_shader(self.wireframe_shader, &options);
+        self.bind_shader(device, self.wireframe_shader, &options);
         for order in options.target.wireframe_orders() {
-            self.draw_order(order, &options)?;
+            self.draw_order(device, order, &options)?;
         }
 
-        cmd.end_render_pass();
+        device.cmd_end_render_pass(cmd);
 
         // TODO: add check based on framebuffer
         if options.blit {
@@ -139,44 +142,56 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn setup_pass(&self, framebuffer: &Framebuffer, options: &ForwardDrawOptions<'_>) {
-        let cmd = options.cmd;
-        cmd.set_view(framebuffer.width(), framebuffer.height());
-        cmd.set_line_width(1.0);
+    fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {
+        let cmd = device.command_buffer();
+        device.cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+        device.cmd_set_line_width(cmd, 1.0);
     }
 
     fn bind_world(
         &self,
+        device: &Device,
         framebuffer: &Framebuffer,
         data: WorldData,
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
-        let cmd = options.cmd;
+        let cmd = device.command_buffer();
         framebuffer.world_uniform().update(data)?;
-        cmd.bind_descriptor(
+        device.cmd_bind_descriptor(
+            cmd,
             framebuffer.world_uniform().descriptor(),
             options.shader_layout,
         );
         Ok(())
     }
 
-    fn bind_shader(&self, shader: IdRef, options: &ForwardDrawOptions<'_>) {
-        let cmd = options.cmd;
+    fn bind_shader(&self, device: &Device, shader: IdRef, options: &ForwardDrawOptions<'_>) {
+        let cmd = device.command_buffer();
         let objects = options.objects;
-        objects.with_shader(shader, |s| cmd.bind_shader(s));
+        objects.with_shader(shader, |s| device.cmd_bind_shader(cmd, s));
     }
 
-    fn bind_material(&self, material: IdRef, options: &ForwardDrawOptions<'_>) -> Result<()> {
-        let cmd = options.cmd;
+    fn bind_material(
+        &self,
+        device: &Device,
+        material: IdRef,
+        options: &ForwardDrawOptions<'_>,
+    ) -> Result<()> {
+        let cmd = device.command_buffer();
         let objects = options.objects;
         if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
-            cmd.bind_descriptor(descriptor?, options.shader_layout);
+            device.cmd_bind_descriptor(cmd, descriptor?, options.shader_layout);
         }
         Ok(())
     }
 
-    fn draw_order(&self, order: Order, options: &ForwardDrawOptions<'_>) -> Result<()> {
-        let cmd = options.cmd;
+    fn draw_order(
+        &self,
+        device: &Device,
+        order: Order,
+        options: &ForwardDrawOptions<'_>,
+    ) -> Result<()> {
+        let cmd = device.command_buffer();
         let objects = options.objects;
         let albedo = objects
             .with_texture(order.albedo, |t| t.image_index())
@@ -185,16 +200,17 @@ impl ForwardRenderer {
             if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
                 (m.vertex_buffer(), m.index_buffer(), m.index_count())
             }) {
-                cmd.set_push_constant(
+                device.cmd_push_constants(
+                    cmd,
                     PushConstants {
                         model_mat: order.model,
                         albedo_index,
                     },
                     options.shader_layout,
                 );
-                cmd.bind_vertex_buffer(vb?);
-                cmd.bind_index_buffer(ib?);
-                cmd.draw(n);
+                device.cmd_bind_vertex_buffer(cmd, vb?);
+                device.cmd_bind_index_buffer(cmd, ib?);
+                device.cmd_draw(cmd, n);
             }
         }
         Ok(())

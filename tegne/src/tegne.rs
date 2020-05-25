@@ -24,10 +24,8 @@ use tegne_math::Camera;
 use tegne_utils::Window;
 
 use crate::device::pick_gpu;
-use crate::device::Commands;
 use crate::device::Device;
 use crate::device::DeviceProperties;
-use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
@@ -70,7 +68,6 @@ pub struct Tegne {
     builtins: Builtins,
     objects: Arc<Objects>,
     window_framebuffers: Vec<Framebuffer>,
-    commands: Vec<Commands>,
     render_passes: Arc<RenderPasses>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
@@ -145,10 +142,6 @@ impl Tegne {
             &shader_layout,
         ));
 
-        let commands = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| check!(Commands::new(&device)))
-            .collect::<Vec<_>>();
-
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
             &render_passes,
@@ -165,7 +158,6 @@ impl Tegne {
             builtins,
             objects: Arc::new(objects),
             window_framebuffers,
-            commands,
             render_passes: Arc::new(render_passes),
             image_uniform,
             shader_layout: Arc::new(shader_layout),
@@ -231,11 +223,12 @@ impl Tegne {
         check!(self.device.next_frame(&self.swapchain));
         self.image_uniform.update_if_needed();
         let current = self.device.current_frame();
-        let cmd = &mut self.commands[current];
-        check!(cmd.reset());
         self.objects.clean_unused(&self.image_uniform, current);
-        check!(cmd.begin());
-        cmd.bind_descriptor(self.image_uniform.descriptor(), &self.shader_layout);
+        self.device.cmd_bind_descriptor(
+            self.device.command_buffer(),
+            self.image_uniform.descriptor(),
+            &self.shader_layout,
+        );
     }
 
     pub fn end_draw(&mut self) {
@@ -245,8 +238,7 @@ impl Tegne {
             self.render_stage = RenderStage::Before;
         }
 
-        let buffer = check!(self.commands[self.device.current_frame()].end());
-        check!(self.device.submit(buffer));
+        check!(self.device.submit());
         check!(self.device.present(&self.swapchain));
     }
 
@@ -261,18 +253,20 @@ impl Tegne {
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
         let window_pass = self.render_passes.window();
 
-        check!(self.forward_renderer.draw(ForwardDrawOptions {
-            framebuffer,
-            color_pass: window_pass,
-            render_passes: &self.render_passes,
-            shader_layout: &self.shader_layout,
-            camera,
-            objects: &self.objects,
-            cmd: &self.commands[self.device.current_frame()],
-            target,
-            time: self.start_time.elapsed().as_secs_f32(),
-            blit: false,
-        }));
+        check!(self.forward_renderer.draw(
+            &self.device,
+            ForwardDrawOptions {
+                framebuffer,
+                color_pass: window_pass,
+                render_passes: &self.render_passes,
+                shader_layout: &self.shader_layout,
+                camera,
+                objects: &self.objects,
+                target,
+                time: self.start_time.elapsed().as_secs_f32(),
+                blit: false,
+            }
+        ));
     }
 
     pub fn draw(
@@ -291,18 +285,20 @@ impl Tegne {
         self.objects.with_framebuffer(framebuffer.id_ref(), |f| {
             let color_pass = self.render_passes.color();
 
-            check!(self.forward_renderer.draw(ForwardDrawOptions {
-                framebuffer: f,
-                color_pass,
-                render_passes: &self.render_passes,
-                shader_layout: &self.shader_layout,
-                camera,
-                objects: &self.objects,
-                cmd: &self.commands[self.device.current_frame()],
-                target,
-                time: self.start_time.elapsed().as_secs_f32(),
-                blit: true,
-            }));
+            check!(self.forward_renderer.draw(
+                &self.device,
+                ForwardDrawOptions {
+                    framebuffer: f,
+                    color_pass,
+                    render_passes: &self.render_passes,
+                    shader_layout: &self.shader_layout,
+                    camera,
+                    objects: &self.objects,
+                    target,
+                    time: self.start_time.elapsed().as_secs_f32(),
+                    blit: true,
+                }
+            ));
         });
     }
 

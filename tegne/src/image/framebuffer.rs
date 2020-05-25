@@ -15,9 +15,8 @@ use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
-use crate::device::Commands;
+use super::LayoutChangeOptions;
 use crate::device::Device;
-use crate::device::LayoutChangeOptions;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
@@ -235,7 +234,7 @@ impl Framebuffer {
         })
     }
 
-    pub(crate) fn update_shader_image(&self, cmd: &Commands) {
+    pub(crate) fn update_shader_image(&self, cmd: vk::CommandBuffer) {
         if let Some(shader_image) = &self.shader_image {
             // pick "resolve" image
             let image = &self.images[cmp::min(self.images.len() - 1, 1)];
@@ -247,7 +246,8 @@ impl Framebuffer {
             };
 
             // prepare images for transfer
-            cmd.change_image_layout(
+            self.device.cmd_change_image_layout(
+                cmd,
                 image,
                 LayoutChangeOptions {
                     old_layout: layout,
@@ -255,7 +255,8 @@ impl Framebuffer {
                     ..Default::default()
                 },
             );
-            cmd.change_image_layout(
+            self.device.cmd_change_image_layout(
+                cmd,
                 shader_image,
                 LayoutChangeOptions {
                     old_layout: ImageLayout::Shader,
@@ -298,10 +299,12 @@ impl Framebuffer {
                 vk::Filter::LINEAR
             };
 
-            cmd.blit_image(image.handle(), shader_image.handle(), blit, filter);
+            self.device
+                .cmd_blit_image(cmd, image.handle(), shader_image.handle(), blit, filter);
 
             // set images back to initial state
-            cmd.change_image_layout(
+            self.device.cmd_change_image_layout(
+                cmd,
                 image,
                 LayoutChangeOptions {
                     old_layout: ImageLayout::TransferSrc,
@@ -309,7 +312,8 @@ impl Framebuffer {
                     ..Default::default()
                 },
             );
-            cmd.change_image_layout(
+            self.device.cmd_change_image_layout(
+                cmd,
                 shader_image,
                 LayoutChangeOptions {
                     old_layout: ImageLayout::TransferDst,
@@ -380,16 +384,17 @@ fn create_shader_image(
     )?;
 
     // change image layout to be used in shaders
-    let cmd = Commands::new(device)?;
-    cmd.begin()?;
-    cmd.change_image_layout(
-        &image,
-        LayoutChangeOptions {
-            new_layout: ImageLayout::Shader,
-            ..Default::default()
-        },
-    );
-    device.submit_and_wait(cmd.end()?)?;
+    device.do_commands(|cmd| {
+        device.cmd_change_image_layout(
+            cmd,
+            &image,
+            LayoutChangeOptions {
+                new_layout: ImageLayout::Shader,
+                ..Default::default()
+            },
+        );
+        Ok(())
+    })?;
 
     // add image to uniform descriptor
     let mut index = 0;
@@ -401,7 +406,7 @@ fn create_shader_image(
 }
 
 fn create_framebuffer(
-    device: &Arc<Device>,
+    device: &Device,
     render_pass: &RenderPass,
     images: &[ImageMemory],
     width: u32,

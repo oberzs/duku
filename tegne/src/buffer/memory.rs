@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use super::BufferAccess;
 use super::BufferUsage;
-use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
 
@@ -49,11 +48,11 @@ impl BufferMemory {
     }
 
     pub(crate) fn copy_from_memory(&self, memory: &Self, size: usize) -> Result<()> {
-        let cmd = Commands::new(&self.device)?;
-        cmd.begin()?;
-        cmd._copy_buffer(memory.handle(), self.handle, size);
-        self.device.submit_and_wait(cmd.end()?)?;
-        Ok(())
+        self.device.do_commands(|cmd| {
+            self.device
+                .cmd_copy_buffer(cmd, memory.handle(), self.handle, size);
+            Ok(())
+        })
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {

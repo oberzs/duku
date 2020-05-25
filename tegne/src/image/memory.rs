@@ -12,10 +12,9 @@ use super::ImageLayout;
 use super::ImageMips;
 use super::ImageSamples;
 use super::ImageUsage;
+use super::LayoutChangeOptions;
 use crate::buffer::BufferMemory;
-use crate::device::Commands;
 use crate::device::Device;
-use crate::device::LayoutChangeOptions;
 use crate::error::Result;
 
 pub(crate) struct ImageMemory {
@@ -143,95 +142,95 @@ impl ImageMemory {
             })
             .build();
 
-        let cmd = Commands::new(&self.device)?;
-        cmd.begin()?;
-        cmd.copy_buffer_to_image(memory.handle(), self.handle, region);
-        self.device.submit_and_wait(cmd.end()?)?;
-        Ok(())
+        self.device.do_commands(|cmd| {
+            self.device
+                .cmd_copy_buffer_to_image(cmd, memory.handle(), self.handle, region);
+            Ok(())
+        })
     }
 
     pub(crate) fn generate_mipmaps(&self) -> Result<()> {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
 
-        let cmd = Commands::new(&self.device)?;
-        cmd.begin()?;
+        self.device.do_commands(|cmd| {
+            for i in 1..self.mip_count {
+                self.device.cmd_change_image_layout(
+                    cmd,
+                    self,
+                    LayoutChangeOptions {
+                        base_mip: i - 1,
+                        mip_count: 1,
+                        old_layout: ImageLayout::TransferDst,
+                        new_layout: ImageLayout::TransferSrc,
+                    },
+                );
 
-        for i in 1..self.mip_count {
-            cmd.change_image_layout(
+                let src_offsets = [
+                    vk::Offset3D { x: 0, y: 0, z: 0 },
+                    vk::Offset3D {
+                        x: mip_width,
+                        y: mip_height,
+                        z: 1,
+                    },
+                ];
+                let src_subresource = vk::ImageSubresourceLayers::builder()
+                    .aspect_mask(vk::ImageAspectFlags::COLOR)
+                    .mip_level(i - 1)
+                    .base_array_layer(0)
+                    .layer_count(1)
+                    .build();
+
+                mip_width = cmp::max(mip_width / 2, 1);
+                mip_height = cmp::max(mip_height / 2, 1);
+                let dst_offsets = [
+                    vk::Offset3D { x: 0, y: 0, z: 0 },
+                    vk::Offset3D {
+                        x: mip_width,
+                        y: mip_height,
+                        z: 1,
+                    },
+                ];
+                let dst_subresource = vk::ImageSubresourceLayers::builder()
+                    .aspect_mask(vk::ImageAspectFlags::COLOR)
+                    .mip_level(i)
+                    .base_array_layer(0)
+                    .layer_count(1)
+                    .build();
+
+                let blit = vk::ImageBlit::builder()
+                    .src_offsets(src_offsets)
+                    .src_subresource(src_subresource)
+                    .dst_offsets(dst_offsets)
+                    .dst_subresource(dst_subresource)
+                    .build();
+
+                self.device
+                    .cmd_blit_image(cmd, self.handle, self.handle, blit, vk::Filter::LINEAR);
+
+                self.device.cmd_change_image_layout(
+                    cmd,
+                    self,
+                    LayoutChangeOptions {
+                        base_mip: i - 1,
+                        mip_count: 1,
+                        old_layout: ImageLayout::TransferSrc,
+                        new_layout: ImageLayout::Shader,
+                    },
+                );
+            }
+            self.device.cmd_change_image_layout(
+                cmd,
                 self,
                 LayoutChangeOptions {
-                    base_mip: i - 1,
+                    base_mip: self.mip_count - 1,
                     mip_count: 1,
                     old_layout: ImageLayout::TransferDst,
-                    new_layout: ImageLayout::TransferSrc,
-                },
-            );
-
-            let src_offsets = [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: mip_width,
-                    y: mip_height,
-                    z: 1,
-                },
-            ];
-            let src_subresource = vk::ImageSubresourceLayers::builder()
-                .aspect_mask(vk::ImageAspectFlags::COLOR)
-                .mip_level(i - 1)
-                .base_array_layer(0)
-                .layer_count(1)
-                .build();
-
-            mip_width = cmp::max(mip_width / 2, 1);
-            mip_height = cmp::max(mip_height / 2, 1);
-            let dst_offsets = [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: mip_width,
-                    y: mip_height,
-                    z: 1,
-                },
-            ];
-            let dst_subresource = vk::ImageSubresourceLayers::builder()
-                .aspect_mask(vk::ImageAspectFlags::COLOR)
-                .mip_level(i)
-                .base_array_layer(0)
-                .layer_count(1)
-                .build();
-
-            let blit = vk::ImageBlit::builder()
-                .src_offsets(src_offsets)
-                .src_subresource(src_subresource)
-                .dst_offsets(dst_offsets)
-                .dst_subresource(dst_subresource)
-                .build();
-
-            cmd.blit_image(self.handle, self.handle, blit, vk::Filter::LINEAR);
-
-            cmd.change_image_layout(
-                self,
-                LayoutChangeOptions {
-                    base_mip: i - 1,
-                    mip_count: 1,
-                    old_layout: ImageLayout::TransferSrc,
                     new_layout: ImageLayout::Shader,
                 },
             );
-        }
-
-        cmd.change_image_layout(
-            self,
-            LayoutChangeOptions {
-                base_mip: self.mip_count - 1,
-                mip_count: 1,
-                old_layout: ImageLayout::TransferDst,
-                new_layout: ImageLayout::Shader,
-            },
-        );
-
-        self.device.submit_and_wait(cmd.end()?)?;
-        Ok(())
+            Ok(())
+        })
     }
 
     pub(crate) fn handle(&self) -> vk::Image {

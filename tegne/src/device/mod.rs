@@ -3,7 +3,6 @@
 
 // Device - struct to access GPU API layer
 
-mod commands;
 mod extension;
 mod pick;
 mod properties;
@@ -19,9 +18,8 @@ use std::mem;
 use std::slice;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::sync::Mutex;
 
-pub(crate) use commands::Commands;
-pub(crate) use commands::LayoutChangeOptions;
 pub(crate) use pick::pick_gpu;
 pub(crate) use properties::DeviceProperties;
 
@@ -33,6 +31,7 @@ use crate::image::Framebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
 use crate::image::ImageSamples;
+use crate::image::LayoutChangeOptions;
 use crate::instance::layer;
 use crate::instance::Instance;
 use crate::pipeline::Descriptor;
@@ -51,6 +50,8 @@ pub(crate) struct Device {
     handle: VkDevice,
     device_properties: DeviceProperties,
     swapchain_ext: SwapchainExt,
+    command_pools: Vec<vk::CommandPool>,
+    command_buffers: Mutex<Vec<vk::CommandBuffer>>,
     graphics_queue: (u32, vk::Queue),
     present_queue: (u32, vk::Queue),
     sync_acquire_image: Vec<vk::Semaphore>,
@@ -122,10 +123,31 @@ impl Device {
             sync_queue_submit.push(fence::create(&handle)?);
         }
 
+        // create command pools and buffers
+        let mut command_pools = vec![];
+        let mut command_buffers = vec![];
+        for _ in 0..IN_FLIGHT_FRAME_COUNT {
+            let pool_info = vk::CommandPoolCreateInfo::builder()
+                .flags(vk::CommandPoolCreateFlags::TRANSIENT)
+                .queue_family_index(g_index);
+            let pool = unsafe { handle.create_command_pool(&pool_info, None)? };
+
+            let buffer_info = vk::CommandBufferAllocateInfo::builder()
+                .command_pool(pool)
+                .level(vk::CommandBufferLevel::PRIMARY)
+                .command_buffer_count(1);
+            let buffer = unsafe { handle.allocate_command_buffers(&buffer_info)?[0] };
+
+            command_pools.push(pool);
+            command_buffers.push(buffer);
+        }
+
         Ok(Self {
             handle,
             device_properties,
             swapchain_ext,
+            command_pools,
+            command_buffers: Mutex::new(command_buffers),
             graphics_queue: (g_index, graphics_queue),
             present_queue: (p_index, present_queue),
             sync_acquire_image,
@@ -150,6 +172,21 @@ impl Device {
         fence::wait_for(&self.handle, wait)?;
         fence::reset(&self.handle, wait)?;
 
+        // reset command buffer
+        let pool = self.command_pools[current];
+        let mut buffers = self.command_buffers.lock().unwrap();
+        self.free_command_buffer(pool, buffers[current])?;
+
+        // create new command buffer
+        let buffer_info = vk::CommandBufferAllocateInfo::builder()
+            .command_pool(pool)
+            .level(vk::CommandBufferLevel::PRIMARY)
+            .command_buffer_count(1);
+        buffers[current] = unsafe { self.handle.allocate_command_buffers(&buffer_info)?[0] };
+
+        // begin new command buffer
+        self.begin_command_buffer(buffers[current])?;
+
         self.current_frame.store(current, Ordering::Release);
 
         Ok(())
@@ -168,12 +205,18 @@ impl Device {
         Ok(())
     }
 
-    pub(crate) fn submit(&self, buffer: vk::CommandBuffer) -> Result<()> {
+    pub(crate) fn submit(&self) -> Result<()> {
         let current = self.current_frame();
+
+        // end command buffer
+        let buffers = self.command_buffers.lock().unwrap();
+        self.end_command_buffer(buffers[current])?;
+
+        // submit
         let wait = [self.sync_acquire_image[current]];
         let signal = [self.sync_release_image[current]];
         let done = self.sync_queue_submit[current];
-        let buffers = [buffer];
+        let buffers = [buffers[current]];
         let stage_mask = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 
         let info = [vk::SubmitInfo::builder()
@@ -194,6 +237,12 @@ impl Device {
         let wait = self.sync_release_image[current];
         swapchain.present(wait)?;
         Ok(())
+    }
+
+    pub(crate) fn command_buffer(&self) -> vk::CommandBuffer {
+        let buffers = self.command_buffers.lock().unwrap();
+        let current = self.current_frame();
+        buffers[current]
     }
 
     pub(crate) fn wait_for_idle(&self) -> Result<()> {
@@ -500,24 +549,34 @@ impl Device {
         }
     }
 
-    pub(crate) fn create_command_pool(&self) -> Result<vk::CommandPool> {
-        let info = vk::CommandPoolCreateInfo::builder()
-            .flags(vk::CommandPoolCreateFlags::TRANSIENT)
-            .queue_family_index(self.graphics_index());
-        Ok(unsafe { self.handle.create_command_pool(&info, None)? })
-    }
-
     pub(crate) fn destroy_command_pool(&self, pool: vk::CommandPool) {
         unsafe {
             self.handle.destroy_command_pool(pool, None);
         }
     }
 
-    pub(crate) fn allocate_command_buffer(
+    pub(crate) fn do_commands(
         &self,
-        info: &vk::CommandBufferAllocateInfo,
-    ) -> Result<vk::CommandBuffer> {
-        Ok(unsafe { self.handle.allocate_command_buffers(&info)?[0] })
+        mut fun: impl FnMut(vk::CommandBuffer) -> Result<()>,
+    ) -> Result<()> {
+        let pool_info = vk::CommandPoolCreateInfo::builder()
+            .flags(vk::CommandPoolCreateFlags::TRANSIENT)
+            .queue_family_index(self.graphics_index());
+        let pool = unsafe { self.handle.create_command_pool(&pool_info, None)? };
+
+        let buffer_info = vk::CommandBufferAllocateInfo::builder()
+            .command_pool(pool)
+            .level(vk::CommandBufferLevel::PRIMARY)
+            .command_buffer_count(1);
+        let buffer = unsafe { self.handle.allocate_command_buffers(&buffer_info)?[0] };
+
+        self.begin_command_buffer(buffer)?;
+        fun(buffer)?;
+        self.end_command_buffer(buffer)?;
+        self.submit_and_wait(buffer)?;
+        self.destroy_command_pool(pool);
+
+        Ok(())
     }
 
     pub(crate) fn free_command_buffer(
@@ -813,6 +872,9 @@ impl Drop for Device {
             self.sync_queue_submit
                 .iter()
                 .for_each(|f| fence::destroy(&self.handle, *f));
+            self.command_pools
+                .iter()
+                .for_each(|p| self.destroy_command_pool(*p));
             self.handle.destroy_device(None);
         }
     }

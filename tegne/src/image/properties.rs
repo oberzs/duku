@@ -40,6 +40,13 @@ pub(crate) enum ImageMips {
     One,
 }
 
+pub(crate) struct LayoutChangeOptions {
+    pub(crate) old_layout: ImageLayout,
+    pub(crate) new_layout: ImageLayout,
+    pub(crate) base_mip: u32,
+    pub(crate) mip_count: u32,
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) struct ImageSamples(pub(crate) u8);
 
@@ -125,6 +132,17 @@ impl ImageSamples {
             32 => vk::SampleCountFlags::TYPE_32,
             64 => vk::SampleCountFlags::TYPE_64,
             _ => vk::SampleCountFlags::TYPE_1,
+        }
+    }
+}
+
+impl Default for LayoutChangeOptions {
+    fn default() -> Self {
+        Self {
+            old_layout: ImageLayout::Undefined,
+            new_layout: ImageLayout::Undefined,
+            base_mip: 0,
+            mip_count: 1,
         }
     }
 }
