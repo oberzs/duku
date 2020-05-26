@@ -62,7 +62,6 @@ impl BufferMemory {
 
 impl Drop for BufferMemory {
     fn drop(&mut self) {
-        self.device.wait_for_idle().unwrap();
         self.device.free_buffer(self.handle, self.memory);
     }
 }

@@ -20,7 +20,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 
-use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
@@ -44,7 +43,6 @@ pub(crate) struct Objects {
     shaders: Storage<Shader>,
     fonts: Storage<Font>,
     framebuffers: Storage<Framebuffer>,
-    unused_shaders: Mutex<Vec<Vec<Shader>>>,
     max_id: AtomicU32,
 }
 
@@ -55,10 +53,6 @@ pub(crate) type IdRef = u32;
 
 impl Objects {
     pub(crate) fn new() -> Self {
-        let unused_shaders = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| vec![])
-            .collect::<Vec<_>>();
-
         Self {
             textures: Mutex::new(HashMap::new()),
             materials: Mutex::new(HashMap::new()),
@@ -66,7 +60,6 @@ impl Objects {
             shaders: Mutex::new(HashMap::new()),
             fonts: Mutex::new(HashMap::new()),
             framebuffers: Mutex::new(HashMap::new()),
-            unused_shaders: Mutex::new(unused_shaders),
             max_id: AtomicU32::new(0),
         }
     }
@@ -170,18 +163,14 @@ impl Objects {
             .map(|v| fun(v))
     }
 
-    pub(crate) fn replace_shader(&self, id: IdRef, shader: Shader, frame: usize) {
+    pub(crate) fn replace_shader(&self, id: IdRef, shader: Shader) {
         let mut map = self.shaders.lock().unwrap();
         if let Some(key) = find_key(&map, id) {
-            if let Some(replaced) = map.insert(key, shader) {
-                self.unused_shaders.lock().unwrap()[frame].push(replaced);
-            }
+            map.insert(key, shader);
         }
     }
 
-    pub(crate) fn clean_unused(&self, uniform: &ImageUniform, frame: usize) {
-        self.unused_shaders.lock().unwrap()[frame].clear();
-
+    pub(crate) fn clean_unused(&self, uniform: &ImageUniform) {
         remove_unused(&mut self.framebuffers.lock().unwrap());
         remove_unused(&mut self.fonts.lock().unwrap());
         remove_unused(&mut self.meshes.lock().unwrap());

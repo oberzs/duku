@@ -44,7 +44,7 @@ use crate::sync::semaphore;
 use crate::window::SurfaceProperties;
 use crate::window::Swapchain;
 
-pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
+const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     handle: VkDevice,
@@ -58,6 +58,9 @@ pub(crate) struct Device {
     sync_release_image: Vec<vk::Semaphore>,
     sync_queue_submit: Vec<vk::Fence>,
     current_frame: AtomicUsize,
+    destroyed_pipelines: Mutex<Vec<Vec<vk::Pipeline>>>,
+    destroyed_buffers: Mutex<Vec<Vec<(vk::Buffer, vk::DeviceMemory)>>>,
+    destroyed_images: Mutex<Vec<Vec<(vk::Image, vk::DeviceMemory)>>>,
 }
 
 impl Device {
@@ -142,6 +145,20 @@ impl Device {
             command_buffers.push(buffer);
         }
 
+        // create destroyed resource storage
+        let mut destroyed_pipelines = vec![];
+        for _ in 0..IN_FLIGHT_FRAME_COUNT {
+            destroyed_pipelines.push(vec![]);
+        }
+        let mut destroyed_buffers = vec![];
+        for _ in 0..IN_FLIGHT_FRAME_COUNT {
+            destroyed_buffers.push(vec![]);
+        }
+        let mut destroyed_images = vec![];
+        for _ in 0..IN_FLIGHT_FRAME_COUNT {
+            destroyed_images.push(vec![]);
+        }
+
         Ok(Self {
             handle,
             device_properties,
@@ -154,11 +171,10 @@ impl Device {
             sync_release_image,
             sync_queue_submit,
             current_frame: AtomicUsize::new(0),
+            destroyed_pipelines: Mutex::new(destroyed_pipelines),
+            destroyed_buffers: Mutex::new(destroyed_buffers),
+            destroyed_images: Mutex::new(destroyed_images),
         })
-    }
-
-    pub(crate) fn current_frame(&self) -> usize {
-        self.current_frame.load(Ordering::Relaxed)
     }
 
     pub(crate) fn next_frame(&self, swapchain: &Swapchain) -> Result<()> {
@@ -176,6 +192,9 @@ impl Device {
         let pool = self.command_pools[current];
         let mut buffers = self.command_buffers.lock().unwrap();
         self.free_command_buffer(pool, buffers[current])?;
+
+        // cleanup destroyed resources
+        self.cleanup_resources(current);
 
         // create new command buffer
         let buffer_info = vk::CommandBufferAllocateInfo::builder()
@@ -349,10 +368,7 @@ impl Device {
     }
 
     pub(crate) fn free_buffer(&self, handle: vk::Buffer, memory: vk::DeviceMemory) {
-        unsafe {
-            self.handle.destroy_buffer(handle, None);
-            self.handle.free_memory(memory, None);
-        }
+        self.destroyed_buffers.lock().unwrap()[self.current_frame()].push((handle, memory));
     }
 
     pub(crate) fn allocate_image(
@@ -532,9 +548,7 @@ impl Device {
     }
 
     pub(crate) fn destroy_pipeline(&self, handle: vk::Pipeline) {
-        unsafe {
-            self.handle.destroy_pipeline(handle, None);
-        }
+        self.destroyed_pipelines.lock().unwrap()[self.current_frame()].push(handle);
     }
 
     pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
@@ -858,10 +872,48 @@ impl Device {
             );
         }
     }
+
+    fn cleanup_resources(&self, frame: usize) {
+        // cleanup pipelines
+        let destroyed_pipelines = &mut self.destroyed_pipelines.lock().unwrap()[frame];
+        for p in destroyed_pipelines.iter() {
+            unsafe {
+                self.handle.destroy_pipeline(*p, None);
+            }
+        }
+        destroyed_pipelines.clear();
+
+        // cleanup buffers
+        let destroyed_buffers = &mut self.destroyed_buffers.lock().unwrap()[frame];
+        for (b, m) in destroyed_buffers.iter() {
+            unsafe {
+                self.handle.destroy_buffer(*b, None);
+                self.handle.free_memory(*m, None);
+            }
+        }
+        destroyed_buffers.clear();
+
+        // cleanup images
+        let destroyed_images = &mut self.destroyed_images.lock().unwrap()[frame];
+        for (i, m) in destroyed_images.iter() {
+            unsafe {
+                self.handle.destroy_image(*i, None);
+                self.handle.free_memory(*m, None);
+            }
+        }
+        destroyed_images.clear();
+    }
+
+    fn current_frame(&self) -> usize {
+        self.current_frame.load(Ordering::Relaxed)
+    }
 }
 
 impl Drop for Device {
     fn drop(&mut self) {
+        for i in 0..IN_FLIGHT_FRAME_COUNT {
+            self.cleanup_resources(i);
+        }
         unsafe {
             self.sync_acquire_image
                 .iter()

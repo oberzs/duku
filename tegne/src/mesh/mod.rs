@@ -26,7 +26,7 @@ pub struct Mesh {
     index_buffer: DynamicBuffer,
     should_update_vertices: Cell<bool>,
     should_update_triangles: Cell<bool>,
-    index_count: u32,
+    index_count: Cell<u32>,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -84,7 +84,7 @@ impl Mesh {
             index_buffer,
             should_update_vertices: Cell::new(true),
             should_update_triangles: Cell::new(true),
-            index_count: index_count as u32,
+            index_count: Cell::new(index_count as u32),
         })
     }
 
@@ -138,12 +138,13 @@ impl Mesh {
                 .cloned()
                 .collect::<Vec<u32>>();
             self.index_buffer.update_data(&indices)?;
+            self.index_count.set(self.triangles.len() as u32 * 3);
             self.should_update_triangles.set(false);
         }
         Ok(self.index_buffer.handle())
     }
 
     pub(crate) fn index_count(&self) -> u32 {
-        self.index_count
+        self.index_count.get()
     }
 }

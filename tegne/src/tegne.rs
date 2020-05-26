@@ -226,9 +226,8 @@ impl Tegne {
         }
 
         check!(self.device.next_frame(&self.swapchain));
+        self.objects.clean_unused(&self.image_uniform);
         self.image_uniform.update_if_needed();
-        let current = self.device.current_frame();
-        self.objects.clean_unused(&self.image_uniform, current);
         self.device.cmd_bind_descriptor(
             self.device.command_buffer(),
             self.image_uniform.descriptor(),
@@ -444,7 +443,7 @@ impl Tegne {
                                 &source,
                                 options,
                             ));
-                            objects.replace_shader(id_ref, shader, device.current_frame());
+                            objects.replace_shader(id_ref, shader);
                         }
                     }
                 }
