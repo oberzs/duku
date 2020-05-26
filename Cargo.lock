@@ -1465,7 +1465,6 @@ dependencies = [
  "ash",
  "cocoa",
  "crossbeam",
- "image",
  "log",
  "metal",
  "notify",
@@ -1505,6 +1504,7 @@ version = "0.1.0"
 name = "tegne-utils"
 version = "0.1.0"
 dependencies = [
+ "image",
  "log",
  "tegne-math",
  "winit",

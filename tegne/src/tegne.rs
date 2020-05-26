@@ -12,7 +12,6 @@ use log::error;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
-use png::GenericImageView;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -332,10 +331,9 @@ impl Tegne {
         self.objects.add_texture(texture)
     }
 
+    #[cfg(feature = "tegne-utils")]
     pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Id<Texture>> {
-        let image = png::open(path.as_ref())?;
-        let (width, height) = image.dimensions();
-        let data = image.to_rgba().into_raw();
+        let (data, width, height) = tegne_utils::read_image(path.as_ref()).unwrap();
         Ok(self.create_texture_rgba(&data, width, height))
     }
 

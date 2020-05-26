@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 winit = "0.22.2"
 log = "0.4.8"
+image_file = { package = "image", version = "0.23.4" }
 tegne-math = { path = "../tegne-math", version = "0.1.0" }

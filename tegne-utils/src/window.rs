@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// window creation and event handling
+
 use log::error;
 use log::info;
 use std::collections::HashSet;

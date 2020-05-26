@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// basic 1st person camera controller
+
 use tegne_math::Camera;
 use tegne_math::Quaternion;
 use tegne_math::Vector3;

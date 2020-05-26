@@ -23,7 +23,6 @@ pub enum ErrorType {
     Json(serde_json::Error),
     Signal(channel::SendError<()>),
     Poison(sync::PoisonError<()>),
-    Png(png::ImageError),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
     VulkanCode(i32),
@@ -84,12 +83,6 @@ impl From<sync::PoisonError<()>> for ErrorType {
 impl From<channel::SendError<()>> for ErrorType {
     fn from(e: channel::SendError<()>) -> Self {
         Self::Signal(e)
-    }
-}
-
-impl From<png::ImageError> for ErrorType {
-    fn from(e: png::ImageError) -> Self {
-        Self::Png(e)
     }
 }
 
