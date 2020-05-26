@@ -342,6 +342,41 @@ impl Tegne {
         self.objects.add_mesh(mesh)
     }
 
+    pub fn combine_meshes(&self, meshes: &[Id<Mesh>]) -> Id<Mesh> {
+        let mut offset = 0;
+        let mut triangles = vec![];
+        let mut vertices = vec![];
+        let mut normals = vec![];
+        let mut uvs = vec![];
+        let mut colors = vec![];
+        for id in meshes {
+            self.objects.with_mesh(id.id_ref(), |mesh| {
+                triangles.extend(
+                    mesh.triangles()
+                        .iter()
+                        .map(|t| [t[0] + offset, t[1] + offset, t[2] + offset]),
+                );
+                vertices.extend(mesh.vertices());
+                normals.extend(mesh.normals());
+                uvs.extend(mesh.uvs());
+                colors.extend(mesh.colors());
+                offset = vertices.len() as u32;
+            });
+        }
+
+        let mesh = check!(Mesh::new(
+            &self.device,
+            MeshOptions {
+                vertices: &vertices,
+                normals: &normals,
+                uvs: &uvs,
+                colors: &colors,
+                triangles: &triangles,
+            }
+        ));
+        self.objects.add_mesh(mesh)
+    }
+
     pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
         debug!("creating material");
         let material = check!(Material::new(&self.device, &self.shader_layout, options));

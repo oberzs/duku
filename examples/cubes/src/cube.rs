@@ -15,7 +15,7 @@ use tegne::Vector3;
 use tegne::Vector4;
 
 pub struct Cube {
-    mesh: Vec<Id<Mesh>>,
+    mesh: Id<Mesh>,
     shader: Id<Shader>,
     transform: Transform,
 }
@@ -42,14 +42,12 @@ impl Cube {
 
     pub fn draw(&self, target: &mut Target) {
         target.set_shader(&self.shader);
-        for mesh in self.mesh.iter() {
-            target.draw(mesh, self.transform);
-        }
+        target.draw(&self.mesh, self.transform);
         target.set_shader_phong();
     }
 }
 
-fn cube(tegne: &Tegne, size: f32, color: Vector4) -> Vec<Id<Mesh>> {
+fn cube(tegne: &Tegne, size: f32, color: Vector4) -> Id<Mesh> {
     let top = rectangle(
         tegne,
         color,
@@ -104,7 +102,7 @@ fn cube(tegne: &Tegne, size: f32, color: Vector4) -> Vec<Id<Mesh>> {
         [size, 0.0, size],
     );
 
-    vec![top, bottom, front, back, left, right]
+    tegne.combine_meshes(&[top, bottom, front, back, left, right])
 }
 
 fn rectangle<V: Into<Vector3>>(

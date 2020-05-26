@@ -121,6 +121,26 @@ impl Mesh {
         self.should_update_triangles.set(true);
     }
 
+    pub fn vertices(&self) -> Vec<Vector3> {
+        self.vertices.clone()
+    }
+
+    pub fn uvs(&self) -> Vec<Vector2> {
+        self.uvs.clone()
+    }
+
+    pub fn normals(&self) -> Vec<Vector3> {
+        self.normals.clone()
+    }
+
+    pub fn colors(&self) -> Vec<Vector4> {
+        self.colors.clone()
+    }
+
+    pub fn triangles(&self) -> Vec<[u32; 3]> {
+        self.triangles.clone()
+    }
+
     pub(crate) fn vertex_buffer(&self) -> Result<vk::Buffer> {
         // if vertex data has changed, update buffer
         if self.should_update_vertices.get() {
