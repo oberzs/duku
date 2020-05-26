@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// generates SDF image from font character
+
 use image::DynamicImage;
 use image::ImageBuffer;
 use image::Rgba;

@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// Camera - struct to hold matrix transforms for a camera
+
 use super::Matrix4;
 use super::Transform;
 use super::Vector3;

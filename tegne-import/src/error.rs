@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// tegne-import error types
+
 use image::error::ImageError;
 use std::error::Error;
 use std::fmt;

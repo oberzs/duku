@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// phong lighting calculations
+
 #ifdef PHONG
 vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {
     vec3 light_dir = normalize(-light.coords.xyz);

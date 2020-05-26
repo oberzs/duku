@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// glsl shader objects
+
 struct Light {
     vec4 coords;
     vec4 color;

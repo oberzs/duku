@@ -1,3 +1,6 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
 //! Tegne Import is a utility for converting common file formats
 //! to formats used in Tegne (e.g. shaders and fonts)
 

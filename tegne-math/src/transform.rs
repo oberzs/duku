@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// represents a whole transform. position + scale + rotation
+
 use super::Matrix4;
 use super::Quaternion;
 use super::Vector3;

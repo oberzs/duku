@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// imports glsl shader for use in tegne
+
 use indicatif::ProgressBar;
 use regex::Regex;
 use shaderc::CompilationArtifact;

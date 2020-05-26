@@ -25,7 +25,6 @@ mod pipeline;
 mod renderer;
 mod sync;
 mod tegne;
-mod thread_kill;
 mod window;
 
 pub use image::Framebuffer;

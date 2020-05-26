@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// small utility functions
+
 pub fn clamp(n: u32, min: u32, max: u32) -> u32 {
     if n > max {
         max

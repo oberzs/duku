@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// linear math and math utilities for tegne
+
 #![feature(proc_macro_hygiene)]
 #![warn(
     rust_2018_idioms,

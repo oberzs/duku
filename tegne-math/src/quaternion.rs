@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// quaternion rotation struct
+
 use super::Matrix4;
 use super::Vector3;
 

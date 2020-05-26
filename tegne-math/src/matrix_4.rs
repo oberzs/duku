@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// 4x4 matrix struct
+
 use std::ops::Mul;
 use std::ops::MulAssign;
 

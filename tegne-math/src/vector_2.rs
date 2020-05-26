@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// 2 component vector
+
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;

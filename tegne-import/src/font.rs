@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/tegne-rs
+
+// imports ttf font for use in tegne
+
 use image::DynamicImage;
 use image::GenericImage;
 use image::ImageBuffer;
