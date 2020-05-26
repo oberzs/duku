@@ -39,9 +39,9 @@ fn main() {
         },
     );
     let floor = Floor::new(&tegne);
-    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, "yellow");
-    let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, "blue1");
-    let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, "blue2");
+    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, [1.0, 0.0, 0.0, 1.0]);
+    let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, [0.0, 1.0, 0.0, 1.0]);
+    let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, [0.0, 0.0, 1.0, 1.0]);
     let ui = Ui::new(&tegne, width, height);
 
     let mut controller = Controller::default();

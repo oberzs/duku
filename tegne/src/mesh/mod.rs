@@ -10,6 +10,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use tegne_math::Vector2;
 use tegne_math::Vector3;
+use tegne_math::Vector4;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
@@ -21,6 +22,7 @@ pub struct Mesh {
     vertices: Vec<Vector3>,
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
+    colors: Vec<Vector4>,
     triangles: Vec<[u32; 3]>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
@@ -34,6 +36,7 @@ pub struct MeshOptions<'slice> {
     pub vertices: &'slice [Vector3],
     pub uvs: &'slice [Vector2],
     pub normals: &'slice [Vector3],
+    pub colors: &'slice [Vector4],
     pub triangles: &'slice [[u32; 3]],
 }
 
@@ -55,6 +58,10 @@ impl Mesh {
         // fill in missing default normals for all vertices
         let mut normals = vec![Vector3::default(); vertex_count];
         normals[..options.normals.len()].clone_from_slice(options.normals);
+
+        // fill in missing default colors for all vertices
+        let mut colors = vec![Vector4::new(1.0, 1.0, 1.0, 1.0); vertex_count];
+        colors[..options.colors.len()].clone_from_slice(options.colors);
 
         // calculate smooth normals
         if options.normals.is_empty() {
@@ -79,6 +86,7 @@ impl Mesh {
             vertices,
             uvs,
             normals,
+            colors,
             triangles,
             vertex_buffer,
             index_buffer,
@@ -103,6 +111,11 @@ impl Mesh {
         self.should_update_vertices.set(true);
     }
 
+    pub fn set_colors(&mut self, colors: &[Vector4]) {
+        self.colors = colors.to_owned();
+        self.should_update_vertices.set(true);
+    }
+
     pub fn set_triangles(&mut self, triangles: &[[u32; 3]]) {
         self.triangles = triangles.to_owned();
         self.should_update_triangles.set(true);
@@ -116,10 +129,12 @@ impl Mesh {
                 .iter()
                 .zip(self.uvs.iter())
                 .zip(self.normals.iter())
-                .map(|((pos, uv), normal)| Vertex {
+                .zip(self.colors.iter())
+                .map(|(((pos, uv), normal), col)| Vertex {
                     pos: *pos,
                     uv: *uv,
                     norm: *normal,
+                    col: *col,
                 })
                 .collect::<Vec<_>>();
             self.vertex_buffer.update_data(&vertices)?;
