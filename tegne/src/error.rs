@@ -36,10 +36,8 @@ pub enum ErrorKind {
     UnsupportedExtension(CString),
     UnsupportedValidation(CString),
     UnsupportedMemoryType,
-    UnsupportedMsaa,
     NoSuitableGpu,
     NoSuitableMemoryType,
-    InvalidMsaa,
 }
 
 impl Error for ErrorType {}
