@@ -1,13 +1,8 @@
-name: Tegne check
+name: Build
 
 on:
   push:
     branches: [master]
-    paths:
-      - "tegne/**"
-      - "tegne-math/**"
-      - "tegne-utils/**"
-      - ".github/workflows/tegne.yml"
 
 jobs:
   check:
@@ -31,4 +26,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --no-default-features --manifest-path "tegne/Cargo.toml"
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          ommand: test
