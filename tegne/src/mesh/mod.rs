@@ -8,14 +8,14 @@ mod vertex;
 use ash::vk;
 use std::cell::Cell;
 use std::sync::Arc;
-use tegne_math::Vector2;
-use tegne_math::Vector3;
-use tegne_math::Vector4;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
+use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::math::Vector4;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {

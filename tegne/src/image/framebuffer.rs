@@ -23,7 +23,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
-use crate::window::Swapchain;
+use crate::surface::Swapchain;
 
 pub struct Framebuffer {
     handle: vk::Framebuffer,

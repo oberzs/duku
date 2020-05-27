@@ -5,9 +5,6 @@
 
 use std::cell::Cell;
 use std::sync::Arc;
-use tegne_math::Vector2;
-use tegne_math::Vector3;
-use tegne_math::Vector4;
 
 use super::Descriptor;
 use super::MaterialData;
@@ -15,6 +12,9 @@ use super::MaterialUniform;
 use super::ShaderLayout;
 use crate::device::Device;
 use crate::error::Result;
+use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::math::Vector4;
 
 pub struct Material {
     albedo_tint: Vector3,

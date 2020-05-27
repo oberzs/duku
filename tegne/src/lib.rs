@@ -14,21 +14,28 @@
 )]
 
 mod buffer;
+mod camera;
 mod device;
 mod error;
 mod font;
 mod image;
 mod instance;
+mod math;
 mod mesh;
 mod objects;
 mod pipeline;
 mod renderer;
+mod surface;
 mod sync;
 mod tegne;
-mod window;
 
+pub use camera::Camera;
 pub use image::Framebuffer;
 pub use image::Texture;
+pub use math::Transform;
+pub use math::Vector2;
+pub use math::Vector3;
+pub use math::Vector4;
 pub use mesh::Mesh;
 pub use mesh::MeshOptions;
 pub use objects::Id;
@@ -40,19 +47,13 @@ pub use renderer::Target;
 pub use tegne::Tegne;
 pub use tegne::TegneOptions;
 
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::Controller;
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::Events;
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::Key;
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::Window;
-#[cfg(feature = "tegne-utils")]
-pub use tegne_utils::WindowOptions;
-
-pub use tegne_math::Camera;
-pub use tegne_math::Transform;
-pub use tegne_math::Vector2;
-pub use tegne_math::Vector3;
-pub use tegne_math::Vector4;
+#[cfg(feature = "controller")]
+pub use camera::Controller;
+#[cfg(feature = "window")]
+pub use surface::Events;
+#[cfg(feature = "window")]
+pub use surface::Key;
+#[cfg(feature = "window")]
+pub use surface::Window;
+#[cfg(feature = "window")]
+pub use surface::WindowOptions;

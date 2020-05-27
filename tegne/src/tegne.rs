@@ -19,11 +19,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
-use tegne_math::Camera;
 
-#[cfg(feature = "tegne-utils")]
-use tegne_utils::Window;
-
+use crate::camera::Camera;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
@@ -46,10 +43,13 @@ use crate::pipeline::ShaderOptions;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
-use crate::window::Surface;
-use crate::window::SurfaceProperties;
-use crate::window::Swapchain;
-use crate::window::WindowHandle;
+use crate::surface::Surface;
+use crate::surface::SurfaceProperties;
+use crate::surface::Swapchain;
+use crate::surface::WindowHandle;
+
+#[cfg(feature = "window")]
+use crate::surface::Window;
 
 macro_rules! check {
     ($result:expr) => {
@@ -174,7 +174,7 @@ impl Tegne {
         }
     }
 
-    #[cfg(feature = "tegne-utils")]
+    #[cfg(feature = "window")]
     pub fn from_window(window: &Window, options: TegneOptions) -> Self {
         let (width, height) = window.size();
 
@@ -330,9 +330,12 @@ impl Tegne {
         self.objects.add_texture(texture)
     }
 
-    #[cfg(feature = "tegne-utils")]
+    #[cfg(feature = "image")]
     pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Id<Texture>> {
-        let (data, width, height) = tegne_utils::read_image(path.as_ref()).unwrap();
+        use image_file::GenericImageView;
+        let img = image_file::open(path)?;
+        let (width, height) = img.dimensions();
+        let data = img.to_rgba().into_raw();
         Ok(self.create_texture_rgba(&data, width, height))
     }
 

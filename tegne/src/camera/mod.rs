@@ -3,9 +3,15 @@
 
 // Camera - struct to hold matrix transforms for a camera
 
-use super::Matrix4;
-use super::Transform;
-use super::Vector3;
+#[cfg(feature = "controller")]
+mod controller;
+
+use crate::math::Matrix4;
+use crate::math::Transform;
+use crate::math::Vector3;
+
+#[cfg(feature = "controller")]
+pub use controller::Controller;
 
 pub struct Camera {
     transform: Transform,
@@ -62,7 +68,7 @@ impl Camera {
         self.height = height as f32;
     }
 
-    pub fn matrix(&self) -> Matrix4 {
+    pub(crate) fn matrix(&self) -> Matrix4 {
         let projection = match self.camera_type {
             CameraType::Orthographic => {
                 Matrix4::orthographic(self.width, self.height, -0.1, self.depth)

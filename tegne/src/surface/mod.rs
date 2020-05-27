@@ -1,16 +1,37 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/tegne-rs
 
-// Surface - OS window abstraction
+// window represents a drawable surface
+// that connects to a OS window manager
+
+mod handle;
+mod properties;
+mod swapchain;
+
+#[cfg(feature = "window")]
+mod window;
 
 use ash::vk;
 use log::debug;
 use std::os::raw::c_void;
 use std::sync::Arc;
 
-use super::WindowHandle;
 use crate::error::Result;
 use crate::instance::Instance;
+
+pub(crate) use properties::SurfaceProperties;
+pub(crate) use swapchain::Swapchain;
+
+pub use handle::WindowHandle;
+
+#[cfg(feature = "window")]
+pub use window::Events;
+#[cfg(feature = "window")]
+pub use window::Key;
+#[cfg(feature = "window")]
+pub use window::Window;
+#[cfg(feature = "window")]
+pub use window::WindowOptions;
 
 pub(crate) struct Surface {
     handle: vk::SurfaceKHR,

@@ -5,9 +5,10 @@
 
 use ash::vk;
 use std::mem;
-use tegne_math::Vector2;
-use tegne_math::Vector3;
-use tegne_math::Vector4;
+
+use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::math::Vector4;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

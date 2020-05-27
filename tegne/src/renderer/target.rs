@@ -3,13 +3,12 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
-use tegne_math::Matrix4;
-use tegne_math::Transform;
-use tegne_math::Vector3;
-
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
+use crate::math::Matrix4;
+use crate::math::Transform;
+use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::objects::Builtins;
 use crate::objects::Id;

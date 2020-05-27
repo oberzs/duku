@@ -1,12 +1,8 @@
 [package]
-name = "tegne-import"
+name = "import"
 version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
-
-[package.metadata.commands]
-release = "cargo rustc --release -- -C debuginfo=0 -o timp.exe"
-postrelease = "del ..\\timp.d ..\\timp.pdb"
 
 [dependencies]
 shaderc = "0.6.2"

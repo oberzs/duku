@@ -4,15 +4,15 @@
 // ForwardRenderer - renderer that renders shadowmap and then normal render pass
 
 use std::sync::Arc;
-use tegne_math::Camera;
-use tegne_math::Matrix4;
-use tegne_math::Vector3;
 
 use super::Order;
 use super::Target;
+use crate::camera::Camera;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
+use crate::math::Matrix4;
+use crate::math::Vector3;
 use crate::objects::Builtins;
 use crate::objects::IdRef;
 use crate::objects::Objects;

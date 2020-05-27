@@ -6,13 +6,13 @@
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
-use tegne_math::Vector2;
-use tegne_math::Vector3;
 
 use super::Id;
 use super::Objects;
 use crate::device::Device;
 use crate::error::Result;
+use crate::math::Vector2;
+use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 

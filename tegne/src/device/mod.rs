@@ -39,10 +39,10 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::surface::SurfaceProperties;
+use crate::surface::Swapchain;
 use crate::sync::fence;
 use crate::sync::semaphore;
-use crate::window::SurfaceProperties;
-use crate::window::Swapchain;
 
 const IN_FLIGHT_FRAME_COUNT: usize = 2;
 

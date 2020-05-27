@@ -1,9 +1,7 @@
 [workspace]
 members = [
   "tegne", 
-  "tegne-math", 
-  "tegne-utils", 
-  "tegne-import", 
+  "import", 
   "examples/blue",
   "examples/gradient",
   "examples/cubes", 

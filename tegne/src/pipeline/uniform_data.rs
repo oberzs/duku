@@ -4,10 +4,10 @@
 // uniform data structs for usage in shaders
 // must be compatible with /tegne-import/glsl/objects.glsl
 
-use tegne_math::Matrix4;
-use tegne_math::Vector2;
-use tegne_math::Vector3;
-use tegne_math::Vector4;
+use crate::math::Matrix4;
+use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::math::Vector4;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

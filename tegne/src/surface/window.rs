@@ -3,6 +3,8 @@
 
 // window creation and event handling
 
+#![cfg(feature = "window")]
+
 use log::error;
 use log::info;
 use std::collections::HashSet;

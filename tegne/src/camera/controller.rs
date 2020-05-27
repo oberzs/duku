@@ -3,12 +3,13 @@
 
 // basic 1st person camera controller
 
-use tegne_math::Camera;
-use tegne_math::Quaternion;
-use tegne_math::Vector3;
+#![cfg(feature = "controller")]
 
-use super::Events;
-use super::Key;
+use super::Camera;
+use crate::math::Quaternion;
+use crate::math::Vector3;
+use crate::surface::Events;
+use crate::surface::Key;
 
 #[derive(Default)]
 pub struct Controller {

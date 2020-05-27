@@ -1,3 +1,4 @@
 target/
-timp.exe
+import.exe
+build-import.bat
 example-surface.log

@@ -5,11 +5,11 @@
 
 use ash::vk;
 use log::info;
-use tegne_math::clamp;
 
 use super::Surface;
 use crate::error::Result;
 use crate::instance::Instance;
+use crate::math::clamp;
 
 pub(crate) struct SurfaceProperties {
     pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
