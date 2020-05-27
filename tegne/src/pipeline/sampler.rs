@@ -37,10 +37,10 @@ impl Sampler {
             .unnormalized_coordinates(false)
             .compare_enable(false)
             .compare_op(vk::CompareOp::ALWAYS)
-            .mipmap_mode(vk::SamplerMipmapMode::LINEAR)
+            .mipmap_mode(vk::SamplerMipmapMode::NEAREST)
             .mip_lod_bias(0.0)
             .min_lod(0.0)
-            .max_lod(16.0);
+            .max_lod(0.0);
 
         let handle = device.create_sampler(&info)?;
 

@@ -35,6 +35,7 @@ pub use objects::Id;
 pub use pipeline::Material;
 pub use pipeline::MaterialOptions;
 pub use pipeline::Shader;
+pub use pipeline::ShaderOptions;
 pub use renderer::Target;
 pub use tegne::Tegne;
 pub use tegne::TegneOptions;
