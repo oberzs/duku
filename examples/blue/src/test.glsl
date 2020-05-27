@@ -8,7 +8,7 @@ void vertex() {
 
 #ifdef FRAGMENT
 void fragment() {
-    vec4 tex_color = texture(albedo, in_uv);
+    vec4 tex_color = texture(sampler2D(textures[object.albedo_index], sampler_m), in_uv);
     out_color = tex_color * in_color;
 }
 #endif

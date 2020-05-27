@@ -16,6 +16,7 @@ mod uniform_data;
 use properties::DependencyType;
 use properties::SamplerAddress;
 use properties::SamplerFilter;
+use properties::SamplerMipmaps;
 use sampler::Sampler;
 use sampler::SamplerOptions;
 

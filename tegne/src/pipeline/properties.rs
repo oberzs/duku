@@ -23,6 +23,12 @@ pub(crate) enum SamplerAddress {
     Clamp,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum SamplerMipmaps {
+    Enabled,
+    Disabled,
+}
+
 impl SamplerAddress {
     pub(crate) fn flag(&self) -> vk::SamplerAddressMode {
         match *self {
@@ -37,6 +43,15 @@ impl SamplerFilter {
         match *self {
             Self::Linear => vk::Filter::LINEAR,
             Self::Nearest => vk::Filter::NEAREST,
+        }
+    }
+}
+
+impl SamplerMipmaps {
+    pub(crate) fn flag(&self) -> vk::SamplerMipmapMode {
+        match *self {
+            Self::Enabled => vk::SamplerMipmapMode::LINEAR,
+            Self::Disabled => vk::SamplerMipmapMode::NEAREST,
         }
     }
 }

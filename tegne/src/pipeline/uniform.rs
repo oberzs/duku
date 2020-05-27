@@ -14,6 +14,7 @@ use super::MaterialData;
 use super::Sampler;
 use super::SamplerAddress;
 use super::SamplerFilter;
+use super::SamplerMipmaps;
 use super::SamplerOptions;
 use super::ShaderLayout;
 use super::WorldData;
@@ -35,9 +36,7 @@ pub(crate) struct MaterialUniform {
 
 pub(crate) struct ImageUniform {
     descriptor: Descriptor,
-    linear_repeat_sampler: Sampler,
-    linear_clamp_sampler: Sampler,
-    nearest_repeat_sampler: Sampler,
+    sampler_combinations: Vec<Sampler>,
     images: RefCell<Vec<vk::ImageView>>,
     should_update: Cell<bool>,
     device: Arc<Device>,
@@ -95,35 +94,27 @@ impl ImageUniform {
 
         let descriptor_set = layout.image_set()?;
         let descriptor = Descriptor(2, descriptor_set);
-        let linear_repeat_sampler = Sampler::new(
-            device,
-            SamplerOptions {
-                anisotropy,
-                ..Default::default()
-            },
-        )?;
-        let linear_clamp_sampler = Sampler::new(
-            device,
-            SamplerOptions {
-                anisotropy,
-                address: SamplerAddress::Clamp,
-                ..Default::default()
-            },
-        )?;
-        let nearest_repeat_sampler = Sampler::new(
-            device,
-            SamplerOptions {
-                anisotropy,
-                filter: SamplerFilter::Nearest,
-                ..Default::default()
-            },
-        )?;
+
+        let mut sampler_combinations = vec![];
+        for filter in &[SamplerFilter::Linear, SamplerFilter::Nearest] {
+            for address in &[SamplerAddress::Repeat, SamplerAddress::Clamp] {
+                for mipmaps in &[SamplerMipmaps::Enabled, SamplerMipmaps::Disabled] {
+                    sampler_combinations.push(Sampler::new(
+                        device,
+                        SamplerOptions {
+                            anisotropy,
+                            filter: *filter,
+                            address: *address,
+                            mipmaps: *mipmaps,
+                        },
+                    )?);
+                }
+            }
+        }
 
         Ok(Self {
             descriptor,
-            linear_repeat_sampler,
-            linear_clamp_sampler,
-            nearest_repeat_sampler,
+            sampler_combinations,
             images: RefCell::new(vec![]),
             should_update: Cell::new(true),
             device: Arc::clone(device),
@@ -166,20 +157,17 @@ impl ImageUniform {
                 .build();
 
             // configure sampler writes to descriptor
-            let sampler_info = [
-                vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::Shader.flag())
-                    .sampler(self.linear_repeat_sampler.handle())
-                    .build(),
-                vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::Shader.flag())
-                    .sampler(self.linear_clamp_sampler.handle())
-                    .build(),
-                vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::Shader.flag())
-                    .sampler(self.nearest_repeat_sampler.handle())
-                    .build(),
-            ];
+            let sampler_info = self
+                .sampler_combinations
+                .iter()
+                .map(|s| {
+                    vk::DescriptorImageInfo::builder()
+                        .image_layout(ImageLayout::Shader.flag())
+                        .sampler(s.handle())
+                        .build()
+                })
+                .collect::<Vec<_>>();
+
             let sampler_write = vk::WriteDescriptorSet::builder()
                 .dst_set(self.descriptor.1)
                 .dst_binding(1)
