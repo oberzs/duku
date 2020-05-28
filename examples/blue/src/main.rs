@@ -15,13 +15,13 @@ use ui::Ui;
 fn main() {
     let (width, height) = (500, 500);
 
-    let window = Window::new(WindowOptions {
+    let mut window = Window::new(WindowOptions {
         title: "Tegne example: Blue",
         width,
         height,
         resizable: true,
     });
-    let mut tegne = Tegne::from_window(&window, Default::default());
+    let mut tegne = Tegne::from_window(&mut window, Default::default());
     let mut camera = Camera::orthographic(width, height);
 
     let mut ui = Ui::new(&tegne, width, height);
@@ -31,6 +31,7 @@ fn main() {
             let (new_width, new_height) = events.size();
             tegne.resize(new_width, new_height);
             camera.resize(new_width, new_height);
+            ui.resize(new_width, new_height);
         }
 
         tegne.begin_draw();

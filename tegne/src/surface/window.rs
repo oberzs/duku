@@ -24,6 +24,15 @@ use winit::platform::desktop::EventLoopExtDesktop;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
+#[cfg(feature = "ui")]
+use imgui::Context;
+#[cfg(feature = "ui")]
+use imgui::FontConfig;
+#[cfg(feature = "ui")]
+use imgui::FontSource;
+#[cfg(feature = "ui")]
+use imgui::Ui;
+
 macro_rules! check {
     ($result:expr) => {
         match $result {
@@ -39,6 +48,9 @@ macro_rules! check {
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
+
+    #[cfg(feature = "ui")]
+    imgui: Context,
 }
 
 pub struct WindowOptions<'title> {
@@ -79,12 +91,37 @@ impl Window {
             .with_resizable(options.resizable)
             .build(&event_loop));
 
-        Self { event_loop, window }
+        #[cfg(feature = "ui")]
+        // configure imgui
+        let imgui = {
+            let mut context = Context::create();
+            context.set_ini_filename(None);
+            context.io_mut().display_size = [options.width as f32, options.height as f32];
+            {
+                let mut fonts = context.fonts();
+                fonts.add_font(&[FontSource::DefaultFontData {
+                    config: Some(FontConfig {
+                        size_pixels: 13.0,
+                        ..Default::default()
+                    }),
+                }]);
+            }
+            context
+        };
+
+        Self {
+            event_loop,
+            window,
+
+            #[cfg(feature = "ui")]
+            imgui,
+        }
     }
 
-    pub fn start_loop<F: FnMut(&Events)>(self, mut draw: F) {
+    pub fn start_loop(self, mut draw: impl FnMut(&Events)) {
         let mut event_loop = self.event_loop;
         let window = self.window;
+        let mut imgui = self.imgui;
 
         let mut events = Events {
             mouse_position: (0, 0),
@@ -142,7 +179,13 @@ impl Window {
                     events.resized = resized;
 
                     if events.size() != (0, 0) {
-                        draw(&events);
+                        #[cfg(feature = "ui")]
+                        let ui = imgui.frame();
+                        draw(
+                            &events,
+                            // #[cfg(feature = "ui")]
+                            // ui,
+                        );
                     }
 
                     let delta_time = frame_time.elapsed();
@@ -208,6 +251,17 @@ impl Window {
     pub fn size(&self) -> (u32, u32) {
         let size = self.window.inner_size();
         (size.width, size.height)
+    }
+
+    #[cfg(feature = "ui")]
+    pub(crate) fn build_ui_texture(&mut self) -> (Vec<u8>, u32, u32) {
+        let mut fonts = self.imgui.fonts();
+        let ui_texture = fonts.build_rgba32_texture();
+        (
+            ui_texture.data.to_vec(),
+            ui_texture.width,
+            ui_texture.height,
+        )
     }
 }
 

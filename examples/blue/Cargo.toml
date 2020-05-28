@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 imgui = "0.3.0"
+imgui-winit-support = "0.3.1"
 tegne = { path = "../../tegne", version = "0.1.0" }

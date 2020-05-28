@@ -14,6 +14,9 @@ use crate::pipeline::ImageUniform;
 
 pub(crate) struct BuiltinTextures {
     pub(crate) white: Id<Texture>,
+
+    #[cfg(feature = "ui")]
+    pub(crate) ui: Id<Texture>,
 }
 
 impl BuiltinTextures {
@@ -21,6 +24,7 @@ impl BuiltinTextures {
         device: &Arc<Device>,
         uniform: &ImageUniform,
         objects: &Objects,
+        #[cfg(feature = "ui")] ui_texture: Id<Texture>,
     ) -> Result<Self> {
         let white = objects.add_texture(Texture::from_raw_rgba(
             device,
@@ -30,6 +34,11 @@ impl BuiltinTextures {
             1,
         )?);
 
-        Ok(Self { white })
+        Ok(Self {
+            white,
+
+            #[cfg(feature = "ui")]
+            ui: ui_texture,
+        })
     }
 }

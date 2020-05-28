@@ -32,13 +32,13 @@ fn main() {
 
     let (width, height) = (900, 900);
 
-    let window = Window::new(WindowOptions {
+    let mut window = Window::new(WindowOptions {
         title: "Tegne example: Surface",
         width,
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(&window, Default::default());
+    let mut tegne = Tegne::from_window(&mut window, Default::default());
     let camera = Camera::orthographic(width, height);
 
     let shader = tegne

@@ -13,8 +13,6 @@ use tegne::Camera;
 use tegne::Events;
 use tegne::Framebuffer;
 use tegne::Id;
-use tegne::Material;
-use tegne::MaterialOptions;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Shader;
@@ -28,12 +26,10 @@ use tegne::Vector4;
 
 pub struct Ui {
     framebuffer: Id<Framebuffer>,
-    material: Id<Material>,
     mesh: Id<Mesh>,
     texture: Id<Texture>,
     shader: Id<Shader>,
     camera: Camera,
-    transform: Transform,
     imgui: Context,
     height: u32,
 }
@@ -41,23 +37,7 @@ pub struct Ui {
 impl Ui {
     pub fn new(tegne: &Tegne, width: u32, height: u32) -> Self {
         let framebuffer = tegne.create_framebuffer(width, height);
-        let material = tegne.create_material(MaterialOptions {
-            albedo_tint: Vector3::new(1.0, 0.0, 1.0),
-            font_width: 0.5,
-            font_edge: 0.15,
-            ..Default::default()
-        });
         let camera = Camera::orthographic(width, height);
-        let scale = 32.0;
-        let transform = Transform {
-            position: Vector3::new(
-                -(width as f32) / 2.0 + 5.0,
-                ((height as f32) / 2.0) - scale,
-                1.0,
-            ),
-            scale: Vector3::new(scale, scale, scale),
-            ..Default::default()
-        };
 
         let mut imgui = Context::create();
         imgui.set_ini_filename(None);
@@ -72,7 +52,6 @@ impl Ui {
                 }),
             }]);
             let font_tex = fonts.build_rgba32_texture();
-            // println!("{} {} {:?}", font_tex.width, font_tex.height, font_tex.data);
             tegne.create_texture_rgba(font_tex.data, font_tex.width, font_tex.height)
         };
 
@@ -94,24 +73,28 @@ impl Ui {
 
         Self {
             framebuffer,
-            material,
             mesh,
             texture,
             camera,
-            transform,
             imgui,
             shader,
             height,
         }
     }
 
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.camera.resize(width, height);
+        self.imgui.io_mut().display_size = [width as f32, height as f32];
+    }
+
     pub fn draw_ui(&mut self, tegne: &Tegne, events: &Events) {
-        let mut ui = self.imgui.frame();
+        let ui = self.imgui.frame();
 
         ImWindow::new(im_str!("Hello world!"))
             .size([200.0, 200.0], Condition::FirstUseEver)
             .build(&ui, || {
-                ui.text(im_str!("oooooooooooooooOOOOOOOOOOOOOO"));
+                let fps = format!("{} fps", events.fps());
+                ui.text(fps);
             });
 
         let draw_data = ui.render();
@@ -128,7 +111,6 @@ impl Ui {
                 let vertex =
                     Vector3::new(vert.pos[0], self.height as f32 - 200.0 - vert.pos[1], 1.0);
                 let uv = Vector2::new(vert.uv[0], vert.uv[1]);
-                // println!("{:?}", &vert.uv);
                 let color = Vector4::new(
                     vert.col[0] as f32 / 255.0,
                     vert.col[1] as f32 / 255.0,
@@ -141,10 +123,6 @@ impl Ui {
                 normals.push(Vector3::backward());
             }
         }
-        // println!("{:?}", &uvs);
-        // println!("{:?}", &triangles);
-        // println!("{:?}", &colors);
-        // panic!();
 
         tegne.with_mesh(&self.mesh, |mesh| {
             mesh.set_vertices(&vertices);
@@ -156,12 +134,9 @@ impl Ui {
 
         tegne.draw(&self.framebuffer, &self.camera, |target| {
             target.set_clear_color([0.0, 0.0, 0.0, 0.0]);
-            // target.set_wireframes(true);
             target.set_shader(&self.shader);
             target.set_albedo_texture(&self.texture);
             target.draw(&self.mesh, Transform::default());
-            // target.set_material(&self.material);
-            target.draw_text(format!("fps: {}", events.fps()), self.transform);
         });
     }
 

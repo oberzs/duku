@@ -97,7 +97,11 @@ struct ThreadKill {
 }
 
 impl Tegne {
-    pub fn new(window: WindowHandle, options: TegneOptions) -> Self {
+    pub fn new(
+        window: WindowHandle,
+        options: TegneOptions,
+        #[cfg(feature = "ui")] ui_texture: (Vec<u8>, u32, u32),
+    ) -> Self {
         let instance = Arc::new(check!(Instance::new()));
         let surface = check!(Surface::new(&instance, window));
 
@@ -132,12 +136,23 @@ impl Tegne {
 
         let objects = Objects::new();
 
+        #[cfg(feature = "ui")]
+        let ui_tex_id = objects.add_texture(check!(Texture::from_raw_rgba(
+            &device,
+            &image_uniform,
+            &ui_texture.0,
+            ui_texture.1,
+            ui_texture.2,
+        )));
+
         let builtins = check!(Builtins::new(
             &device,
             &render_passes,
             &shader_layout,
             &image_uniform,
             &objects,
+            #[cfg(feature = "ui")]
+            ui_tex_id,
         ));
 
         let window_framebuffers = check!(Framebuffer::window(
@@ -175,7 +190,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "window")]
-    pub fn from_window(window: &Window, options: TegneOptions) -> Self {
+    pub fn from_window(window: &mut Window, options: TegneOptions) -> Self {
         let (width, height) = window.size();
 
         #[cfg(target_os = "windows")]
@@ -201,7 +216,15 @@ impl Tegne {
             height,
         };
 
-        Self::new(handle, options)
+        #[cfg(feature = "ui")]
+        let ui_texture = window.build_ui_texture();
+
+        Self::new(
+            handle,
+            options,
+            #[cfg(feature = "ui")]
+            ui_texture,
+        )
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {

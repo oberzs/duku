@@ -11,9 +11,11 @@ use super::BuiltinMaterials;
 use super::BuiltinMeshes;
 use super::BuiltinShaders;
 use super::BuiltinTextures;
+use super::Id;
 use super::Objects;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::Texture;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
@@ -33,6 +35,7 @@ impl Builtins {
         layout: &ShaderLayout,
         uniform: &ImageUniform,
         objects: &Objects,
+        #[cfg(feature = "ui")] ui_texture: Id<Texture>,
     ) -> Result<Self> {
         debug!("creating builtin meshes");
         let meshes = BuiltinMeshes::new(device, objects)?;
@@ -41,7 +44,7 @@ impl Builtins {
         let shaders = BuiltinShaders::new(device, passes, layout, objects)?;
 
         debug!("creating builtin textures");
-        let textures = BuiltinTextures::new(device, uniform, objects)?;
+        let textures = BuiltinTextures::new(device, uniform, objects, ui_texture)?;
 
         debug!("creating builtin materials");
         let materials = BuiltinMaterials::new(device, layout, objects)?;

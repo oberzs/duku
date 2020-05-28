@@ -22,11 +22,13 @@ macro_rules! include_shader {
 
 pub(crate) struct BuiltinShaders {
     pub(crate) phong: Id<Shader>,
-    // pub(crate) unshaded: Id<Shader>,
     pub(crate) passthru: Id<Shader>,
     pub(crate) wireframe: Id<Shader>,
     pub(crate) shadow: Id<Shader>,
     pub(crate) font: Id<Shader>,
+
+    #[cfg(feature = "ui")]
+    pub(crate) ui: Id<Shader>,
 }
 
 impl BuiltinShaders {
@@ -45,6 +47,7 @@ impl BuiltinShaders {
         let shadow_spv = include_shader!("shadow.shader");
         let wireframe_spv = include_shader!("wireframe.shader");
         let font_spv = include_shader!("font.shader");
+        let ui_spv = include_shader!("ui.shader");
 
         let phong = objects.add_shader(Shader::new(
             device,
@@ -101,13 +104,27 @@ impl BuiltinShaders {
             },
         )?);
 
+        #[cfg(feature = "ui")]
+        let ui = objects.add_shader(Shader::new(
+            device,
+            color_pass,
+            layout,
+            ui_spv,
+            ShaderOptions {
+                depth_test: false,
+                ..Default::default()
+            },
+        )?);
+
         Ok(Self {
             phong,
-            // unshaded,
             shadow,
             font,
             passthru,
             wireframe,
+
+            #[cfg(feature = "ui")]
+            ui,
         })
     }
 }

@@ -3,7 +3,7 @@
 
 // Tegne is a Vulkan rendering engine
 
-#![feature(proc_macro_hygiene, drain_filter)]
+#![feature(proc_macro_hygiene, drain_filter, type_alias_impl_trait)]
 #![warn(
     rust_2018_idioms,
     unused,

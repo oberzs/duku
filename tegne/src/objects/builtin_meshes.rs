@@ -20,6 +20,9 @@ pub(crate) struct BuiltinMeshes {
     pub(crate) surface: Id<Mesh>,
     pub(crate) cube: Id<Mesh>,
     pub(crate) sphere: Id<Mesh>,
+
+    #[cfg(feature = "ui")]
+    pub(crate) ui: Id<Mesh>,
 }
 
 impl BuiltinMeshes {
@@ -28,10 +31,23 @@ impl BuiltinMeshes {
         let cube = objects.add_mesh(create_cube(device)?);
         let sphere = objects.add_mesh(create_sphere(device, 2)?);
 
+        #[cfg(feature = "ui")]
+        let ui = objects.add_mesh(Mesh::new(
+            device,
+            MeshOptions {
+                vertices: &[Vector3::new(0.0, 0.0, 0.0)],
+                triangles: &[[0, 0, 0]],
+                ..Default::default()
+            },
+        )?);
+
         Ok(Self {
             surface,
             cube,
             sphere,
+
+            #[cfg(feature = "ui")]
+            ui,
         })
     }
 }
