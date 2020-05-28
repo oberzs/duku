@@ -312,8 +312,8 @@ mod test {
     }
 
     #[test]
-    fn orthographic() {
-        let m = Matrix4::orthographic(1.0, 1.0, 0.0, 1.0);
+    fn orthographic_center() {
+        let m = Matrix4::orthographic_center(1.0, 1.0, 0.0, 1.0);
         assert_eq!(m.row_x(), Vector4::new(2.0, 0.0, 0.0, 0.0));
         assert_eq!(m.row_y(), Vector4::new(0.0, -2.0, 0.0, 0.0));
         assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, -0.0));

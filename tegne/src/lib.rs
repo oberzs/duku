@@ -29,6 +29,8 @@ mod surface;
 mod sync;
 mod tegne;
 
+pub use self::tegne::Tegne;
+pub use self::tegne::TegneOptions;
 pub use camera::Camera;
 pub use image::Framebuffer;
 pub use image::Texture;
@@ -44,8 +46,6 @@ pub use pipeline::Shader;
 pub use pipeline::ShaderOptions;
 pub use renderer::Target;
 pub use resource::Id;
-pub use tegne::Tegne;
-pub use tegne::TegneOptions;
 
 #[cfg(feature = "controller")]
 pub use camera::Controller;
