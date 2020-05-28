@@ -71,7 +71,7 @@ impl Camera {
     pub(crate) fn matrix(&self) -> Matrix4 {
         let projection = match self.camera_type {
             CameraType::Orthographic => {
-                Matrix4::orthographic(self.width, self.height, -0.1, self.depth)
+                Matrix4::orthographic_center(self.width, self.height, -0.1, self.depth)
             }
             CameraType::Perspective => {
                 Matrix4::perspective(self.fov, self.width / self.height, 0.1, self.depth)

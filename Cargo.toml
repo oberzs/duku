@@ -6,5 +6,6 @@ members = [
   "examples/gradient",
   "examples/cubes", 
   "examples/surface",
-  "examples/dynamic"
+  "examples/dynamic",
+  "examples/ui",
 ]

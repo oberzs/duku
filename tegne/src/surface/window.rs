@@ -32,6 +32,10 @@ use imgui::FontConfig;
 use imgui::FontSource;
 #[cfg(feature = "ui")]
 use imgui::Ui;
+#[cfg(feature = "ui")]
+use imgui_winit_support::HiDpiMode;
+#[cfg(feature = "ui")]
+use imgui_winit_support::WinitPlatform;
 
 macro_rules! check {
     ($result:expr) => {
@@ -122,7 +126,6 @@ impl Window {
     pub fn main_loop(self, mut draw: impl FnMut(&Events)) {
         let mut event_loop = self.event_loop;
         let window = self.window;
-        let mut imgui = self.imgui;
 
         let mut events = Events {
             mouse_position: (0, 0),
@@ -207,6 +210,10 @@ impl Window {
         let window = self.window;
         let mut imgui = self.imgui;
 
+        // configure imgui platform
+        let mut platform = WinitPlatform::init(&mut imgui);
+        platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Default);
+
         let mut events = Events {
             mouse_position: (0, 0),
             mouse_delta: (0.0, 0.0),
@@ -222,10 +229,18 @@ impl Window {
         let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
         let mut resized = false;
 
+        let mut last_frame = Instant::now();
+
         info!("staring event loop");
         event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
+
+            platform.handle_event(imgui.io_mut(), &events.window, &event);
+
             match event {
+                Event::NewEvents(_) => {
+                    last_frame = imgui.io_mut().update_delta_time(last_frame);
+                }
                 Event::WindowEvent {
                     event: win_event, ..
                 } => match win_event {
@@ -260,10 +275,16 @@ impl Window {
                     }
                 }
                 Event::MainEventsCleared => {
+                    platform
+                        .prepare_frame(imgui.io_mut(), &events.window)
+                        .expect("failed to prepare frame");
+
                     events.resized = resized;
 
                     if events.size() != (0, 0) {
                         let ui = imgui.frame();
+
+                        // imgui: does not handle mouse hiding
                         draw(&events, ui);
                     }
 

@@ -150,8 +150,9 @@ impl<'a> Target<'a> {
 
     #[cfg(feature = "ui")]
     pub fn draw_ui(&mut self, draw_data: &imgui::DrawData) {
-        // println!("display pos: {:?}", draw_data.display_pos);
-        // println!("display size: {:?}", draw_data.display_size);
+        let half_width = draw_data.display_size[0] / 2.0;
+        let half_height = draw_data.display_size[1] / 2.0;
+
         // generate mesh data
         let mut triangles = vec![];
         let mut vertices = vec![];
@@ -160,10 +161,11 @@ impl<'a> Target<'a> {
         let mut uvs = vec![];
         for draw_list in draw_data.draw_lists() {
             for tri in draw_list.idx_buffer().chunks(3) {
-                triangles.push([tri[0] as u32, tri[2] as u32, tri[1] as u32]);
+                triangles.push([tri[0] as u32, tri[1] as u32, tri[2] as u32]);
             }
             for vert in draw_list.vtx_buffer() {
-                let vertex = Vector3::new(vert.pos[0], vert.pos[1], 1.0);
+                let vertex =
+                    Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
                 let uv = Vector2::new(vert.uv[0], vert.uv[1]);
                 let color = Vector4::new(
                     vert.col[0] as f32 / 255.0,

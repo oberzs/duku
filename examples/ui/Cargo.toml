@@ -1,5 +1,5 @@
 [package]
-name = "example-blue"
+name = "example-ui"
 version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
