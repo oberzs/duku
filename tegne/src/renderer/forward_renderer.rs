@@ -13,20 +13,17 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::math::Matrix4;
 use crate::math::Vector3;
-use crate::objects::Builtins;
-use crate::objects::IdRef;
-use crate::objects::Objects;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::RenderPass;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldData;
+use crate::resource::IdRef;
+use crate::resource::ResourceManager;
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffer: Framebuffer,
-    shadow_shader: IdRef,
-    wireframe_shader: IdRef,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
@@ -35,7 +32,7 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) color_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) camera: &'a Camera,
-    pub(crate) objects: &'a Objects,
+    pub(crate) resources: &'a ResourceManager,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
     pub(crate) blit: bool,
@@ -47,7 +44,6 @@ impl ForwardRenderer {
         render_passes: &RenderPasses,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
-        builtins: &Builtins,
     ) -> Result<Self> {
         let shadow_framebuffer = Framebuffer::depth(
             device,
@@ -58,11 +54,7 @@ impl ForwardRenderer {
             2048,
         )?;
 
-        Ok(Self {
-            shadow_framebuffer,
-            shadow_shader: builtins.shaders.shadow.id_ref(),
-            wireframe_shader: builtins.shaders.wireframe.id_ref(),
-        })
+        Ok(Self { shadow_framebuffer })
     }
 
     pub fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
@@ -96,7 +88,7 @@ impl ForwardRenderer {
         self.setup_pass(device, &self.shadow_framebuffer);
         self.bind_world(device, &self.shadow_framebuffer, world_data, &options)?;
 
-        self.bind_shader(device, self.shadow_shader, &options);
+        self.bind_shader(device, options.resources.builtin("shadow_sh"), &options);
         for s_order in options.target.orders_by_shader() {
             for m_order in s_order.orders_by_material() {
                 self.bind_material(device, m_order.material(), &options)?;
@@ -127,7 +119,7 @@ impl ForwardRenderer {
         }
 
         // wireframe render
-        self.bind_shader(device, self.wireframe_shader, &options);
+        self.bind_shader(device, options.resources.builtin("wireframe_sh"), &options);
         for order in options.target.wireframe_orders() {
             self.draw_order(device, order, &options)?;
         }
@@ -167,8 +159,8 @@ impl ForwardRenderer {
 
     fn bind_shader(&self, device: &Device, shader: IdRef, options: &ForwardDrawOptions<'_>) {
         let cmd = device.command_buffer();
-        let objects = options.objects;
-        objects.with_shader(shader, |s| device.cmd_bind_shader(cmd, s));
+        let resources = options.resources;
+        resources.with_shader(shader, |s| device.cmd_bind_shader(cmd, s));
     }
 
     fn bind_material(
@@ -178,8 +170,8 @@ impl ForwardRenderer {
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
         let cmd = device.command_buffer();
-        let objects = options.objects;
-        if let Some(descriptor) = objects.with_material(material, |m| m.descriptor()) {
+        let resources = options.resources;
+        if let Some(descriptor) = resources.with_material(material, |m| m.descriptor()) {
             device.cmd_bind_descriptor(cmd, descriptor?, options.shader_layout);
         }
         Ok(())
@@ -192,12 +184,12 @@ impl ForwardRenderer {
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
         let cmd = device.command_buffer();
-        let objects = options.objects;
-        let albedo = objects
+        let resources = options.resources;
+        let albedo = resources
             .with_texture(order.albedo, |t| t.image_index())
-            .or_else(|| objects.with_framebuffer(order.albedo, |f| f.image_index()));
+            .or_else(|| resources.with_framebuffer(order.albedo, |f| f.image_index()));
         if let Some(albedo_index) = albedo {
-            if let Some((vb, ib, n)) = objects.with_mesh(order.mesh, |m| {
+            if let Some((vb, ib, n)) = resources.with_mesh(order.mesh, |m| {
                 (m.vertex_buffer(), m.index_buffer(), m.index_count())
             }) {
                 device.cmd_push_constants(

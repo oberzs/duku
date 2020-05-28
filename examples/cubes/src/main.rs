@@ -53,7 +53,7 @@ fn main() {
         transform.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    window.start_loop(|events| {
+    window.main_loop(|events, _| {
         controller.update(&mut camera, events);
 
         tegne.begin_draw();

@@ -1,55 +1,165 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/tegne-rs
 
-// BuiltinMeshes - tegne meshes that can be used without extra code
+// builtin resource creation
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
-use super::Id;
-use super::Objects;
+use super::ResourceManager;
 use crate::device::Device;
 use crate::error::Result;
+use crate::font::Font;
+use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::pipeline::ImageUniform;
+use crate::pipeline::Material;
+use crate::pipeline::RenderPasses;
+use crate::pipeline::Shader;
+use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderOptions;
 
-pub(crate) struct BuiltinMeshes {
-    pub(crate) surface: Id<Mesh>,
-    pub(crate) cube: Id<Mesh>,
-    pub(crate) sphere: Id<Mesh>,
-
-    #[cfg(feature = "ui")]
-    pub(crate) ui: Id<Mesh>,
+macro_rules! include_shader {
+    ($path:expr) => {
+        include_bytes!(concat!("../../assets/shaders/", $path))
+    };
 }
 
-impl BuiltinMeshes {
-    pub(crate) fn new(device: &Arc<Device>, objects: &Objects) -> Result<Self> {
-        let surface = objects.add_mesh(create_surface(device)?);
-        let cube = objects.add_mesh(create_cube(device)?);
-        let sphere = objects.add_mesh(create_sphere(device, 2)?);
+pub(crate) fn create_builtins(
+    device: &Arc<Device>,
+    resources: &ResourceManager,
+    passes: &RenderPasses,
+    layout: &ShaderLayout,
+    uniform: &ImageUniform,
+) -> Result<()> {
+    // textures
+    resources.add_texture(
+        Texture::from_raw_rgba(device, uniform, &[255, 255, 255, 255], 1, 1)?,
+        Some("white_tex"),
+    );
 
-        #[cfg(feature = "ui")]
-        let ui = objects.add_mesh(Mesh::new(
+    // materials
+    resources.add_material(
+        Material::new(device, layout, Default::default())?,
+        Some("white_mat"),
+    );
+
+    // meshes
+    resources.add_mesh(create_surface(device)?, Some("surface_mesh"));
+    resources.add_mesh(create_cube(device)?, Some("cube_mesh"));
+    resources.add_mesh(create_sphere(device, 2)?, Some("sphere_mesh"));
+
+    // shaders
+    let color_pass = passes.color();
+    let depth_pass = passes.depth();
+
+    resources.add_shader(
+        Shader::new(
             device,
-            MeshOptions {
-                vertices: &[Vector3::new(0.0, 0.0, 0.0)],
-                triangles: &[[0, 0, 0]],
+            color_pass,
+            layout,
+            include_shader!("phong.shader"),
+            Default::default(),
+        )?,
+        Some("phong_sh"),
+    );
+
+    resources.add_shader(
+        Shader::new(
+            device,
+            depth_pass,
+            layout,
+            include_shader!("shadow.shader"),
+            Default::default(),
+        )?,
+        Some("shadow_sh"),
+    );
+
+    resources.add_shader(
+        Shader::new(
+            device,
+            color_pass,
+            layout,
+            include_shader!("font.shader"),
+            Default::default(),
+        )?,
+        Some("font_sh"),
+    );
+
+    resources.add_shader(
+        Shader::new(
+            device,
+            color_pass,
+            layout,
+            include_shader!("passthru.shader"),
+            ShaderOptions {
+                depth_test: false,
                 ..Default::default()
             },
-        )?);
+        )?,
+        Some("passthru_sh"),
+    );
 
-        Ok(Self {
-            surface,
-            cube,
-            sphere,
+    resources.add_shader(
+        Shader::new(
+            device,
+            color_pass,
+            layout,
+            include_shader!("wireframe.shader"),
+            ShaderOptions {
+                lines: true,
+                depth_test: false,
+                ..Default::default()
+            },
+        )?,
+        Some("wireframe_sh"),
+    );
 
-            #[cfg(feature = "ui")]
-            ui,
-        })
+    // fonts
+    resources.add_font(
+        Font::new(
+            device,
+            uniform,
+            resources,
+            include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
+        )?,
+        Some("roboto_font"),
+    );
+
+    // ui
+    #[cfg(feature = "ui")]
+    {
+        resources.add_mesh(
+            Mesh::new(
+                device,
+                MeshOptions {
+                    vertices: &[Vector3::new(0.0, 0.0, 0.0)],
+                    triangles: &[[0, 0, 0]],
+                    ..Default::default()
+                },
+            )?,
+            Some("ui_mesh"),
+        );
+        resources.add_shader(
+            Shader::new(
+                device,
+                color_pass,
+                layout,
+                include_shader!("ui.shader"),
+                ShaderOptions {
+                    depth_test: false,
+                    ..Default::default()
+                },
+            )?,
+            Some("ui_sh"),
+        );
     }
+
+    Ok(())
 }
 
 fn create_surface(device: &Arc<Device>) -> Result<Mesh> {

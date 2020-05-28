@@ -17,10 +17,10 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::objects::Id;
-use crate::objects::IdRef;
-use crate::objects::Objects;
 use crate::pipeline::ImageUniform;
+use crate::resource::Id;
+use crate::resource::IdRef;
+use crate::resource::ResourceManager;
 use json::JsonAtlasMetrics;
 
 pub struct Font {
@@ -39,7 +39,7 @@ impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &ImageUniform,
-        objects: &Objects,
+        resources: &ResourceManager,
         source: &[u8],
     ) -> Result<Self> {
         // read font data from archive
@@ -65,13 +65,16 @@ impl Font {
         let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
         // create font atlas texture
-        let texture = objects.add_texture(Texture::from_raw_rgba(
-            device,
-            uniform,
-            &image_source,
-            atlas.atlas_size,
-            atlas.atlas_size,
-        )?);
+        let texture = resources.add_texture(
+            Texture::from_raw_rgba(
+                device,
+                uniform,
+                &image_source,
+                atlas.atlas_size,
+                atlas.atlas_size,
+            )?,
+            None,
+        );
 
         let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
@@ -105,15 +108,18 @@ impl Font {
 
             let triangles = &[[0, 2, 3], [0, 3, 1]];
 
-            let mesh = objects.add_mesh(Mesh::new(
-                device,
-                MeshOptions {
-                    vertices,
-                    triangles,
-                    uvs,
-                    ..Default::default()
-                },
-            )?);
+            let mesh = resources.add_mesh(
+                Mesh::new(
+                    device,
+                    MeshOptions {
+                        vertices,
+                        triangles,
+                        uvs,
+                        ..Default::default()
+                    },
+                )?,
+                None,
+            );
 
             let data = CharData {
                 mesh,

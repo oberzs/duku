@@ -8,15 +8,16 @@ use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Transform;
+use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::mesh::Mesh;
-use crate::objects::Builtins;
-use crate::objects::Id;
-use crate::objects::IdRef;
-use crate::objects::Objects;
 use crate::pipeline::Light;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::resource::Id;
+use crate::resource::IdRef;
+use crate::resource::ResourceManager;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
@@ -28,8 +29,7 @@ pub struct Target<'a> {
     current_albedo: IdRef,
     current_font: IdRef,
     draw_wireframes: bool,
-    builtins: &'a Builtins,
-    objects: &'a Objects,
+    resources: &'a ResourceManager,
 }
 
 pub(crate) struct OrdersByShader {
@@ -51,19 +51,18 @@ pub(crate) struct Order {
 }
 
 impl<'a> Target<'a> {
-    pub(crate) fn new(builtins: &'a Builtins, objects: &'a Objects) -> Result<Self> {
+    pub(crate) fn new(resources: &'a ResourceManager) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
             wireframe_orders: vec![],
             clear: [0.7, 0.7, 0.7, 1.0],
             lights: vec![],
-            current_shader: builtins.shaders.phong.id_ref(),
-            current_material: builtins.materials.white.id_ref(),
-            current_albedo: builtins.textures.white.id_ref(),
-            current_font: builtins.fonts.roboto_mono.id_ref(),
+            current_shader: resources.builtin("phong_sh"),
+            current_material: resources.builtin("white_mat"),
+            current_albedo: resources.builtin("white_tex"),
+            current_font: resources.builtin("roboto_font"),
             draw_wireframes: false,
-            builtins,
-            objects,
+            resources,
         })
     }
 
@@ -77,24 +76,39 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        self.draw(&self.builtins.meshes.cube, transform);
+        self.add_order(Order {
+            mesh: self.resources.builtin("cube_mesh"),
+            albedo: self.current_albedo,
+            model: transform.into().as_matrix(),
+            has_shadows: true,
+        });
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        self.draw(&self.builtins.meshes.sphere, transform);
+        self.add_order(Order {
+            mesh: self.resources.builtin("sphere_mesh"),
+            albedo: self.current_albedo,
+            model: transform.into().as_matrix(),
+            has_shadows: true,
+        });
     }
 
     pub fn draw_surface(&mut self) {
-        self.draw(&self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+        self.add_order(Order {
+            mesh: self.resources.builtin("surface_mesh"),
+            albedo: self.current_albedo,
+            model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
+            has_shadows: false,
+        });
     }
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
         let temp_shader = self.current_shader;
         let temp_albedo = self.current_albedo;
-        self.current_shader = self.builtins.shaders.passthru.id_ref();
+        self.current_shader = self.resources.builtin("passthru_sh");
         self.current_albedo = framebuffer.id_ref();
 
-        self.draw(&self.builtins.meshes.surface, [0.0, 0.0, 0.0]);
+        self.draw_surface();
 
         self.current_shader = temp_shader;
         self.current_albedo = temp_albedo;
@@ -102,10 +116,10 @@ impl<'a> Target<'a> {
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
-        self.current_shader = self.builtins.shaders.font.id_ref();
+        self.current_shader = self.resources.builtin("font_sh");
         let text_str = text.as_ref();
 
-        self.objects.with_font(self.current_font, |font| {
+        self.resources.with_font(self.current_font, |font| {
             let mut current_transform = transform.into();
             let x_scale = current_transform.scale.x;
             current_transform.position.x -=
@@ -134,6 +148,60 @@ impl<'a> Target<'a> {
         self.current_shader = temp_shader;
     }
 
+    #[cfg(feature = "ui")]
+    pub fn draw_ui(&mut self, draw_data: &imgui::DrawData) {
+        // println!("display pos: {:?}", draw_data.display_pos);
+        // println!("display size: {:?}", draw_data.display_size);
+        // generate mesh data
+        let mut triangles = vec![];
+        let mut vertices = vec![];
+        let mut normals = vec![];
+        let mut colors = vec![];
+        let mut uvs = vec![];
+        for draw_list in draw_data.draw_lists() {
+            for tri in draw_list.idx_buffer().chunks(3) {
+                triangles.push([tri[0] as u32, tri[2] as u32, tri[1] as u32]);
+            }
+            for vert in draw_list.vtx_buffer() {
+                let vertex = Vector3::new(vert.pos[0], vert.pos[1], 1.0);
+                let uv = Vector2::new(vert.uv[0], vert.uv[1]);
+                let color = Vector4::new(
+                    vert.col[0] as f32 / 255.0,
+                    vert.col[1] as f32 / 255.0,
+                    vert.col[2] as f32 / 255.0,
+                    vert.col[3] as f32 / 255.0,
+                );
+                vertices.push(vertex);
+                uvs.push(uv);
+                colors.push(color);
+                normals.push(Vector3::backward());
+            }
+        }
+
+        // update mesh
+        let mesh = self.resources.builtin("ui_mesh");
+        self.resources.with_mesh(mesh, |m| {
+            m.set_vertices(&vertices);
+            m.set_normals(&normals);
+            m.set_colors(&colors);
+            m.set_uvs(&uvs);
+            m.set_triangles(&triangles);
+        });
+
+        // draw mesh
+        let temp_shader = self.current_shader;
+        self.current_shader = self.resources.builtin("ui_sh");
+
+        self.add_order(Order {
+            mesh,
+            albedo: self.resources.builtin("ui_tex"),
+            model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
+            has_shadows: false,
+        });
+
+        self.current_shader = temp_shader;
+    }
+
     pub fn add_directional_light(
         &mut self,
         direction: impl Into<Vector3>,
@@ -150,7 +218,7 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_material_white(&mut self) {
-        self.current_material = self.builtins.materials.white.id_ref();
+        self.current_material = self.resources.builtin("white_mat");
     }
 
     pub fn set_albedo_texture(&mut self, texture: &Id<Texture>) {
@@ -166,7 +234,7 @@ impl<'a> Target<'a> {
     }
 
     pub fn set_shader_phong(&mut self) {
-        self.current_shader = self.builtins.shaders.phong.id_ref();
+        self.current_shader = self.resources.builtin("phong_sh");
     }
 
     pub fn set_clear_color(&mut self, clear: [f32; 4]) {

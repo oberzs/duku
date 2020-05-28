@@ -50,7 +50,7 @@ fn main() {
 
     let ui = Ui::new(&tegne, width, height);
 
-    window.start_loop(|events| {
+    window.main_loop(|events, _| {
         tegne.begin_draw();
         ui.draw_ui(&tegne, &events);
 

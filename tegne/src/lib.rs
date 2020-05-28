@@ -3,7 +3,7 @@
 
 // Tegne is a Vulkan rendering engine
 
-#![feature(proc_macro_hygiene, drain_filter, type_alias_impl_trait)]
+#![feature(proc_macro_hygiene, drain_filter, trait_alias)]
 #![warn(
     rust_2018_idioms,
     unused,
@@ -22,9 +22,9 @@ mod image;
 mod instance;
 mod math;
 mod mesh;
-mod objects;
 mod pipeline;
 mod renderer;
+mod resource;
 mod surface;
 mod sync;
 mod tegne;
@@ -38,17 +38,19 @@ pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::Mesh;
 pub use mesh::MeshOptions;
-pub use objects::Id;
 pub use pipeline::Material;
 pub use pipeline::MaterialOptions;
 pub use pipeline::Shader;
 pub use pipeline::ShaderOptions;
 pub use renderer::Target;
+pub use resource::Id;
 pub use tegne::Tegne;
 pub use tegne::TegneOptions;
 
 #[cfg(feature = "controller")]
 pub use camera::Controller;
+#[cfg(feature = "ui")]
+pub use imgui as ui;
 #[cfg(feature = "window")]
 pub use surface::Events;
 #[cfg(feature = "window")]

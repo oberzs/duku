@@ -37,7 +37,7 @@ fn main() {
         ..Default::default()
     });
 
-    window.start_loop(|_| {
+    window.main_loop(|_, _| {
         tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_shader(&shader);

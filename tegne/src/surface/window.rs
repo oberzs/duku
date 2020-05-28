@@ -91,8 +91,8 @@ impl Window {
             .with_resizable(options.resizable)
             .build(&event_loop));
 
-        #[cfg(feature = "ui")]
         // configure imgui
+        #[cfg(feature = "ui")]
         let imgui = {
             let mut context = Context::create();
             context.set_ini_filename(None);
@@ -118,7 +118,8 @@ impl Window {
         }
     }
 
-    pub fn start_loop(self, mut draw: impl FnMut(&Events)) {
+    #[cfg(not(feature = "ui"))]
+    pub fn main_loop(self, mut draw: impl FnMut(&Events)) {
         let mut event_loop = self.event_loop;
         let window = self.window;
         let mut imgui = self.imgui;
@@ -179,13 +180,91 @@ impl Window {
                     events.resized = resized;
 
                     if events.size() != (0, 0) {
-                        #[cfg(feature = "ui")]
+                        draw(&events);
+                    }
+
+                    let delta_time = frame_time.elapsed();
+                    frame_time = Instant::now();
+                    fps_samples[frame_count % FPS_SAMPLE_COUNT] =
+                        1_000_000 / delta_time.as_micros() as u32;
+                    frame_count += 1;
+
+                    events.keys.clear_typed();
+                    events.mouse_delta = (0.0, 0.0);
+                    events.delta_time = delta_time.as_secs_f32();
+                    events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
+                        .round() as u32;
+                    resized = false;
+                }
+                _ => (),
+            }
+        });
+    }
+
+    #[cfg(feature = "ui")]
+    pub fn main_loop(self, mut draw: impl FnMut(&Events, Ui<'_>)) {
+        let mut event_loop = self.event_loop;
+        let window = self.window;
+        let mut imgui = self.imgui;
+
+        let mut events = Events {
+            mouse_position: (0, 0),
+            mouse_delta: (0.0, 0.0),
+            keys: Keys::default(),
+            delta_time: 0.0,
+            fps: 0,
+            resized: false,
+            window,
+        };
+
+        let mut frame_time = Instant::now();
+        let mut frame_count = 0;
+        let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
+        let mut resized = false;
+
+        info!("staring event loop");
+        event_loop.run_return(|event, _, control_flow| {
+            *control_flow = ControlFlow::Poll;
+            match event {
+                Event::WindowEvent {
+                    event: win_event, ..
+                } => match win_event {
+                    WindowEvent::CursorMoved { position: pos, .. } => {
+                        events.mouse_position = (pos.x as u32, pos.y as u32);
+                    }
+                    WindowEvent::Resized(size) => {
+                        if size.width != 0 && size.height != 0 {
+                            resized = true;
+                        }
+                    }
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                virtual_keycode: Some(keycode),
+                                state,
+                                ..
+                            },
+                        ..
+                    } => events.keys.handle(keycode, state),
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                        info!("closing window");
+                    }
+                    _ => (),
+                },
+                Event::DeviceEvent {
+                    event: dev_event, ..
+                } => {
+                    if let DeviceEvent::MouseMotion { delta, .. } = dev_event {
+                        events.mouse_delta = (delta.0 as f32, delta.1 as f32);
+                    }
+                }
+                Event::MainEventsCleared => {
+                    events.resized = resized;
+
+                    if events.size() != (0, 0) {
                         let ui = imgui.frame();
-                        draw(
-                            &events,
-                            // #[cfg(feature = "ui")]
-                            // ui,
-                        );
+                        draw(&events, ui);
                     }
 
                     let delta_time = frame_time.elapsed();

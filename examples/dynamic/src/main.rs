@@ -46,7 +46,7 @@ fn main() {
 
     let square = Square::new(&tegne);
 
-    window.start_loop(|events| {
+    window.main_loop(|events, _| {
         controller.update(&mut camera, events);
         square.update(&tegne);
 

@@ -30,9 +30,6 @@ use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::objects::Builtins;
-use crate::objects::Id;
-use crate::objects::Objects;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialOptions;
@@ -43,6 +40,9 @@ use crate::pipeline::ShaderOptions;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
+use crate::resource::create_builtins;
+use crate::resource::Id;
+use crate::resource::ResourceManager;
 use crate::surface::Surface;
 use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
@@ -65,8 +65,7 @@ pub struct Tegne {
     thread_kill: ThreadKill,
     start_time: Instant,
     forward_renderer: ForwardRenderer,
-    builtins: Builtins,
-    objects: Arc<Objects>,
+    resources: Arc<ResourceManager>,
     window_framebuffers: Vec<Framebuffer>,
     render_passes: Arc<RenderPasses>,
     image_uniform: ImageUniform,
@@ -97,11 +96,7 @@ struct ThreadKill {
 }
 
 impl Tegne {
-    pub fn new(
-        window: WindowHandle,
-        options: TegneOptions,
-        #[cfg(feature = "ui")] ui_texture: (Vec<u8>, u32, u32),
-    ) -> Self {
+    pub fn new(window: WindowHandle, options: TegneOptions) -> Self {
         let instance = Arc::new(check!(Instance::new()));
         let surface = check!(Surface::new(&instance, window));
 
@@ -134,25 +129,13 @@ impl Tegne {
 
         let render_passes = check!(RenderPasses::new(&device));
 
-        let objects = Objects::new();
-
-        #[cfg(feature = "ui")]
-        let ui_tex_id = objects.add_texture(check!(Texture::from_raw_rgba(
+        let resources = ResourceManager::new();
+        check!(create_builtins(
             &device,
-            &image_uniform,
-            &ui_texture.0,
-            ui_texture.1,
-            ui_texture.2,
-        )));
-
-        let builtins = check!(Builtins::new(
-            &device,
+            &resources,
             &render_passes,
             &shader_layout,
             &image_uniform,
-            &objects,
-            #[cfg(feature = "ui")]
-            ui_tex_id,
         ));
 
         let window_framebuffers = check!(Framebuffer::window(
@@ -167,7 +150,6 @@ impl Tegne {
             &render_passes,
             &image_uniform,
             &shader_layout,
-            &builtins
         ));
 
         Self {
@@ -175,8 +157,7 @@ impl Tegne {
             thread_kill: ThreadKill::new(),
             start_time: Instant::now(),
             forward_renderer,
-            builtins,
-            objects: Arc::new(objects),
+            resources: Arc::new(resources),
             window_framebuffers,
             render_passes: Arc::new(render_passes),
             image_uniform,
@@ -216,15 +197,24 @@ impl Tegne {
             height,
         };
 
-        #[cfg(feature = "ui")]
-        let ui_texture = window.build_ui_texture();
+        let s = Self::new(handle, options);
 
-        Self::new(
-            handle,
-            options,
-            #[cfg(feature = "ui")]
-            ui_texture,
-        )
+        #[cfg(feature = "ui")]
+        {
+            let ui_texture = window.build_ui_texture();
+            s.resources.add_texture(
+                check!(Texture::from_raw_rgba(
+                    &s.device,
+                    &s.image_uniform,
+                    &ui_texture.0,
+                    ui_texture.1,
+                    ui_texture.2,
+                )),
+                Some("ui_tex"),
+            );
+        }
+
+        s
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -249,7 +239,7 @@ impl Tegne {
         }
 
         check!(self.device.next_frame(&self.swapchain));
-        self.objects.clean_unused(&self.image_uniform);
+        self.resources.clean_unused(&self.image_uniform);
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_descriptor(
             self.device.command_buffer(),
@@ -274,7 +264,7 @@ impl Tegne {
             panic!(error!("cannot draw before draw stage"));
         }
 
-        let mut target = check!(Target::new(&self.builtins, &self.objects));
+        let mut target = check!(Target::new(&self.resources));
         draw_callback(&mut target);
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
@@ -288,7 +278,7 @@ impl Tegne {
                 render_passes: &self.render_passes,
                 shader_layout: &self.shader_layout,
                 camera,
-                objects: &self.objects,
+                resources: &self.resources,
                 target,
                 time: self.start_time.elapsed().as_secs_f32(),
                 blit: false,
@@ -306,10 +296,10 @@ impl Tegne {
             panic!(error!("cannot draw before draw stage"));
         }
 
-        let mut target = check!(Target::new(&self.builtins, &self.objects));
+        let mut target = check!(Target::new(&self.resources));
         draw_callback(&mut target);
 
-        self.objects.with_framebuffer(framebuffer.id_ref(), |f| {
+        self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
             let color_pass = self.render_passes.color();
 
             check!(self.forward_renderer.draw(
@@ -320,7 +310,7 @@ impl Tegne {
                     render_passes: &self.render_passes,
                     shader_layout: &self.shader_layout,
                     camera,
-                    objects: &self.objects,
+                    resources: &self.resources,
                     target,
                     time: self.start_time.elapsed().as_secs_f32(),
                     blit: true,
@@ -338,7 +328,7 @@ impl Tegne {
             width,
             height,
         ));
-        self.objects.add_texture(texture)
+        self.resources.add_texture(texture, None)
     }
 
     pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
@@ -350,7 +340,7 @@ impl Tegne {
             width,
             height,
         ));
-        self.objects.add_texture(texture)
+        self.resources.add_texture(texture, None)
     }
 
     #[cfg(feature = "image")]
@@ -365,7 +355,7 @@ impl Tegne {
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
         debug!("creating mesh");
         let mesh = check!(Mesh::new(&self.device, options));
-        self.objects.add_mesh(mesh)
+        self.resources.add_mesh(mesh, None)
     }
 
     pub fn combine_meshes(&self, meshes: &[Id<Mesh>]) -> Id<Mesh> {
@@ -376,7 +366,7 @@ impl Tegne {
         let mut uvs = vec![];
         let mut colors = vec![];
         for id in meshes {
-            self.objects.with_mesh(id.id_ref(), |mesh| {
+            self.resources.with_mesh(id.id_ref(), |mesh| {
                 triangles.extend(
                     mesh.triangles()
                         .iter()
@@ -400,27 +390,27 @@ impl Tegne {
                 triangles: &triangles,
             }
         ));
-        self.objects.add_mesh(mesh)
+        self.resources.add_mesh(mesh, None)
     }
 
     pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
         debug!("creating material");
         let material = check!(Material::new(&self.device, &self.shader_layout, options));
-        self.objects.add_material(material)
+        self.resources.add_material(material, None)
     }
 
     pub fn with_material<F, R>(&self, material: &Id<Material>, fun: F) -> Option<R>
     where
         F: FnOnce(&mut Material) -> R,
     {
-        self.objects.with_material(material.id_ref(), fun)
+        self.resources.with_material(material.id_ref(), fun)
     }
 
     pub fn with_mesh<F, R>(&self, mesh: &Id<Mesh>, fun: F) -> Option<R>
     where
         F: FnOnce(&mut Mesh) -> R,
     {
-        self.objects.with_mesh(mesh.id_ref(), fun)
+        self.resources.with_mesh(mesh.id_ref(), fun)
     }
 
     pub fn create_framebuffer(&self, width: u32, height: u32) -> Id<Framebuffer> {
@@ -433,7 +423,7 @@ impl Tegne {
             width,
             height,
         ));
-        self.objects.add_framebuffer(framebuffer)
+        self.resources.add_framebuffer(framebuffer)
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
@@ -446,7 +436,7 @@ impl Tegne {
             source,
             options,
         ));
-        self.objects.add_shader(shader)
+        self.resources.add_shader(shader, None)
     }
 
     pub fn create_shader_from_file(
@@ -470,7 +460,7 @@ impl Tegne {
         let render_passes = self.render_passes.clone();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
-        let objects = self.objects.clone();
+        let resources = self.resources.clone();
         let kill_recv = self.thread_kill.receiver();
         let id_ref = id.id_ref();
 
@@ -504,7 +494,7 @@ impl Tegne {
                                 &source,
                                 options,
                             ));
-                            objects.replace_shader(id_ref, shader);
+                            resources.replace_shader(id_ref, shader);
                         }
                     }
                 }
