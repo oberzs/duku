@@ -16,9 +16,9 @@ fn main() {
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: UI",
+        resizable: true,
         width,
         height,
-        resizable: true,
     });
     let mut tegne = Tegne::from_window(&mut window, Default::default());
     let mut camera = Camera::orthographic(width, height);
@@ -41,11 +41,9 @@ fn main() {
         let ui_data = ui.render();
 
         let value = light as f32 / 10.0;
-        tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([value, value, value, 1.0]);
             target.draw_ui(ui_data);
         });
-        tegne.end_draw();
     });
 }

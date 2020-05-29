@@ -50,11 +50,9 @@ fn main() {
         controller.update(&mut camera, events);
         square.update(&tegne);
 
-        tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_wireframes(true);
             square.draw(target);
         });
-        tegne.end_draw();
     });
 }

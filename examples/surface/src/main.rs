@@ -52,7 +52,7 @@ fn main() {
 
     window.main_loop(|events, _| {
         tegne.begin_draw();
-        ui.draw_ui(&tegne, &events);
+        ui.draw_ui(&mut tegne, &events);
 
         tegne.draw_on_window(&camera, |target| {
             target.set_shader(&shader);

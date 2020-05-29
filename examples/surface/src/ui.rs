@@ -49,7 +49,7 @@ impl Ui {
         }
     }
 
-    pub fn draw_ui(&self, tegne: &Tegne, events: &Events) {
+    pub fn draw_ui(&self, tegne: &mut Tegne, events: &Events) {
         tegne.draw(&self.framebuffer, &self.camera, |target| {
             target.set_clear_color([0.0, 0.0, 0.0, 0.0]);
             target.set_material(&self.material);

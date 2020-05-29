@@ -231,37 +231,9 @@ impl Tegne {
         ));
     }
 
-    pub fn begin_draw(&mut self) {
-        if let RenderStage::During = self.render_stage {
-            panic!(error!("cannot begin draw stage during draw stage"));
-        } else {
-            self.render_stage = RenderStage::During;
-        }
-
-        check!(self.device.next_frame(&self.swapchain));
-        self.resources.clean_unused(&self.image_uniform);
-        self.image_uniform.update_if_needed();
-        self.device.cmd_bind_descriptor(
-            self.device.command_buffer(),
-            self.image_uniform.descriptor(),
-            &self.shader_layout,
-        );
-    }
-
-    pub fn end_draw(&mut self) {
-        if let RenderStage::Before = self.render_stage {
-            panic!(error!("cannot end draw stage before draw stage"));
-        } else {
-            self.render_stage = RenderStage::Before;
-        }
-
-        check!(self.device.submit());
-        check!(self.device.present(&self.swapchain));
-    }
-
     pub fn draw_on_window(&mut self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
         if let RenderStage::Before = self.render_stage {
-            panic!(error!("cannot draw before draw stage"));
+            self.begin_draw();
         }
 
         let mut target = check!(Target::new(&self.resources));
@@ -284,16 +256,18 @@ impl Tegne {
                 blit: false,
             }
         ));
+
+        self.end_draw();
     }
 
     pub fn draw(
-        &self,
+        &mut self,
         framebuffer: &Id<Framebuffer>,
         camera: &Camera,
         draw_callback: impl Fn(&mut Target<'_>),
     ) {
         if let RenderStage::Before = self.render_stage {
-            panic!(error!("cannot draw before draw stage"));
+            self.begin_draw();
         }
 
         let mut target = check!(Target::new(&self.resources));
@@ -502,6 +476,24 @@ impl Tegne {
         });
 
         Ok(id)
+    }
+
+    fn begin_draw(&mut self) {
+        self.render_stage = RenderStage::During;
+        check!(self.device.next_frame(&self.swapchain));
+        self.resources.clean_unused(&self.image_uniform);
+        self.image_uniform.update_if_needed();
+        self.device.cmd_bind_descriptor(
+            self.device.command_buffer(),
+            self.image_uniform.descriptor(),
+            &self.shader_layout,
+        );
+    }
+
+    fn end_draw(&mut self) {
+        self.render_stage = RenderStage::Before;
+        check!(self.device.submit());
+        check!(self.device.present(&self.swapchain));
     }
 }
 

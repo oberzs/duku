@@ -27,10 +27,8 @@ fn main() {
             camera.resize(new_width, new_height);
         }
 
-        tegne.begin_draw();
         tegne.draw_on_window(&camera, |target| {
             target.set_clear_color([0.0, 0.0, 1.0, 1.0]);
         });
-        tegne.end_draw();
     });
 }

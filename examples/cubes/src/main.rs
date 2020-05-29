@@ -56,9 +56,7 @@ fn main() {
     window.main_loop(|events, _| {
         controller.update(&mut camera, events);
 
-        tegne.begin_draw();
-
-        ui.draw_ui(&tegne, events);
+        ui.draw_ui(&mut tegne, events);
 
         tegne.draw_on_window(&camera, |target| {
             target.add_directional_light([-1.0, -2.0, -1.0], [1.0, 1.0, 1.0]);
@@ -68,7 +66,5 @@ fn main() {
             cube_3.draw(target);
             target.blit_framebuffer(ui.framebuffer());
         });
-
-        tegne.end_draw();
     });
 }
