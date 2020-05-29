@@ -136,6 +136,12 @@ impl From<[f32; 4]> for Color {
     }
 }
 
+impl Into<Vector4> for Color {
+    fn into(self) -> Vector4 {
+        self.to_rgba_norm_vec()
+    }
+}
+
 fn to_norm(value: u8) -> f32 {
     value as f32 / 255.0
 }

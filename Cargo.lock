@@ -460,6 +460,7 @@ dependencies = [
 name = "example-ui"
 version = "0.1.0"
 dependencies = [
+ "pretty_env_logger",
  "tegne",
 ]
 

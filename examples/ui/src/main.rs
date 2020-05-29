@@ -4,8 +4,6 @@
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use tegne::ui;
-use tegne::ui::im_str;
 use tegne::CameraType;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -13,6 +11,8 @@ use tegne::Window;
 use tegne::WindowOptions;
 
 fn main() {
+    pretty_env_logger::init();
+
     let (width, height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
@@ -29,7 +29,7 @@ fn main() {
         },
     );
 
-    let mut color = [0.0, 0.0, 0.0];
+    let mut show_demo = true;
 
     window.main_loop(|events, ui| {
         if events.is_resized() {
@@ -37,16 +37,10 @@ fn main() {
             tegne.resize(new_width, new_height);
         }
 
-        // TODO: multiple window support
-        ui::Window::new(im_str!("Background control"))
-            .size([300.0, 300.0], ui::Condition::FirstUseEver)
-            .build(&ui, || {
-                ui::ColorPicker::new(im_str!("color"), &mut color).build(&ui);
-            });
+        ui.show_demo_window(&mut show_demo);
         let ui_data = ui.render();
 
         tegne.draw_on_window(|target| {
-            target.set_clear(color);
             target.draw_ui(ui_data);
         });
     });

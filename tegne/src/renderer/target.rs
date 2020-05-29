@@ -159,9 +159,10 @@ impl<'a> Target<'a> {
         let mut normals = vec![];
         let mut colors = vec![];
         let mut uvs = vec![];
+        let mut to = 0;
         for draw_list in draw_data.draw_lists() {
             for tri in draw_list.idx_buffer().chunks(3) {
-                triangles.push([tri[0] as u32, tri[1] as u32, tri[2] as u32]);
+                triangles.push([tri[0] as u32 + to, tri[1] as u32 + to, tri[2] as u32 + to]);
             }
             for vert in draw_list.vtx_buffer() {
                 let vertex =
@@ -173,6 +174,7 @@ impl<'a> Target<'a> {
                 colors.push(color);
                 normals.push(Vector3::backward());
             }
+            to = vertices.len() as u32;
         }
 
         // update mesh
