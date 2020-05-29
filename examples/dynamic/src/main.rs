@@ -5,7 +5,6 @@
 
 mod square;
 
-use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -37,20 +36,19 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    let mut camera = Camera::perspective(width, height, 90);
     {
-        let transform = camera.transform_mut();
-        transform.move_backward(10.0);
-        transform.look_at([0.0, 0.0, 0.0], Vector3::up());
+        let cam_t = &mut tegne.main_camera.transform;
+        cam_t.move_backward(10.0);
+        cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
     let square = Square::new(&tegne);
 
     window.main_loop(|events, _| {
-        controller.update(&mut camera, events);
+        controller.update(&mut tegne.main_camera, events);
         square.update(&tegne);
 
-        tegne.draw_on_window(&camera, |target| {
+        tegne.draw_on_window(|target| {
             target.set_wireframes(true);
             square.draw(target);
         });

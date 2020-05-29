@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use super::Order;
 use super::Target;
-use crate::camera::Camera;
+use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
@@ -31,7 +31,6 @@ pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) render_passes: &'a RenderPasses,
     pub(crate) color_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
-    pub(crate) camera: &'a Camera,
     pub(crate) resources: &'a ResourceManager,
     pub(crate) target: Target<'a>,
     pub(crate) time: f32,
@@ -50,6 +49,7 @@ impl ForwardRenderer {
             render_passes,
             image_uniform,
             shader_layout,
+            CameraType::Orthographic,
             2048,
             2048,
         )?;
@@ -60,7 +60,8 @@ impl ForwardRenderer {
     pub fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
         let depth_pass = options.render_passes.depth();
 
-        let cam_mat = options.camera.matrix();
+        let cam_mat = options.framebuffer.camera.matrix();
+        let cam_pos = options.framebuffer.camera.transform.position;
 
         let light_distance = 10.0;
         let light_dir = options.target.lights()[0].coords.shrink();
@@ -72,7 +73,7 @@ impl ForwardRenderer {
 
         let world_data = WorldData {
             cam_mat,
-            cam_pos: options.camera.transform().position,
+            cam_pos,
             lights: options.target.lights(),
             light_mat,
             shadow_index: self.shadow_framebuffer.image_index(),

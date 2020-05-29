@@ -12,7 +12,6 @@ use simplelog::TermLogger;
 use simplelog::TerminalMode;
 use simplelog::WriteLogger;
 use std::fs::File;
-use tegne::Camera;
 use tegne::Tegne;
 use tegne::Window;
 use tegne::WindowOptions;
@@ -39,7 +38,6 @@ fn main() {
         ..Default::default()
     });
     let mut tegne = Tegne::from_window(&mut window, Default::default());
-    let camera = Camera::orthographic(width, height);
 
     let shader = tegne
         .create_shader_from_file_watch(
@@ -53,7 +51,7 @@ fn main() {
     window.main_loop(|events, _| {
         ui.draw_ui(&mut tegne, &events);
 
-        tegne.draw_on_window(&camera, |target| {
+        tegne.draw_on_window(|target| {
             target.set_shader(&shader);
             target.draw_surface();
             target.blit_framebuffer(ui.framebuffer());

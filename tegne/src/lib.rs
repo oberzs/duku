@@ -32,6 +32,7 @@ mod tegne;
 pub use self::tegne::Tegne;
 pub use self::tegne::TegneOptions;
 pub use camera::Camera;
+pub use camera::CameraType;
 pub use image::Framebuffer;
 pub use image::Texture;
 pub use math::Transform;

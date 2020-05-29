@@ -3,9 +3,10 @@
 
 // gradient example with custom shader arguments
 
-use tegne::Camera;
+use tegne::CameraType;
 use tegne::MaterialOptions;
 use tegne::Tegne;
+use tegne::TegneOptions;
 use tegne::Vector4;
 use tegne::Window;
 use tegne::WindowOptions;
@@ -21,9 +22,13 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(&mut window, Default::default());
-
-    let camera = Camera::orthographic(width, height);
+    let mut tegne = Tegne::from_window(
+        &mut window,
+        TegneOptions {
+            camera: CameraType::Orthographic,
+            ..Default::default()
+        },
+    );
 
     let shader = tegne
         .create_shader_from_file_watch(
@@ -38,7 +43,7 @@ fn main() {
     });
 
     window.main_loop(|_, _| {
-        tegne.draw_on_window(&camera, |target| {
+        tegne.draw_on_window(|target| {
             target.set_shader(&shader);
             target.set_material(&material);
             target.draw_surface();

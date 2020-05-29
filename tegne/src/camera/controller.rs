@@ -39,7 +39,7 @@ impl Controller {
             speed_mod = 5.0;
         }
 
-        let transform = camera.transform_mut();
+        let transform = &mut camera.transform;
 
         // camera movement
         let final_move_speed = move_speed * speed_mod * events.delta_time();

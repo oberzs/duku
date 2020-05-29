@@ -2,7 +2,7 @@
 // https://github.com/OllieBerzs/tegne-rs
 
 // Framebuffer - image that can be used as a render target
-// also manages world uniforms
+// also manages world uniform and camera
 
 use ash::vk;
 use log::debug;
@@ -16,6 +16,8 @@ use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
 use super::LayoutChangeOptions;
+use crate::camera::Camera;
+use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
@@ -26,6 +28,7 @@ use crate::pipeline::WorldUniform;
 use crate::surface::Swapchain;
 
 pub struct Framebuffer {
+    pub camera: Camera,
     handle: vk::Framebuffer,
     width: u32,
     height: u32,
@@ -42,6 +45,7 @@ impl Framebuffer {
         swapchain: &Swapchain,
         render_passes: &RenderPasses,
         shader_layout: &ShaderLayout,
+        camera_type: CameraType,
     ) -> Result<Vec<Self>> {
         debug!("creating window framebuffers");
 
@@ -102,6 +106,8 @@ impl Framebuffer {
 
                 let world_uniform = WorldUniform::new(device, shader_layout)?;
 
+                let camera = Camera::new(camera_type, extent.width, extent.height);
+
                 Ok(Self {
                     handle,
                     width: extent.width,
@@ -110,6 +116,7 @@ impl Framebuffer {
                     shader_index: None,
                     images,
                     world_uniform,
+                    camera,
                     device: Arc::clone(device),
                 })
             })
@@ -121,6 +128,7 @@ impl Framebuffer {
         render_passes: &RenderPasses,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
+        camera_type: CameraType,
         width: u32,
         height: u32,
     ) -> Result<Self> {
@@ -178,6 +186,8 @@ impl Framebuffer {
 
         let world_uniform = WorldUniform::new(device, shader_layout)?;
 
+        let camera = Camera::new(camera_type, width, height);
+
         Ok(Self {
             handle,
             width,
@@ -186,6 +196,7 @@ impl Framebuffer {
             shader_index: Some(shader_index),
             images,
             world_uniform,
+            camera,
             device: Arc::clone(device),
         })
     }
@@ -195,6 +206,7 @@ impl Framebuffer {
         render_passes: &RenderPasses,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
+        camera_type: CameraType,
         width: u32,
         height: u32,
     ) -> Result<Self> {
@@ -222,6 +234,8 @@ impl Framebuffer {
 
         let world_uniform = WorldUniform::new(device, shader_layout)?;
 
+        let camera = Camera::new(camera_type, width, height);
+
         Ok(Self {
             handle,
             width,
@@ -230,6 +244,7 @@ impl Framebuffer {
             shader_index: Some(shader_index),
             images,
             world_uniform,
+            camera,
             device: Arc::clone(device),
         })
     }

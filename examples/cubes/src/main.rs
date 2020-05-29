@@ -7,7 +7,6 @@ mod cube;
 mod floor;
 mod ui;
 
-use tegne::Camera;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -44,21 +43,20 @@ fn main() {
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, [0.0, 0.0, 1.0, 1.0]);
     let ui = Ui::new(&tegne, width, height);
 
-    let mut controller = Controller::default();
-
-    let mut camera = Camera::perspective(width, height, 90);
     {
-        let transform = camera.transform_mut();
-        transform.move_by([0.0, 5.0, -10.0]);
-        transform.look_at([0.0, 0.0, 0.0], Vector3::up());
+        let cam_t = &mut tegne.main_camera.transform;
+        cam_t.move_by([0.0, 5.0, -10.0]);
+        cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
+    let mut controller = Controller::default();
+
     window.main_loop(|events, _| {
-        controller.update(&mut camera, events);
+        controller.update(&mut tegne.main_camera, events);
 
         ui.draw_ui(&mut tegne, events);
 
-        tegne.draw_on_window(&camera, |target| {
+        tegne.draw_on_window(|target| {
             target.add_directional_light([-1.0, -2.0, -1.0], [1.0, 1.0, 1.0]);
             floor.draw(target);
             cube_1.draw(target);

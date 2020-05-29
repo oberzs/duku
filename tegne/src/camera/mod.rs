@@ -13,16 +13,18 @@ use crate::math::Vector3;
 #[cfg(feature = "controller")]
 pub use controller::Controller;
 
+#[derive(Clone)]
 pub struct Camera {
-    transform: Transform,
+    pub transform: Transform,
+    pub fov: f32,
     camera_type: CameraType,
     width: f32,
     height: f32,
     depth: f32,
-    fov: f32,
 }
 
-enum CameraType {
+#[derive(Debug, Copy, Clone)]
+pub enum CameraType {
     Orthographic,
     Perspective,
 }
@@ -47,6 +49,17 @@ impl Camera {
             height: height as f32,
             depth: 5000.0,
             fov: 0.0,
+        }
+    }
+
+    pub fn new(t: CameraType, width: u32, height: u32) -> Self {
+        Self {
+            transform: Transform::default(),
+            camera_type: t,
+            width: width as f32,
+            height: height as f32,
+            depth: 5000.0,
+            fov: 90.0,
         }
     }
 
@@ -81,13 +94,5 @@ impl Camera {
         let view = self.transform.as_matrix_for_camera();
 
         projection * view
-    }
-
-    pub fn transform(&self) -> Transform {
-        self.transform
-    }
-
-    pub fn transform_mut(&mut self) -> &mut Transform {
-        &mut self.transform
     }
 }

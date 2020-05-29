@@ -21,6 +21,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use crate::camera::Camera;
+use crate::camera::CameraType;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
@@ -61,6 +62,7 @@ macro_rules! check {
 }
 
 pub struct Tegne {
+    pub main_camera: Camera,
     render_stage: RenderStage,
     thread_kill: ThreadKill,
     start_time: Instant,
@@ -75,6 +77,7 @@ pub struct Tegne {
     surface: Surface,
     gpu_index: usize,
     instance: Arc<Instance>,
+    camera_type: CameraType,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -82,6 +85,7 @@ pub struct TegneOptions {
     pub anisotropy: f32,
     pub vsync: bool,
     pub msaa: u8,
+    pub camera: CameraType,
 }
 
 #[derive(Copy, Clone)]
@@ -143,6 +147,7 @@ impl Tegne {
             &swapchain,
             &render_passes,
             &shader_layout,
+            options.camera,
         ));
 
         let forward_renderer = check!(ForwardRenderer::new(
@@ -151,6 +156,8 @@ impl Tegne {
             &image_uniform,
             &shader_layout,
         ));
+
+        let main_camera = Camera::new(options.camera, window.width, window.height);
 
         Self {
             render_stage: RenderStage::Before,
@@ -167,6 +174,8 @@ impl Tegne {
             surface,
             gpu_index,
             instance,
+            main_camera,
+            camera_type: options.camera,
         }
     }
 
@@ -220,6 +229,7 @@ impl Tegne {
     pub fn resize(&mut self, width: u32, height: u32) {
         check!(self.device.wait_for_idle());
         self.surface.resize(width, height);
+        self.main_camera.resize(width, height);
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
@@ -228,10 +238,11 @@ impl Tegne {
             &self.swapchain,
             &self.render_passes,
             &self.shader_layout,
+            self.camera_type,
         ));
     }
 
-    pub fn draw_on_window(&mut self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
+    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
@@ -239,7 +250,8 @@ impl Tegne {
         let mut target = check!(Target::new(&self.resources));
         draw_callback(&mut target);
 
-        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
+        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
+        framebuffer.camera = self.main_camera.clone();
         let window_pass = self.render_passes.window();
 
         check!(self.forward_renderer.draw(
@@ -249,7 +261,6 @@ impl Tegne {
                 color_pass: window_pass,
                 render_passes: &self.render_passes,
                 shader_layout: &self.shader_layout,
-                camera,
                 resources: &self.resources,
                 target,
                 time: self.start_time.elapsed().as_secs_f32(),
@@ -260,12 +271,7 @@ impl Tegne {
         self.end_draw();
     }
 
-    pub fn draw(
-        &mut self,
-        framebuffer: &Id<Framebuffer>,
-        camera: &Camera,
-        draw_callback: impl Fn(&mut Target<'_>),
-    ) {
+    pub fn draw(&mut self, framebuffer: &Id<Framebuffer>, draw_callback: impl Fn(&mut Target<'_>)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
@@ -283,7 +289,6 @@ impl Tegne {
                     color_pass,
                     render_passes: &self.render_passes,
                     shader_layout: &self.shader_layout,
-                    camera,
                     resources: &self.resources,
                     target,
                     time: self.start_time.elapsed().as_secs_f32(),
@@ -387,13 +392,14 @@ impl Tegne {
         self.resources.with_mesh(mesh.id_ref(), fun)
     }
 
-    pub fn create_framebuffer(&self, width: u32, height: u32) -> Id<Framebuffer> {
+    pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
         debug!("creating framebuffer");
         let framebuffer = check!(Framebuffer::color(
             &self.device,
             &self.render_passes,
             &self.image_uniform,
             &self.shader_layout,
+            t,
             width,
             height,
         ));
@@ -510,6 +516,7 @@ impl Default for TegneOptions {
             anisotropy: 0.0,
             vsync: true,
             msaa: 1,
+            camera: CameraType::Perspective,
         }
     }
 }

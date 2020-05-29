@@ -6,8 +6,9 @@
 
 use tegne::ui;
 use tegne::ui::im_str;
-use tegne::Camera;
+use tegne::CameraType;
 use tegne::Tegne;
+use tegne::TegneOptions;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -20,8 +21,13 @@ fn main() {
         width,
         height,
     });
-    let mut tegne = Tegne::from_window(&mut window, Default::default());
-    let mut camera = Camera::orthographic(width, height);
+    let mut tegne = Tegne::from_window(
+        &mut window,
+        TegneOptions {
+            camera: CameraType::Orthographic,
+            ..Default::default()
+        },
+    );
 
     let mut light = 10;
 
@@ -29,7 +35,6 @@ fn main() {
         if events.is_resized() {
             let (new_width, new_height) = events.size();
             tegne.resize(new_width, new_height);
-            camera.resize(new_width, new_height);
         }
 
         // TODO: multiple window support
@@ -41,7 +46,7 @@ fn main() {
         let ui_data = ui.render();
 
         let value = light as f32 / 10.0;
-        tegne.draw_on_window(&camera, |target| {
+        tegne.draw_on_window(|target| {
             target.set_clear_color([value, value, value, 1.0]);
             target.draw_ui(ui_data);
         });
