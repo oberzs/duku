@@ -1,4 +1,5 @@
 target/
 import.exe
 build-import.bat
+import-assets.bat
 example-surface.log
