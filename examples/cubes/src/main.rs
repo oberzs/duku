@@ -7,6 +7,7 @@ mod cube;
 mod floor;
 mod ui;
 
+use tegne::colors;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -38,9 +39,9 @@ fn main() {
         },
     );
     let floor = Floor::new(&tegne);
-    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, [1.0, 0.0, 0.0, 1.0]);
-    let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, [0.0, 1.0, 0.0, 1.0]);
-    let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, [0.0, 0.0, 1.0, 1.0]);
+    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, colors::RED);
+    let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, colors::BLUE);
+    let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, colors::GREEN);
     let ui = Ui::new(&tegne, width, height);
 
     {

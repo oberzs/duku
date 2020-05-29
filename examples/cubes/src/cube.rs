@@ -3,6 +3,7 @@
 
 // Cube mesh struct with custom shader
 
+use tegne::Color;
 use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
@@ -12,7 +13,6 @@ use tegne::Tegne;
 use tegne::Transform;
 use tegne::Vector2;
 use tegne::Vector3;
-use tegne::Vector4;
 
 pub struct Cube {
     mesh: Id<Mesh>,
@@ -21,12 +21,7 @@ pub struct Cube {
 }
 
 impl Cube {
-    pub fn new(
-        tegne: &Tegne,
-        pos: impl Into<Vector3>,
-        size: f32,
-        color: impl Into<Vector4>,
-    ) -> Self {
+    pub fn new(tegne: &Tegne, pos: impl Into<Vector3>, size: f32, color: impl Into<Color>) -> Self {
         let mesh = cube(tegne, size, color.into());
         let shader = tegne
             .create_shader_from_file_watch("examples/cubes/assets/test.shader", Default::default())
@@ -47,7 +42,7 @@ impl Cube {
     }
 }
 
-fn cube(tegne: &Tegne, size: f32, color: Vector4) -> Id<Mesh> {
+fn cube(tegne: &Tegne, size: f32, color: Color) -> Id<Mesh> {
     let top = rectangle(
         tegne,
         color,
@@ -107,7 +102,7 @@ fn cube(tegne: &Tegne, size: f32, color: Vector4) -> Id<Mesh> {
 
 fn rectangle<V: Into<Vector3>>(
     tegne: &Tegne,
-    color: Vector4,
+    color: Color,
     p1: V,
     p2: V,
     p3: V,

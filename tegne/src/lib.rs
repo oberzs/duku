@@ -15,6 +15,7 @@
 
 mod buffer;
 mod camera;
+mod color;
 mod device;
 mod error;
 mod font;
@@ -33,6 +34,8 @@ pub use self::tegne::Tegne;
 pub use self::tegne::TegneOptions;
 pub use camera::Camera;
 pub use camera::CameraType;
+pub use color::colors;
+pub use color::Color;
 pub use image::Framebuffer;
 pub use image::Texture;
 pub use math::Transform;

@@ -11,18 +11,19 @@ use std::sync::Arc;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
+use crate::color::colors;
+use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::math::Vector4;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {
     vertices: Vec<Vector3>,
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
-    colors: Vec<Vector4>,
+    colors: Vec<Color>,
     triangles: Vec<[u32; 3]>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
@@ -36,7 +37,7 @@ pub struct MeshOptions<'slice> {
     pub vertices: &'slice [Vector3],
     pub uvs: &'slice [Vector2],
     pub normals: &'slice [Vector3],
-    pub colors: &'slice [Vector4],
+    pub colors: &'slice [Color],
     pub triangles: &'slice [[u32; 3]],
 }
 
@@ -60,7 +61,7 @@ impl Mesh {
         normals[..options.normals.len()].clone_from_slice(options.normals);
 
         // fill in missing default colors for all vertices
-        let mut colors = vec![Vector4::new(1.0, 1.0, 1.0, 1.0); vertex_count];
+        let mut colors = vec![colors::WHITE; vertex_count];
         colors[..options.colors.len()].clone_from_slice(options.colors);
 
         // calculate smooth normals
@@ -111,7 +112,7 @@ impl Mesh {
         self.should_update_vertices.set(true);
     }
 
-    pub fn set_colors(&mut self, colors: &[Vector4]) {
+    pub fn set_colors(&mut self, colors: &[Color]) {
         self.colors = colors.to_owned();
         self.should_update_vertices.set(true);
     }
@@ -133,7 +134,7 @@ impl Mesh {
         self.normals.clone()
     }
 
-    pub fn colors(&self) -> Vec<Vector4> {
+    pub fn colors(&self) -> Vec<Color> {
         self.colors.clone()
     }
 
@@ -154,7 +155,7 @@ impl Mesh {
                     pos: *pos,
                     uv: *uv,
                     norm: *normal,
-                    col: *col,
+                    col: col.to_rgba_norm_vec(),
                 })
                 .collect::<Vec<_>>();
             self.vertex_buffer.update_data(&vertices)?;

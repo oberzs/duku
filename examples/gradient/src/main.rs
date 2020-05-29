@@ -3,18 +3,18 @@
 
 // gradient example with custom shader arguments
 
+use tegne::colors;
 use tegne::CameraType;
 use tegne::MaterialOptions;
 use tegne::Tegne;
 use tegne::TegneOptions;
-use tegne::Vector4;
 use tegne::Window;
 use tegne::WindowOptions;
 
 fn main() {
     let (width, height) = (800, 500);
-    let color_1 = Vector4::new(1.0, 0.0, 0.0, 1.0);
-    let color_2 = Vector4::new(0.0, 0.0, 1.0, 1.0);
+    let color_1 = colors::RED;
+    let color_2 = colors::BLUE;
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: Surface",
@@ -37,8 +37,8 @@ fn main() {
         )
         .unwrap();
     let material = tegne.create_material(MaterialOptions {
-        arg_1: color_1,
-        arg_2: color_2,
+        arg_1: color_1.to_rgba_norm_vec(),
+        arg_2: color_2.to_rgba_norm_vec(),
         ..Default::default()
     });
 

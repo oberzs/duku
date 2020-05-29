@@ -48,7 +48,7 @@ impl Ui {
 
     pub fn draw_ui(&self, tegne: &mut Tegne, events: &Events) {
         tegne.draw(&self.framebuffer, |target| {
-            target.set_clear_color([0.0, 0.0, 0.0, 0.0]);
+            target.set_clear([0.0, 0.0, 0.0, 0.0]);
             target.set_material(&self.material);
             target.draw_text(format!("fps: {}", events.fps()), self.transform);
         });

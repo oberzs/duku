@@ -3,6 +3,7 @@
 
 // "Hello, World!" example to open a blue resizable window
 
+use tegne::colors;
 use tegne::Tegne;
 use tegne::Window;
 use tegne::WindowOptions;
@@ -25,7 +26,7 @@ fn main() {
         }
 
         tegne.draw_on_window(|target| {
-            target.set_clear_color([0.0, 0.0, 1.0, 1.0]);
+            target.set_clear(colors::BLUE);
         });
     });
 }

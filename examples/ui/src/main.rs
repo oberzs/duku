@@ -47,7 +47,7 @@ fn main() {
 
         let value = light as f32 / 10.0;
         tegne.draw_on_window(|target| {
-            target.set_clear_color([value, value, value, 1.0]);
+            target.set_clear([value, value, value]);
             target.draw_ui(ui_data);
         });
     });

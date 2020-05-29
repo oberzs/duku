@@ -3,6 +3,7 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
+use crate::color::Color;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
@@ -10,7 +11,6 @@ use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::math::Vector4;
 use crate::mesh::Mesh;
 use crate::pipeline::Light;
 use crate::pipeline::Material;
@@ -22,7 +22,7 @@ use crate::resource::ResourceManager;
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
     wireframe_orders: Vec<Order>,
-    clear: [f32; 4],
+    clear: Color,
     lights: Vec<Light>,
     current_shader: IdRef,
     current_material: IdRef,
@@ -55,7 +55,7 @@ impl<'a> Target<'a> {
         Ok(Self {
             orders_by_shader: vec![],
             wireframe_orders: vec![],
-            clear: [0.7, 0.7, 0.7, 1.0],
+            clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             lights: vec![],
             current_shader: resources.builtin("phong_sh"),
             current_material: resources.builtin("white_mat"),
@@ -167,12 +167,7 @@ impl<'a> Target<'a> {
                 let vertex =
                     Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
                 let uv = Vector2::new(vert.uv[0], vert.uv[1]);
-                let color = Vector4::new(
-                    vert.col[0] as f32 / 255.0,
-                    vert.col[1] as f32 / 255.0,
-                    vert.col[2] as f32 / 255.0,
-                    vert.col[3] as f32 / 255.0,
-                );
+                let color = Color::from(vert.col);
                 vertices.push(vertex);
                 uvs.push(uv);
                 colors.push(color);
@@ -207,11 +202,11 @@ impl<'a> Target<'a> {
     pub fn add_directional_light(
         &mut self,
         direction: impl Into<Vector3>,
-        color: impl Into<Vector3>,
+        color: impl Into<Color>,
     ) {
         self.lights.push(Light {
             coords: direction.into().extend(0.0),
-            color: color.into().extend(1.0),
+            color: color.into().to_rgba_norm_vec(),
         });
     }
 
@@ -239,8 +234,8 @@ impl<'a> Target<'a> {
         self.current_shader = self.resources.builtin("phong_sh");
     }
 
-    pub fn set_clear_color(&mut self, clear: [f32; 4]) {
-        self.clear = clear;
+    pub fn set_clear(&mut self, clear: impl Into<Color>) {
+        self.clear = clear.into();
     }
 
     pub fn set_wireframes(&mut self, draw: bool) {
@@ -248,7 +243,7 @@ impl<'a> Target<'a> {
     }
 
     pub(crate) fn clear(&self) -> [f32; 4] {
-        [self.clear[0], self.clear[1], self.clear[2], self.clear[3]]
+        self.clear.to_rgba_norm()
     }
 
     pub(crate) fn orders_by_shader(&self) -> impl Iterator<Item = &OrdersByShader> {
