@@ -29,7 +29,7 @@ fn main() {
         },
     );
 
-    let mut light = 10;
+    let mut color = [0.0, 0.0, 0.0];
 
     window.main_loop(|events, ui| {
         if events.is_resized() {
@@ -38,16 +38,15 @@ fn main() {
         }
 
         // TODO: multiple window support
-        ui::Window::new(im_str!("Light control"))
-            .size([280.0, 70.0], ui::Condition::FirstUseEver)
+        ui::Window::new(im_str!("Background control"))
+            .size([300.0, 300.0], ui::Condition::FirstUseEver)
             .build(&ui, || {
-                ui::Slider::new(im_str!("strength"), 0..=10).build(&ui, &mut light);
+                ui::ColorPicker::new(im_str!("color"), &mut color).build(&ui);
             });
         let ui_data = ui.render();
 
-        let value = light as f32 / 10.0;
         tegne.draw_on_window(|target| {
-            target.set_clear([value, value, value]);
+            target.set_clear(color);
             target.draw_ui(ui_data);
         });
     });
