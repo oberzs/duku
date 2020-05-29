@@ -67,7 +67,7 @@ impl ForwardRenderer {
         let light_dir = options.target.lights()[0].coords.shrink();
         let light_mat_dir = light_dir.unit();
         let light_mat_pos = light_mat_dir * light_distance;
-        let light_mat = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0)
+        let light_mat = Matrix4::orthographic_center(20.0, 20.0, 0.1, 50.0)
             * Matrix4::look_rotation(light_mat_dir, Vector3::up())
             * Matrix4::translation(light_mat_pos);
 
