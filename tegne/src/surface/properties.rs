@@ -10,6 +10,7 @@ use super::Surface;
 use crate::error::Result;
 use crate::instance::Instance;
 use crate::math::clamp;
+use crate::profile_scope;
 
 pub(crate) struct SurfaceProperties {
     pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
@@ -24,6 +25,8 @@ pub(crate) struct SurfaceProperties {
 
 impl SurfaceProperties {
     pub(crate) fn new(instance: &Instance, surface: &Surface, vsync: bool) -> Result<Vec<Self>> {
+        profile_scope!("new");
+
         let formats = instance.get_surface_formats(surface)?.into_iter();
         let present_modes = instance.get_surface_present_modes(surface)?.into_iter();
         let capabilities = instance.get_surface_capabilities(surface)?.into_iter();

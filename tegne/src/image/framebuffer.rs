@@ -25,6 +25,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
+use crate::profile_scope;
 use crate::surface::Swapchain;
 
 pub struct Framebuffer {
@@ -47,6 +48,7 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
+        profile_scope!("window");
         debug!("creating window framebuffers");
 
         let extent = swapchain.extent();

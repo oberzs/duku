@@ -38,6 +38,7 @@ use crate::pipeline::RenderPasses;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
+use crate::profile_scope;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
@@ -101,6 +102,8 @@ struct ThreadKill {
 
 impl Tegne {
     pub fn new(window: WindowHandle, options: TegneOptions) -> Self {
+        profile_scope!("new");
+
         let instance = Arc::new(check!(Instance::new()));
         let surface = check!(Surface::new(&instance, window));
 

@@ -15,6 +15,7 @@ use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
 use crate::instance::Instance;
+use crate::profile_scope;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
@@ -29,6 +30,7 @@ impl Swapchain {
         surface: &Surface,
         surface_properties: SurfaceProperties,
     ) -> Result<Self> {
+        profile_scope!("new");
         debug!("creating window swapchain");
 
         let info = swapchain_info(surface, &surface_properties);

@@ -19,6 +19,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldData;
+use crate::profile_scope;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
@@ -44,6 +45,8 @@ impl ForwardRenderer {
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
     ) -> Result<Self> {
+        profile_scope!("new");
+
         let shadow_framebuffer = Framebuffer::depth(
             device,
             render_passes,

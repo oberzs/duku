@@ -39,6 +39,7 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::profile_scope;
 use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
 use crate::sync::fence;
@@ -70,6 +71,8 @@ impl Device {
         device_properties: DeviceProperties,
         gpu_index: usize,
     ) -> Result<Self> {
+        profile_scope!("new");
+
         // configure device features
         let features = vk::PhysicalDeviceFeatures::builder()
             .sampler_anisotropy(true)

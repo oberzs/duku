@@ -23,6 +23,7 @@ use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::profile_scope;
 
 pub(crate) use builtin::create_builtins;
 
@@ -54,6 +55,8 @@ type Builtins<T> = Mutex<HashMap<String, Id<T>>>;
 
 impl ResourceManager {
     pub(crate) fn new() -> Self {
+        profile_scope!("new");
+
         Self {
             textures: Mutex::new(HashMap::new()),
             materials: Mutex::new(HashMap::new()),

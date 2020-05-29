@@ -22,10 +22,17 @@ use crate::pipeline::RenderPasses;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
+use crate::profile_scope;
 
 macro_rules! include_shader {
     ($path:expr) => {
         include_bytes!(concat!("../../assets/shaders/", $path))
+    };
+}
+
+macro_rules! include_font {
+    ($path:expr) => {
+        include_bytes!(concat!("../../assets/fonts/", $path))
     };
 }
 
@@ -36,6 +43,8 @@ pub(crate) fn create_builtins(
     layout: &ShaderLayout,
     uniform: &ImageUniform,
 ) -> Result<()> {
+    profile_scope!("create_builtins");
+
     // textures
     resources.add_texture(
         Texture::from_raw_rgba(device, uniform, &[255, 255, 255, 255], 1, 1)?,
@@ -125,7 +134,7 @@ pub(crate) fn create_builtins(
             device,
             uniform,
             resources,
-            include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
+            include_font!("RobotoMono-Regular.font"),
         )?,
         Some("roboto_font"),
     );

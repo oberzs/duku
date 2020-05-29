@@ -3,7 +3,7 @@
 
 // Tegne is a Vulkan rendering engine
 
-#![feature(proc_macro_hygiene, drain_filter, trait_alias)]
+#![feature(proc_macro_hygiene, drain_filter, trait_alias, thread_id_value)]
 #![warn(
     rust_2018_idioms,
     unused,
@@ -24,6 +24,7 @@ mod instance;
 mod math;
 mod mesh;
 mod pipeline;
+mod profiler;
 mod renderer;
 mod resource;
 mod surface;
@@ -48,6 +49,8 @@ pub use pipeline::Material;
 pub use pipeline::MaterialOptions;
 pub use pipeline::Shader;
 pub use pipeline::ShaderOptions;
+pub use profiler::begin_profile;
+pub use profiler::end_profile;
 pub use renderer::Target;
 pub use resource::Id;
 

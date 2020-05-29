@@ -13,6 +13,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
+use crate::profile_scope;
 
 pub(crate) struct RenderPasses {
     window: RenderPass,
@@ -35,6 +36,8 @@ struct RenderPassOptions {
 
 impl RenderPasses {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
+        profile_scope!("new");
+
         let window = RenderPass::window(device)?;
         let color = RenderPass::color(device)?;
         let depth = RenderPass::depth(device)?;

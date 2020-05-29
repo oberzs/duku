@@ -12,6 +12,7 @@ use super::PushConstants;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
+use crate::profile_scope;
 
 pub(crate) struct ShaderLayout {
     handle: vk::PipelineLayout,
@@ -24,6 +25,7 @@ pub(crate) struct ShaderLayout {
 
 impl ShaderLayout {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
+        profile_scope!("new");
         debug!("creating shader layout");
 
         // world uniform layout

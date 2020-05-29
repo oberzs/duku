@@ -26,6 +26,7 @@ use ash::extensions::ext::DebugUtils as DebugExt;
 
 use crate::error::ErrorKind;
 use crate::error::Result;
+use crate::profile_scope;
 use crate::surface::Surface;
 
 pub(crate) struct Instance {
@@ -42,6 +43,7 @@ pub(crate) struct Instance {
 
 impl Instance {
     pub(crate) fn new() -> Result<Self> {
+        profile_scope!("new");
         info!("initializing the Vulkan API");
 
         let entry = Entry::new()?;
@@ -58,6 +60,7 @@ impl Instance {
         }
 
         // check extension support
+        let extension_list = extension::list()?;
         let available_extensions = entry
             .enumerate_instance_extension_properties()?
             .iter()
@@ -66,7 +69,6 @@ impl Instance {
                 unsafe { CStr::from_ptr(ptr).to_owned() }
             })
             .collect::<Vec<_>>();
-        let extension_list = extension::list()?;
         for extension in extension_list.iter() {
             if !available_extensions.contains(&extension) {
                 return Err(ErrorKind::UnsupportedExtension(extension.clone()).into());
@@ -74,6 +76,7 @@ impl Instance {
         }
 
         // check validation layer support
+        let layer_list = layer::list()?;
         let available_layers = entry
             .enumerate_instance_layer_properties()?
             .iter()
@@ -82,7 +85,6 @@ impl Instance {
                 unsafe { CStr::from_ptr(ptr).to_owned() }
             })
             .collect::<Vec<_>>();
-        let layer_list = layer::list()?;
         for layer in layer_list.iter() {
             if !available_layers.contains(&layer) {
                 return Err(ErrorKind::UnsupportedValidation(layer.clone()).into());

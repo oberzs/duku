@@ -37,6 +37,8 @@ use imgui_winit_support::HiDpiMode;
 #[cfg(feature = "ui")]
 use imgui_winit_support::WinitPlatform;
 
+use crate::profile_scope;
+
 macro_rules! check {
     ($result:expr) => {
         match $result {
@@ -85,6 +87,8 @@ const FPS_SAMPLE_COUNT: usize = 64;
 
 impl Window {
     pub fn new(options: WindowOptions<'_>) -> Self {
+        profile_scope!("new");
+
         let event_loop = EventLoop::new();
         let size = PhysicalSize::new(options.width, options.height);
 

@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 default = ["controller", "image", "window", "ui"]
+profiler = ["lazy_static"]
 image = ["image_file"]
 window = ["winit"]
 controller = ["window"]
@@ -25,6 +26,7 @@ image_file = { package = "image", version = "0.23.4", optional = true }
 winit = { version = "0.22.2", optional = true }
 imgui = { version = "0.4.0", optional = true }
 imgui-winit-support = { version = "0.4.0", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
 
 # Windows dependencies
 [target.'cfg(target_os = "windows")'.dependencies]

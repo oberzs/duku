@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::instance::Instance;
+use crate::profile_scope;
 
 pub(crate) use properties::SurfaceProperties;
 pub(crate) use swapchain::Swapchain;
@@ -43,6 +44,8 @@ pub(crate) struct Surface {
 impl Surface {
     #[cfg(target_os = "windows")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+        profile_scope!("new");
+
         debug!("creating Windows window surface");
 
         use std::ptr;
@@ -65,6 +68,8 @@ impl Surface {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+        profile_scope!("new");
+
         debug!("creating Linux window surface");
 
         let info = vk::XlibSurfaceCreateInfoKHR::builder()
@@ -83,6 +88,8 @@ impl Surface {
 
     #[cfg(target_os = "macos")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+        profile_scope!("new");
+
         debug!("creating MacOS window surface");
 
         use cocoa::appkit::NSView;

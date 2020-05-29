@@ -11,6 +11,7 @@ use super::extension;
 use crate::error::Result;
 use crate::image::ImageSamples;
 use crate::instance::Instance;
+use crate::profile_scope;
 
 #[derive(Clone)]
 pub(crate) struct DeviceProperties {
@@ -23,6 +24,8 @@ pub(crate) struct DeviceProperties {
 
 impl DeviceProperties {
     pub(crate) fn new(instance: &Instance, msaa: u8) -> Result<Vec<Self>> {
+        profile_scope!("new");
+
         let properties = instance.get_device_properties().into_iter();
         let features = instance.get_device_features().into_iter();
         let memory = instance.get_device_memory().into_iter();

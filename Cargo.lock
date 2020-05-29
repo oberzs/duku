@@ -1527,6 +1527,7 @@ dependencies = [
  "image",
  "imgui",
  "imgui-winit-support",
+ "lazy_static",
  "log",
  "metal",
  "notify",

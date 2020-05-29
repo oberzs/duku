@@ -23,6 +23,7 @@ use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
+use crate::profile_scope;
 
 pub(crate) struct WorldUniform {
     descriptor: Descriptor,
@@ -89,6 +90,7 @@ impl ImageUniform {
         layout: &ShaderLayout,
         anisotropy: f32,
     ) -> Result<Self> {
+        profile_scope!("new");
         debug!("creating image uniforms");
         info!("using anisotropy level {}", anisotropy);
 
