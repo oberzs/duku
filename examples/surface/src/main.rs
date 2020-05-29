@@ -51,7 +51,6 @@ fn main() {
     let ui = Ui::new(&tegne, width, height);
 
     window.main_loop(|events, _| {
-        tegne.begin_draw();
         ui.draw_ui(&mut tegne, &events);
 
         tegne.draw_on_window(&camera, |target| {
@@ -59,7 +58,5 @@ fn main() {
             target.draw_surface();
             target.blit_framebuffer(ui.framebuffer());
         });
-
-        tegne.end_draw();
     });
 }
