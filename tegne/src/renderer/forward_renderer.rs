@@ -4,6 +4,7 @@
 // ForwardRenderer - renderer that renders shadowmap and then normal render pass
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use super::Order;
 use super::Target;
@@ -16,7 +17,6 @@ use crate::math::Vector3;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::RenderPass;
-use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldData;
 use crate::profile_scope;
@@ -24,32 +24,31 @@ use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
 pub(crate) struct ForwardRenderer {
-    shadow_framebuffer: Framebuffer,
+    depth_framebuffer: Framebuffer,
+    start_time: Instant,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) framebuffer: &'a Framebuffer,
-    pub(crate) render_passes: &'a RenderPasses,
     pub(crate) color_pass: &'a RenderPass,
+    pub(crate) depth_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) resources: &'a ResourceManager,
     pub(crate) target: Target<'a>,
-    pub(crate) time: f32,
-    pub(crate) blit: bool,
 }
 
 impl ForwardRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
-        render_passes: &RenderPasses,
+        depth_pass: &RenderPass,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let shadow_framebuffer = Framebuffer::depth(
+        let depth_framebuffer = Framebuffer::depth(
             device,
-            render_passes,
+            depth_pass,
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
@@ -57,14 +56,16 @@ impl ForwardRenderer {
             2048,
         )?;
 
-        Ok(Self { shadow_framebuffer })
+        Ok(Self {
+            start_time: Instant::now(),
+            depth_framebuffer,
+        })
     }
 
-    pub fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
-        let depth_pass = options.render_passes.depth();
-
+    pub(crate) fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
         let cam_mat = options.framebuffer.camera.matrix();
         let cam_pos = options.framebuffer.camera.transform.position;
+        let time = self.start_time.elapsed().as_secs_f32();
 
         let light_distance = 10.0;
         let light_dir = options.target.lights()[0].coords.shrink();
@@ -75,12 +76,12 @@ impl ForwardRenderer {
             * Matrix4::translation(light_mat_pos);
 
         let world_data = WorldData {
+            shadow_index: self.depth_framebuffer.image_index(),
+            lights: options.target.lights(),
             cam_mat,
             cam_pos,
-            lights: options.target.lights(),
             light_mat,
-            shadow_index: self.shadow_framebuffer.image_index(),
-            time: options.time,
+            time,
         };
 
         let clear = options.target.clear();
@@ -88,9 +89,9 @@ impl ForwardRenderer {
         let cmd = device.command_buffer();
 
         // shadow mapping
-        device.cmd_begin_render_pass(cmd, &self.shadow_framebuffer, depth_pass, clear);
-        self.setup_pass(device, &self.shadow_framebuffer);
-        self.bind_world(device, &self.shadow_framebuffer, world_data, &options)?;
+        device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, options.depth_pass, clear);
+        self.setup_pass(device, &self.depth_framebuffer);
+        self.bind_world(device, &self.depth_framebuffer, world_data, &options)?;
 
         self.bind_shader(device, options.resources.builtin("shadow_sh"), &options);
         for s_order in options.target.orders_by_shader() {
@@ -105,7 +106,7 @@ impl ForwardRenderer {
         }
 
         device.cmd_end_render_pass(cmd);
-        self.shadow_framebuffer.update_shader_image(cmd);
+        self.depth_framebuffer.update_shader_image(cmd);
 
         // normal render
         device.cmd_begin_render_pass(cmd, options.framebuffer, options.color_pass, clear);
@@ -129,11 +130,7 @@ impl ForwardRenderer {
         }
 
         device.cmd_end_render_pass(cmd);
-
-        // TODO: add check based on framebuffer
-        if options.blit {
-            options.framebuffer.update_shader_image(cmd);
-        }
+        options.framebuffer.update_shader_image(cmd);
 
         Ok(())
     }

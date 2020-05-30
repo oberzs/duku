@@ -34,7 +34,7 @@ use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialOptions;
-use crate::pipeline::RenderPasses;
+use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -66,7 +66,6 @@ pub struct Tegne {
     pub main_camera: Camera,
     render_stage: RenderStage,
     thread_kill: ThreadKill,
-    start_time: Instant,
     forward_renderer: ForwardRenderer,
     resources: Arc<ResourceManager>,
     window_framebuffers: Vec<Framebuffer>,
@@ -87,6 +86,12 @@ pub struct TegneOptions {
     pub vsync: bool,
     pub msaa: u8,
     pub camera: CameraType,
+}
+
+struct RenderPasses {
+    pub(crate) window: RenderPass,
+    pub(crate) color: RenderPass,
+    pub(crate) depth: RenderPass,
 }
 
 #[derive(Copy, Clone)]
@@ -134,13 +139,18 @@ impl Tegne {
             options.anisotropy
         ));
 
-        let render_passes = check!(RenderPasses::new(&device));
+        let render_passes = RenderPasses {
+            window: check!(RenderPass::window(&device)),
+            color: check!(RenderPass::color(&device)),
+            depth: check!(RenderPass::depth(&device)),
+        };
 
         let resources = ResourceManager::new();
         check!(create_builtins(
             &device,
             &resources,
-            &render_passes,
+            &render_passes.color,
+            &render_passes.depth,
             &shader_layout,
             &image_uniform,
         ));
@@ -148,14 +158,14 @@ impl Tegne {
         let window_framebuffers = check!(Framebuffer::window(
             &device,
             &swapchain,
-            &render_passes,
+            &render_passes.window,
             &shader_layout,
             options.camera,
         ));
 
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
-            &render_passes,
+            &render_passes.depth,
             &image_uniform,
             &shader_layout,
         ));
@@ -165,7 +175,6 @@ impl Tegne {
         Self {
             render_stage: RenderStage::Before,
             thread_kill: ThreadKill::new(),
-            start_time: Instant::now(),
             forward_renderer,
             resources: Arc::new(resources),
             window_framebuffers,
@@ -239,7 +248,7 @@ impl Tegne {
         self.window_framebuffers = check!(Framebuffer::window(
             &self.device,
             &self.swapchain,
-            &self.render_passes,
+            &self.render_passes.window,
             &self.shader_layout,
             self.camera_type,
         ));
@@ -255,19 +264,16 @@ impl Tegne {
 
         let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
         framebuffer.camera = self.main_camera.clone();
-        let window_pass = self.render_passes.window();
 
         check!(self.forward_renderer.draw(
             &self.device,
             ForwardDrawOptions {
                 framebuffer,
-                color_pass: window_pass,
-                render_passes: &self.render_passes,
+                color_pass: &self.render_passes.window,
+                depth_pass: &self.render_passes.depth,
                 shader_layout: &self.shader_layout,
                 resources: &self.resources,
                 target,
-                time: self.start_time.elapsed().as_secs_f32(),
-                blit: false,
             }
         ));
 
@@ -283,19 +289,15 @@ impl Tegne {
         draw_callback(&mut target);
 
         self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
-            let color_pass = self.render_passes.color();
-
             check!(self.forward_renderer.draw(
                 &self.device,
                 ForwardDrawOptions {
                     framebuffer: f,
-                    color_pass,
-                    render_passes: &self.render_passes,
+                    color_pass: &self.render_passes.color,
+                    depth_pass: &self.render_passes.depth,
                     shader_layout: &self.shader_layout,
                     resources: &self.resources,
                     target,
-                    time: self.start_time.elapsed().as_secs_f32(),
-                    blit: true,
                 }
             ));
         });
@@ -399,7 +401,7 @@ impl Tegne {
         debug!("creating framebuffer");
         let framebuffer = check!(Framebuffer::color(
             &self.device,
-            &self.render_passes,
+            &self.render_passes.color,
             &self.image_uniform,
             &self.shader_layout,
             t,
@@ -411,10 +413,9 @@ impl Tegne {
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
         debug!("creating shader");
-        let render_pass = self.render_passes.color();
         let shader = check!(Shader::new(
             &self.device,
-            render_pass,
+            &self.render_passes.color,
             &self.shader_layout,
             source,
             options,
@@ -469,10 +470,9 @@ impl Tegne {
                             thread::sleep(Duration::from_millis(500));
 
                             let source = check!(fs::read(&path_buf));
-                            let color_pass = render_passes.color();
                             let shader = check!(Shader::new(
                                 &device,
-                                &color_pass,
+                                &render_passes.color,
                                 &shader_layout,
                                 &source,
                                 options,

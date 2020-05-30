@@ -18,7 +18,7 @@ use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
-use crate::pipeline::RenderPasses;
+use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -39,7 +39,8 @@ macro_rules! include_font {
 pub(crate) fn create_builtins(
     device: &Arc<Device>,
     resources: &ResourceManager,
-    passes: &RenderPasses,
+    color_pass: &RenderPass,
+    depth_pass: &RenderPass,
     layout: &ShaderLayout,
     uniform: &ImageUniform,
 ) -> Result<()> {
@@ -63,9 +64,6 @@ pub(crate) fn create_builtins(
     resources.add_mesh(create_sphere(device, 2)?, Some("sphere_mesh"));
 
     // shaders
-    let color_pass = passes.color();
-    let depth_pass = passes.depth();
-
     resources.add_shader(
         Shader::new(
             device,

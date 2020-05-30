@@ -22,7 +22,6 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
-use crate::pipeline::RenderPasses;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
 use crate::profile_scope;
@@ -44,7 +43,7 @@ impl Framebuffer {
     pub(crate) fn window(
         device: &Arc<Device>,
         swapchain: &Swapchain,
-        render_passes: &RenderPasses,
+        render_pass: &RenderPass,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
@@ -52,7 +51,6 @@ impl Framebuffer {
         debug!("creating window framebuffers");
 
         let extent = swapchain.extent();
-        let render_pass = render_passes.window();
 
         // create a framebuffer for each image in the swapchain
         swapchain
@@ -127,7 +125,7 @@ impl Framebuffer {
 
     pub(crate) fn color(
         device: &Arc<Device>,
-        render_passes: &RenderPasses,
+        render_pass: &RenderPass,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
@@ -135,7 +133,6 @@ impl Framebuffer {
         height: u32,
     ) -> Result<Self> {
         let mut images = vec![];
-        let render_pass = render_passes.color();
 
         // depth
         images.push(ImageMemory::new(
@@ -205,7 +202,7 @@ impl Framebuffer {
 
     pub(crate) fn depth(
         device: &Arc<Device>,
-        render_passes: &RenderPasses,
+        render_pass: &RenderPass,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
@@ -213,7 +210,6 @@ impl Framebuffer {
         height: u32,
     ) -> Result<Self> {
         let mut images = vec![];
-        let render_pass = render_passes.depth();
 
         // depth
         images.push(ImageMemory::new(

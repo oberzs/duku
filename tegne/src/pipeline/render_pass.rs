@@ -15,12 +15,6 @@ use crate::image::ImageFormat;
 use crate::image::ImageLayout;
 use crate::profile_scope;
 
-pub(crate) struct RenderPasses {
-    window: RenderPass,
-    color: RenderPass,
-    depth: RenderPass,
-}
-
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
     has_msaa_attachment: bool,
@@ -34,36 +28,10 @@ struct RenderPassOptions {
     dependency_type: DependencyType,
 }
 
-impl RenderPasses {
-    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
-        profile_scope!("new");
-
-        let window = RenderPass::window(device)?;
-        let color = RenderPass::color(device)?;
-        let depth = RenderPass::depth(device)?;
-
-        Ok(Self {
-            window,
-            color,
-            depth,
-        })
-    }
-
-    pub(crate) fn window(&self) -> &RenderPass {
-        &self.window
-    }
-
-    pub(crate) fn color(&self) -> &RenderPass {
-        &self.color
-    }
-
-    pub(crate) fn depth(&self) -> &RenderPass {
-        &self.depth
-    }
-}
-
 impl RenderPass {
     pub(crate) fn window(device: &Arc<Device>) -> Result<Self> {
+        profile_scope!("window");
+
         // depth
         let depth_attachment = Some(Attachment::new(AttachmentOptions {
             index: 0,
@@ -110,6 +78,8 @@ impl RenderPass {
     }
 
     pub(crate) fn color(device: &Arc<Device>) -> Result<Self> {
+        profile_scope!("color");
+
         // depth
         let depth_attachment = Some(Attachment::new(AttachmentOptions {
             index: 0,
@@ -156,6 +126,8 @@ impl RenderPass {
     }
 
     pub(crate) fn depth(device: &Arc<Device>) -> Result<Self> {
+        profile_scope!("depth");
+
         // depth
         let depth_attachment = Some(Attachment::new(AttachmentOptions {
             index: 0,
