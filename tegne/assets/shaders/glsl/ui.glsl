@@ -1,7 +1,9 @@
+#define SRGB
+
 #ifdef VERTEX
 void vertex() {
     gl_Position = world.cam_mat * object.model_mat * vec4(in_position, 1.0);
-    out_color = in_color;
+    out_color = srgb_to_linear_color(in_color);
     out_uv = in_uv;
 }
 #endif

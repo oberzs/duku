@@ -57,11 +57,18 @@ pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
 fn compile_vert(src: &str) -> Result<CompilationArtifact> {
     let vert_glsl = include_str!("../glsl/vert.glsl");
     let objects_glsl = include_str!("../glsl/objects.glsl");
+    let srgb_glsl = include_str!("../glsl/srgb.glsl");
+
+    let define_regex = Regex::new(r"(#define [A-Z]+\s+)*")?;
+    let defines = match define_regex.find(src) {
+        Some(m) => &src[m.start()..m.end()],
+        None => "",
+    };
 
     // create real glsl code
     let real_src = format!(
-        "#version 450\n{}\n{}\n{}\nvoid main() {{ vertex(); }}",
-        objects_glsl, vert_glsl, src
+        "#version 450\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ vertex(); }}",
+        objects_glsl, vert_glsl, defines, srgb_glsl, src
     );
 
     // compile glsl to spirv
@@ -82,6 +89,7 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     let frag_glsl = include_str!("../glsl/frag.glsl");
     let objects_glsl = include_str!("../glsl/objects.glsl");
     let phong_glsl = include_str!("../glsl/phong.glsl");
+    let srgb_glsl = include_str!("../glsl/srgb.glsl");
 
     let define_regex = Regex::new(r"(#define [A-Z]+\s+)*")?;
     let defines = match define_regex.find(src) {
@@ -98,8 +106,8 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     };
 
     let real_src = format!(
-        "#version 450\n{}\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
-        objects_glsl, frag_glsl, out_color, defines, phong_glsl, src
+        "#version 450\n{}\n{}\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
+        objects_glsl, frag_glsl, out_color, defines, phong_glsl, srgb_glsl, src
     );
 
     // compile glsl to spirv
