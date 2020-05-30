@@ -6,7 +6,8 @@
 mod cube;
 mod floor;
 
-use tegne::colors;
+use rand::Rng;
+use std::time::Instant;
 use tegne::ui;
 use tegne::ui::im_str;
 use tegne::CameraType;
@@ -40,10 +41,20 @@ fn main() {
         },
     );
 
+    let start_time = Instant::now();
+
     let floor = Floor::new(&tegne);
-    let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, colors::RED);
-    let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, colors::BLUE);
-    let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, colors::GREEN);
+
+    let mut rng = rand::thread_rng();
+    let cubes = (0..20)
+        .map(|i| {
+            let y = rng.gen_range(0.0, 5.0);
+            let size = rng.gen_range(0.5, 1.0);
+            Cube::new(&tegne, [10.0 - i as f32, y, i as f32 - 10.0], size)
+        })
+        .collect::<Vec<_>>();
+
+    let load_time = start_time.elapsed().as_secs_f32();
 
     let ui_frame = tegne.create_framebuffer(CameraType::Orthographic, width, height);
 
@@ -71,7 +82,8 @@ fn main() {
                     .build();
                 ui.separator();
                 ui.separator();
-                ui.text(format!("FPS: {}", events.fps()));
+                ui.text(format!("Load time: {}s", load_time));
+                ui.text(format!("Fps: {}", events.fps()));
             });
         let ui_data = ui.render();
 
@@ -82,9 +94,9 @@ fn main() {
 
         tegne.draw_on_window(|target| {
             floor.draw(target);
-            cube_1.draw(target);
-            cube_2.draw(target);
-            cube_3.draw(target);
+            for cube in &cubes {
+                cube.draw(target);
+            }
             target.blit_framebuffer(&ui_frame);
         });
     });

@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 pretty_env_logger = "0.4.0"
+rand = "0.7.3"
 tegne = { path = "../../tegne", version = "0.1.0" }

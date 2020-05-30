@@ -21,9 +21,7 @@ pub struct Floor {
 impl Floor {
     pub fn new(tegne: &Tegne) -> Self {
         let mesh = plane(tegne, 100.0);
-        let texture = tegne
-            .create_texture_from_file("examples/cubes/assets/images/grey2.png")
-            .expect("cannot create floor texture");
+        let texture = tegne.create_texture_from_file("examples/cubes/assets/images/grey2.png");
 
         Self { mesh, texture }
     }
