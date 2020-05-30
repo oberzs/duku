@@ -114,6 +114,11 @@ impl Window {
                     }),
                 }]);
             }
+            {
+                let mut style = context.style_mut();
+                style.window_rounding = 3.0;
+                style.use_dark_colors();
+            }
             context
         };
 

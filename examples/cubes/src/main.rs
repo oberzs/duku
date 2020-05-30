@@ -61,9 +61,15 @@ fn main() {
         controller.update(&mut tegne.main_camera, events);
 
         ui::Window::new(im_str!("Light control"))
-            .size([300.0, 100.0], ui::Condition::FirstUseEver)
+            .position([0.0, 0.0], ui::Condition::FirstUseEver)
+            .size([100.0, 100.0], ui::Condition::FirstUseEver)
+            .always_auto_resize(true)
+            .resizable(false)
             .build(&ui, || {
-                ui::DragFloat::new(&ui, im_str!("x"), &mut light_x).build();
+                ui::DragFloat::new(&ui, im_str!("x"), &mut light_x)
+                    .speed(0.1)
+                    .build();
+                ui.separator();
                 ui.separator();
                 ui.text(format!("FPS: {}", events.fps()));
             });
