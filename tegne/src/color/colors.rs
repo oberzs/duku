@@ -20,8 +20,8 @@ pub const RED: Color = Color {
 };
 pub const GREEN: Color = Color {
     r: 0,
-    g: 0,
-    b: 255,
+    g: 255,
+    b: 0,
     a: 255,
 };
 pub const BLUE: Color = Color {

@@ -6,7 +6,6 @@
 
 use ash::vk;
 use log::debug;
-use log::warn;
 use std::cmp;
 use std::sync::Arc;
 
@@ -334,8 +333,6 @@ impl Framebuffer {
                     ..Default::default()
                 },
             );
-        } else {
-            warn!("trying to blit framebuffer without a shader image");
         }
     }
 

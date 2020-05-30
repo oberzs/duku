@@ -256,8 +256,8 @@ impl<'a> Target<'a> {
         self.wireframe_orders.iter().cloned()
     }
 
-    pub(crate) fn lights(&self) -> [Light; 4] {
-        let mut lights: [Light; 4] = Default::default();
+    pub(crate) fn lights(&self) -> [Light; 3] {
+        let mut lights: [Light; 3] = Default::default();
         lights[..self.lights.len()].clone_from_slice(&self.lights[..]);
         lights
     }

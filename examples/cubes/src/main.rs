@@ -5,9 +5,11 @@
 
 mod cube;
 mod floor;
-mod ui;
 
 use tegne::colors;
+use tegne::ui;
+use tegne::ui::im_str;
+use tegne::CameraType;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -17,7 +19,6 @@ use tegne::WindowOptions;
 
 use cube::Cube;
 use floor::Floor;
-use ui::Ui;
 
 fn main() {
     pretty_env_logger::init();
@@ -38,11 +39,13 @@ fn main() {
             ..Default::default()
         },
     );
+
     let floor = Floor::new(&tegne);
     let cube_1 = Cube::new(&tegne, [0.0, 0.0, 0.0], 1.0, colors::RED);
     let cube_2 = Cube::new(&tegne, [-3.0, 0.0, -3.0], 3.0, colors::BLUE);
     let cube_3 = Cube::new(&tegne, [-1.0, 3.0, 0.0], 1.0, colors::GREEN);
-    let ui = Ui::new(&tegne, width, height);
+
+    let ui_frame = tegne.create_framebuffer(CameraType::Orthographic, width, height);
 
     {
         let cam_t = &mut tegne.main_camera.transform;
@@ -52,18 +55,31 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    window.main_loop(|events, _| {
+    let mut light_x = 0.0;
+
+    window.main_loop(|events, ui| {
         controller.update(&mut tegne.main_camera, events);
 
-        ui.draw_ui(&mut tegne, events);
+        ui::Window::new(im_str!("Light control"))
+            .size([300.0, 100.0], ui::Condition::FirstUseEver)
+            .build(&ui, || {
+                ui::DragFloat::new(&ui, im_str!("x"), &mut light_x).build();
+                ui.separator();
+                ui.text(format!("FPS: {}", events.fps()));
+            });
+        let ui_data = ui.render();
+
+        tegne.draw(&ui_frame, |target| {
+            target.set_clear([0, 0, 0, 0]);
+            target.draw_ui(ui_data);
+        });
 
         tegne.draw_on_window(|target| {
-            target.add_directional_light([-1.0, -2.0, -1.0], [1.0, 1.0, 1.0]);
             floor.draw(target);
             cube_1.draw(target);
             cube_2.draw(target);
             cube_3.draw(target);
-            target.blit_framebuffer(ui.framebuffer());
+            target.blit_framebuffer(&ui_frame);
         });
     });
 }

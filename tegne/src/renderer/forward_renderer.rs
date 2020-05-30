@@ -8,13 +8,16 @@ use std::time::Instant;
 
 use super::Order;
 use super::Target;
+use crate::camera::Camera;
 use crate::camera::CameraType;
+use crate::color::colors;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
-use crate::math::Matrix4;
+use crate::math::Transform;
 use crate::math::Vector3;
 use crate::pipeline::ImageUniform;
+use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
@@ -46,7 +49,7 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let depth_framebuffer = Framebuffer::depth(
+        let mut depth_framebuffer = Framebuffer::depth(
             device,
             depth_pass,
             image_uniform,
@@ -56,6 +59,18 @@ impl ForwardRenderer {
             2048,
         )?;
 
+        {
+            // setup default depth camera
+            let light_distance = 10.0;
+            let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
+            let light_pos = -light_dir * light_distance;
+            let mut camera = &mut depth_framebuffer.camera;
+            *camera = Camera::orthographic(20, 20);
+            camera.depth = 50;
+            camera.transform.look_in_dir(light_dir, Vector3::up());
+            camera.transform.position = light_pos;
+        }
+
         Ok(Self {
             start_time: Instant::now(),
             depth_framebuffer,
@@ -63,30 +78,36 @@ impl ForwardRenderer {
     }
 
     pub(crate) fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
-        let cam_mat = options.framebuffer.camera.matrix();
-        let cam_pos = options.framebuffer.camera.transform.position;
-        let time = self.start_time.elapsed().as_secs_f32();
+        let framebuffer = options.framebuffer;
+        let clear = options.target.clear();
+        let cmd = device.command_buffer();
 
-        let light_distance = 10.0;
-        let light_dir = options.target.lights()[0].coords.shrink();
-        let light_mat_dir = light_dir.unit();
-        let light_mat_pos = light_mat_dir * light_distance;
-        let light_mat = Matrix4::orthographic_center(20.0, 20.0, 0.1, 50.0)
-            * Matrix4::look_rotation(light_mat_dir, Vector3::up())
-            * Matrix4::translation(light_mat_pos);
+        // setup lights
+        let main_light = Light {
+            coords: self
+                .depth_framebuffer
+                .camera
+                .transform
+                .forward()
+                .extend(0.0),
+            color: colors::WHITE.to_rgba_norm_vec(),
+        };
+        let other_lights = options.target.lights();
 
+        // update world uniform
         let world_data = WorldData {
             shadow_index: self.depth_framebuffer.image_index(),
-            lights: options.target.lights(),
-            cam_mat,
-            cam_pos,
-            light_mat,
-            time,
+            lights: [
+                main_light,
+                other_lights[0],
+                other_lights[1],
+                other_lights[2],
+            ],
+            cam_mat: framebuffer.camera.matrix(),
+            cam_pos: framebuffer.camera.transform.position,
+            light_mat: self.depth_framebuffer.camera.matrix(),
+            time: self.start_time.elapsed().as_secs_f32(),
         };
-
-        let clear = options.target.clear();
-
-        let cmd = device.command_buffer();
 
         // shadow mapping
         device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, options.depth_pass, clear);
@@ -109,9 +130,9 @@ impl ForwardRenderer {
         self.depth_framebuffer.update_shader_image(cmd);
 
         // normal render
-        device.cmd_begin_render_pass(cmd, options.framebuffer, options.color_pass, clear);
-        self.setup_pass(device, options.framebuffer);
-        self.bind_world(device, options.framebuffer, world_data, &options)?;
+        device.cmd_begin_render_pass(cmd, framebuffer, options.color_pass, clear);
+        self.setup_pass(device, framebuffer);
+        self.bind_world(device, framebuffer, world_data, &options)?;
 
         for s_order in options.target.orders_by_shader() {
             self.bind_shader(device, s_order.shader(), &options);
@@ -130,9 +151,13 @@ impl ForwardRenderer {
         }
 
         device.cmd_end_render_pass(cmd);
-        options.framebuffer.update_shader_image(cmd);
+        framebuffer.update_shader_image(cmd);
 
         Ok(())
+    }
+
+    pub(crate) fn main_light_mut(&mut self) -> &mut Transform {
+        &mut self.depth_framebuffer.camera.transform
     }
 
     fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {

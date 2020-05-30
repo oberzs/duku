@@ -29,6 +29,7 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::instance::Instance;
+use crate::math::Transform;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
@@ -241,7 +242,8 @@ impl Tegne {
     pub fn resize(&mut self, width: u32, height: u32) {
         check!(self.device.wait_for_idle());
         self.surface.resize(width, height);
-        self.main_camera.resize(width, height);
+        self.main_camera.width = width;
+        self.main_camera.height = height;
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
@@ -485,6 +487,10 @@ impl Tegne {
         });
 
         Ok(id)
+    }
+
+    pub fn main_light_mut(&mut self) -> &mut Transform {
+        self.forward_renderer.main_light_mut()
     }
 
     fn begin_draw(&mut self) {
