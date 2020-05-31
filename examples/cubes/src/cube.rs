@@ -31,8 +31,9 @@ impl Cube {
         let color = COLORS[rng.gen_range(0, 16)];
 
         let mesh = cube(tegne, size);
-        let texture =
-            tegne.create_texture_from_file(format!("examples/cubes/assets/images/{}.png", color));
+        let texture = tegne
+            .create_texture_from_file(format!("examples/cubes/assets/images/{}.png", color))
+            .expect("cannot open cube texture file");
         let transform = Transform::from(pos.into());
 
         Self {

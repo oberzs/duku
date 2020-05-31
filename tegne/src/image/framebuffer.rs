@@ -5,7 +5,6 @@
 // also manages world uniform and camera
 
 use ash::vk;
-use log::debug;
 use std::cmp;
 use std::sync::Arc;
 
@@ -47,7 +46,6 @@ impl Framebuffer {
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
         profile_scope!("window");
-        debug!("creating window framebuffers");
 
         let extent = swapchain.extent();
 

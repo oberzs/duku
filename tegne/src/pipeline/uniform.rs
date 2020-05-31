@@ -4,7 +4,6 @@
 // uniform structs to manage shader accessible uniform data
 
 use ash::vk;
-use log::debug;
 use log::info;
 use std::cell::Cell;
 use std::cell::RefCell;
@@ -91,7 +90,6 @@ impl ImageUniform {
         anisotropy: f32,
     ) -> Result<Self> {
         profile_scope!("new");
-        debug!("creating image uniforms");
         info!("using anisotropy level {}", anisotropy);
 
         let descriptor_set = layout.image_set()?;

@@ -7,7 +7,6 @@ use crossbeam::channel;
 use crossbeam::channel::select;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
-use log::debug;
 use log::error;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
@@ -306,7 +305,6 @@ impl Tegne {
     }
 
     pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
-        debug!("creating rgba texture");
         let texture = check!(Texture::from_raw_rgba(
             &self.device,
             &self.image_uniform,
@@ -318,7 +316,6 @@ impl Tegne {
     }
 
     pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
-        debug!("creating rgb texture");
         let texture = check!(Texture::from_raw_rgb(
             &self.device,
             &self.image_uniform,
@@ -339,7 +336,6 @@ impl Tegne {
     }
 
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
-        debug!("creating mesh");
         let mesh = check!(Mesh::new(&self.device, options));
         self.resources.add_mesh(mesh, None)
     }
@@ -380,7 +376,6 @@ impl Tegne {
     }
 
     pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
-        debug!("creating material");
         let material = check!(Material::new(&self.device, &self.shader_layout, options));
         self.resources.add_material(material, None)
     }
@@ -400,7 +395,6 @@ impl Tegne {
     }
 
     pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
-        debug!("creating framebuffer");
         let framebuffer = check!(Framebuffer::color(
             &self.device,
             &self.render_passes.color,
@@ -414,7 +408,6 @@ impl Tegne {
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
-        debug!("creating shader");
         let shader = check!(Shader::new(
             &self.device,
             &self.render_passes.color,

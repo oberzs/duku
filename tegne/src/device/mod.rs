@@ -256,8 +256,20 @@ impl Device {
 
     pub(crate) fn present(&self, swapchain: &Swapchain) -> Result<()> {
         let current = self.current_frame();
-        let wait = self.sync_release_image[current];
-        swapchain.present(wait)?;
+        let wait = [self.sync_release_image[current]];
+        let image = [swapchain.current() as u32];
+        let handle = [swapchain.handle()];
+
+        let info = vk::PresentInfoKHR::builder()
+            .wait_semaphores(&wait)
+            .swapchains(&handle)
+            .image_indices(&image);
+
+        unsafe {
+            self.swapchain_ext
+                .queue_present(self.present_queue.1, &info)?;
+        }
+
         Ok(())
     }
 
@@ -307,14 +319,6 @@ impl Device {
                 .acquire_next_image(handle, u64::max_value(), signal, Default::default())?
                 .0
         })
-    }
-
-    pub(crate) fn present_queue(&self, info: &vk::PresentInfoKHR) -> Result<()> {
-        unsafe {
-            self.swapchain_ext
-                .queue_present(self.present_queue.1, info)?;
-        }
-        Ok(())
     }
 
     pub(crate) fn graphics_index(&self) -> u32 {

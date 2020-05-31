@@ -4,7 +4,6 @@
 // Swapchain - struct that holds images for specific surface
 
 use ash::vk;
-use log::debug;
 use std::cell::Cell;
 use std::sync::Arc;
 
@@ -31,7 +30,6 @@ impl Swapchain {
         surface_properties: SurfaceProperties,
     ) -> Result<Self> {
         profile_scope!("new");
-        debug!("creating window swapchain");
 
         let info = swapchain_info(surface, &surface_properties);
         let handle = device.create_swapchain(&info)?;
@@ -73,21 +71,12 @@ impl Swapchain {
         self.current_image.get() as usize
     }
 
-    pub(crate) fn present(&self, wait: vk::Semaphore) -> Result<()> {
-        let waits = [wait];
-        let swapchains = [self.handle];
-        let image = [self.current_image.get()];
-        let info = vk::PresentInfoKHR::builder()
-            .wait_semaphores(&waits)
-            .swapchains(&swapchains)
-            .image_indices(&image);
-
-        self.device.present_queue(&info)?;
-        Ok(())
-    }
-
     pub(crate) fn extent(&self) -> vk::Extent2D {
         self.surface_properties.extent
+    }
+
+    pub(crate) fn handle(&self) -> vk::SwapchainKHR {
+        self.handle
     }
 }
 

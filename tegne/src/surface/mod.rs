@@ -12,7 +12,6 @@ mod swapchain;
 mod window;
 
 use ash::vk;
-use log::debug;
 use std::os::raw::c_void;
 use std::sync::Arc;
 
@@ -46,8 +45,6 @@ impl Surface {
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
         profile_scope!("new");
 
-        debug!("creating Windows window surface");
-
         use std::ptr;
         use winapi::um::libloaderapi::GetModuleHandleW;
 
@@ -70,8 +67,6 @@ impl Surface {
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
         profile_scope!("new");
 
-        debug!("creating Linux window surface");
-
         let info = vk::XlibSurfaceCreateInfoKHR::builder()
             .window(window.xlib_window)
             .dpy(window.xlib_display as *mut vk::Display);
@@ -89,8 +84,6 @@ impl Surface {
     #[cfg(target_os = "macos")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
         profile_scope!("new");
-
-        debug!("creating MacOS window surface");
 
         use cocoa::appkit::NSView;
         use cocoa::appkit::NSWindow;

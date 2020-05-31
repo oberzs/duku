@@ -4,7 +4,6 @@
 // ShaderLayout - struct that holds shader layout
 
 use ash::vk;
-use log::debug;
 use std::mem;
 use std::sync::Arc;
 
@@ -26,7 +25,6 @@ pub(crate) struct ShaderLayout {
 impl ShaderLayout {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
         profile_scope!("new");
-        debug!("creating shader layout");
 
         // world uniform layout
         let world_binding = [vk::DescriptorSetLayoutBinding::builder()
