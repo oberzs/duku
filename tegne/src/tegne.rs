@@ -28,7 +28,6 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::instance::Instance;
-use crate::math::Transform;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
@@ -480,10 +479,6 @@ impl Tegne {
         });
 
         Ok(id)
-    }
-
-    pub fn main_light_mut(&mut self) -> &mut Transform {
-        self.forward_renderer.main_light_mut()
     }
 
     fn begin_draw(&mut self) {

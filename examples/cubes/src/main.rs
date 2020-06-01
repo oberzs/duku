@@ -48,9 +48,10 @@ fn main() {
     let mut rng = rand::thread_rng();
     let cubes = (0..20)
         .map(|i| {
-            let y = rng.gen_range(0.0, 5.0);
+            let y = rng.gen_range(0.0, 3.0);
+            let z = rng.gen_range(-10.0, 10.0);
             let size = rng.gen_range(0.5, 1.0);
-            Cube::new(&tegne, [10.0 - i as f32, y, i as f32 - 10.0], size)
+            Cube::new(&tegne, [10.0 - i as f32, y, z], size)
         })
         .collect::<Vec<_>>();
 
@@ -66,22 +67,15 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    let mut light_x = 0.0;
-
     window.main_loop(|events, ui| {
         controller.update(&mut tegne.main_camera, events);
 
-        ui::Window::new(im_str!("Light control"))
+        ui::Window::new(im_str!("Stats"))
             .position([0.0, 0.0], ui::Condition::FirstUseEver)
             .size([100.0, 100.0], ui::Condition::FirstUseEver)
             .always_auto_resize(true)
             .resizable(false)
             .build(&ui, || {
-                ui::DragFloat::new(&ui, im_str!("x"), &mut light_x)
-                    .speed(0.1)
-                    .build();
-                ui.separator();
-                ui.separator();
                 ui.text(format!("Load time: {}s", load_time));
                 ui.text(format!("Fps: {}", events.fps()));
             });

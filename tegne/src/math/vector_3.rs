@@ -3,6 +3,7 @@
 
 // 3 component vector
 
+use std::iter::Sum;
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
@@ -109,6 +110,15 @@ impl Add<Self> for Vector3 {
 
     fn add(self, rhs: Self) -> Self {
         Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl<'vec> Sum<&'vec Vector3> for Vector3 {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = &'vec Self>,
+    {
+        iter.fold(Self::default(), |a, b| a + *b)
     }
 }
 

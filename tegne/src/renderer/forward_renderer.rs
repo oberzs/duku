@@ -14,8 +14,8 @@ use crate::color::colors;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
-use crate::math::Transform;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
@@ -49,27 +49,15 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let mut depth_framebuffer = Framebuffer::depth(
+        let depth_framebuffer = Framebuffer::depth(
             device,
             depth_pass,
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
-            2048,
-            2048,
+            4096,
+            4096,
         )?;
-
-        {
-            // setup default depth camera
-            let light_distance = 10.0;
-            let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
-            let light_pos = -light_dir * light_distance;
-            let mut camera = &mut depth_framebuffer.camera;
-            *camera = Camera::orthographic(20, 20);
-            camera.depth = 50;
-            camera.transform.look_in_dir(light_dir, Vector3::up());
-            camera.transform.position = light_pos;
-        }
 
         Ok(Self {
             start_time: Instant::now(),
@@ -82,14 +70,40 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
+        // frustum-fit light camera
+        // get view frustum corners from NDC
+        let cam_inv = framebuffer.camera.matrix().inverse().unwrap();
+        let mut corners = vec![];
+        for x in &[-1.0, 1.0] {
+            for y in &[-1.0, 1.0] {
+                for z in &[0.0, 1.0] {
+                    let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
+                    corners.push(corner.shrink() / corner.w);
+                }
+            }
+        }
+
+        // get bounding sphere radius
+        let corner_count = corners.len() as f32;
+        let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
+        let r = corners
+            .iter()
+            .map(|v| (center - *v).length().abs())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
+        // create depth camera
+        let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
+        let light_pos = center - light_dir * r;
+        let size = (r * 2.0) as u32;
+        let mut depth_cam = Camera::orthographic(size, size);
+        depth_cam.depth = size;
+        depth_cam.transform.look_in_dir(light_dir, Vector3::up());
+        depth_cam.transform.position = light_pos;
+
         // setup lights
         let main_light = Light {
-            coords: self
-                .depth_framebuffer
-                .camera
-                .transform
-                .forward()
-                .extend(0.0),
+            coords: light_dir.extend(0.0),
             color: colors::WHITE.to_rgba_norm_vec(),
         };
         let other_lights = options.target.lights();
@@ -105,7 +119,8 @@ impl ForwardRenderer {
             ],
             cam_mat: framebuffer.camera.matrix(),
             cam_pos: framebuffer.camera.transform.position,
-            light_mat: self.depth_framebuffer.camera.matrix(),
+            // light_mat: self.depth_framebuffer.camera.matrix(),
+            light_mat: depth_cam.matrix(),
             time: self.start_time.elapsed().as_secs_f32(),
         };
 
@@ -154,10 +169,6 @@ impl ForwardRenderer {
         framebuffer.update_shader_image(cmd);
 
         Ok(())
-    }
-
-    pub(crate) fn main_light_mut(&mut self) -> &mut Transform {
-        &mut self.depth_framebuffer.camera.transform
     }
 
     fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {
