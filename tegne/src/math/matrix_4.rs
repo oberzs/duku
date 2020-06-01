@@ -178,27 +178,135 @@ impl Matrix4 {
         )
     }
 
-    pub fn row_x(self) -> Vector4 {
+    pub fn inverse(&self) -> Option<Self> {
+        let m: [f32; 16] = (*self).into();
+        let mut inv = [0.0; 16];
+
+        inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15]
+            + m[9] * m[7] * m[14]
+            + m[13] * m[6] * m[11]
+            - m[13] * m[7] * m[10];
+
+        inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15]
+            - m[8] * m[7] * m[14]
+            - m[12] * m[6] * m[11]
+            + m[12] * m[7] * m[10];
+
+        inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15]
+            + m[8] * m[7] * m[13]
+            + m[12] * m[5] * m[11]
+            - m[12] * m[7] * m[9];
+
+        inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14]
+            - m[8] * m[6] * m[13]
+            - m[12] * m[5] * m[10]
+            + m[12] * m[6] * m[9];
+
+        inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15]
+            - m[9] * m[3] * m[14]
+            - m[13] * m[2] * m[11]
+            + m[13] * m[3] * m[10];
+
+        inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15]
+            + m[8] * m[3] * m[14]
+            + m[12] * m[2] * m[11]
+            - m[12] * m[3] * m[10];
+
+        inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15]
+            - m[8] * m[3] * m[13]
+            - m[12] * m[1] * m[11]
+            + m[12] * m[3] * m[9];
+
+        inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14]
+            + m[8] * m[2] * m[13]
+            + m[12] * m[1] * m[10]
+            - m[12] * m[2] * m[9];
+
+        inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15]
+            + m[5] * m[3] * m[14]
+            + m[13] * m[2] * m[7]
+            - m[13] * m[3] * m[6];
+
+        inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15]
+            - m[4] * m[3] * m[14]
+            - m[12] * m[2] * m[7]
+            + m[12] * m[3] * m[6];
+
+        inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15]
+            + m[4] * m[3] * m[13]
+            + m[12] * m[1] * m[7]
+            - m[12] * m[3] * m[5];
+
+        inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14]
+            - m[4] * m[2] * m[13]
+            - m[12] * m[1] * m[6]
+            + m[12] * m[2] * m[5];
+
+        inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11]
+            - m[5] * m[3] * m[10]
+            - m[9] * m[2] * m[7]
+            + m[9] * m[3] * m[6];
+
+        inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11]
+            + m[4] * m[3] * m[10]
+            + m[8] * m[2] * m[7]
+            - m[8] * m[3] * m[6];
+
+        inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11]
+            - m[4] * m[3] * m[9]
+            - m[8] * m[1] * m[7]
+            + m[8] * m[3] * m[5];
+
+        inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10]
+            + m[4] * m[2] * m[9]
+            + m[8] * m[1] * m[6]
+            - m[8] * m[2] * m[5];
+
+        let mut det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+        if det == 0.0 {
+            return None;
+        }
+
+        det = 1.0 / det;
+
+        Some(Self::from(inv) * det)
+    }
+
+    pub fn row_x(&self) -> Vector4 {
         Vector4::new(self.col_x.x, self.col_y.x, self.col_z.x, self.col_w.x)
     }
 
-    pub fn row_y(self) -> Vector4 {
+    pub fn row_y(&self) -> Vector4 {
         Vector4::new(self.col_x.y, self.col_y.y, self.col_z.y, self.col_w.y)
     }
 
-    pub fn row_z(self) -> Vector4 {
+    pub fn row_z(&self) -> Vector4 {
         Vector4::new(self.col_x.z, self.col_y.z, self.col_z.z, self.col_w.z)
     }
 
-    pub fn row_w(self) -> Vector4 {
+    pub fn row_w(&self) -> Vector4 {
         Vector4::new(self.col_x.w, self.col_y.w, self.col_z.w, self.col_w.w)
+    }
+}
+
+impl Mul<f32> for Matrix4 {
+    type Output = Matrix4;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        let mut m = self;
+        m.col_x *= rhs;
+        m.col_y *= rhs;
+        m.col_z *= rhs;
+        m.col_w *= rhs;
+        m
     }
 }
 
 impl Mul<Vector4> for Matrix4 {
     type Output = Vector4;
 
-    fn mul(self, rhs: Vector4) -> Vector4 {
+    fn mul(self, rhs: Vector4) -> Self::Output {
         let x = self.row_x().dot(rhs);
         let y = self.row_y().dot(rhs);
         let z = self.row_z().dot(rhs);
@@ -210,7 +318,7 @@ impl Mul<Vector4> for Matrix4 {
 impl Mul<Self> for Matrix4 {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self {
+    fn mul(self, rhs: Self) -> Self::Output {
         let col_x = self * rhs.col_x;
         let col_y = self * rhs.col_y;
         let col_z = self * rhs.col_z;
@@ -222,6 +330,40 @@ impl Mul<Self> for Matrix4 {
 impl MulAssign<Self> for Matrix4 {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
+    }
+}
+
+impl From<[f32; 16]> for Matrix4 {
+    fn from(m: [f32; 16]) -> Self {
+        Self::from_columns(
+            [m[0], m[1], m[2], m[3]],
+            [m[4], m[5], m[6], m[7]],
+            [m[8], m[9], m[10], m[11]],
+            [m[12], m[13], m[14], m[15]],
+        )
+    }
+}
+
+impl Into<[f32; 16]> for Matrix4 {
+    fn into(self) -> [f32; 16] {
+        [
+            self.col_x.x,
+            self.col_x.y,
+            self.col_x.z,
+            self.col_x.w,
+            self.col_y.x,
+            self.col_y.y,
+            self.col_y.z,
+            self.col_y.w,
+            self.col_z.x,
+            self.col_z.y,
+            self.col_z.z,
+            self.col_z.w,
+            self.col_w.x,
+            self.col_w.y,
+            self.col_w.z,
+            self.col_w.w,
+        ]
     }
 }
 
@@ -365,5 +507,12 @@ mod test {
         assert_eq!(ma.row_y(), Vector4::new(111.0, 115.0, 119.0, 123.0));
         assert_eq!(ma.row_z(), Vector4::new(123.0, 119.0, 115.0, 111.0));
         assert_eq!(ma.row_w(), Vector4::new(51.0, 47.0, 43.0, 39.0));
+    }
+
+    #[test]
+    fn inverse() {
+        let m = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0);
+        let precision = 0.99999994;
+        assert_eq!(m * m.inverse().unwrap(), Matrix4::identity() * precision);
     }
 }
