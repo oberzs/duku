@@ -3,48 +3,29 @@
 
 // Cube mesh struct with texture
 
-use rand::Rng;
 use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
 use tegne::Tegne;
-use tegne::Texture;
 use tegne::Transform;
 use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Cube {
     mesh: Id<Mesh>,
-    texture: Id<Texture>,
     transform: Transform,
 }
 
-const COLORS: [&str; 16] = [
-    "blue1", "blue2", "blue3", "brown", "cyan", "green1", "green2", "grey1", "grey2", "grey3",
-    "grey4", "orange", "purple", "red", "white", "yellow",
-];
-
 impl Cube {
     pub fn new(tegne: &Tegne, pos: impl Into<Vector3>, size: f32) -> Self {
-        let mut rng = rand::thread_rng();
-        let color = COLORS[rng.gen_range(0, 16)];
-
         let mesh = cube(tegne, size);
-        let texture = tegne
-            .create_texture_from_file(format!("examples/cubes/assets/images/{}.png", color))
-            .expect("cannot open cube texture file");
         let transform = Transform::from(pos.into());
 
-        Self {
-            mesh,
-            texture,
-            transform,
-        }
+        Self { mesh, transform }
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_albedo_texture(&self.texture);
         target.draw(&self.mesh, self.transform);
     }
 }

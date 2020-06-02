@@ -89,6 +89,10 @@ impl Vector3 {
     pub fn shrink(self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
+
+    pub fn floor(self) -> Self {
+        Vector3::new(self.x.floor(), self.y.floor(), self.z.floor())
+    }
 }
 
 impl From<[f32; 3]> for Vector3 {

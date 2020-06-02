@@ -41,7 +41,6 @@ impl Sampler {
             .anisotropy_enable(options.anisotropy != 0.0)
             .max_anisotropy(options.anisotropy)
             .border_color(vk::BorderColor::FLOAT_OPAQUE_WHITE)
-            // .border_color(vk::BorderColor::FLOAT_OPAQUE_BLACK)
             .unnormalized_coordinates(false)
             .compare_enable(false)
             .compare_op(vk::CompareOp::ALWAYS)

@@ -54,6 +54,9 @@ fn main() {
             Cube::new(&tegne, [10.0 - i as f32, y, z], size)
         })
         .collect::<Vec<_>>();
+    let cube_tex = tegne
+        .create_texture_from_file("examples/cubes/assets/images/orange.png")
+        .unwrap();
 
     let load_time = start_time.elapsed().as_secs_f32();
 
@@ -88,9 +91,11 @@ fn main() {
 
         tegne.draw_on_window(|target| {
             floor.draw(target);
+            target.set_albedo_texture(&cube_tex);
             for cube in &cubes {
                 cube.draw(target);
             }
+            target.set_albedo_white();
             target.blit_framebuffer(&ui_frame);
         });
     });

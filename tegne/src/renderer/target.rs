@@ -228,6 +228,10 @@ impl<'a> Target<'a> {
         self.current_albedo = framebuffer.id_ref();
     }
 
+    pub fn set_albedo_white(&mut self) {
+        self.current_albedo = self.resources.builtin("white_tex");
+    }
+
     pub fn set_shader(&mut self, shader: &Id<Shader>) {
         self.current_shader = shader.id_ref();
     }

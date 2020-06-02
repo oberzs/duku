@@ -29,6 +29,7 @@ use crate::resource::ResourceManager;
 pub(crate) struct ForwardRenderer {
     depth_framebuffer: Framebuffer,
     start_time: Instant,
+    // shadow_resolution: u32,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
@@ -49,19 +50,22 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
+        let shadow_resolution = 2048;
+
         let depth_framebuffer = Framebuffer::depth(
             device,
             depth_pass,
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
-            4096,
-            4096,
+            shadow_resolution,
+            shadow_resolution,
         )?;
 
         Ok(Self {
             start_time: Instant::now(),
             depth_framebuffer,
+            // shadow_resolution,
         })
     }
 
@@ -86,15 +90,13 @@ impl ForwardRenderer {
         // get bounding sphere radius
         let corner_count = corners.len() as f32;
         let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
-        let r = corners
-            .iter()
-            .map(|v| (center - *v).length().abs())
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap();
+        let r = corners.iter().map(|v| (center - *v).length()).sum::<f32>() / corners.len() as f32;
 
-        // create depth camera
+        // main light
         let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
         let light_pos = center - light_dir * r;
+
+        // create depth camera
         let size = (r * 2.0) as u32;
         let mut depth_cam = Camera::orthographic(size, size);
         depth_cam.depth = size;
