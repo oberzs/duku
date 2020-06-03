@@ -29,6 +29,7 @@ pub struct Target<'a> {
     current_albedo: IdRef,
     current_font: IdRef,
     draw_wireframes: bool,
+    has_shadows: bool,
     resources: &'a ResourceManager,
 }
 
@@ -62,6 +63,7 @@ impl<'a> Target<'a> {
             current_albedo: resources.builtin("white_tex"),
             current_font: resources.builtin("roboto_font"),
             draw_wireframes: false,
+            has_shadows: false,
             resources,
         })
     }
@@ -228,6 +230,10 @@ impl<'a> Target<'a> {
         self.current_albedo = framebuffer.id_ref();
     }
 
+    pub fn set_albedo_white(&mut self) {
+        self.current_albedo = self.resources.builtin("white_tex");
+    }
+
     pub fn set_shader(&mut self, shader: &Id<Shader>) {
         self.current_shader = shader.id_ref();
     }
@@ -262,9 +268,17 @@ impl<'a> Target<'a> {
         lights
     }
 
+    pub(crate) fn has_shadows(&self) -> bool {
+        self.has_shadows
+    }
+
     fn add_order(&mut self, order: Order) {
         let material = self.current_material;
         let shader = self.current_shader;
+
+        if order.has_shadows {
+            self.has_shadows = true;
+        }
 
         match self
             .orders_by_shader

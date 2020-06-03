@@ -34,7 +34,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Perspective,
-            depth: 100,
+            depth: 50,
             width,
             height,
             fov,
@@ -45,7 +45,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Orthographic,
-            depth: 100,
+            depth: 50,
             fov: 0,
             width,
             height,
@@ -55,7 +55,7 @@ impl Camera {
     pub fn new(camera_type: CameraType, width: u32, height: u32) -> Self {
         Self {
             transform: Transform::default(),
-            depth: 100,
+            depth: 50,
             fov: 90,
             camera_type,
             width,

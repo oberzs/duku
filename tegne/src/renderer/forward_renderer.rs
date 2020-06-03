@@ -14,8 +14,9 @@ use crate::color::colors;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
-use crate::math::Transform;
+use crate::math::Matrix4;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
@@ -29,6 +30,7 @@ use crate::resource::ResourceManager;
 pub(crate) struct ForwardRenderer {
     depth_framebuffer: Framebuffer,
     start_time: Instant,
+    // shadow_resolution: u32,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
@@ -49,31 +51,22 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let mut depth_framebuffer = Framebuffer::depth(
+        let shadow_resolution = 2048;
+
+        let depth_framebuffer = Framebuffer::depth(
             device,
             depth_pass,
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
-            2048,
-            2048,
+            shadow_resolution,
+            shadow_resolution,
         )?;
-
-        {
-            // setup default depth camera
-            let light_distance = 10.0;
-            let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
-            let light_pos = -light_dir * light_distance;
-            let mut camera = &mut depth_framebuffer.camera;
-            *camera = Camera::orthographic(20, 20);
-            camera.depth = 50;
-            camera.transform.look_in_dir(light_dir, Vector3::up());
-            camera.transform.position = light_pos;
-        }
 
         Ok(Self {
             start_time: Instant::now(),
             depth_framebuffer,
+            // shadow_resolution,
         })
     }
 
@@ -82,14 +75,44 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
+        let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
+
+        let light_mat = if options.target.has_shadows() {
+            // frustum-fit light camera
+            // get view frustum corners from NDC
+            let cam_inv = framebuffer.camera.matrix().inverse().unwrap();
+            let mut corners = vec![];
+            for x in &[-1.0, 1.0] {
+                for y in &[-1.0, 1.0] {
+                    for z in &[0.0, 1.0] {
+                        let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
+                        corners.push(corner.shrink() / corner.w);
+                    }
+                }
+            }
+
+            // get bounding sphere radius
+            let corner_count = corners.len() as f32;
+            let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
+            let r =
+                corners.iter().map(|v| (center - *v).length()).sum::<f32>() / corners.len() as f32;
+
+            // create depth camera
+            let light_pos = center - light_dir * r;
+            let size = (r * 2.0) as u32;
+            let mut depth_cam = Camera::orthographic(size, size);
+            depth_cam.depth = size;
+            depth_cam.transform.look_in_dir(light_dir, Vector3::up());
+            depth_cam.transform.position = light_pos;
+
+            depth_cam.matrix()
+        } else {
+            Matrix4::identity()
+        };
+
         // setup lights
         let main_light = Light {
-            coords: self
-                .depth_framebuffer
-                .camera
-                .transform
-                .forward()
-                .extend(0.0),
+            coords: light_dir.extend(0.0),
             color: colors::WHITE.to_rgba_norm_vec(),
         };
         let other_lights = options.target.lights();
@@ -105,29 +128,31 @@ impl ForwardRenderer {
             ],
             cam_mat: framebuffer.camera.matrix(),
             cam_pos: framebuffer.camera.transform.position,
-            light_mat: self.depth_framebuffer.camera.matrix(),
+            light_mat,
             time: self.start_time.elapsed().as_secs_f32(),
         };
 
         // shadow mapping
-        device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, options.depth_pass, clear);
-        self.setup_pass(device, &self.depth_framebuffer);
-        self.bind_world(device, &self.depth_framebuffer, world_data, &options)?;
+        if options.target.has_shadows() {
+            device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, options.depth_pass, clear);
+            self.setup_pass(device, &self.depth_framebuffer);
+            self.bind_world(device, &self.depth_framebuffer, world_data, &options)?;
 
-        self.bind_shader(device, options.resources.builtin("shadow_sh"), &options);
-        for s_order in options.target.orders_by_shader() {
-            for m_order in s_order.orders_by_material() {
-                self.bind_material(device, m_order.material(), &options)?;
-                for order in m_order.orders() {
-                    if order.has_shadows {
-                        self.draw_order(device, order, &options)?;
+            self.bind_shader(device, options.resources.builtin("shadow_sh"), &options);
+            for s_order in options.target.orders_by_shader() {
+                for m_order in s_order.orders_by_material() {
+                    self.bind_material(device, m_order.material(), &options)?;
+                    for order in m_order.orders() {
+                        if order.has_shadows {
+                            self.draw_order(device, order, &options)?;
+                        }
                     }
                 }
             }
-        }
 
-        device.cmd_end_render_pass(cmd);
-        self.depth_framebuffer.update_shader_image(cmd);
+            device.cmd_end_render_pass(cmd);
+            self.depth_framebuffer.update_shader_image(cmd);
+        }
 
         // normal render
         device.cmd_begin_render_pass(cmd, framebuffer, options.color_pass, clear);
@@ -154,10 +179,6 @@ impl ForwardRenderer {
         framebuffer.update_shader_image(cmd);
 
         Ok(())
-    }
-
-    pub(crate) fn main_light_mut(&mut self) -> &mut Transform {
-        &mut self.depth_framebuffer.camera.transform
     }
 
     fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {

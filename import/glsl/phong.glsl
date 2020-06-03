@@ -50,14 +50,15 @@ float calc_shadow(vec4 ls_position, vec3 normal, Light light) {
     float bias = max(0.001 * (1.0 - dot(normal, light_dir)), 0.0001);
 
     // PCF
+    int strength = 0;
     vec2 texel_size = 1.0 / textureSize(shadow_map, 0);
-    for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
+    for (int x = -strength; x <= strength; ++x) {
+        for (int y = -strength; y <= strength; ++y) {
             float pcf_depth = texture(shadow_map, uv + vec2(x, y) * texel_size).r;
             shadow += current_depth - bias > pcf_depth ? 1.0 : 0.0;
         }
     }
-    shadow /= 9;
+    shadow /= pow(strength * 2 + 1, 2);
 
     if (current_depth > 1.0) {
         shadow = 0.0;
