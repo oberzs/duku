@@ -37,6 +37,7 @@ fn main() {
         TegneOptions {
             anisotropy: 16.0,
             msaa: 4,
+            vsync: false,
             ..Default::default()
         },
     );

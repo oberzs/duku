@@ -1,10 +1,10 @@
 [workspace]
 members = [
-  "tegne", 
-  "import", 
+  "tegne",
+  "import",
   "examples/blue",
   "examples/gradient",
-  "examples/cubes", 
+  "examples/cubes",
   "examples/surface",
   "examples/dynamic",
   "examples/ui",
