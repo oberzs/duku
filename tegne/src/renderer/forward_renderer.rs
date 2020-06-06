@@ -30,7 +30,6 @@ use crate::resource::ResourceManager;
 pub(crate) struct ForwardRenderer {
     depth_framebuffer: Framebuffer,
     start_time: Instant,
-    // shadow_resolution: u32,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
@@ -51,7 +50,8 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let shadow_resolution = 2048;
+        // TODO: no need for multiple depth framebuffers
+        // might be a sync issue
 
         let depth_framebuffer = Framebuffer::depth(
             device,
@@ -59,14 +59,13 @@ impl ForwardRenderer {
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
-            shadow_resolution,
-            shadow_resolution,
+            2048,
+            2048,
         )?;
 
         Ok(Self {
             start_time: Instant::now(),
             depth_framebuffer,
-            // shadow_resolution,
         })
     }
 

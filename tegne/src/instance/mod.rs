@@ -4,7 +4,7 @@
 // Instance - struct for Vulkan entrypoint
 
 mod extension;
-pub(crate) mod layer;
+mod layer;
 
 #[cfg(debug_assertions)]
 mod validator;

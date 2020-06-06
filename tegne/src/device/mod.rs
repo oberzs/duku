@@ -32,7 +32,6 @@ use crate::image::ImageLayout;
 use crate::image::ImageMemory;
 use crate::image::ImageSamples;
 use crate::image::LayoutChangeOptions;
-use crate::instance::layer;
 use crate::instance::Instance;
 use crate::pipeline::Descriptor;
 use crate::pipeline::PushConstants;
@@ -100,14 +99,11 @@ impl Device {
 
         let extension_list = extension::list()?;
         let extensions = extension::to_i8(&extension_list);
-        let layer_list = layer::list()?;
-        let layers = layer::to_i8(&layer_list);
 
         // open GPU
         let info = vk::DeviceCreateInfo::builder()
             .queue_create_infos(&queue_infos)
             .enabled_features(&features)
-            .enabled_layer_names(&layers)
             .enabled_extension_names(&extensions);
 
         let handle = instance.create_device(gpu_index, &info)?;
