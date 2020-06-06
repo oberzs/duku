@@ -97,7 +97,7 @@ impl Device {
             queue_infos.push(p_queue_info);
         }
 
-        let extension_list = extension::list()?;
+        let extension_list = extension::list();
         let extensions = extension::to_i8(&extension_list);
 
         // open GPU

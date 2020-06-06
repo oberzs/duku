@@ -5,15 +5,17 @@
 
 use std::ffi::CString;
 
-use crate::error::Result;
-
 pub(crate) fn to_i8(layers: &[CString]) -> Vec<*const i8> {
     layers.iter().map(|v| v.as_ptr()).collect()
 }
 
-pub(crate) fn list() -> Result<Vec<CString>> {
-    Ok(vec![
+pub(crate) fn list() -> Vec<CString> {
+    let lay = &[
         #[cfg(debug_assertions)]
-        CString::new("VK_LAYER_KHRONOS_validation")?,
-    ])
+        "VK_LAYER_KHRONOS_validation",
+    ];
+
+    lay.iter()
+        .map(|s| CString::new(*s).expect("bad string"))
+        .collect()
 }

@@ -60,7 +60,7 @@ impl Instance {
         }
 
         // check extension support
-        let extension_list = extension::list()?;
+        let extension_list = extension::list();
         let available_extensions = entry
             .enumerate_instance_extension_properties()?
             .iter()
@@ -76,7 +76,7 @@ impl Instance {
         }
 
         // check validation layer support
-        let layer_list = layer::list()?;
+        let layer_list = layer::list();
         let available_layers = entry
             .enumerate_instance_layer_properties()?
             .iter()

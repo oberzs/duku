@@ -35,7 +35,7 @@ impl DeviceProperties {
         let mut supports = vec![];
         for available in available_extensions {
             let mut s = true;
-            for extension in extension::list()? {
+            for extension in extension::list() {
                 if !available.contains(&extension) {
                     s = false;
                 }
