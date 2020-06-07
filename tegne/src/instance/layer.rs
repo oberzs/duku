@@ -10,7 +10,7 @@ pub(crate) fn to_i8(layers: &[CString]) -> Vec<*const i8> {
 }
 
 pub(crate) fn list() -> Vec<CString> {
-    let lay = &[
+    let lay: &[&str] = &[
         #[cfg(debug_assertions)]
         "VK_LAYER_KHRONOS_validation",
     ];

@@ -154,7 +154,7 @@ impl RenderPass {
         let dependencies = [match options.dependency_type {
             DependencyType::Color => vk::SubpassDependency::builder()
                 .src_subpass(vk::SUBPASS_EXTERNAL)
-                .dst_subpass(0)
+                .dst_subpass(vk::SUBPASS_EXTERNAL)
                 .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
                 .src_access_mask(vk::AccessFlags::empty())
                 .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
@@ -164,7 +164,7 @@ impl RenderPass {
                 )
                 .build(),
             DependencyType::Depth => vk::SubpassDependency::builder()
-                .src_subpass(0)
+                .src_subpass(vk::SUBPASS_EXTERNAL)
                 .dst_subpass(vk::SUBPASS_EXTERNAL)
                 .src_stage_mask(
                     vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
