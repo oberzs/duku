@@ -8,153 +8,130 @@ use std::sync::Arc;
 
 use super::Attachment;
 use super::AttachmentOptions;
-use super::DependencyType;
+use super::AttachmentType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
+use crate::image::ImageSamples;
 use crate::profile_scope;
 
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
-    has_msaa_attachment: bool,
+    attachments: Vec<AttachmentOptions>,
     device: Arc<Device>,
 }
 
-struct RenderPassOptions {
-    depth_attachment: Option<Attachment>,
-    color_attachment: Option<Attachment>,
-    msaa_attachment: Option<Attachment>,
-    dependency_type: DependencyType,
+pub(crate) struct RenderPassOptions<'types> {
+    pub(crate) attachments: &'types [AttachmentType],
+    pub(crate) present: bool,
 }
 
 impl RenderPass {
-    pub(crate) fn window(device: &Arc<Device>) -> Result<Self> {
-        profile_scope!("window");
+    pub(crate) fn new(device: &Arc<Device>, options: RenderPassOptions<'_>) -> Result<Self> {
+        profile_scope!("new");
 
-        // depth
-        let depth_attachment = Some(Attachment::new(AttachmentOptions {
-            index: 0,
-            layout: ImageLayout::Depth,
-            format: ImageFormat::Depth,
-            samples: device.samples(),
-            clear: true,
-            ..Default::default()
-        }));
+        let mut depth_attachment = None;
+        let mut color_attachments = vec![];
+        let mut resolve_attachments = vec![];
+        let mut attachment_descriptions = vec![];
 
-        // color
-        let color_attachment = Some(Attachment::new(AttachmentOptions {
-            index: 1,
-            layout: ImageLayout::Present,
-            format: ImageFormat::Bgra,
-            clear: !device.is_msaa(),
-            store: true,
-            ..Default::default()
-        }));
+        let mut index = 0;
+        let attachments = options
+            .attachments
+            .iter()
+            .map(|a_type| {
+                let is_last = index as usize == options.attachments.len() - 1;
 
-        // msaa
-        let msaa_attachment = if !device.is_msaa() {
-            None
-        } else {
-            Some(Attachment::new(AttachmentOptions {
-                index: 2,
-                layout: ImageLayout::Color,
-                format: ImageFormat::Bgra,
-                samples: device.samples(),
-                clear: true,
-                ..Default::default()
-            }))
-        };
+                match *a_type {
+                    AttachmentType::Depth => {
+                        let samples = if options.attachments.contains(&AttachmentType::ColorMsaa) {
+                            device.samples()
+                        } else {
+                            ImageSamples(1)
+                        };
+                        let o = AttachmentOptions {
+                            layout: ImageLayout::Depth,
+                            format: ImageFormat::Depth,
+                            clear: true,
+                            store: is_last,
+                            samples,
+                            index,
+                        };
+                        index += 1;
+                        let a = Attachment::new(o);
+                        depth_attachment = Some(a.reference());
+                        attachment_descriptions.push(a.description());
+                        vec![o]
+                    }
+                    AttachmentType::Color => {
+                        let layout = if options.present && is_last {
+                            ImageLayout::Present
+                        } else {
+                            ImageLayout::Color
+                        };
+                        let o = AttachmentOptions {
+                            format: ImageFormat::Bgra,
+                            samples: ImageSamples(1),
+                            clear: true,
+                            store: is_last,
+                            layout,
+                            index,
+                        };
+                        index += 1;
+                        let a = Attachment::new(o);
+                        color_attachments.push(a.reference());
+                        attachment_descriptions.push(a.description());
+                        vec![o]
+                    }
+                    AttachmentType::ColorMsaa => {
+                        let layout = if options.present && is_last {
+                            ImageLayout::Present
+                        } else {
+                            ImageLayout::Color
+                        };
 
-        Self::new(
-            device,
-            RenderPassOptions {
-                depth_attachment,
-                color_attachment,
-                msaa_attachment,
-                dependency_type: DependencyType::Color,
-            },
-        )
-    }
+                        // resolve attachment
+                        let o = AttachmentOptions {
+                            format: ImageFormat::Bgra,
+                            samples: ImageSamples(1),
+                            clear: false,
+                            store: is_last,
+                            layout,
+                            index,
+                        };
+                        index += 1;
+                        let a = Attachment::new(o);
+                        resolve_attachments.push(a.reference());
+                        attachment_descriptions.push(a.description());
 
-    pub(crate) fn color(device: &Arc<Device>) -> Result<Self> {
-        profile_scope!("color");
+                        // color multisampled attachment
+                        let o_msaa = AttachmentOptions {
+                            format: ImageFormat::Bgra,
+                            layout: ImageLayout::Color,
+                            samples: device.samples(),
+                            clear: true,
+                            store: is_last,
+                            index,
+                        };
+                        index += 1;
+                        let a_msaa = Attachment::new(o_msaa);
+                        color_attachments.push(a_msaa.reference());
+                        attachment_descriptions.push(a_msaa.description());
 
-        // depth
-        let depth_attachment = Some(Attachment::new(AttachmentOptions {
-            index: 0,
-            layout: ImageLayout::Depth,
-            format: ImageFormat::Depth,
-            samples: device.samples(),
-            clear: true,
-            ..Default::default()
-        }));
+                        vec![o, o_msaa]
+                    }
+                }
+            })
+            .flatten()
+            .collect::<Vec<_>>();
 
-        // color
-        let color_attachment = Some(Attachment::new(AttachmentOptions {
-            index: 1,
-            layout: ImageLayout::Color,
-            format: ImageFormat::Bgra,
-            clear: !device.is_msaa(),
-            store: true,
-            ..Default::default()
-        }));
-
-        // msaa
-        let msaa_attachment = if !device.is_msaa() {
-            None
-        } else {
-            Some(Attachment::new(AttachmentOptions {
-                index: 2,
-                layout: ImageLayout::Color,
-                format: ImageFormat::Bgra,
-                samples: device.samples(),
-                clear: true,
-                ..Default::default()
-            }))
-        };
-
-        Self::new(
-            device,
-            RenderPassOptions {
-                depth_attachment,
-                color_attachment,
-                msaa_attachment,
-                dependency_type: DependencyType::Color,
-            },
-        )
-    }
-
-    pub(crate) fn depth(device: &Arc<Device>) -> Result<Self> {
-        profile_scope!("depth");
-
-        // depth
-        let depth_attachment = Some(Attachment::new(AttachmentOptions {
-            index: 0,
-            layout: ImageLayout::Depth,
-            format: ImageFormat::Depth,
-            clear: true,
-            store: true,
-            ..Default::default()
-        }));
-
-        Self::new(
-            device,
-            RenderPassOptions {
-                depth_attachment,
-                color_attachment: None,
-                msaa_attachment: None,
-                dependency_type: DependencyType::Depth,
-            },
-        )
-    }
-
-    fn new(device: &Arc<Device>, options: RenderPassOptions) -> Result<Self> {
         // create subpass dependency
-        let dependencies = [match options.dependency_type {
-            DependencyType::Color => vk::SubpassDependency::builder()
+        let last_type = options.attachments[options.attachments.len() - 1];
+        let dependency = [match last_type {
+            AttachmentType::Color | AttachmentType::ColorMsaa => vk::SubpassDependency::builder()
                 .src_subpass(vk::SUBPASS_EXTERNAL)
-                .dst_subpass(vk::SUBPASS_EXTERNAL)
+                .dst_subpass(0)
                 .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
                 .src_access_mask(vk::AccessFlags::empty())
                 .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
@@ -163,8 +140,8 @@ impl RenderPass {
                         | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
                 )
                 .build(),
-            DependencyType::Depth => vk::SubpassDependency::builder()
-                .src_subpass(vk::SUBPASS_EXTERNAL)
+            AttachmentType::Depth => vk::SubpassDependency::builder()
+                .src_subpass(0)
                 .dst_subpass(vk::SUBPASS_EXTERNAL)
                 .src_stage_mask(
                     vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
@@ -176,60 +153,38 @@ impl RenderPass {
                 .build(),
         }];
 
-        let mut attachments = vec![];
+        // create render pass
         let mut subpass_builder =
             vk::SubpassDescription::builder().pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS);
-
-        // depth
-        let depth_attachment;
-        if let Some(attach) = &options.depth_attachment {
-            depth_attachment = attach.reference();
-            attachments.push(attach.description());
-            subpass_builder = subpass_builder.depth_stencil_attachment(&depth_attachment);
+        if let Some(depth_a) = &depth_attachment {
+            subpass_builder = subpass_builder.depth_stencil_attachment(depth_a);
         }
-
-        // color
-        let mut color_attachments = vec![];
-        if let Some(attach) = &options.color_attachment {
-            attachments.push(attach.description());
-            color_attachments.push(attach.reference());
+        if !color_attachments.is_empty() {
+            subpass_builder = subpass_builder.color_attachments(&color_attachments);
         }
-
-        // resolve
-        let mut msaa_attachments = vec![];
-        if let Some(attach) = &options.msaa_attachment {
-            attachments.push(attach.description());
-            msaa_attachments.push(attach.reference());
+        if !resolve_attachments.is_empty() {
+            subpass_builder = subpass_builder.resolve_attachments(&resolve_attachments);
         }
-
-        let has_msaa_attachment = options.msaa_attachment.is_some();
-
-        subpass_builder = if has_msaa_attachment {
-            subpass_builder
-                .color_attachments(&msaa_attachments)
-                .resolve_attachments(&color_attachments)
-        } else {
-            subpass_builder.color_attachments(&color_attachments)
-        };
-
-        let subpasses = [subpass_builder.build()];
+        let subpass = [subpass_builder.build()];
 
         let info = vk::RenderPassCreateInfo::builder()
-            .attachments(&attachments)
-            .subpasses(&subpasses)
-            .dependencies(&dependencies);
+            .attachments(&attachment_descriptions)
+            .subpasses(&subpass)
+            .dependencies(&dependency);
 
         let handle = device.create_render_pass(&info)?;
 
         Ok(Self {
+            device: device.clone(),
+            attachments,
             handle,
-            has_msaa_attachment,
-            device: Arc::clone(device),
         })
     }
 
-    pub(crate) fn has_msaa_attachment(&self) -> bool {
-        self.has_msaa_attachment
+    pub(crate) fn is_sampled(&self) -> bool {
+        self.attachments
+            .iter()
+            .any(|a| self.device.is_msaa() && a.samples == self.device.samples())
     }
 
     pub(crate) fn handle(&self) -> vk::RenderPass {

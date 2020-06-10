@@ -5,10 +5,11 @@
 
 use ash::vk;
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum DependencyType {
-    Depth,
+#[derive(Copy, Clone, PartialEq)]
+pub(crate) enum AttachmentType {
     Color,
+    Depth,
+    ColorMsaa,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

@@ -30,10 +30,12 @@ use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialOptions;
 use crate::pipeline::RenderPass;
+use crate::pipeline::RenderPassOptions;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -138,10 +140,34 @@ impl Tegne {
             options.anisotropy
         ));
 
+        let color_attachment = if device.is_msaa() {
+            AttachmentType::ColorMsaa
+        } else {
+            AttachmentType::Color
+        };
+
         let render_passes = RenderPasses {
-            window: check!(RenderPass::window(&device)),
-            color: check!(RenderPass::color(&device)),
-            depth: check!(RenderPass::depth(&device)),
+            window: check!(RenderPass::new(
+                &device,
+                RenderPassOptions {
+                    attachments: &[AttachmentType::Depth, color_attachment],
+                    present: true,
+                }
+            )),
+            color: check!(RenderPass::new(
+                &device,
+                RenderPassOptions {
+                    attachments: &[AttachmentType::Depth, color_attachment],
+                    present: false,
+                }
+            )),
+            depth: check!(RenderPass::new(
+                &device,
+                RenderPassOptions {
+                    attachments: &[AttachmentType::Depth],
+                    present: false,
+                }
+            )),
         };
 
         let resources = ResourceManager::new();
