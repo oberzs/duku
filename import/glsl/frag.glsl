@@ -17,7 +17,7 @@ layout(set = 2, binding = 1) uniform sampler samplers[8];
 #define sampler_ncm samplers[7] // nearest, clamp, no-mipmaps
 
 // textures
-#define albedo sampler2D(textures[object.albedo_index], sampler)
+#define albedo sampler2D(textures[object.albedo_index], samplers[object.sampler_index])
 #define shadow_map sampler2D(textures[world.shadow_index], sampler_c)
 
 layout(location = 0) in vec3 in_position;

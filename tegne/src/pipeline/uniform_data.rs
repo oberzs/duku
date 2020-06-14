@@ -41,6 +41,7 @@ pub(crate) struct MaterialData {
 pub(crate) struct PushConstants {
     pub(crate) model_mat: Matrix4,
     pub(crate) albedo_index: i32,
+    pub(crate) sampler_index: i32,
 }
 
 #[derive(Default, Copy, Clone)]

@@ -28,8 +28,11 @@ pub struct Target<'a> {
     current_material: IdRef,
     current_albedo: IdRef,
     current_font: IdRef,
-    draw_wireframes: bool,
     has_shadows: bool,
+    wireframes: bool,
+    sampler_nearest: bool,
+    sampler_clamp: bool,
+    sampler_no_mipmaps: bool,
     resources: &'a ResourceManager,
 }
 
@@ -49,6 +52,7 @@ pub(crate) struct Order {
     pub(crate) albedo: IdRef,
     pub(crate) model: Matrix4,
     pub(crate) has_shadows: bool,
+    pub(crate) sampler_index: i32,
 }
 
 impl<'a> Target<'a> {
@@ -62,8 +66,11 @@ impl<'a> Target<'a> {
             current_material: resources.builtin("white_mat"),
             current_albedo: resources.builtin("white_tex"),
             current_font: resources.builtin("roboto_font"),
-            draw_wireframes: false,
             has_shadows: false,
+            wireframes: false,
+            sampler_nearest: false,
+            sampler_clamp: false,
+            sampler_no_mipmaps: false,
             resources,
         })
     }
@@ -74,6 +81,7 @@ impl<'a> Target<'a> {
             albedo: self.current_albedo,
             model: transform.into().as_matrix(),
             has_shadows: true,
+            sampler_index: self.sampler_combination(),
         });
     }
 
@@ -83,6 +91,7 @@ impl<'a> Target<'a> {
             albedo: self.current_albedo,
             model: transform.into().as_matrix(),
             has_shadows: true,
+            sampler_index: self.sampler_combination(),
         });
     }
 
@@ -92,6 +101,7 @@ impl<'a> Target<'a> {
             albedo: self.current_albedo,
             model: transform.into().as_matrix(),
             has_shadows: true,
+            sampler_index: self.sampler_combination(),
         });
     }
 
@@ -101,6 +111,7 @@ impl<'a> Target<'a> {
             albedo: self.current_albedo,
             model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
             has_shadows: false,
+            sampler_index: self.sampler_combination(),
         });
     }
 
@@ -141,6 +152,7 @@ impl<'a> Target<'a> {
                     albedo,
                     model: current_transform.as_matrix(),
                     has_shadows: false,
+                    sampler_index: self.sampler_combination(),
                 });
 
                 current_transform.position.x += font.char_advance(c) * x_scale;
@@ -198,6 +210,7 @@ impl<'a> Target<'a> {
             albedo: self.resources.builtin("ui_tex"),
             model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
             has_shadows: false,
+            sampler_index: self.sampler_combination(),
         });
 
         self.current_shader = temp_shader;
@@ -214,12 +227,12 @@ impl<'a> Target<'a> {
         });
     }
 
-    pub fn set_material(&mut self, material: &Id<Material>) {
-        self.current_material = material.id_ref();
+    pub fn set_clear(&mut self, clear: impl Into<Color>) {
+        self.clear = clear.into();
     }
 
-    pub fn set_material_white(&mut self) {
-        self.current_material = self.resources.builtin("white_mat");
+    pub fn set_material(&mut self, material: &Id<Material>) {
+        self.current_material = material.id_ref();
     }
 
     pub fn set_albedo_texture(&mut self, texture: &Id<Texture>) {
@@ -230,24 +243,34 @@ impl<'a> Target<'a> {
         self.current_albedo = framebuffer.id_ref();
     }
 
-    pub fn set_albedo_white(&mut self) {
-        self.current_albedo = self.resources.builtin("white_tex");
-    }
-
     pub fn set_shader(&mut self, shader: &Id<Shader>) {
         self.current_shader = shader.id_ref();
     }
 
-    pub fn set_shader_phong(&mut self) {
+    pub fn enable_wireframes(&mut self) {
+        self.wireframes = true;
+    }
+
+    pub fn enable_sampler_nearest(&mut self) {
+        self.sampler_nearest = true;
+    }
+
+    pub fn enable_sampler_clamp(&mut self) {
+        self.sampler_clamp = true;
+    }
+
+    pub fn enable_sampler_no_mipmaps(&mut self) {
+        self.sampler_no_mipmaps = true;
+    }
+
+    pub fn reset(&mut self) {
+        self.current_material = self.resources.builtin("white_mat");
+        self.current_albedo = self.resources.builtin("white_tex");
         self.current_shader = self.resources.builtin("phong_sh");
-    }
-
-    pub fn set_clear(&mut self, clear: impl Into<Color>) {
-        self.clear = clear.into();
-    }
-
-    pub fn set_wireframes(&mut self, draw: bool) {
-        self.draw_wireframes = draw;
+        self.wireframes = false;
+        self.sampler_nearest = false;
+        self.sampler_clamp = false;
+        self.sampler_no_mipmaps = false;
     }
 
     pub(crate) fn clear(&self) -> [f32; 4] {
@@ -305,9 +328,23 @@ impl<'a> Target<'a> {
             }),
         }
 
-        if self.draw_wireframes {
+        if self.wireframes {
             self.wireframe_orders.push(order);
         }
+    }
+
+    fn sampler_combination(&self) -> i32 {
+        let mut index = 0;
+        if self.sampler_nearest {
+            index += 4;
+        }
+        if self.sampler_clamp {
+            index += 2;
+        }
+        if self.sampler_no_mipmaps {
+            index += 1;
+        }
+        index
     }
 }
 

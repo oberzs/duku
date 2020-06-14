@@ -49,7 +49,7 @@ fn main() {
         square.update(&tegne);
 
         tegne.draw_on_window(|target| {
-            target.set_wireframes(true);
+            target.enable_wireframes();
             square.draw(target);
         });
     });

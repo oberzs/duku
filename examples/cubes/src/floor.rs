@@ -21,16 +21,17 @@ pub struct Floor {
 impl Floor {
     pub fn new(tegne: &Tegne) -> Self {
         let mesh = plane(tegne, 150.0);
-        let texture = tegne
-            .create_texture_from_file("examples/cubes/assets/images/blue1.png")
-            .expect("cannot open floor texture");
+        let bytes = &[240, 240, 240, 220, 220, 220, 220, 220, 220, 240, 240, 240];
+        let texture = tegne.create_texture_rgb(bytes, 2, 2);
 
         Self { mesh, texture }
     }
 
     pub fn draw(&self, target: &mut Target) {
         target.set_albedo_texture(&self.texture);
+        target.enable_sampler_nearest();
         target.draw(&self.mesh, Transform::default());
+        target.reset();
     }
 }
 

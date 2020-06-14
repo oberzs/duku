@@ -96,7 +96,7 @@ fn main() {
             for cube in &cubes {
                 cube.draw(target);
             }
-            target.set_albedo_white();
+            target.reset();
             target.blit_framebuffer(&ui_frame);
         });
     });

@@ -34,4 +34,5 @@ layout(set = 1, binding = 0) uniform MaterialObject {
 layout(push_constant) uniform Constants {
     mat4 model_mat;
     int albedo_index;
+    int sampler_index;
 } object;

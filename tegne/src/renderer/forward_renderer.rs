@@ -254,6 +254,7 @@ impl ForwardRenderer {
                     cmd,
                     PushConstants {
                         model_mat: order.model,
+                        sampler_index: order.sampler_index,
                         albedo_index,
                     },
                     options.shader_layout,
