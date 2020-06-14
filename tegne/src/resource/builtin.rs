@@ -11,6 +11,7 @@ use super::ResourceManager;
 use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
+use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -18,7 +19,6 @@ use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
-use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -39,8 +39,7 @@ macro_rules! include_font {
 pub(crate) fn create_builtins(
     device: &Arc<Device>,
     resources: &ResourceManager,
-    color_pass: &RenderPass,
-    depth_pass: &RenderPass,
+    framebuffer: &Framebuffer,
     layout: &ShaderLayout,
     uniform: &ImageUniform,
 ) -> Result<()> {
@@ -64,11 +63,15 @@ pub(crate) fn create_builtins(
     resources.add_mesh(create_sphere(device, 2)?, Some("sphere_mesh"));
 
     // shaders
+    let render_pass = framebuffer.render_pass();
+    let is_sampled = framebuffer.is_sampled();
+
     resources.add_shader(
         Shader::new(
             device,
-            color_pass,
+            render_pass,
             layout,
+            is_sampled,
             include_shader!("phong.shader"),
             Default::default(),
         )?,
@@ -78,19 +81,9 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            depth_pass,
+            render_pass,
             layout,
-            include_shader!("shadow.shader"),
-            Default::default(),
-        )?,
-        Some("shadow_sh"),
-    );
-
-    resources.add_shader(
-        Shader::new(
-            device,
-            color_pass,
-            layout,
+            is_sampled,
             include_shader!("font.shader"),
             Default::default(),
         )?,
@@ -100,8 +93,9 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            color_pass,
+            render_pass,
             layout,
+            is_sampled,
             include_shader!("passthru.shader"),
             ShaderOptions {
                 depth_test: false,
@@ -114,8 +108,9 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            color_pass,
+            render_pass,
             layout,
+            is_sampled,
             include_shader!("wireframe.shader"),
             ShaderOptions {
                 lines: true,
@@ -154,8 +149,9 @@ pub(crate) fn create_builtins(
         resources.add_shader(
             Shader::new(
                 device,
-                color_pass,
+                render_pass,
                 layout,
+                is_sampled,
                 include_shader!("ui.shader"),
                 ShaderOptions {
                     depth_test: false,

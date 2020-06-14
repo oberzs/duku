@@ -18,6 +18,7 @@ use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
+use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
@@ -28,6 +29,7 @@ use crate::surface::Swapchain;
 pub struct Framebuffer {
     pub camera: Camera,
     handle: vk::Framebuffer,
+    render_pass: RenderPass,
     width: u32,
     height: u32,
     images: Vec<ImageMemory>,
@@ -41,18 +43,18 @@ impl Framebuffer {
     pub(crate) fn for_swapchain(
         device: &Arc<Device>,
         swapchain: &Swapchain,
-        render_pass: &RenderPass,
+        attachment_types: &[AttachmentType],
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
         profile_scope!("for_swapchain");
 
         let vk::Extent2D { width, height } = swapchain.extent();
-
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()?
             .map(|img| {
+                let render_pass = RenderPass::new(device, attachment_types, true)?;
                 let images = render_pass
                     .attachments()
                     .map(|a| {
@@ -105,6 +107,7 @@ impl Framebuffer {
                     shader_image: None,
                     shader_index: None,
                     handle,
+                    render_pass,
                     width,
                     height,
                     images,
@@ -118,7 +121,7 @@ impl Framebuffer {
 
     pub(crate) fn new(
         device: &Arc<Device>,
-        render_pass: &RenderPass,
+        attachment_types: &[AttachmentType],
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
@@ -126,6 +129,8 @@ impl Framebuffer {
         height: u32,
     ) -> Result<Self> {
         profile_scope!("new");
+
+        let render_pass = RenderPass::new(device, attachment_types, false)?;
 
         let mut stored_format = None;
 
@@ -223,6 +228,7 @@ impl Framebuffer {
 
         Ok(Self {
             handle,
+            render_pass,
             width,
             height,
             shader_image,
@@ -326,6 +332,14 @@ impl Framebuffer {
 
     pub(crate) fn handle(&self) -> vk::Framebuffer {
         self.handle
+    }
+
+    pub(crate) fn render_pass(&self) -> vk::RenderPass {
+        self.render_pass.handle()
+    }
+
+    pub(crate) fn is_sampled(&self) -> bool {
+        self.render_pass.is_sampled()
     }
 
     pub(crate) fn width(&self) -> u32 {

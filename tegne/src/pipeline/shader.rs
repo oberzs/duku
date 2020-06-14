@@ -9,7 +9,6 @@ use std::io::Read;
 use std::sync::Arc;
 use tar::Archive;
 
-use super::RenderPass;
 use super::ShaderLayout;
 use crate::device::Device;
 use crate::error::Result;
@@ -31,8 +30,9 @@ pub struct ShaderOptions {
 impl Shader {
     pub(crate) fn new(
         device: &Arc<Device>,
-        pass: &RenderPass,
+        render_pass: vk::RenderPass,
         layout: &ShaderLayout,
+        sampled: bool,
         source: &[u8],
         options: ShaderOptions,
     ) -> Result<Self> {
@@ -132,7 +132,7 @@ impl Shader {
             .polygon_mode(polygon_mode);
 
         // configure msaa state
-        let samples = if pass.is_sampled() {
+        let samples = if sampled {
             device.samples()
         } else {
             ImageSamples(1)
@@ -208,7 +208,7 @@ impl Shader {
             .depth_stencil_state(&depth_stencil_state)
             .dynamic_state(&dynamic_state)
             .layout(layout.handle())
-            .render_pass(pass.handle())
+            .render_pass(render_pass)
             .subpass(0)
             .build();
 

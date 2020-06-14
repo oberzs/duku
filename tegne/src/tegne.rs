@@ -34,8 +34,6 @@ use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialOptions;
-use crate::pipeline::RenderPass;
-use crate::pipeline::RenderPassOptions;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -70,7 +68,6 @@ pub struct Tegne {
     forward_renderer: ForwardRenderer,
     resources: Arc<ResourceManager>,
     window_framebuffers: Vec<Framebuffer>,
-    render_passes: Arc<RenderPasses>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
@@ -87,12 +84,6 @@ pub struct TegneOptions {
     pub vsync: bool,
     pub msaa: u8,
     pub camera: CameraType,
-}
-
-struct RenderPasses {
-    pub(crate) window: RenderPass,
-    pub(crate) color: RenderPass,
-    pub(crate) depth: RenderPass,
 }
 
 #[derive(Copy, Clone)]
@@ -146,51 +137,25 @@ impl Tegne {
             AttachmentType::Color
         };
 
-        let render_passes = RenderPasses {
-            window: check!(RenderPass::new(
-                &device,
-                RenderPassOptions {
-                    attachments: &[AttachmentType::Depth, color_attachment],
-                    present: true,
-                }
-            )),
-            color: check!(RenderPass::new(
-                &device,
-                RenderPassOptions {
-                    attachments: &[AttachmentType::Depth, color_attachment],
-                    present: false,
-                }
-            )),
-            depth: check!(RenderPass::new(
-                &device,
-                RenderPassOptions {
-                    attachments: &[AttachmentType::Depth],
-                    present: false,
-                }
-            )),
-        };
+        let window_framebuffers = check!(Framebuffer::for_swapchain(
+            &device,
+            &swapchain,
+            &[AttachmentType::Depth, color_attachment],
+            &shader_layout,
+            options.camera,
+        ));
 
         let resources = ResourceManager::new();
         check!(create_builtins(
             &device,
             &resources,
-            &render_passes.color,
-            &render_passes.depth,
+            &window_framebuffers[0],
             &shader_layout,
             &image_uniform,
         ));
 
-        let window_framebuffers = check!(Framebuffer::for_swapchain(
-            &device,
-            &swapchain,
-            &render_passes.window,
-            &shader_layout,
-            options.camera,
-        ));
-
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
-            &render_passes.depth,
             &image_uniform,
             &shader_layout,
         ));
@@ -203,7 +168,6 @@ impl Tegne {
             forward_renderer,
             resources: Arc::new(resources),
             window_framebuffers,
-            render_passes: Arc::new(render_passes),
             image_uniform,
             shader_layout: Arc::new(shader_layout),
             swapchain,
@@ -271,10 +235,15 @@ impl Tegne {
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
+        let color_attachment = if self.device.is_msaa() {
+            AttachmentType::ColorMsaa
+        } else {
+            AttachmentType::Color
+        };
         self.window_framebuffers = check!(Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
-            &self.render_passes.window,
+            &[AttachmentType::Depth, color_attachment],
             &self.shader_layout,
             self.camera_type,
         ));
@@ -295,8 +264,6 @@ impl Tegne {
             &self.device,
             ForwardDrawOptions {
                 framebuffer,
-                color_pass: &self.render_passes.window,
-                depth_pass: &self.render_passes.depth,
                 shader_layout: &self.shader_layout,
                 resources: &self.resources,
                 target,
@@ -319,8 +286,6 @@ impl Tegne {
                 &self.device,
                 ForwardDrawOptions {
                     framebuffer: f,
-                    color_pass: &self.render_passes.color,
-                    depth_pass: &self.render_passes.depth,
                     shader_layout: &self.shader_layout,
                     resources: &self.resources,
                     target,
@@ -420,9 +385,14 @@ impl Tegne {
     }
 
     pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
+        let color_attachment = if self.device.is_msaa() {
+            AttachmentType::ColorMsaa
+        } else {
+            AttachmentType::Color
+        };
         let framebuffer = check!(Framebuffer::new(
             &self.device,
-            &self.render_passes.color,
+            &[AttachmentType::Depth, color_attachment],
             &self.image_uniform,
             &self.shader_layout,
             t,
@@ -433,10 +403,13 @@ impl Tegne {
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
+        let render_pass = self.window_framebuffers[0].render_pass();
+        let is_sampled = self.window_framebuffers[0].is_sampled();
         let shader = check!(Shader::new(
             &self.device,
-            &self.render_passes.color,
+            render_pass,
             &self.shader_layout,
+            is_sampled,
             source,
             options,
         ));
@@ -461,7 +434,8 @@ impl Tegne {
         let id = self.create_shader_from_file(&path_buf, options)?;
 
         // setup watcher
-        let render_passes = self.render_passes.clone();
+        let render_pass = self.window_framebuffers[0].render_pass();
+        let is_sampled = self.window_framebuffers[0].is_sampled();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
         let resources = self.resources.clone();
@@ -492,8 +466,9 @@ impl Tegne {
                             let source = check!(fs::read(&path_buf));
                             let shader = check!(Shader::new(
                                 &device,
-                                &render_passes.color,
+                                render_pass,
                                 &shader_layout,
+                                is_sampled,
                                 &source,
                                 options,
                             ));

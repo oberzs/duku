@@ -35,7 +35,6 @@ use crate::image::LayoutChangeOptions;
 use crate::instance::Instance;
 use crate::pipeline::Descriptor;
 use crate::pipeline::PushConstants;
-use crate::pipeline::RenderPass;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::profile_scope;
@@ -630,7 +629,6 @@ impl Device {
         &self,
         buffer: vk::CommandBuffer,
         framebuffer: &Framebuffer,
-        render_pass: &RenderPass,
         clear: [f32; 4],
     ) {
         // create clear values based on framebuffer image formats
@@ -653,7 +651,7 @@ impl Device {
             .collect::<Vec<_>>();
 
         let info = vk::RenderPassBeginInfo::builder()
-            .render_pass(render_pass.handle())
+            .render_pass(framebuffer.render_pass())
             .framebuffer(framebuffer.handle())
             .render_area(vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },

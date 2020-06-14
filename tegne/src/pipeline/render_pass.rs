@@ -22,13 +22,12 @@ pub(crate) struct RenderPass {
     device: Arc<Device>,
 }
 
-pub(crate) struct RenderPassOptions<'types> {
-    pub(crate) attachments: &'types [AttachmentType],
-    pub(crate) present: bool,
-}
-
 impl RenderPass {
-    pub(crate) fn new(device: &Arc<Device>, options: RenderPassOptions<'_>) -> Result<Self> {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        attachment_types: &[AttachmentType],
+        present: bool,
+    ) -> Result<Self> {
         profile_scope!("new");
 
         let mut depth_attachment = None;
@@ -37,15 +36,14 @@ impl RenderPass {
         let mut attachment_descriptions = vec![];
 
         let mut index = 0;
-        let attachments = options
-            .attachments
+        let attachments = attachment_types
             .iter()
             .map(|a_type| {
-                let is_last = index as usize == options.attachments.len() - 1;
+                let is_last = index as usize == attachment_types.len() - 1;
 
                 match *a_type {
                     AttachmentType::Depth => {
-                        let samples = if options.attachments.contains(&AttachmentType::ColorMsaa) {
+                        let samples = if attachment_types.contains(&AttachmentType::ColorMsaa) {
                             device.samples()
                         } else {
                             ImageSamples(1)
@@ -65,7 +63,7 @@ impl RenderPass {
                         vec![o]
                     }
                     AttachmentType::Color => {
-                        let layout = if options.present && is_last {
+                        let layout = if present && is_last {
                             ImageLayout::Present
                         } else {
                             ImageLayout::Color
@@ -85,7 +83,7 @@ impl RenderPass {
                         vec![o]
                     }
                     AttachmentType::ColorMsaa => {
-                        let layout = if options.present && is_last {
+                        let layout = if present && is_last {
                             ImageLayout::Present
                         } else {
                             ImageLayout::Color
@@ -127,7 +125,7 @@ impl RenderPass {
             .collect::<Vec<_>>();
 
         // create subpass dependency
-        let last_type = options.attachments[options.attachments.len() - 1];
+        let last_type = attachment_types[attachment_types.len() - 1];
         let dependency = [match last_type {
             AttachmentType::Color | AttachmentType::ColorMsaa => vk::SubpassDependency::builder()
                 .src_subpass(vk::SUBPASS_EXTERNAL)

@@ -17,10 +17,11 @@ use crate::image::Framebuffer;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
-use crate::pipeline::RenderPass;
+use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldData;
 use crate::profile_scope;
@@ -29,13 +30,12 @@ use crate::resource::ResourceManager;
 
 pub(crate) struct ForwardRenderer {
     depth_framebuffer: Framebuffer,
+    shadow_shader: Shader,
     start_time: Instant,
 }
 
 pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) framebuffer: &'a Framebuffer,
-    pub(crate) color_pass: &'a RenderPass,
-    pub(crate) depth_pass: &'a RenderPass,
     pub(crate) shader_layout: &'a ShaderLayout,
     pub(crate) resources: &'a ResourceManager,
     pub(crate) target: Target<'a>,
@@ -44,18 +44,14 @@ pub(crate) struct ForwardDrawOptions<'a> {
 impl ForwardRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
-        depth_pass: &RenderPass,
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
     ) -> Result<Self> {
         profile_scope!("new");
 
-        // TODO: no need for multiple depth framebuffers
-        // might be a sync issue
-
         let depth_framebuffer = Framebuffer::new(
             device,
-            depth_pass,
+            &[AttachmentType::Depth],
             image_uniform,
             shader_layout,
             CameraType::Orthographic,
@@ -63,9 +59,19 @@ impl ForwardRenderer {
             2048,
         )?;
 
+        let shadow_shader = Shader::new(
+            device,
+            depth_framebuffer.render_pass(),
+            shader_layout,
+            depth_framebuffer.is_sampled(),
+            include_bytes!("../../assets/shaders/shadow.shader"),
+            Default::default(),
+        )?;
+
         Ok(Self {
             start_time: Instant::now(),
             depth_framebuffer,
+            shadow_shader,
         })
     }
 
@@ -133,11 +139,11 @@ impl ForwardRenderer {
 
         // shadow mapping
         if options.target.has_shadows() {
-            device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, options.depth_pass, clear);
+            device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, clear);
             self.setup_pass(device, &self.depth_framebuffer);
             self.bind_world(device, &self.depth_framebuffer, world_data, &options)?;
 
-            self.bind_shader(device, options.resources.builtin("shadow_sh"), &options);
+            device.cmd_bind_shader(cmd, &self.shadow_shader);
             for s_order in options.target.orders_by_shader() {
                 for m_order in s_order.orders_by_material() {
                     self.bind_material(device, m_order.material(), &options)?;
@@ -154,7 +160,7 @@ impl ForwardRenderer {
         }
 
         // normal render
-        device.cmd_begin_render_pass(cmd, framebuffer, options.color_pass, clear);
+        device.cmd_begin_render_pass(cmd, framebuffer, clear);
         self.setup_pass(device, framebuffer);
         self.bind_world(device, framebuffer, world_data, &options)?;
 
