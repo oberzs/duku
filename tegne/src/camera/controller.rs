@@ -22,7 +22,7 @@ pub struct Controller {
 impl Controller {
     pub fn update(&mut self, camera: &mut Camera, events: &Events) {
         let move_speed = 5.0;
-        let rotate_speed = 50.0;
+        let rotate_speed = 70.0;
         let mut speed_mod = 1.0;
 
         if events.is_key_typed(Key::Escape) {

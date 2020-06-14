@@ -43,7 +43,7 @@ use crate::surface::Swapchain;
 use crate::sync::fence;
 use crate::sync::semaphore;
 
-const IN_FLIGHT_FRAME_COUNT: usize = 2;
+pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     handle: VkDevice,
@@ -905,7 +905,7 @@ impl Device {
         destroyed_images.clear();
     }
 
-    fn current_frame(&self) -> usize {
+    pub(crate) fn current_frame(&self) -> usize {
         self.current_frame.load(Ordering::Relaxed)
     }
 }

@@ -12,6 +12,7 @@ use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::color::colors;
 use crate::device::Device;
+use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
@@ -30,7 +31,7 @@ use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
 pub(crate) struct ForwardRenderer {
-    depth_framebuffer: Framebuffer,
+    depth_framebuffers: Vec<Framebuffer>,
     shadow_shader: Shader,
     start_time: Instant,
 }
@@ -50,37 +51,42 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let depth_framebuffer = Framebuffer::new(
-            device,
-            image_uniform,
-            shader_layout,
-            FramebufferOptions {
-                attachment_types: &[AttachmentType::Depth],
-                camera_type: CameraType::Orthographic,
-                multisampled: false,
-                width: 2048,
-                height: 2048,
-            },
-        )?;
+        let depth_framebuffers = (0..IN_FLIGHT_FRAME_COUNT)
+            .map(|_| {
+                Framebuffer::new(
+                    device,
+                    image_uniform,
+                    shader_layout,
+                    FramebufferOptions {
+                        attachment_types: &[AttachmentType::Depth],
+                        camera_type: CameraType::Orthographic,
+                        multisampled: false,
+                        width: 2048,
+                        height: 2048,
+                    },
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         let shadow_shader = Shader::new(
             device,
-            depth_framebuffer.render_pass(),
+            depth_framebuffers[0].render_pass(),
             shader_layout,
-            depth_framebuffer.multisampled(),
+            depth_framebuffers[0].multisampled(),
             include_bytes!("../../assets/shaders/shadow.shader"),
             Default::default(),
         )?;
 
         Ok(Self {
             start_time: Instant::now(),
-            depth_framebuffer,
+            depth_framebuffers,
             shadow_shader,
         })
     }
 
     pub(crate) fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
         let framebuffer = options.framebuffer;
+        let depth_framebuffer = &self.depth_framebuffers[device.current_frame()];
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
@@ -128,7 +134,7 @@ impl ForwardRenderer {
 
         // update world uniform
         let world_data = WorldData {
-            shadow_index: self.depth_framebuffer.image_index(),
+            shadow_index: depth_framebuffer.image_index(),
             lights: [
                 main_light,
                 other_lights[0],
@@ -140,13 +146,14 @@ impl ForwardRenderer {
             light_mat,
             time: self.start_time.elapsed().as_secs_f32(),
         };
+        framebuffer.world_uniform().update(world_data)?;
+        depth_framebuffer.world_uniform().update(world_data)?;
 
         // shadow mapping
         if options.target.has_shadows() {
-            device.cmd_begin_render_pass(cmd, &self.depth_framebuffer, clear);
-            self.setup_pass(device, &self.depth_framebuffer);
-            self.bind_world(device, &self.depth_framebuffer, world_data, &options)?;
-
+            device.cmd_begin_render_pass(cmd, depth_framebuffer, clear);
+            self.setup_pass(device, depth_framebuffer);
+            self.bind_world(device, depth_framebuffer, &options);
             device.cmd_bind_shader(cmd, &self.shadow_shader);
             for s_order in options.target.orders_by_shader() {
                 for m_order in s_order.orders_by_material() {
@@ -158,15 +165,13 @@ impl ForwardRenderer {
                     }
                 }
             }
-
             device.cmd_end_render_pass(cmd);
-            self.depth_framebuffer.update_shader_image(cmd);
+            depth_framebuffer.update_shader_image(cmd);
         }
-
         // normal render
         device.cmd_begin_render_pass(cmd, framebuffer, clear);
         self.setup_pass(device, framebuffer);
-        self.bind_world(device, framebuffer, world_data, &options)?;
+        self.bind_world(device, framebuffer, &options);
 
         for s_order in options.target.orders_by_shader() {
             self.bind_shader(device, s_order.shader(), &options);
@@ -200,17 +205,14 @@ impl ForwardRenderer {
         &self,
         device: &Device,
         framebuffer: &Framebuffer,
-        data: WorldData,
         options: &ForwardDrawOptions<'_>,
-    ) -> Result<()> {
+    ) {
         let cmd = device.command_buffer();
-        framebuffer.world_uniform().update(data)?;
         device.cmd_bind_descriptor(
             cmd,
             framebuffer.world_uniform().descriptor(),
             options.shader_layout,
         );
-        Ok(())
     }
 
     fn bind_shader(&self, device: &Device, shader: IdRef, options: &ForwardDrawOptions<'_>) {

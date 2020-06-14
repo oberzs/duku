@@ -69,7 +69,7 @@ impl Shader {
 
         let vert_module = device.create_shader_module(&vert_source)?;
         let frag_module = device.create_shader_module(&frag_source)?;
-        let entry_point = CString::new("main")?;
+        let entry_point = CString::new("main").expect("bad code");
 
         // configure vertex stage
         let vs_stage_info = vk::PipelineShaderStageCreateInfo::builder()
