@@ -85,8 +85,11 @@ impl ImageMemory {
             None
         } else {
             let aspect_flags = match options.format {
-                ImageFormat::Bgra => vk::ImageAspectFlags::COLOR,
-                ImageFormat::Rgba => vk::ImageAspectFlags::COLOR,
+                ImageFormat::Sbgra
+                | ImageFormat::Rgb
+                | ImageFormat::Rgba
+                | ImageFormat::Srgba
+                | ImageFormat::Srgb => vk::ImageAspectFlags::COLOR,
                 ImageFormat::Depth => vk::ImageAspectFlags::DEPTH,
                 ImageFormat::DepthStencil => {
                     vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
@@ -267,7 +270,7 @@ impl Default for ImageMemoryOptions<'_> {
             handle: None,
             width: 1,
             height: 1,
-            format: ImageFormat::Rgba,
+            format: ImageFormat::Srgba,
             mips: ImageMips::One,
             samples: ImageSamples(1),
             usage: &[],

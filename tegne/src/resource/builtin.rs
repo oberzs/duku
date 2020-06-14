@@ -47,7 +47,7 @@ pub(crate) fn create_builtins(
 
     // textures
     resources.add_texture(
-        Texture::from_raw_rgba(device, uniform, &[255, 255, 255, 255], 1, 1)?,
+        Texture::new(device, uniform, Default::default())?,
         Some("white_tex"),
     );
 

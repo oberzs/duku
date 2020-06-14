@@ -21,6 +21,7 @@ use std::time::Instant;
 
 use crate::camera::Camera;
 use crate::camera::CameraType;
+use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
@@ -28,6 +29,8 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::Texture;
+use crate::image::TextureFormat;
+use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
@@ -215,12 +218,15 @@ impl Tegne {
         {
             let ui_texture = window.build_ui_texture();
             s.resources.add_texture(
-                check!(Texture::from_raw_rgba(
+                check!(Texture::new(
                     &s.device,
                     &s.image_uniform,
-                    &ui_texture.0,
-                    ui_texture.1,
-                    ui_texture.2,
+                    TextureOptions {
+                        data: &ui_texture.0,
+                        width: ui_texture.1,
+                        height: ui_texture.2,
+                        format: TextureFormat::Rgba,
+                    }
                 )),
                 Some("ui_tex"),
             );
@@ -298,24 +304,21 @@ impl Tegne {
         });
     }
 
-    pub fn create_texture_rgba(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
-        let texture = check!(Texture::from_raw_rgba(
+    pub fn create_texture(&self, pixels: &[Color], width: u32) -> Id<Texture> {
+        let data = pixels
+            .iter()
+            .map(|p| vec![p.r, p.g, p.b, p.a])
+            .flatten()
+            .collect::<Vec<_>>();
+        let texture = check!(Texture::new(
             &self.device,
             &self.image_uniform,
-            raw,
-            width,
-            height,
-        ));
-        self.resources.add_texture(texture, None)
-    }
-
-    pub fn create_texture_rgb(&self, raw: &[u8], width: u32, height: u32) -> Id<Texture> {
-        let texture = check!(Texture::from_raw_rgb(
-            &self.device,
-            &self.image_uniform,
-            raw,
-            width,
-            height,
+            TextureOptions {
+                format: TextureFormat::Rgba,
+                data: &data,
+                height: pixels.len() as u32 / width,
+                width,
+            }
         ));
         self.resources.add_texture(texture, None)
     }
@@ -326,7 +329,18 @@ impl Tegne {
         let img = image_file::open(path)?;
         let (width, height) = img.dimensions();
         let data = img.to_rgba().into_raw();
-        Ok(self.create_texture_rgba(&data, width, height))
+
+        let texture = check!(Texture::new(
+            &self.device,
+            &self.image_uniform,
+            TextureOptions {
+                format: TextureFormat::Srgba,
+                data: &data,
+                width,
+                height,
+            }
+        ));
+        Ok(self.resources.add_texture(texture, None))
     }
 
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {

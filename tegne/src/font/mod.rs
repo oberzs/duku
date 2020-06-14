@@ -10,9 +10,10 @@ use std::io::Read;
 use std::sync::Arc;
 use tar::Archive;
 
-use super::Texture;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::Texture;
+use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
@@ -66,12 +67,15 @@ impl Font {
 
         // create font atlas texture
         let texture = resources.add_texture(
-            Texture::from_raw_rgba(
+            Texture::new(
                 device,
                 uniform,
-                &image_source,
-                atlas.atlas_size,
-                atlas.atlas_size,
+                TextureOptions {
+                    data: &image_source,
+                    width: atlas.atlas_size,
+                    height: atlas.atlas_size,
+                    ..Default::default()
+                },
             )?,
             None,
         );

@@ -97,7 +97,7 @@ fn swapchain_info(
 
     let mut info = vk::SwapchainCreateInfoKHR::builder()
         .surface(surface.handle())
-        .image_format(ImageFormat::Bgra.flag())
+        .image_format(ImageFormat::Sbgra.flag())
         .image_color_space(vk::ColorSpaceKHR::SRGB_NONLINEAR)
         .image_extent(extent)
         .image_array_layers(1)

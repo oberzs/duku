@@ -7,8 +7,11 @@ use ash::vk;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum ImageFormat {
+    Rgb,
     Rgba,
-    Bgra,
+    Srgb,
+    Srgba,
+    Sbgra,
     Depth,
     DepthStencil,
 }
@@ -74,8 +77,11 @@ impl ImageUsage {
 impl ImageFormat {
     pub(crate) fn flag(&self) -> vk::Format {
         match *self {
-            Self::Rgba => vk::Format::R8G8B8A8_SRGB,
-            Self::Bgra => vk::Format::B8G8R8A8_SRGB,
+            Self::Rgb => vk::Format::R8G8B8_UNORM,
+            Self::Rgba => vk::Format::R8G8B8A8_UNORM,
+            Self::Srgb => vk::Format::R8G8B8_SRGB,
+            Self::Srgba => vk::Format::R8G8B8A8_SRGB,
+            Self::Sbgra => vk::Format::B8G8R8A8_SRGB,
             Self::Depth => vk::Format::D32_SFLOAT_S8_UINT,
             Self::DepthStencil => vk::Format::D32_SFLOAT_S8_UINT,
         }

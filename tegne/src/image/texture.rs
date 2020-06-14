@@ -24,43 +24,40 @@ pub struct Texture {
     image_index: i32,
 }
 
-impl Texture {
-    pub(crate) fn from_raw_rgb(
-        device: &Arc<Device>,
-        uniform: &ImageUniform,
-        data: &[u8],
-        width: u32,
-        height: u32,
-    ) -> Result<Self> {
-        // convert image to RGBA format
-        let mut rgba = vec![];
-        rgba.reserve(data.len() + data.len() / 3);
-        for c in data.chunks(3) {
-            rgba.extend(c.iter());
-            rgba.push(255);
-        }
-        Self::from_raw_rgba(device, uniform, &rgba, width, height)
-    }
+pub(crate) struct TextureOptions<'data> {
+    pub data: &'data [u8],
+    pub width: u32,
+    pub height: u32,
+    pub format: TextureFormat,
+}
 
-    pub(crate) fn from_raw_rgba(
+pub(crate) enum TextureFormat {
+    Rgba,
+    Srgba,
+}
+
+impl Texture {
+    pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &ImageUniform,
-        data: &[u8],
-        width: u32,
-        height: u32,
+        options: TextureOptions<'_>,
     ) -> Result<Self> {
-        let size = (width * height) as usize * 4;
+        let format = match options.format {
+            TextureFormat::Rgba => ImageFormat::Rgba,
+            TextureFormat::Srgba => ImageFormat::Srgba,
+        };
+
+        let size = (options.width * options.height) as usize * 4;
 
         let staging_memory =
             BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        staging_memory.copy_from_data(data, size)?;
+        staging_memory.copy_from_data(options.data, size)?;
 
         let memory = ImageMemory::new(
             device,
             ImageMemoryOptions {
-                width,
-                height,
-                format: ImageFormat::Rgba,
+                width: options.width,
+                height: options.height,
                 mips: ImageMips::Log2,
                 usage: &[
                     ImageUsage::Sampled,
@@ -68,6 +65,7 @@ impl Texture {
                     ImageUsage::TransferDst,
                 ],
                 create_view: true,
+                format,
                 ..Default::default()
             },
         )?;
@@ -103,5 +101,16 @@ impl Texture {
 
     pub(crate) fn image_index(&self) -> i32 {
         self.image_index
+    }
+}
+
+impl Default for TextureOptions<'_> {
+    fn default() -> Self {
+        Self {
+            data: &[255, 255, 255, 255],
+            width: 1,
+            height: 1,
+            format: TextureFormat::Rgba,
+        }
     }
 }

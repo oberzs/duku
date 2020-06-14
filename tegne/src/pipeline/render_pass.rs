@@ -72,7 +72,7 @@ impl RenderPass {
                             ImageLayout::Color
                         };
                         let o = AttachmentOptions {
-                            format: ImageFormat::Bgra,
+                            format: ImageFormat::Sbgra,
                             samples: ImageSamples(1),
                             clear: !multisampled,
                             store: is_last,
@@ -92,7 +92,7 @@ impl RenderPass {
                         // color multisampled attachment
                         if multisampled {
                             let o_msaa = AttachmentOptions {
-                                format: ImageFormat::Bgra,
+                                format: ImageFormat::Sbgra,
                                 layout: ImageLayout::Color,
                                 samples: device.samples(),
                                 clear: true,
