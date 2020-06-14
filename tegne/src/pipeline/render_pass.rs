@@ -111,7 +111,7 @@ impl RenderPass {
                             layout: ImageLayout::Color,
                             samples: device.samples(),
                             clear: true,
-                            store: is_last,
+                            store: false,
                             index,
                         };
                         index += 1;
@@ -185,6 +185,10 @@ impl RenderPass {
         self.attachments
             .iter()
             .any(|a| self.device.is_msaa() && a.samples == self.device.samples())
+    }
+
+    pub(crate) fn attachments(&self) -> impl Iterator<Item = &AttachmentOptions> {
+        self.attachments.iter()
     }
 
     pub(crate) fn handle(&self) -> vk::RenderPass {

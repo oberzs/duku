@@ -38,89 +38,85 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
-    pub(crate) fn window(
+    pub(crate) fn for_swapchain(
         device: &Arc<Device>,
         swapchain: &Swapchain,
         render_pass: &RenderPass,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
-        profile_scope!("window");
+        profile_scope!("for_swapchain");
 
-        let extent = swapchain.extent();
+        let vk::Extent2D { width, height } = swapchain.extent();
 
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()?
-            .map(|handle| {
-                let mut images = vec![];
+            .map(|img| {
+                let images = render_pass
+                    .attachments()
+                    .map(|a| {
+                        let mut usage = vec![];
 
-                // depth
-                images.push(ImageMemory::new(
-                    device,
-                    ImageMemoryOptions {
-                        width: extent.width,
-                        height: extent.height,
-                        format: ImageFormat::Depth,
-                        usage: &[ImageUsage::Depth],
-                        samples: device.samples(),
-                        create_view: true,
-                        ..Default::default()
-                    },
-                )?);
+                        match a.layout {
+                            ImageLayout::Color => usage.push(ImageUsage::Color),
+                            ImageLayout::Depth => usage.push(ImageUsage::Depth),
+                            _ => (),
+                        }
 
-                // color
-                images.push(ImageMemory::new(
-                    device,
-                    ImageMemoryOptions {
-                        handle: Some(handle),
-                        width: extent.width,
-                        height: extent.height,
-                        format: ImageFormat::Bgra,
-                        create_view: true,
-                        ..Default::default()
-                    },
-                )?);
+                        let mut handle = None;
+                        if a.store {
+                            handle = Some(img);
+                        } else {
+                            usage.push(ImageUsage::Transient);
+                        }
 
-                // msaa
-                if device.is_msaa() {
-                    images.push(ImageMemory::new(
-                        device,
-                        ImageMemoryOptions {
-                            width: extent.width,
-                            height: extent.height,
-                            format: ImageFormat::Bgra,
-                            usage: &[ImageUsage::Color, ImageUsage::Transient],
-                            samples: device.samples(),
-                            create_view: true,
-                            ..Default::default()
-                        },
-                    )?);
-                }
+                        ImageMemory::new(
+                            device,
+                            ImageMemoryOptions {
+                                samples: a.samples,
+                                format: a.format,
+                                usage: &usage,
+                                create_view: true,
+                                width,
+                                height,
+                                handle,
+                                ..Default::default()
+                            },
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?;
 
-                let handle =
-                    create_framebuffer(device, render_pass, &images, extent.width, extent.height)?;
+                let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+
+                let info = vk::FramebufferCreateInfo::builder()
+                    .render_pass(render_pass.handle())
+                    .attachments(&views)
+                    .width(width)
+                    .height(height)
+                    .layers(1);
+
+                let handle = device.create_framebuffer(&info)?;
 
                 let world_uniform = WorldUniform::new(device, shader_layout)?;
-
-                let camera = Camera::new(camera_type, extent.width, extent.height);
+                let camera = Camera::new(camera_type, width, height);
 
                 Ok(Self {
-                    handle,
-                    width: extent.width,
-                    height: extent.height,
                     shader_image: None,
                     shader_index: None,
+                    handle,
+                    width,
+                    height,
                     images,
                     world_uniform,
                     camera,
                     device: Arc::clone(device),
                 })
             })
-            .collect::<Result<Vec<_>>>()
+            .collect()
     }
 
-    pub(crate) fn color(
+    pub(crate) fn new(
         device: &Arc<Device>,
         render_pass: &RenderPass,
         image_uniform: &ImageUniform,
@@ -129,114 +125,108 @@ impl Framebuffer {
         width: u32,
         height: u32,
     ) -> Result<Self> {
-        let mut images = vec![];
+        profile_scope!("new");
 
-        // depth
-        images.push(ImageMemory::new(
-            device,
-            ImageMemoryOptions {
-                width,
-                height,
-                format: ImageFormat::Depth,
-                usage: &[ImageUsage::Depth],
-                samples: device.samples(),
-                create_view: true,
-                ..Default::default()
-            },
-        )?);
+        let mut stored_format = None;
 
-        // color
-        images.push(ImageMemory::new(
-            device,
-            ImageMemoryOptions {
-                width,
-                height,
-                format: ImageFormat::Bgra,
-                usage: &[ImageUsage::Color, ImageUsage::TransferSrc],
-                create_view: true,
-                ..Default::default()
-            },
-        )?);
+        let images = render_pass
+            .attachments()
+            .map(|a| {
+                let mut usage = vec![];
 
-        // msaa
-        if device.is_msaa() {
-            images.push(ImageMemory::new(
+                match a.layout {
+                    ImageLayout::Color => usage.push(ImageUsage::Color),
+                    ImageLayout::Depth => usage.push(ImageUsage::Depth),
+                    _ => (),
+                }
+
+                // attachments that stay in memory can be read from
+                if a.store {
+                    usage.push(ImageUsage::TransferSrc);
+                    stored_format = Some(a.format);
+                } else {
+                    usage.push(ImageUsage::Transient);
+                }
+
+                let format = match a.format {
+                    ImageFormat::Depth if a.store => ImageFormat::DepthStencil,
+                    f => f,
+                };
+
+                ImageMemory::new(
+                    device,
+                    ImageMemoryOptions {
+                        samples: a.samples,
+                        usage: &usage,
+                        create_view: true,
+                        format,
+                        width,
+                        height,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // create image to be used in shaders if needed
+        let (shader_image, shader_index) = if let Some(stored) = stored_format {
+            // create shader image memory
+            let img = ImageMemory::new(
                 device,
                 ImageMemoryOptions {
+                    usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
+                    create_view: true,
+                    format: stored,
                     width,
                     height,
-                    format: ImageFormat::Bgra,
-                    usage: &[ImageUsage::Color, ImageUsage::Transient],
-                    samples: device.samples(),
-                    create_view: true,
                     ..Default::default()
                 },
-            )?);
-        }
+            )?;
 
-        // create image to be used in shaders
-        let (shader_image, shader_index) =
-            create_shader_image(device, image_uniform, width, height, ImageFormat::Bgra)?;
+            // change image layout to be used in shaders
+            device.do_commands(|cmd| {
+                device.cmd_change_image_layout(
+                    cmd,
+                    &img,
+                    LayoutChangeOptions {
+                        new_layout: ImageLayout::Shader,
+                        ..Default::default()
+                    },
+                );
+                Ok(())
+            })?;
 
-        let handle = create_framebuffer(device, render_pass, &images, width, height)?;
+            // add image to uniform descriptor
+            let mut index = 0;
+            if let Some(view) = img.view() {
+                index = image_uniform.add(view);
+            }
+
+            (Some(img), Some(index))
+        } else {
+            (None, None)
+        };
+
+        let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+
+        let info = vk::FramebufferCreateInfo::builder()
+            .render_pass(render_pass.handle())
+            .attachments(&views)
+            .width(width)
+            .height(height)
+            .layers(1);
+
+        let handle = device.create_framebuffer(&info)?;
 
         let world_uniform = WorldUniform::new(device, shader_layout)?;
-
         let camera = Camera::new(camera_type, width, height);
 
         Ok(Self {
             handle,
             width,
             height,
-            shader_image: Some(shader_image),
-            shader_index: Some(shader_index),
-            images,
-            world_uniform,
-            camera,
-            device: Arc::clone(device),
-        })
-    }
-
-    pub(crate) fn depth(
-        device: &Arc<Device>,
-        render_pass: &RenderPass,
-        image_uniform: &ImageUniform,
-        shader_layout: &ShaderLayout,
-        camera_type: CameraType,
-        width: u32,
-        height: u32,
-    ) -> Result<Self> {
-        let mut images = vec![];
-
-        // depth
-        images.push(ImageMemory::new(
-            device,
-            ImageMemoryOptions {
-                width,
-                height,
-                format: ImageFormat::DepthStencil,
-                usage: &[ImageUsage::Depth, ImageUsage::TransferSrc],
-                create_view: true,
-                ..Default::default()
-            },
-        )?);
-
-        // create image to be used in shaders
-        let (shader_image, shader_index) =
-            create_shader_image(device, image_uniform, width, height, ImageFormat::Depth)?;
-
-        let handle = create_framebuffer(device, render_pass, &images, width, height)?;
-
-        let world_uniform = WorldUniform::new(device, shader_layout)?;
-
-        let camera = Camera::new(camera_type, width, height);
-
-        Ok(Self {
-            handle,
-            width,
-            height,
-            shader_image: Some(shader_image),
-            shader_index: Some(shader_index),
+            shader_image,
+            shader_index,
             images,
             world_uniform,
             camera,
@@ -370,64 +360,4 @@ impl PartialEq for Framebuffer {
         self.shader_image.as_ref().map(|i| i.handle())
             == other.shader_image.as_ref().map(|i| i.handle())
     }
-}
-
-fn create_shader_image(
-    device: &Arc<Device>,
-    uniform: &ImageUniform,
-    width: u32,
-    height: u32,
-    format: ImageFormat,
-) -> Result<(ImageMemory, i32)> {
-    let image = ImageMemory::new(
-        device,
-        ImageMemoryOptions {
-            width,
-            height,
-            format,
-            usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
-            create_view: true,
-            ..Default::default()
-        },
-    )?;
-
-    // change image layout to be used in shaders
-    device.do_commands(|cmd| {
-        device.cmd_change_image_layout(
-            cmd,
-            &image,
-            LayoutChangeOptions {
-                new_layout: ImageLayout::Shader,
-                ..Default::default()
-            },
-        );
-        Ok(())
-    })?;
-
-    // add image to uniform descriptor
-    let mut index = 0;
-    if let Some(view) = image.view() {
-        index = uniform.add(view);
-    }
-
-    Ok((image, index))
-}
-
-fn create_framebuffer(
-    device: &Device,
-    render_pass: &RenderPass,
-    images: &[ImageMemory],
-    width: u32,
-    height: u32,
-) -> Result<vk::Framebuffer> {
-    let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
-
-    let info = vk::FramebufferCreateInfo::builder()
-        .render_pass(render_pass.handle())
-        .attachments(&views)
-        .width(width)
-        .height(height)
-        .layers(1);
-
-    device.create_framebuffer(&info)
 }

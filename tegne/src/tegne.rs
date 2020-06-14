@@ -180,7 +180,7 @@ impl Tegne {
             &image_uniform,
         ));
 
-        let window_framebuffers = check!(Framebuffer::window(
+        let window_framebuffers = check!(Framebuffer::for_swapchain(
             &device,
             &swapchain,
             &render_passes.window,
@@ -271,7 +271,7 @@ impl Tegne {
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
-        self.window_framebuffers = check!(Framebuffer::window(
+        self.window_framebuffers = check!(Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.render_passes.window,
@@ -420,7 +420,7 @@ impl Tegne {
     }
 
     pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
-        let framebuffer = check!(Framebuffer::color(
+        let framebuffer = check!(Framebuffer::new(
             &self.device,
             &self.render_passes.color,
             &self.image_uniform,

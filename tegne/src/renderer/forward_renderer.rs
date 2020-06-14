@@ -53,7 +53,7 @@ impl ForwardRenderer {
         // TODO: no need for multiple depth framebuffers
         // might be a sync issue
 
-        let depth_framebuffer = Framebuffer::depth(
+        let depth_framebuffer = Framebuffer::new(
             device,
             depth_pass,
             image_uniform,
