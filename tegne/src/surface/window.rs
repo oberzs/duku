@@ -205,7 +205,7 @@ impl Window {
                     events.mouse_delta = (0.0, 0.0);
                     events.delta_time = delta_time.as_secs_f32();
                     events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
-                        .round() as u32;
+                        .ceil() as u32;
                     resized = false;
                 }
                 _ => (),
@@ -307,7 +307,7 @@ impl Window {
                     events.mouse_delta = (0.0, 0.0);
                     events.delta_time = delta_time.as_secs_f32();
                     events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
-                        .round() as u32;
+                        .ceil() as u32;
                     resized = false;
                 }
                 _ => (),
