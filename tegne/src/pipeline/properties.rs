@@ -9,7 +9,6 @@ use ash::vk;
 pub(crate) enum AttachmentType {
     Color,
     Depth,
-    ColorMsaa,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

@@ -8,6 +8,7 @@ mod memory;
 mod properties;
 mod texture;
 
+pub(crate) use framebuffer::FramebufferOptions;
 pub(crate) use memory::ImageMemory;
 pub(crate) use memory::ImageMemoryOptions;
 pub(crate) use properties::ImageFormat;

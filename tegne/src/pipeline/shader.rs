@@ -32,7 +32,7 @@ impl Shader {
         device: &Arc<Device>,
         render_pass: vk::RenderPass,
         layout: &ShaderLayout,
-        sampled: bool,
+        multisampled: bool,
         source: &[u8],
         options: ShaderOptions,
     ) -> Result<Self> {
@@ -132,7 +132,7 @@ impl Shader {
             .polygon_mode(polygon_mode);
 
         // configure msaa state
-        let samples = if sampled {
+        let samples = if multisampled {
             device.samples()
         } else {
             ImageSamples(1)

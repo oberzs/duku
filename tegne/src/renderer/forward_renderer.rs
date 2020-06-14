@@ -14,6 +14,7 @@ use crate::color::colors;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
+use crate::image::FramebufferOptions;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
@@ -51,19 +52,22 @@ impl ForwardRenderer {
 
         let depth_framebuffer = Framebuffer::new(
             device,
-            &[AttachmentType::Depth],
             image_uniform,
             shader_layout,
-            CameraType::Orthographic,
-            2048,
-            2048,
+            FramebufferOptions {
+                attachment_types: &[AttachmentType::Depth],
+                camera_type: CameraType::Orthographic,
+                multisampled: false,
+                width: 2048,
+                height: 2048,
+            },
         )?;
 
         let shadow_shader = Shader::new(
             device,
             depth_framebuffer.render_pass(),
             shader_layout,
-            depth_framebuffer.is_sampled(),
+            depth_framebuffer.multisampled(),
             include_bytes!("../../assets/shaders/shadow.shader"),
             Default::default(),
         )?;

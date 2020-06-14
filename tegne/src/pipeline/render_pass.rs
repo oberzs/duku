@@ -26,6 +26,7 @@ impl RenderPass {
     pub(crate) fn new(
         device: &Arc<Device>,
         attachment_types: &[AttachmentType],
+        multisampled: bool,
         present: bool,
     ) -> Result<Self> {
         profile_scope!("new");
@@ -43,7 +44,7 @@ impl RenderPass {
 
                 match *a_type {
                     AttachmentType::Depth => {
-                        let samples = if attachment_types.contains(&AttachmentType::ColorMsaa) {
+                        let samples = if multisampled {
                             device.samples()
                         } else {
                             ImageSamples(1)
@@ -63,61 +64,49 @@ impl RenderPass {
                         vec![o]
                     }
                     AttachmentType::Color => {
-                        let layout = if present && is_last {
-                            ImageLayout::Present
-                        } else {
-                            ImageLayout::Color
-                        };
-                        let o = AttachmentOptions {
-                            format: ImageFormat::Bgra,
-                            samples: ImageSamples(1),
-                            clear: true,
-                            store: is_last,
-                            layout,
-                            index,
-                        };
-                        index += 1;
-                        let a = Attachment::new(o);
-                        color_attachments.push(a.reference());
-                        attachment_descriptions.push(a.description());
-                        vec![o]
-                    }
-                    AttachmentType::ColorMsaa => {
-                        let layout = if present && is_last {
-                            ImageLayout::Present
-                        } else {
-                            ImageLayout::Color
-                        };
+                        let mut os = vec![];
 
-                        // resolve attachment
+                        let layout = if present && is_last {
+                            ImageLayout::Present
+                        } else {
+                            ImageLayout::Color
+                        };
                         let o = AttachmentOptions {
                             format: ImageFormat::Bgra,
                             samples: ImageSamples(1),
-                            clear: false,
+                            clear: !multisampled,
                             store: is_last,
                             layout,
                             index,
                         };
                         index += 1;
                         let a = Attachment::new(o);
-                        resolve_attachments.push(a.reference());
+                        if multisampled {
+                            resolve_attachments.push(a.reference());
+                        } else {
+                            color_attachments.push(a.reference());
+                        }
                         attachment_descriptions.push(a.description());
+                        os.push(o);
 
                         // color multisampled attachment
-                        let o_msaa = AttachmentOptions {
-                            format: ImageFormat::Bgra,
-                            layout: ImageLayout::Color,
-                            samples: device.samples(),
-                            clear: true,
-                            store: false,
-                            index,
-                        };
-                        index += 1;
-                        let a_msaa = Attachment::new(o_msaa);
-                        color_attachments.push(a_msaa.reference());
-                        attachment_descriptions.push(a_msaa.description());
+                        if multisampled {
+                            let o_msaa = AttachmentOptions {
+                                format: ImageFormat::Bgra,
+                                layout: ImageLayout::Color,
+                                samples: device.samples(),
+                                clear: true,
+                                store: false,
+                                index,
+                            };
+                            index += 1;
+                            let a_msaa = Attachment::new(o_msaa);
+                            color_attachments.push(a_msaa.reference());
+                            attachment_descriptions.push(a_msaa.description());
+                            os.push(o_msaa);
+                        }
 
-                        vec![o, o_msaa]
+                        os
                     }
                 }
             })
@@ -127,7 +116,7 @@ impl RenderPass {
         // create subpass dependency
         let last_type = attachment_types[attachment_types.len() - 1];
         let dependency = [match last_type {
-            AttachmentType::Color | AttachmentType::ColorMsaa => vk::SubpassDependency::builder()
+            AttachmentType::Color => vk::SubpassDependency::builder()
                 .src_subpass(vk::SUBPASS_EXTERNAL)
                 .dst_subpass(0)
                 .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
@@ -177,12 +166,6 @@ impl RenderPass {
             attachments,
             handle,
         })
-    }
-
-    pub(crate) fn is_sampled(&self) -> bool {
-        self.attachments
-            .iter()
-            .any(|a| self.device.is_msaa() && a.samples == self.device.samples())
     }
 
     pub(crate) fn attachments(&self) -> impl Iterator<Item = &AttachmentOptions> {

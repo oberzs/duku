@@ -26,6 +26,7 @@ use crate::device::Device;
 use crate::device::DeviceProperties;
 use crate::error::Result;
 use crate::image::Framebuffer;
+use crate::image::FramebufferOptions;
 use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
@@ -131,18 +132,19 @@ impl Tegne {
             options.anisotropy
         ));
 
-        let color_attachment = if device.is_msaa() {
-            AttachmentType::ColorMsaa
-        } else {
-            AttachmentType::Color
-        };
-
         let window_framebuffers = check!(Framebuffer::for_swapchain(
             &device,
             &swapchain,
-            &[AttachmentType::Depth, color_attachment],
             &shader_layout,
-            options.camera,
+            FramebufferOptions {
+                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                camera_type: options.camera,
+
+                // does not matter for window framebuffers
+                multisampled: false,
+                width: 1,
+                height: 1,
+            }
         ));
 
         let resources = ResourceManager::new();
@@ -235,17 +237,19 @@ impl Tegne {
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
-        let color_attachment = if self.device.is_msaa() {
-            AttachmentType::ColorMsaa
-        } else {
-            AttachmentType::Color
-        };
         self.window_framebuffers = check!(Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
-            &[AttachmentType::Depth, color_attachment],
             &self.shader_layout,
-            self.camera_type,
+            FramebufferOptions {
+                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                camera_type: self.camera_type,
+
+                // does not matter for window framebuffers
+                multisampled: false,
+                width: 1,
+                height: 1,
+            }
         ));
     }
 
@@ -385,31 +389,29 @@ impl Tegne {
     }
 
     pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
-        let color_attachment = if self.device.is_msaa() {
-            AttachmentType::ColorMsaa
-        } else {
-            AttachmentType::Color
-        };
         let framebuffer = check!(Framebuffer::new(
             &self.device,
-            &[AttachmentType::Depth, color_attachment],
             &self.image_uniform,
             &self.shader_layout,
-            t,
-            width,
-            height,
+            FramebufferOptions {
+                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                camera_type: t,
+                multisampled: self.device.is_msaa(),
+                width,
+                height,
+            }
         ));
         self.resources.add_framebuffer(framebuffer)
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
         let render_pass = self.window_framebuffers[0].render_pass();
-        let is_sampled = self.window_framebuffers[0].is_sampled();
+        let multisampled = self.window_framebuffers[0].multisampled();
         let shader = check!(Shader::new(
             &self.device,
             render_pass,
             &self.shader_layout,
-            is_sampled,
+            multisampled,
             source,
             options,
         ));
@@ -435,7 +437,7 @@ impl Tegne {
 
         // setup watcher
         let render_pass = self.window_framebuffers[0].render_pass();
-        let is_sampled = self.window_framebuffers[0].is_sampled();
+        let multisampled = self.window_framebuffers[0].multisampled();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
         let resources = self.resources.clone();
@@ -468,7 +470,7 @@ impl Tegne {
                                 &device,
                                 render_pass,
                                 &shader_layout,
-                                is_sampled,
+                                multisampled,
                                 &source,
                                 options,
                             ));

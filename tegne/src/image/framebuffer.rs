@@ -36,25 +36,40 @@ pub struct Framebuffer {
     shader_image: Option<ImageMemory>,
     shader_index: Option<i32>,
     world_uniform: WorldUniform,
+    multisampled: bool,
     device: Arc<Device>,
+}
+
+pub(crate) struct FramebufferOptions<'types> {
+    pub(crate) attachment_types: &'types [AttachmentType],
+    pub(crate) camera_type: CameraType,
+    pub(crate) multisampled: bool,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
 }
 
 impl Framebuffer {
     pub(crate) fn for_swapchain(
         device: &Arc<Device>,
         swapchain: &Swapchain,
-        attachment_types: &[AttachmentType],
         shader_layout: &ShaderLayout,
-        camera_type: CameraType,
+        options: FramebufferOptions<'_>,
     ) -> Result<Vec<Self>> {
         profile_scope!("for_swapchain");
 
         let vk::Extent2D { width, height } = swapchain.extent();
+        let FramebufferOptions {
+            attachment_types,
+            camera_type,
+            ..
+        } = options;
+
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()?
             .map(|img| {
-                let render_pass = RenderPass::new(device, attachment_types, true)?;
+                let render_pass =
+                    RenderPass::new(device, attachment_types, device.is_msaa(), true)?;
                 let images = render_pass
                     .attachments()
                     .map(|a| {
@@ -106,6 +121,7 @@ impl Framebuffer {
                 Ok(Self {
                     shader_image: None,
                     shader_index: None,
+                    multisampled: device.is_msaa(),
                     handle,
                     render_pass,
                     width,
@@ -121,16 +137,21 @@ impl Framebuffer {
 
     pub(crate) fn new(
         device: &Arc<Device>,
-        attachment_types: &[AttachmentType],
         image_uniform: &ImageUniform,
         shader_layout: &ShaderLayout,
-        camera_type: CameraType,
-        width: u32,
-        height: u32,
+        options: FramebufferOptions<'_>,
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let render_pass = RenderPass::new(device, attachment_types, false)?;
+        let FramebufferOptions {
+            width,
+            height,
+            attachment_types,
+            multisampled,
+            camera_type,
+        } = options;
+
+        let render_pass = RenderPass::new(device, attachment_types, multisampled, false)?;
 
         let mut stored_format = None;
 
@@ -164,9 +185,9 @@ impl Framebuffer {
                         samples: a.samples,
                         usage: &usage,
                         create_view: true,
-                        format,
                         width,
                         height,
+                        format,
                         ..Default::default()
                     },
                 )
@@ -236,6 +257,7 @@ impl Framebuffer {
             images,
             world_uniform,
             camera,
+            multisampled,
             device: Arc::clone(device),
         })
     }
@@ -338,8 +360,8 @@ impl Framebuffer {
         self.render_pass.handle()
     }
 
-    pub(crate) fn is_sampled(&self) -> bool {
-        self.render_pass.is_sampled()
+    pub(crate) fn multisampled(&self) -> bool {
+        self.multisampled
     }
 
     pub(crate) fn width(&self) -> u32 {

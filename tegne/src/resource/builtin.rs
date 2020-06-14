@@ -64,14 +64,14 @@ pub(crate) fn create_builtins(
 
     // shaders
     let render_pass = framebuffer.render_pass();
-    let is_sampled = framebuffer.is_sampled();
+    let multisampled = framebuffer.multisampled();
 
     resources.add_shader(
         Shader::new(
             device,
             render_pass,
             layout,
-            is_sampled,
+            multisampled,
             include_shader!("phong.shader"),
             Default::default(),
         )?,
@@ -83,7 +83,7 @@ pub(crate) fn create_builtins(
             device,
             render_pass,
             layout,
-            is_sampled,
+            multisampled,
             include_shader!("font.shader"),
             Default::default(),
         )?,
@@ -95,7 +95,7 @@ pub(crate) fn create_builtins(
             device,
             render_pass,
             layout,
-            is_sampled,
+            multisampled,
             include_shader!("passthru.shader"),
             ShaderOptions {
                 depth_test: false,
@@ -110,7 +110,7 @@ pub(crate) fn create_builtins(
             device,
             render_pass,
             layout,
-            is_sampled,
+            multisampled,
             include_shader!("wireframe.shader"),
             ShaderOptions {
                 lines: true,
@@ -151,7 +151,7 @@ pub(crate) fn create_builtins(
                 device,
                 render_pass,
                 layout,
-                is_sampled,
+                multisampled,
                 include_shader!("ui.shader"),
                 ShaderOptions {
                     depth_test: false,
