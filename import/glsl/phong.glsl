@@ -3,8 +3,9 @@
 
 // phong lighting calculations
 
-#ifdef PHONG
-vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {
+#if defined(PHONG)
+vec3 calc_dir_light(Light light, vec3 cam_dir, float shadow) {
+    vec3 normal = normalize(in_normal);
     vec3 light_dir = normalize(-light.coords.xyz);
     // diffuse shading
     float diff = max(dot(normal, light_dir), 0.0);
@@ -18,7 +19,8 @@ vec3 calc_dir_light(Light light, vec3 normal, vec3 cam_dir, float shadow) {
     return (ambient + (diffuse + specular) * (1.0 - shadow));
 }
 
-vec3 calc_point_light(Light light, vec3 normal, vec3 cam_dir, vec3 pos, float shadow) {
+vec3 calc_point_light(Light light, vec3 cam_dir, vec3 pos, float shadow) {
+    vec3 normal = normalize(in_normal);
     vec3 light_dir = normalize(light.coords.xyz - pos);
     // diffuse shading
     float diff = max(dot(normal, light_dir), 0.0);
@@ -38,10 +40,11 @@ vec3 calc_point_light(Light light, vec3 normal, vec3 cam_dir, vec3 pos, float sh
     return (ambient + (diffuse + specular) * (1.0 - shadow));
 }
 
-float calc_shadow(vec4 ls_position, vec3 normal, Light light) {
+float calc_shadow(Light light) {
     float shadow = 0.0;
 
-    vec3 proj_coords = ls_position.xyz / ls_position.w;
+    vec3 normal = normalize(in_normal);
+    vec3 proj_coords = in_lightspace_position.xyz / in_lightspace_position.w;
     vec2 uv = proj_coords.xy * 0.5 + 0.5;
     float current_depth = proj_coords.z;
     vec3 light_dir = normalize(-light.coords.xyz);
@@ -68,20 +71,19 @@ float calc_shadow(vec4 ls_position, vec3 normal, Light light) {
 }
 
 vec4 phong() {
-    vec3 normal = normalize(in_normal);
-    vec3 cam_dir = normalize(world.cam_pos - in_position);
+    vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
 
     // shadows
-    float shadow = calc_shadow(in_ls_position, normal, world.lights[0]);
+    float shadow = calc_shadow(world.lights[0]);
 
     // ligthing
     vec3 lighting = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < 4; i++) {
         Light light = world.lights[i];
         if (light.coords.w == 0.0) {
-            lighting += calc_dir_light(light, normal, cam_dir, shadow);
+            lighting += calc_dir_light(light, cam_dir, shadow);
         } else if (light.coords.w == 1.0) {
-            lighting += calc_point_light(light, normal, cam_dir, in_position, shadow);
+            lighting += calc_point_light(light, cam_dir, in_modelspace_position.xyz, shadow);
         }
     }
 

@@ -30,9 +30,13 @@ use crate::profile_scope;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
+const CASCADE_COUNT: usize = 3;
+const CASCADE_SPLITS: [f32; CASCADE_COUNT] = [0.2, 0.5, 1.0];
+
 pub(crate) struct ForwardRenderer {
-    depth_framebuffers: Vec<Framebuffer>,
+    shadow_framebuffers: Vec<Vec<Framebuffer>>,
     shadow_shader: Shader,
+    shadow_map_size: u32,
     start_time: Instant,
 }
 
@@ -51,9 +55,13 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let depth_framebuffers = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| {
-                Framebuffer::new(
+        let shadow_map_size = 2048;
+
+        let mut shadow_framebuffers = vec![];
+        for cascade in 0..CASCADE_COUNT {
+            shadow_framebuffers.push(vec![]);
+            for _ in 0..IN_FLIGHT_FRAME_COUNT {
+                shadow_framebuffers[cascade].push(Framebuffer::new(
                     device,
                     image_uniform,
                     shader_layout,
@@ -61,38 +69,40 @@ impl ForwardRenderer {
                         attachment_types: &[AttachmentType::Depth],
                         camera_type: CameraType::Orthographic,
                         multisampled: false,
-                        width: 2048,
-                        height: 2048,
+                        width: shadow_map_size,
+                        height: shadow_map_size,
                     },
-                )
-            })
-            .collect::<Result<Vec<_>>>()?;
+                )?);
+            }
+        }
 
         let shadow_shader = Shader::new(
             device,
-            depth_framebuffers[0].render_pass(),
+            shadow_framebuffers[0][0].render_pass(),
             shader_layout,
-            depth_framebuffers[0].multisampled(),
+            shadow_framebuffers[0][0].multisampled(),
             include_bytes!("../../assets/shaders/shadow.shader"),
             Default::default(),
         )?;
 
         Ok(Self {
             start_time: Instant::now(),
-            depth_framebuffers,
+            shadow_framebuffers,
             shadow_shader,
+            shadow_map_size,
         })
     }
 
     pub(crate) fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
         let framebuffer = options.framebuffer;
-        let depth_framebuffer = &self.depth_framebuffers[device.current_frame()];
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
+        let shadow_framebuffer = &self.shadow_framebuffers[0][device.current_frame()];
+
         let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
 
-        let light_mat = if options.target.has_shadows() {
+        let light_matrix = if options.target.has_shadows() {
             // frustum-fit light camera
             // get view frustum corners from NDC
             let cam_inv = framebuffer.camera.matrix().inverse().unwrap();
@@ -107,6 +117,7 @@ impl ForwardRenderer {
             }
 
             // get bounding sphere radius
+            // sphere makes it axis-aligned
             let corner_count = corners.len() as f32;
             let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
             let r =
@@ -115,10 +126,11 @@ impl ForwardRenderer {
             // create depth camera
             let light_pos = center - light_dir * r;
             let size = (r * 2.0) as u32;
+            let texel_size = size as f32 / self.shadow_map_size as f32;
             let mut depth_cam = Camera::orthographic(size, size);
             depth_cam.depth = size;
             depth_cam.transform.look_in_dir(light_dir, Vector3::up());
-            depth_cam.transform.position = light_pos;
+            depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
 
             depth_cam.matrix()
         } else {
@@ -134,26 +146,27 @@ impl ForwardRenderer {
 
         // update world uniform
         let world_data = WorldData {
-            shadow_index: depth_framebuffer.image_index(),
+            shadow_index: shadow_framebuffer.image_index(),
             lights: [
                 main_light,
                 other_lights[0],
                 other_lights[1],
                 other_lights[2],
             ],
-            cam_mat: framebuffer.camera.matrix(),
-            cam_pos: framebuffer.camera.transform.position,
-            light_mat,
+            world_matrix: framebuffer.camera.matrix(),
+            light_matrix,
+            camera_position: framebuffer.camera.transform.position,
+            cascade_splits: CASCADE_SPLITS.into(),
             time: self.start_time.elapsed().as_secs_f32(),
         };
         framebuffer.world_uniform().update(world_data)?;
-        depth_framebuffer.world_uniform().update(world_data)?;
+        shadow_framebuffer.world_uniform().update(world_data)?;
 
         // shadow mapping
         if options.target.has_shadows() {
-            device.cmd_begin_render_pass(cmd, depth_framebuffer, clear);
-            self.setup_pass(device, depth_framebuffer);
-            self.bind_world(device, depth_framebuffer, &options);
+            device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
+            self.setup_pass(device, shadow_framebuffer);
+            self.bind_world(device, shadow_framebuffer, &options);
             device.cmd_bind_shader(cmd, &self.shadow_shader);
             for s_order in options.target.orders_by_shader() {
                 for m_order in s_order.orders_by_material() {
@@ -166,7 +179,7 @@ impl ForwardRenderer {
                 }
             }
             device.cmd_end_render_pass(cmd);
-            depth_framebuffer.update_shader_image(cmd);
+            shadow_framebuffer.update_shader_image(cmd);
         }
         // normal render
         device.cmd_begin_render_pass(cmd, framebuffer, clear);
@@ -253,7 +266,7 @@ impl ForwardRenderer {
                 device.cmd_push_constants(
                     cmd,
                     PushConstants {
-                        model_mat: order.model,
+                        model_matrix: order.model,
                         sampler_index: order.sampler_index,
                         albedo_index,
                     },

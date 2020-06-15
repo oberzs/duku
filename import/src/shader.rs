@@ -4,9 +4,7 @@
 // imports glsl shader for use in tegne
 
 use indicatif::ProgressBar;
-use regex::Regex;
 use shaderc::CompilationArtifact;
-use shaderc::CompileOptions;
 use shaderc::Compiler;
 use shaderc::ShaderKind;
 use std::fs;
@@ -18,6 +16,15 @@ use tar::Header;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
+
+#[derive(Debug)]
+struct Defines {
+    phong: bool,
+    srgb: bool,
+    vertex_color_srgb: bool,
+    vertex_position_lightspace: bool,
+    vertex_position_worldspace: bool,
+}
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     println!("Converting {:?}", in_path.file_name().unwrap_or_default());
@@ -59,29 +66,39 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
     let objects_glsl = include_str!("../glsl/objects.glsl");
     let srgb_glsl = include_str!("../glsl/srgb.glsl");
 
-    let define_regex = Regex::new(r"(#define [A-Z]+\s+)*")?;
-    let defines = match define_regex.find(src) {
-        Some(m) => &src[m.start()..m.end()],
-        None => "",
-    };
+    let defines = Defines::new(src);
 
     // create real glsl code
-    let real_src = format!(
-        "#version 450\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ vertex(); }}",
-        objects_glsl, vert_glsl, defines, srgb_glsl, src
-    );
+    let mut real_src = "#version 450\n".to_string();
+
+    // add defines before source
+    if defines.vertex_color_srgb {
+        real_src.push_str("#define VERTEX_COLOR_SRGB\n");
+        real_src.push_str("#define SRGB\n");
+    }
+    if defines.srgb {
+        real_src.push_str("#define SRGB\n");
+    }
+    if defines.vertex_position_lightspace {
+        real_src.push_str("#define VERTEX_POSITION_LIGHTSPACE\n");
+    }
+    if defines.vertex_position_worldspace {
+        real_src.push_str("#define VERTEX_POSITION_WORLDSPACE\n");
+    }
+
+    // add objects
+    real_src.push_str(objects_glsl);
+
+    // add modules
+    real_src.push_str(srgb_glsl);
+
+    // add vertex source
+    real_src.push_str(vert_glsl);
 
     // compile glsl to spirv
     let mut compiler = Compiler::new().ok_or(ErrorType::Internal(ErrorKind::NoCompiler))?;
-    let mut options = CompileOptions::new().ok_or(ErrorType::Internal(ErrorKind::NoCompiler))?;
-    options.add_macro_definition("VERTEX", Some("1"));
-    let artifact = compiler.compile_into_spirv(
-        &real_src,
-        ShaderKind::Vertex,
-        "shader.vert",
-        "main",
-        Some(&options),
-    )?;
+    let artifact =
+        compiler.compile_into_spirv(&real_src, ShaderKind::Vertex, "shader.vert", "main", None)?;
     Ok(artifact)
 }
 
@@ -91,35 +108,57 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     let phong_glsl = include_str!("../glsl/phong.glsl");
     let srgb_glsl = include_str!("../glsl/srgb.glsl");
 
-    let define_regex = Regex::new(r"(#define [A-Z]+\s+)*")?;
-    let defines = match define_regex.find(src) {
-        Some(m) => &src[m.start()..m.end()],
-        None => "",
-    };
+    let defines = Defines::new(src);
 
     // create real glsl code
-    let is_depth_frag = src.find("out_color").is_none();
-    let out_color = if is_depth_frag {
-        ""
-    } else {
-        "layout(location = 0) out vec4 out_color;"
-    };
+    let mut real_src = "#version 450\n".to_string();
 
-    let real_src = format!(
-        "#version 450\n{}\n{}\n{}\n{}\n{}\n{}\n{}\nvoid main() {{ fragment(); }}",
-        objects_glsl, frag_glsl, out_color, defines, phong_glsl, srgb_glsl, src
-    );
+    // add defines before source
+    if defines.srgb {
+        real_src.push_str("#define SRGB\n");
+    }
+    if defines.phong {
+        real_src.push_str("#define PHONG\n");
+    }
+
+    // add objects
+    real_src.push_str(objects_glsl);
+
+    // add base fragment source
+    real_src.push_str(frag_glsl);
+
+    // add modules
+    real_src.push_str(srgb_glsl);
+    real_src.push_str(phong_glsl);
+
+    // add out_color if needed
+    if src.contains("out_color") {
+        real_src.push_str("layout(location = 0) out vec4 out_color;\n");
+    }
+
+    // add fragment source
+    real_src.push_str(&format!("{}\nvoid main() {{ fragment(); }}", src));
 
     // compile glsl to spirv
     let mut compiler = Compiler::new().ok_or(ErrorType::Internal(ErrorKind::NoCompiler))?;
-    let mut options = CompileOptions::new().ok_or(ErrorType::Internal(ErrorKind::NoCompiler))?;
-    options.add_macro_definition("FRAGMENT", Some("1"));
     let artifact = compiler.compile_into_spirv(
         &real_src,
         ShaderKind::Fragment,
         "shader.frag",
         "main",
-        Some(&options),
+        None,
     )?;
     Ok(artifact)
+}
+
+impl Defines {
+    pub fn new(src: &str) -> Self {
+        Self {
+            phong: src.contains("#define PHONG"),
+            srgb: src.contains("#define SRGB"),
+            vertex_color_srgb: src.contains("#define VERTEX_COLOR_SRGB"),
+            vertex_position_lightspace: src.contains("#define VERTEX_POSITION_LIGHTSPACE"),
+            vertex_position_worldspace: src.contains("#define VERTEX_POSITION_WORLDSPACE"),
+        }
+    }
 }

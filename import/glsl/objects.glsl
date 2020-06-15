@@ -9,11 +9,12 @@ struct Light {
 };
 
 layout(set = 0, binding = 0) uniform WorldObject {
-    mat4 cam_mat;
-    mat4 light_mat;
+    mat4 world_matrix;
+    mat4 light_matrix;
     Light lights[4];
-    vec3 cam_pos;
+    vec3 camera_position;
     float time;
+    vec3 cascade_splits;
     int shadow_index;
 } world;
 
@@ -32,7 +33,7 @@ layout(set = 1, binding = 0) uniform MaterialObject {
 } material;
 
 layout(push_constant) uniform Constants {
-    mat4 model_mat;
+    mat4 model_matrix;
     int albedo_index;
     int sampler_index;
 } object;

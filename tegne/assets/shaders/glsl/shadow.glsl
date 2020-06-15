@@ -1,9 +1,3 @@
-#ifdef VERTEX
-void vertex() {
-    gl_Position = world.light_mat * object.model_mat * vec4(in_position, 1.0);
-}
-#endif
+#define VERTEX_POSITION_LIGHTSPACE
 
-#ifdef FRAGMENT
 void fragment() {}
-#endif

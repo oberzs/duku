@@ -1,11 +1,3 @@
-#ifdef VERTEX
-void vertex() {
-    gl_Position = vec4(in_position, 1.0);
-    out_uv = in_uv;
-}
-#endif
-
-#ifdef FRAGMENT
 const int MAX_STEPS = 100;
 const float MAX_DIST = 100.0;
 const float SURF_DIST = 0.001;
@@ -130,4 +122,3 @@ void fragment() {
 
     out_color = vec4(color, 1.0);
 }
-#endif

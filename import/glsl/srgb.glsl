@@ -3,7 +3,7 @@
 
 // sRGB and linear conversions
 
-#ifdef SRGB
+#if defined(SRGB)
 float srgb_to_linear(float value) {
     float s = clamp(value, 0.0, 1.0);
     float cutoff = 0.04045;

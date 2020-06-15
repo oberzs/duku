@@ -1,14 +1,5 @@
-#ifdef VERTEX
-void vertex() {
-    gl_Position = vec4(in_position, 1.0);
-    out_position = in_position;
-    out_normal = in_normal;
-    out_uv = in_uv;
-}
-#endif
+#define VERTEX_POSITION_WORLDSPACE
 
-#ifdef FRAGMENT
 void fragment() {
     out_color = texture(albedo, in_uv) * vec4(material.albedo_tint, 1.0);
 }
-#endif
