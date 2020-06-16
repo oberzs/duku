@@ -17,9 +17,11 @@
     box_pointers
 )]
 
+// should be imported first
+mod macros;
+
 mod error;
 mod font;
-mod macros;
 mod sdf;
 mod shader;
 

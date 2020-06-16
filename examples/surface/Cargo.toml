@@ -5,5 +5,4 @@ authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-simplelog = "0.8.0"
 tegne = { path = "../../tegne", version = "0.1.0" }

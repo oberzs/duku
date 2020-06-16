@@ -13,6 +13,9 @@
     unused_qualifications,
 )]
 
+// should be imported first
+mod macros;
+
 mod buffer;
 mod camera;
 mod color;

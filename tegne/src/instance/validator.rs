@@ -6,8 +6,6 @@
 #![cfg(debug_assertions)]
 
 use ash::vk;
-use log::error;
-use log::warn;
 use std::ffi::c_void;
 use std::ffi::CStr;
 
@@ -34,7 +32,7 @@ extern "system" fn callback(
     };
 
     if severity.contains(vk::DebugUtilsMessageSeverityFlagsEXT::ERROR) {
-        panic!(error!("{}", msg));
+        error!("{}", msg);
     } else {
         warn!("{}", msg);
     }

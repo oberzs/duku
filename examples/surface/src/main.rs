@@ -5,13 +5,6 @@
 
 mod ui;
 
-use simplelog::CombinedLogger;
-use simplelog::Config;
-use simplelog::LevelFilter;
-use simplelog::TermLogger;
-use simplelog::TerminalMode;
-use simplelog::WriteLogger;
-use std::fs::File;
 use tegne::Tegne;
 use tegne::Window;
 use tegne::WindowOptions;
@@ -19,16 +12,6 @@ use tegne::WindowOptions;
 use ui::Ui;
 
 fn main() {
-    CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed),
-        WriteLogger::new(
-            LevelFilter::Info,
-            Config::default(),
-            File::create("example-surface.log").unwrap(),
-        ),
-    ])
-    .unwrap();
-
     let (width, height) = (900, 900);
 
     let mut window = Window::new(WindowOptions {

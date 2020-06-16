@@ -11,8 +11,6 @@ use tegne::Window;
 use tegne::WindowOptions;
 
 fn main() {
-    pretty_env_logger::init();
-
     let (width, height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {

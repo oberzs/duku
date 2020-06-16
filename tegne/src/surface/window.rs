@@ -5,10 +5,7 @@
 
 #![cfg(feature = "window")]
 
-use log::error;
-use log::info;
 use std::collections::HashSet;
-use std::process::exit;
 use std::time::Instant;
 use winit::dpi::PhysicalPosition;
 use winit::dpi::PhysicalSize;
@@ -38,18 +35,6 @@ use imgui_winit_support::HiDpiMode;
 use imgui_winit_support::WinitPlatform;
 
 use crate::profile_scope;
-
-macro_rules! check {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => {
-                error!("{}", err);
-                exit(1);
-            }
-        }
-    };
-}
 
 pub struct Window {
     event_loop: EventLoop<()>,
@@ -93,11 +78,15 @@ impl Window {
         let size = PhysicalSize::new(options.width, options.height);
 
         info!("creating window");
-        let window = check!(WindowBuilder::new()
+        let window = match WindowBuilder::new()
             .with_inner_size(size)
             .with_title(options.title)
             .with_resizable(options.resizable)
-            .build(&event_loop));
+            .build(&event_loop)
+        {
+            Ok(value) => value,
+            Err(err) => error!("{}", err),
+        };
 
         // configure imgui
         #[cfg(feature = "ui")]
@@ -412,11 +401,15 @@ impl Events {
     }
 
     pub fn set_mouse_position(&self, x: u32, y: u32) {
-        check!(self.window.set_cursor_position(PhysicalPosition::new(x, y)));
+        if let Err(err) = self.window.set_cursor_position(PhysicalPosition::new(x, y)) {
+            error!("{}", err);
+        }
     }
 
     pub fn set_mouse_grab(&self, grab: bool) {
-        check!(self.window.set_cursor_grab(grab));
+        if let Err(err) = self.window.set_cursor_grab(grab) {
+            error!("{}", err);
+        }
     }
 
     pub fn set_mouse_visible(&self, visible: bool) {

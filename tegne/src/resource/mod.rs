@@ -5,7 +5,6 @@
 
 mod builtin;
 
-use log::error;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -151,7 +150,7 @@ impl ResourceManager {
             return id.id_ref();
         }
 
-        panic!(error!("builtin not found '{}'", name));
+        panic!("bad code: builtin not found '{}'", name);
     }
 
     pub(crate) fn add_framebuffer(&self, framebuffer: Framebuffer) -> Id<Framebuffer> {

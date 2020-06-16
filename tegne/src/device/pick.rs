@@ -4,7 +4,6 @@
 // picks the most suitable GPU
 
 use ash::vk;
-use log::info;
 use std::ffi::CStr;
 
 use super::DeviceProperties;
@@ -51,7 +50,6 @@ pub(crate) fn pick_gpu(
             let driver_minor = vk::version_minor(d.properties.driver_version);
             let driver_patch = vk::version_patch(d.properties.driver_version);
 
-            info!("found GPU");
             info!("using {:?} {}", device_name, device_type);
             info!(
                 "using driver version {}.{}.{}",

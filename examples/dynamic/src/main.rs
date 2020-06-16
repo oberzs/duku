@@ -15,8 +15,6 @@ use tegne::WindowOptions;
 use square::Square;
 
 fn main() {
-    pretty_env_logger::init();
-
     let (width, height) = (720, 640);
 
     let mut window = Window::new(WindowOptions {

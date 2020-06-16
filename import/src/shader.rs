@@ -3,7 +3,6 @@
 
 // imports glsl shader for use in tegne
 
-use console::style;
 use indicatif::ProgressBar;
 use shaderc::CompilationArtifact;
 use shaderc::Compiler;
@@ -157,12 +156,7 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
                 let line = parts[1].parse::<u32>().expect("bad code") - pre_line_count;
                 let reason = format!("{}, {}", parts[3], parts[4]);
 
-                result.push_str(&format!(
-                    "{}{}: {}\n",
-                    style("at line ").yellow().bright(),
-                    style(line).yellow().bright(),
-                    reason,
-                ));
+                result.push_str(&format!("\x1b[93mat line {}\x1b[0m: {}\n", line, reason,));
             }
             Err(ErrorType::Internal(ErrorKind::InvalidShader(result)))
         }

@@ -4,7 +4,6 @@
 // SurfaceProperties - properties for the specific surface
 
 use ash::vk;
-use log::info;
 
 use super::Surface;
 use crate::error::Result;

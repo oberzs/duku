@@ -17,7 +17,6 @@ use ash::vk;
 use ash::Device as VkDevice;
 use ash::Entry;
 use ash::Instance as VkInstance;
-use log::info;
 use std::ffi::CStr;
 use std::ffi::CString;
 

@@ -8,7 +8,6 @@ use crossbeam_channel::select;
 use crossbeam_channel::unbounded;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
-use log::error;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
@@ -61,7 +60,7 @@ macro_rules! check {
     ($result:expr) => {
         match $result {
             Ok(value) => value,
-            Err(err) => panic!(error!("{}", err)),
+            Err(err) => error!("{}", err),
         }
     };
 }

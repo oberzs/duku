@@ -4,7 +4,6 @@
 // uniform structs to manage shader accessible uniform data
 
 use ash::vk;
-use log::info;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::sync::Arc;

@@ -4,8 +4,6 @@
 // DeviceProperties - properties for the specific GPU
 
 use ash::vk;
-use log::info;
-use log::warn;
 
 use super::extension;
 use crate::error::Result;

@@ -5,16 +5,16 @@ authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["controller", "image", "window", "ui"]
+default = ["controller", "image", "window", "ui", "logger"]
 profiler = ["lazy_static"]
 image = ["image_file"]
 window = ["winit"]
 controller = ["window"]
 ui = ["window", "imgui", "imgui-winit-support"]
+logger = []
 
 [dependencies]
 ash = "0.30.0"
-log = "0.4.8"
 serde = { version = "1.0.106", features = ["derive"] }
 serde_json = "1.0.52"
 tar = "0.4.26"

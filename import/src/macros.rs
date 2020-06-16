@@ -6,16 +6,16 @@
 #![macro_use]
 
 macro_rules! error {
-    ($($arg:tt)*) => {{
-        print!("{}: ", console::style("error").red().bright());
-        println!($($arg)*);
+    ($($arg:expr),*) => {{
+        print!("\x1b[91merror\x1b[0m: ");
+        println!($($arg),*);
         std::process::exit(1);
     }};
 }
 
 macro_rules! warn {
-    ($($arg:tt)*) => {{
-        print!("{}: ", console::style("warning").yellow());
-        println!($($arg)*);
+    ($($arg:expr),*) => {{
+        print!("\x1b[93mwarning\x1b[0m: ");
+        println!($($arg),*);
     }};
 }
