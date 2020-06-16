@@ -26,7 +26,6 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldData;
-use crate::profile_scope;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 

@@ -25,7 +25,6 @@ use ash::extensions::ext::DebugUtils as DebugExt;
 
 use crate::error::ErrorKind;
 use crate::error::Result;
-use crate::profile_scope;
 use crate::surface::Surface;
 
 pub(crate) struct Instance {

@@ -16,12 +16,3 @@ pub fn end_profile() {
     #[cfg(feature = "profiler")]
     PROFILER.lock().unwrap().end();
 }
-
-#[macro_export]
-macro_rules! profile_scope {
-    ($name:expr) => {
-        #[cfg(feature = "profiler")]
-        let _f =
-            crate::profiler::ProfileTimer::new(concat!(module_path!(), "::", $name, ":", line!()));
-    };
-}

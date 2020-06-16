@@ -9,7 +9,6 @@ use std::ffi::CStr;
 use super::DeviceProperties;
 use crate::error::ErrorKind;
 use crate::error::Result;
-use crate::profile_scope;
 use crate::surface::SurfaceProperties;
 
 pub(crate) fn pick_gpu(

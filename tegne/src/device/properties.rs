@@ -9,7 +9,6 @@ use super::extension;
 use crate::error::Result;
 use crate::image::ImageSamples;
 use crate::instance::Instance;
-use crate::profile_scope;
 
 #[derive(Clone)]
 pub(crate) struct DeviceProperties {

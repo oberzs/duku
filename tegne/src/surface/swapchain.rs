@@ -14,7 +14,6 @@ use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
 use crate::instance::Instance;
-use crate::profile_scope;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,

@@ -22,7 +22,6 @@ use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-use crate::profile_scope;
 
 pub(crate) use builtin::create_builtins;
 

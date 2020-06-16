@@ -9,7 +9,6 @@ use super::Surface;
 use crate::error::Result;
 use crate::instance::Instance;
 use crate::math::clamp;
-use crate::profile_scope;
 
 pub(crate) struct SurfaceProperties {
     pub(crate) formats: Vec<vk::SurfaceFormatKHR>,

@@ -14,7 +14,6 @@ use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
 use crate::image::ImageSamples;
-use crate::profile_scope;
 
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,

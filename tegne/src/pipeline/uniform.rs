@@ -21,7 +21,6 @@ use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
-use crate::profile_scope;
 
 pub(crate) struct WorldUniform {
     descriptor: Descriptor,

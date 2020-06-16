@@ -34,8 +34,6 @@ use imgui_winit_support::HiDpiMode;
 #[cfg(feature = "ui")]
 use imgui_winit_support::WinitPlatform;
 
-use crate::profile_scope;
-
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,

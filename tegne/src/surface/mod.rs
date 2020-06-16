@@ -17,7 +17,6 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::instance::Instance;
-use crate::profile_scope;
 
 pub(crate) use properties::SurfaceProperties;
 pub(crate) use swapchain::Swapchain;

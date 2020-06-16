@@ -23,7 +23,6 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
-use crate::profile_scope;
 use crate::surface::Swapchain;
 
 pub struct Framebuffer {

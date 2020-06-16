@@ -37,7 +37,6 @@ use crate::pipeline::Descriptor;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::profile_scope;
 use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
 use crate::sync::fence;

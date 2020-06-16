@@ -41,7 +41,6 @@ use crate::pipeline::MaterialOptions;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
-use crate::profile_scope;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
@@ -56,6 +55,7 @@ use crate::surface::WindowHandle;
 #[cfg(feature = "window")]
 use crate::surface::Window;
 
+// TODO: remove and pass errors to user
 macro_rules! check {
     ($result:expr) => {
         match $result {

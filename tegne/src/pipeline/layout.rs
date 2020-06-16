@@ -11,7 +11,6 @@ use super::PushConstants;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
-use crate::profile_scope;
 
 pub(crate) struct ShaderLayout {
     handle: vk::PipelineLayout,

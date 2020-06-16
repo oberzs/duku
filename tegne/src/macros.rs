@@ -48,3 +48,11 @@ macro_rules! info {
         }
     }};
 }
+
+macro_rules! profile_scope {
+    ($name:expr) => {
+        #[cfg(feature = "profiler")]
+        let _f =
+            crate::profiler::ProfileTimer::new(concat!(module_path!(), "::", $name, ":", line!()));
+    };
+}

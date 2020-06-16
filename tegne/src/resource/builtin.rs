@@ -22,19 +22,6 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
-use crate::profile_scope;
-
-macro_rules! include_shader {
-    ($path:expr) => {
-        include_bytes!(concat!("../../assets/shaders/", $path))
-    };
-}
-
-macro_rules! include_font {
-    ($path:expr) => {
-        include_bytes!(concat!("../../assets/fonts/", $path))
-    };
-}
 
 pub(crate) fn create_builtins(
     device: &Arc<Device>,
@@ -72,7 +59,7 @@ pub(crate) fn create_builtins(
             render_pass,
             layout,
             multisampled,
-            include_shader!("phong.shader"),
+            include_bytes!("../../assets/shaders/phong.shader"),
             Default::default(),
         )?,
         Some("phong_sh"),
@@ -84,7 +71,7 @@ pub(crate) fn create_builtins(
             render_pass,
             layout,
             multisampled,
-            include_shader!("font.shader"),
+            include_bytes!("../../assets/shaders/font.shader"),
             Default::default(),
         )?,
         Some("font_sh"),
@@ -96,7 +83,7 @@ pub(crate) fn create_builtins(
             render_pass,
             layout,
             multisampled,
-            include_shader!("passthru.shader"),
+            include_bytes!("../../assets/shaders/passthru.shader"),
             ShaderOptions {
                 depth_test: false,
                 ..Default::default()
@@ -111,7 +98,7 @@ pub(crate) fn create_builtins(
             render_pass,
             layout,
             multisampled,
-            include_shader!("wireframe.shader"),
+            include_bytes!("../../assets/shaders/wireframe.shader"),
             ShaderOptions {
                 lines: true,
                 depth_test: false,
@@ -127,7 +114,7 @@ pub(crate) fn create_builtins(
             device,
             uniform,
             resources,
-            include_font!("RobotoMono-Regular.font"),
+            include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
         )?,
         Some("roboto_font"),
     );
@@ -152,7 +139,7 @@ pub(crate) fn create_builtins(
                 render_pass,
                 layout,
                 multisampled,
-                include_shader!("ui.shader"),
+                include_bytes!("../../assets/shaders/ui.shader"),
                 ShaderOptions {
                     depth_test: false,
                     ..Default::default()
