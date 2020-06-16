@@ -123,7 +123,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     archive.append_data(&mut json_header, "atlas.json", json.as_slice())?;
     progress.inc(1);
 
-    progress.finish_with_message("done");
+    progress.finish_and_clear();
     Ok(())
 }
 

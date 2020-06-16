@@ -19,21 +19,19 @@
 
 mod error;
 mod font;
+mod macros;
 mod sdf;
 mod shader;
 
 use clap::App;
 use clap::Arg;
 use crossbeam_channel::unbounded;
-use log::error;
-use log::warn;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::exit;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -42,21 +40,7 @@ use error::Result;
 use font::import_font;
 use shader::import_shader;
 
-macro_rules! check {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => {
-                error!("{}", err);
-                exit(1);
-            }
-        }
-    };
-}
-
 fn main() {
-    pretty_env_logger::init();
-
     let opts = App::new("Tegne importer")
         .version("0.1.0")
         .author("Oliver Berzs <oliver.berzs@gmail.com>")
@@ -96,27 +80,34 @@ fn main() {
         .unwrap_or_else(|| Path::new("."));
     let watch = opts.is_present("watch");
 
-    match (input, dir) {
-        (Some(in_path), None) => {
-            if !in_path.is_file() {
-                error!("input is not a file");
-                exit(0);
-            }
-            let out_path = create_out_path(in_path, out_dir);
-            check!(import_file(in_path, &out_path));
+    // import input file
+    if let Some(in_path) = input {
+        if !in_path.is_file() {
+            error!("'{}' is not a file", in_path.display());
         }
-        (None, Some(in_dir)) => {
-            for entry in check!(in_dir.read_dir()) {
-                if let Ok(entry) = entry {
-                    let in_path = entry.path();
-                    if in_path.is_file() {
-                        let out_path = create_out_path(&in_path, out_dir);
-                        check!(import_file(&in_path, &out_path));
+        let out_path = create_out_path(in_path, out_dir);
+        if let Err(err) = import_file(in_path, &out_path) {
+            error!("{}", err);
+        }
+    }
+
+    // import files from input directory
+    if let Some(in_dir) = dir {
+        let entries = match in_dir.read_dir() {
+            Ok(value) => value,
+            _ => error!("'{}' is not a directory", in_dir.display()),
+        };
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let in_path = entry.path();
+                if in_path.is_file() {
+                    let out_path = create_out_path(&in_path, out_dir);
+                    if let Err(err) = import_file(&in_path, &out_path) {
+                        error!("{}", err);
                     }
                 }
             }
         }
-        (_, _) => {}
     }
 
     // watch for changes
@@ -125,11 +116,15 @@ fn main() {
         let (sender, receiver) = unbounded();
         let start_time = Instant::now();
 
-        let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
+        let mut watcher: RecommendedWatcher = Watcher::new_immediate(move |res| {
             let time = start_time.elapsed().as_secs();
-            sender.send((check!(res), time)).unwrap()
-        }));
-        check!(watcher.watch(path, RecursiveMode::NonRecursive));
+            match res {
+                Err(err) => error!("{}", err),
+                Ok(r) => sender.send((r, time)).unwrap(),
+            }
+        })
+        .unwrap();
+        watcher.watch(path, RecursiveMode::NonRecursive).unwrap();
 
         let mut same_events = HashSet::new();
         loop {
@@ -145,7 +140,7 @@ fn main() {
 
                 let out_path = create_out_path(&in_path, out_dir);
                 if let Err(err) = import_file(&in_path, &out_path) {
-                    error!("{}", err);
+                    warn!("{}", err);
                 }
             }
         }

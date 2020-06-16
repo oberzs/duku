@@ -57,7 +57,7 @@ pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     archive.append_data(&mut frag_header, "frag.spv", frag_bin.as_binary_u8())?;
     progress.inc(1);
 
-    progress.finish_with_message("done");
+    progress.finish_and_clear();
     Ok(())
 }
 

@@ -215,9 +215,9 @@ checksum = "0dbbb57365263e881e805dc77d94697c9118fd94d8da011240555aa7b23445bd"
 
 [[package]]
 name = "console"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea0f3e2e8d7dba335e913b97f9e1992c86c4399d54f8be1d31c8727d0652064"
+checksum = "8c0994e656bba7b922d8dd1245db90672ffb701e684e45be58f20719d69abc5a"
 dependencies = [
  "encode_unicode",
  "lazy_static",
@@ -626,12 +626,11 @@ name = "import"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "console",
  "crossbeam-channel",
  "image",
  "indicatif",
- "log",
  "notify",
- "pretty_env_logger",
  "rusttype 0.9.1",
  "serde",
  "serde_json",
