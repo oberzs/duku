@@ -3,6 +3,7 @@
 
 // imports glsl shader for use in tegne
 
+use console::style;
 use indicatif::ProgressBar;
 use shaderc::CompilationArtifact;
 use shaderc::Compiler;
@@ -136,19 +137,38 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
         real_src.push_str("layout(location = 0) out vec4 out_color;\n");
     }
 
+    let pre_line_count = real_src.lines().count() as u32;
+
     // add fragment source
     real_src.push_str(&format!("{}\nvoid main() {{ fragment(); }}", src));
 
     // compile glsl to spirv
     let mut compiler = Compiler::new().ok_or(ErrorType::Internal(ErrorKind::NoCompiler))?;
-    let artifact = compiler.compile_into_spirv(
-        &real_src,
-        ShaderKind::Fragment,
-        "shader.frag",
-        "main",
-        None,
-    )?;
-    Ok(artifact)
+    let artifact =
+        compiler.compile_into_spirv(&real_src, ShaderKind::Fragment, "shader.frag", "main", None);
+
+    match artifact {
+        Err(shaderc::Error::CompilationError(_, msg)) => {
+            // format shader error
+            let mut result = "invalid shader code\n".to_string();
+            for error in msg.lines() {
+                let parts = error.split(':').map(|p| p.trim()).collect::<Vec<_>>();
+
+                let line = parts[1].parse::<u32>().expect("bad code") - pre_line_count;
+                let reason = format!("{}, {}", parts[3], parts[4]);
+
+                result.push_str(&format!(
+                    "{}{}: {}\n",
+                    style("at line ").yellow().bright(),
+                    style(line).yellow().bright(),
+                    reason,
+                ));
+            }
+            Err(ErrorType::Internal(ErrorKind::InvalidShader(result)))
+        }
+        Err(err) => Err(err.into()),
+        Ok(value) => Ok(value),
+    }
 }
 
 impl Defines {

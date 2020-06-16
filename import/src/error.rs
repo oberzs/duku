@@ -22,9 +22,10 @@ pub enum ErrorType {
     Internal(ErrorKind),
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ErrorKind {
     InvalidFont,
+    InvalidShader(String),
     NoBounds,
     NoCompiler,
 }
@@ -34,11 +35,8 @@ impl Error for ErrorType {}
 impl fmt::Display for ErrorType {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
-            ErrorType::Io(ref err) => write!(fmt, "{:?}", err),
-            ErrorType::Image(ref err) => write!(fmt, "{:?}", err),
-            ErrorType::Json(ref err) => write!(fmt, "{:?}", err),
-            ErrorType::Shader(ref err) => write!(fmt, "{}", err),
-            ErrorType::Internal(ref err) => write!(fmt, "{:?}", err),
+            ErrorType::Internal(ErrorKind::InvalidShader(ref err)) => write!(fmt, "{}", err),
+            ref e => write!(fmt, "{:?}", e),
         }
     }
 }
