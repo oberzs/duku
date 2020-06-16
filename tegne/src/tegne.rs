@@ -3,10 +3,11 @@
 
 // Tegne - tegne application entrypoint
 
-use crossbeam::channel;
-use crossbeam::channel::select;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
+use crossbeam_channel::bounded;
+use crossbeam_channel::select;
+use crossbeam_channel::unbounded;
+use crossbeam_channel::Receiver;
+use crossbeam_channel::Sender;
 use log::error;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
@@ -459,7 +460,7 @@ impl Tegne {
         let id_ref = id.id_ref();
 
         thread::spawn(move || {
-            let (sender, receiver) = channel::unbounded();
+            let (sender, receiver) = unbounded();
             let start_time = Instant::now();
             let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
                 let time = start_time.elapsed().as_secs();
@@ -537,7 +538,7 @@ impl Default for TegneOptions {
 
 impl ThreadKill {
     pub(crate) fn new() -> Self {
-        let (sender, receiver) = channel::bounded(1);
+        let (sender, receiver) = bounded(1);
         Self { sender, receiver }
     }
 

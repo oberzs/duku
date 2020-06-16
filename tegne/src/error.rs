@@ -3,7 +3,6 @@
 
 // tegne error types
 
-use crossbeam::channel;
 use std::error::Error;
 use std::ffi;
 use std::ffi::CString;
@@ -21,7 +20,7 @@ pub enum ErrorType {
     Nul(ffi::NulError),
     NoNul(ffi::FromBytesWithNulError),
     Json(serde_json::Error),
-    Signal(channel::SendError<()>),
+    Signal(crossbeam_channel::SendError<()>),
     Poison(sync::PoisonError<()>),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -82,8 +81,8 @@ impl From<sync::PoisonError<()>> for ErrorType {
     }
 }
 
-impl From<channel::SendError<()>> for ErrorType {
-    fn from(e: channel::SendError<()>) -> Self {
+impl From<crossbeam_channel::SendError<()>> for ErrorType {
+    fn from(e: crossbeam_channel::SendError<()>) -> Self {
         Self::Signal(e)
     }
 }
