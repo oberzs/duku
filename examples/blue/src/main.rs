@@ -13,7 +13,7 @@ use tegne::WindowOptions;
 
 fn main() {
     begin_profile("Startup", "startup.json");
-    let (width, height) = (500, 500);
+    let (mut width, mut height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: Blue",
@@ -27,9 +27,10 @@ fn main() {
     end_profile();
 
     window.main_loop(|events, _| {
-        if events.is_resized() {
-            let (new_width, new_height) = events.size();
+        if let Some((new_width, new_height)) = events.resized() {
             tegne.resize(new_width, new_height);
+            width = new_width;
+            height = new_height;
         }
 
         hue = (hue + 1) % 360;

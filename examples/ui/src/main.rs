@@ -11,7 +11,7 @@ use tegne::Window;
 use tegne::WindowOptions;
 
 fn main() {
-    let (width, height) = (500, 500);
+    let (mut width, mut height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: UI",
@@ -30,9 +30,10 @@ fn main() {
     let mut show_demo = true;
 
     window.main_loop(|events, ui| {
-        if events.is_resized() {
-            let (new_width, new_height) = events.size();
+        if let Some((new_width, new_height)) = events.resized() {
             tegne.resize(new_width, new_height);
+            width = new_width;
+            height = new_height;
         }
 
         ui.show_demo_window(&mut show_demo);

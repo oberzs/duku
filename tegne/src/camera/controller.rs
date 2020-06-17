@@ -20,10 +20,14 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub fn update(&mut self, camera: &mut Camera, events: &Events) {
+    pub fn update(&mut self, camera: &mut Camera, events: &mut Events) {
         let move_speed = 5.0;
         let rotate_speed = 70.0;
         let mut speed_mod = 1.0;
+
+        if events.is_key_typed(Key::F11) {
+            events.set_fullscreen(!events.fullscreen());
+        }
 
         if events.is_key_typed(Key::Escape) {
             self.mouse_grab = !self.mouse_grab;

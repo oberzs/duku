@@ -22,7 +22,7 @@ use cube::Cube;
 use floor::Floor;
 
 fn main() {
-    let (width, height) = (720, 640);
+    let (mut width, mut height) = (720, 640);
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: Cubes",
@@ -70,13 +70,14 @@ fn main() {
     let mut controller = Controller::default();
 
     window.main_loop(|events, ui| {
-        if events.is_resized() {
-            let (new_width, new_height) = events.size();
+        controller.update(&mut tegne.main_camera, events);
+
+        if let Some((new_width, new_height)) = events.resized() {
             tegne.resize(new_width, new_height);
             tegne.resize_framebuffer(&ui_frame, new_width, new_height);
+            width = new_width;
+            height = new_height;
         }
-
-        controller.update(&mut tegne.main_camera, events);
 
         ui::Window::new(im_str!("Stats"))
             .position([0.0, 0.0], ui::Condition::FirstUseEver)

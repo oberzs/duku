@@ -19,6 +19,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::platform::desktop::EventLoopExtDesktop;
+use winit::window::Fullscreen;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
@@ -121,8 +122,8 @@ impl Window {
 
     pub fn main_loop(
         self,
-        #[cfg(feature = "ui")] mut draw_fn: impl FnMut(&Events, Ui<'_>),
-        #[cfg(not(feature = "ui"))] mut draw_fn: impl FnMut(&Events),
+        #[cfg(feature = "ui")] mut draw_fn: impl FnMut(&mut Events, Ui<'_>),
+        #[cfg(not(feature = "ui"))] mut draw_fn: impl FnMut(&mut Events),
     ) {
         let mut event_loop = self.event_loop;
         let window = self.window;
@@ -215,10 +216,10 @@ impl Window {
                         #[cfg(feature = "ui")]
                         {
                             let ui = imgui.frame();
-                            draw_fn(&events, ui);
+                            draw_fn(&mut events, ui);
                         }
                         #[cfg(not(feature = "ui"))]
-                        draw_fn(&events);
+                        draw_fn(&mut events);
                     }
 
                     let delta_time = frame_time.elapsed();
@@ -322,8 +323,16 @@ impl Events {
         self.mouse_delta
     }
 
-    pub fn is_resized(&self) -> bool {
-        self.resized
+    pub fn resized(&self) -> Option<(u32, u32)> {
+        if self.resized {
+            Some(self.size())
+        } else {
+            None
+        }
+    }
+
+    pub fn fullscreen(&self) -> bool {
+        self.window.fullscreen().is_some()
     }
 
     pub fn set_title(&self, title: impl AsRef<str>) {
@@ -352,6 +361,17 @@ impl Events {
 
     pub fn set_visible(&self, visible: bool) {
         self.window.set_visible(visible);
+    }
+
+    pub fn set_fullscreen(&mut self, on: bool) {
+        let mode = if on {
+            Some(Fullscreen::Borderless(self.window.current_monitor()))
+        } else {
+            None
+        };
+
+        self.window.set_fullscreen(mode);
+        self.resized = true;
     }
 
     pub fn is_key_pressed(&self, key: Key) -> bool {
