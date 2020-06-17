@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 default = ["controller", "image", "window", "ui", "logger"]
+minimal = ["window", "logger"]
 profiler = ["lazy_static"]
 image = ["image_file"]
 window = ["winit"]

@@ -6,6 +6,7 @@
 #![cfg(feature = "window")]
 
 use std::collections::HashSet;
+use std::time::Duration;
 use std::time::Instant;
 use winit::dpi::PhysicalPosition;
 use winit::dpi::PhysicalSize;
@@ -118,10 +119,24 @@ impl Window {
         }
     }
 
-    #[cfg(not(feature = "ui"))]
-    pub fn main_loop(self, mut draw: impl FnMut(&Events)) {
+    pub fn main_loop(
+        self,
+        #[cfg(feature = "ui")] mut draw_fn: impl FnMut(&Events, Ui<'_>),
+        #[cfg(not(feature = "ui"))] mut draw_fn: impl FnMut(&Events),
+    ) {
         let mut event_loop = self.event_loop;
         let window = self.window;
+
+        #[cfg(feature = "ui")]
+        let (mut imgui, mut platform) = {
+            let mut imgui = self.imgui;
+            let mut platform = WinitPlatform::init(&mut imgui);
+
+            // configure imgui platform
+            platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Default);
+
+            (imgui, platform)
+        };
 
         let mut events = Events {
             mouse_position: (0, 0),
@@ -136,107 +151,16 @@ impl Window {
         let mut frame_time = Instant::now();
         let mut frame_count = 0;
         let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
-        let mut resized = false;
-
-        info!("staring event loop");
-        event_loop.run_return(|event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
-            match event {
-                Event::WindowEvent {
-                    event: win_event, ..
-                } => match win_event {
-                    WindowEvent::CursorMoved { position: pos, .. } => {
-                        events.mouse_position = (pos.x as u32, pos.y as u32);
-                    }
-                    WindowEvent::Resized(size) => {
-                        if size.width != 0 && size.height != 0 {
-                            resized = true;
-                        }
-                    }
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                virtual_keycode: Some(keycode),
-                                state,
-                                ..
-                            },
-                        ..
-                    } => events.keys.handle(keycode, state),
-                    WindowEvent::CloseRequested => {
-                        *control_flow = ControlFlow::Exit;
-                        info!("closing window");
-                    }
-                    _ => (),
-                },
-                Event::DeviceEvent {
-                    event: dev_event, ..
-                } => {
-                    if let DeviceEvent::MouseMotion { delta, .. } = dev_event {
-                        events.mouse_delta = (delta.0 as f32, delta.1 as f32);
-                    }
-                }
-                Event::MainEventsCleared => {
-                    events.resized = resized;
-
-                    if events.size() != (0, 0) {
-                        draw(&events);
-                    }
-
-                    let delta_time = frame_time.elapsed();
-                    frame_time = Instant::now();
-                    fps_samples[frame_count % FPS_SAMPLE_COUNT] =
-                        1_000_000 / delta_time.as_micros() as u32;
-                    frame_count += 1;
-
-                    events.keys.clear_typed();
-                    events.mouse_delta = (0.0, 0.0);
-                    events.delta_time = delta_time.as_secs_f32();
-                    events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
-                        .ceil() as u32;
-                    resized = false;
-                }
-                _ => (),
-            }
-        });
-    }
-
-    #[cfg(feature = "ui")]
-    pub fn main_loop(self, mut draw: impl FnMut(&Events, Ui<'_>)) {
-        let mut event_loop = self.event_loop;
-        let window = self.window;
-        let mut imgui = self.imgui;
-
-        // configure imgui platform
-        let mut platform = WinitPlatform::init(&mut imgui);
-        platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Default);
-
-        let mut events = Events {
-            mouse_position: (0, 0),
-            mouse_delta: (0.0, 0.0),
-            keys: Keys::default(),
-            delta_time: 0.0,
-            fps: 0,
-            resized: false,
-            window,
-        };
-
-        let mut frame_time = Instant::now();
-        let mut frame_count = 0;
-        let mut fps_samples: [u32; FPS_SAMPLE_COUNT] = [0; FPS_SAMPLE_COUNT];
-        let mut resized = false;
-
-        let mut last_frame = Instant::now();
+        let mut last_resize = None;
 
         info!("staring event loop");
         event_loop.run_return(|event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
 
+            #[cfg(feature = "ui")]
             platform.handle_event(imgui.io_mut(), &events.window, &event);
 
             match event {
-                Event::NewEvents(_) => {
-                    last_frame = imgui.io_mut().update_delta_time(last_frame);
-                }
                 Event::WindowEvent {
                     event: win_event, ..
                 } => match win_event {
@@ -245,7 +169,7 @@ impl Window {
                     }
                     WindowEvent::Resized(size) => {
                         if size.width != 0 && size.height != 0 {
-                            resized = true;
+                            last_resize = Some(Instant::now());
                         }
                     }
                     WindowEvent::KeyboardInput {
@@ -271,17 +195,30 @@ impl Window {
                     }
                 }
                 Event::MainEventsCleared => {
+                    #[cfg(feature = "ui")]
                     platform
                         .prepare_frame(imgui.io_mut(), &events.window)
                         .expect("failed to prepare frame");
 
-                    events.resized = resized;
+                    if let Some(last) = last_resize {
+                        if Instant::now().duration_since(last) >= Duration::from_millis(100) {
+                            let (new_width, new_height) = events.size();
+                            info!("resized window to {}x{}", new_width, new_height);
+                            events.resized = true;
+                            last_resize = None;
+                        }
+                    } else {
+                        events.resized = false;
+                    }
 
-                    if events.size() != (0, 0) {
-                        let ui = imgui.frame();
-
-                        // imgui: does not handle mouse hiding
-                        draw(&events, ui);
+                    if events.size() != (0, 0) && last_resize == None {
+                        #[cfg(feature = "ui")]
+                        {
+                            let ui = imgui.frame();
+                            draw_fn(&events, ui);
+                        }
+                        #[cfg(not(feature = "ui"))]
+                        draw_fn(&events);
                     }
 
                     let delta_time = frame_time.elapsed();
@@ -295,7 +232,6 @@ impl Window {
                     events.delta_time = delta_time.as_secs_f32();
                     events.fps = (fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32)
                         .ceil() as u32;
-                    resized = false;
                 }
                 _ => (),
             }
