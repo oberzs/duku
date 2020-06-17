@@ -57,6 +57,10 @@ fn main() {
         .create_texture_from_file("examples/cubes/assets/images/orange.png")
         .unwrap();
 
+    let shader = tegne
+        .create_shader_from_file_watch("examples/cubes/assets/test.shader", Default::default())
+        .unwrap();
+
     let load_time = start_time.elapsed().as_secs_f32();
 
     let ui_frame = tegne.create_framebuffer(CameraType::Orthographic, width, height);
@@ -96,6 +100,7 @@ fn main() {
         });
 
         tegne.draw_on_window(|target| {
+            target.set_shader(&shader);
             floor.draw(target);
             target.set_albedo_texture(&cube_tex);
             for cube in &cubes {

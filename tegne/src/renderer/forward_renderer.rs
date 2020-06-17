@@ -77,9 +77,8 @@ impl ForwardRenderer {
 
         let shadow_shader = Shader::new(
             device,
-            shadow_framebuffers[0][0].render_pass(),
+            &shadow_framebuffers[0][0],
             shader_layout,
-            shadow_framebuffers[0][0].multisampled(),
             include_bytes!("../../assets/shaders/shadow.shader"),
             Default::default(),
         )?;

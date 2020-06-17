@@ -50,15 +50,11 @@ pub(crate) fn create_builtins(
     resources.add_mesh(create_sphere(device, 2)?, Some("sphere_mesh"));
 
     // shaders
-    let render_pass = framebuffer.render_pass();
-    let multisampled = framebuffer.multisampled();
-
     resources.add_shader(
         Shader::new(
             device,
-            render_pass,
+            framebuffer,
             layout,
-            multisampled,
             include_bytes!("../../assets/shaders/phong.shader"),
             Default::default(),
         )?,
@@ -68,9 +64,8 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            render_pass,
+            framebuffer,
             layout,
-            multisampled,
             include_bytes!("../../assets/shaders/font.shader"),
             Default::default(),
         )?,
@@ -80,9 +75,8 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            render_pass,
+            framebuffer,
             layout,
-            multisampled,
             include_bytes!("../../assets/shaders/passthru.shader"),
             ShaderOptions {
                 depth_test: false,
@@ -95,9 +89,8 @@ pub(crate) fn create_builtins(
     resources.add_shader(
         Shader::new(
             device,
-            render_pass,
+            framebuffer,
             layout,
-            multisampled,
             include_bytes!("../../assets/shaders/wireframe.shader"),
             ShaderOptions {
                 lines: true,
@@ -136,9 +129,8 @@ pub(crate) fn create_builtins(
         resources.add_shader(
             Shader::new(
                 device,
-                render_pass,
+                framebuffer,
                 layout,
-                multisampled,
                 include_bytes!("../../assets/shaders/ui.shader"),
                 ShaderOptions {
                     depth_test: false,

@@ -12,6 +12,7 @@ use tar::Archive;
 use super::ShaderLayout;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::Framebuffer;
 use crate::image::ImageSamples;
 use crate::mesh::Vertex;
 
@@ -30,9 +31,8 @@ pub struct ShaderOptions {
 impl Shader {
     pub(crate) fn new(
         device: &Arc<Device>,
-        render_pass: vk::RenderPass,
+        framebuffer: &Framebuffer,
         layout: &ShaderLayout,
-        multisampled: bool,
         source: &[u8],
         options: ShaderOptions,
     ) -> Result<Self> {
@@ -132,7 +132,7 @@ impl Shader {
             .polygon_mode(polygon_mode);
 
         // configure msaa state
-        let samples = if multisampled {
+        let samples = if framebuffer.multisampled() {
             device.samples()
         } else {
             ImageSamples(1)
@@ -208,7 +208,7 @@ impl Shader {
             .depth_stencil_state(&depth_stencil_state)
             .dynamic_state(&dynamic_state)
             .layout(layout.handle())
-            .render_pass(render_pass)
+            .render_pass(framebuffer.render_pass())
             .subpass(0)
             .build();
 

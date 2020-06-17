@@ -15,6 +15,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -71,7 +72,7 @@ pub struct Tegne {
     thread_kill: ThreadKill,
     forward_renderer: ForwardRenderer,
     resources: Arc<ResourceManager>,
-    window_framebuffers: Vec<Framebuffer>,
+    window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
@@ -172,7 +173,7 @@ impl Tegne {
             thread_kill: ThreadKill::new(),
             forward_renderer,
             resources: Arc::new(resources),
-            window_framebuffers,
+            window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             image_uniform,
             shader_layout: Arc::new(shader_layout),
             swapchain,
@@ -243,7 +244,9 @@ impl Tegne {
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));
-        self.window_framebuffers = check!(Framebuffer::for_swapchain(
+
+        let mut framebuffers = self.window_framebuffers.lock().unwrap();
+        *framebuffers = check!(Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
@@ -264,21 +267,24 @@ impl Tegne {
             self.begin_draw();
         }
 
-        let mut target = check!(Target::new(&self.resources));
-        draw_callback(&mut target);
+        {
+            let mut target = check!(Target::new(&self.resources));
+            draw_callback(&mut target);
 
-        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
-        framebuffer.camera = self.main_camera.clone();
+            let framebuffer =
+                &mut self.window_framebuffers.lock().unwrap()[self.swapchain.current()];
+            framebuffer.camera = self.main_camera.clone();
 
-        check!(self.forward_renderer.draw(
-            &self.device,
-            ForwardDrawOptions {
-                framebuffer,
-                shader_layout: &self.shader_layout,
-                resources: &self.resources,
-                target,
-            }
-        ));
+            check!(self.forward_renderer.draw(
+                &self.device,
+                ForwardDrawOptions {
+                    framebuffer,
+                    shader_layout: &self.shader_layout,
+                    resources: &self.resources,
+                    target,
+                }
+            ));
+        }
 
         self.end_draw();
     }
@@ -425,13 +431,11 @@ impl Tegne {
     }
 
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
-        let render_pass = self.window_framebuffers[0].render_pass();
-        let multisampled = self.window_framebuffers[0].multisampled();
+        let framebuffer = &self.window_framebuffers.lock().unwrap()[0];
         let shader = check!(Shader::new(
             &self.device,
-            render_pass,
+            framebuffer,
             &self.shader_layout,
-            multisampled,
             source,
             options,
         ));
@@ -456,8 +460,7 @@ impl Tegne {
         let id = self.create_shader_from_file(&path_buf, options)?;
 
         // setup watcher
-        let render_pass = self.window_framebuffers[0].render_pass();
-        let multisampled = self.window_framebuffers[0].multisampled();
+        let framebuffers = self.window_framebuffers.clone();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
         let resources = self.resources.clone();
@@ -485,16 +488,18 @@ impl Tegne {
                             // wait to commit
                             thread::sleep(Duration::from_millis(500));
 
+                            let framebuffer = &framebuffers.lock().unwrap()[0];
+
                             let source = check!(fs::read(&path_buf));
                             let shader = check!(Shader::new(
                                 &device,
-                                render_pass,
+                                framebuffer,
                                 &shader_layout,
-                                multisampled,
                                 &source,
                                 options,
                             ));
                             resources.replace_shader(id_ref, shader);
+                            info!("shader {:?} was reloaded", path_buf);
                         }
                     }
                 }
