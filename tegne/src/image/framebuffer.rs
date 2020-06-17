@@ -351,6 +351,122 @@ impl Framebuffer {
         }
     }
 
+    pub(crate) fn resize(
+        &mut self,
+        width: u32,
+        height: u32,
+        image_uniform: &ImageUniform,
+    ) -> Result<()> {
+        // check if this is not a swapchain framebuffer
+        if self.render_pass.attachments().count() > self.images.len() {
+            panic!("bad code: trying to resize swapchain framebuffer");
+        }
+
+        // recreate framebuffer images
+        let mut stored_format = None;
+        let images = self
+            .render_pass
+            .attachments()
+            .map(|a| {
+                let mut usage = vec![];
+
+                match a.layout {
+                    ImageLayout::Color => usage.push(ImageUsage::Color),
+                    ImageLayout::Depth => usage.push(ImageUsage::Depth),
+                    _ => (),
+                }
+
+                // attachments that stay in memory can be read from
+                if a.store {
+                    usage.push(ImageUsage::TransferSrc);
+                    stored_format = Some(a.format);
+                } else {
+                    usage.push(ImageUsage::Transient);
+                }
+
+                let format = match a.format {
+                    ImageFormat::Depth if a.store => ImageFormat::DepthStencil,
+                    f => f,
+                };
+
+                ImageMemory::new(
+                    &self.device,
+                    ImageMemoryOptions {
+                        samples: a.samples,
+                        usage: &usage,
+                        create_view: true,
+                        width,
+                        height,
+                        format,
+                        ..Default::default()
+                    },
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // create image to be used in shaders if needed
+        let (shader_image, shader_index) = if let Some(stored) = stored_format {
+            // create shader image memory
+            let img = ImageMemory::new(
+                &self.device,
+                ImageMemoryOptions {
+                    usage: &[ImageUsage::Sampled, ImageUsage::TransferDst],
+                    create_view: true,
+                    format: stored,
+                    width,
+                    height,
+                    ..Default::default()
+                },
+            )?;
+
+            // change image layout to be used in shaders
+            self.device.do_commands(|cmd| {
+                self.device.cmd_change_image_layout(
+                    cmd,
+                    &img,
+                    LayoutChangeOptions {
+                        new_layout: ImageLayout::Shader,
+                        ..Default::default()
+                    },
+                );
+                Ok(())
+            })?;
+
+            // add image to uniform descriptor
+            let mut index = 0;
+            if let Some(view) = img.view() {
+                image_uniform.remove(self.shader_index.unwrap());
+                index = image_uniform.add(view);
+            }
+
+            (Some(img), Some(index))
+        } else {
+            (None, None)
+        };
+
+        let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+
+        let info = vk::FramebufferCreateInfo::builder()
+            .render_pass(self.render_pass.handle())
+            .attachments(&views)
+            .width(width)
+            .height(height)
+            .layers(1);
+
+        // reassign new values
+        self.device.destroy_framebuffer(self.handle);
+        self.handle = self.device.create_framebuffer(&info)?;
+        self.images = images;
+        self.shader_image = shader_image;
+        self.shader_index = shader_index;
+        self.camera.width = width;
+        self.camera.height = height;
+        self.width = width;
+        self.height = height;
+
+        Ok(())
+    }
+
     pub(crate) fn handle(&self) -> vk::Framebuffer {
         self.handle
     }

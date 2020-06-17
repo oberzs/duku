@@ -213,11 +213,11 @@ impl ResourceManager {
 
     pub(crate) fn with_framebuffer<F, R>(&self, id: IdRef, fun: F) -> Option<R>
     where
-        F: FnOnce(&Framebuffer) -> R,
+        F: FnOnce(&mut Framebuffer) -> R,
     {
-        let map = self.framebuffers.lock().unwrap();
+        let mut map = self.framebuffers.lock().unwrap();
         find_key(&map, id)
-            .map(|k| map.get(&k).unwrap())
+            .map(|k| map.get_mut(&k).unwrap())
             .map(|v| fun(v))
     }
 
@@ -229,7 +229,6 @@ impl ResourceManager {
     }
 
     pub(crate) fn clean_unused(&self, uniform: &ImageUniform) {
-        remove_unused(&mut self.framebuffers.lock().unwrap());
         remove_unused(&mut self.fonts.lock().unwrap());
         remove_unused(&mut self.meshes.lock().unwrap());
         remove_unused(&mut self.materials.lock().unwrap());
@@ -237,6 +236,9 @@ impl ResourceManager {
         remove_unused(&mut self.textures.lock().unwrap())
             .iter()
             .for_each(|tex| uniform.remove(tex.image_index()));
+        remove_unused(&mut self.framebuffers.lock().unwrap())
+            .iter()
+            .for_each(|frame| uniform.remove(frame.image_index()));
     }
 
     fn get_id(&self) -> Arc<u32> {

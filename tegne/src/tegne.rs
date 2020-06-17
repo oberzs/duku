@@ -418,6 +418,12 @@ impl Tegne {
         self.resources.add_framebuffer(framebuffer)
     }
 
+    pub fn resize_framebuffer(&self, framebuffer: &Id<Framebuffer>, width: u32, height: u32) {
+        self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
+            check!(f.resize(width, height, &self.image_uniform));
+        });
+    }
+
     pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
         let render_pass = self.window_framebuffers[0].render_pass();
         let multisampled = self.window_framebuffers[0].multisampled();

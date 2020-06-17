@@ -35,7 +35,7 @@ pub(crate) struct MaterialUniform {
 pub(crate) struct ImageUniform {
     descriptor: Descriptor,
     sampler_combinations: Vec<Sampler>,
-    images: RefCell<Vec<vk::ImageView>>,
+    images: RefCell<Vec<Option<vk::ImageView>>>,
     should_update: Cell<bool>,
     device: Arc<Device>,
 }
@@ -93,6 +93,7 @@ impl ImageUniform {
         let descriptor_set = layout.image_set()?;
         let descriptor = Descriptor(2, descriptor_set);
 
+        // create sampler combinations
         let mut sampler_combinations = vec![];
         for filter in &[SamplerFilter::Linear, SamplerFilter::Nearest] {
             for address in &[SamplerAddress::Repeat, SamplerAddress::Clamp] {
@@ -121,28 +122,50 @@ impl ImageUniform {
 
     pub(crate) fn add(&self, image: vk::ImageView) -> i32 {
         let mut images = self.images.borrow_mut();
-        let index = images.len() as i32;
-        images.push(image);
+
+        // find free index
+        let index = images
+            .iter()
+            .position(|img| img.is_none())
+            .unwrap_or_else(|| images.len());
+
+        // add new or replace image
+        if index == images.len() {
+            images.push(Some(image));
+        } else {
+            images[index] = Some(image);
+        }
+
         self.should_update.set(true);
-        index
+        index as i32
     }
 
     pub(crate) fn remove(&self, index: i32) {
-        self.images.borrow_mut().remove(index as usize);
+        let mut images = self.images.borrow_mut();
+
+        // mark image as removed
+        images[index as usize] = None;
+
         self.should_update.set(true);
     }
 
     pub(crate) fn update_if_needed(&self) {
+        let images = self.images.borrow();
+
         // update if image was added/removed
         if self.should_update.get() {
             // configure image writes to descriptor
             let image_infos = (0..100)
                 .map(|i| {
-                    let has_image = i < self.images.borrow().len();
-                    let index = if has_image { i } else { 0 };
+                    // get image or default image
+                    let image = match images.get(i) {
+                        Some(Some(img)) => *img,
+                        _ => images[0].expect("bad code"),
+                    };
+
                     vk::DescriptorImageInfo::builder()
                         .image_layout(ImageLayout::Shader.flag())
-                        .image_view(self.images.borrow()[index])
+                        .image_view(image)
                         .build()
                 })
                 .collect::<Vec<_>>();

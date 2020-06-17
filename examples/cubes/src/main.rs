@@ -26,9 +26,9 @@ fn main() {
 
     let mut window = Window::new(WindowOptions {
         title: "Tegne example: Cubes",
+        resizable: true,
         width,
         height,
-        ..Default::default()
     });
     let mut tegne = Tegne::from_window(
         &mut window,
@@ -70,6 +70,12 @@ fn main() {
     let mut controller = Controller::default();
 
     window.main_loop(|events, ui| {
+        if events.is_resized() {
+            let (new_width, new_height) = events.size();
+            tegne.resize(new_width, new_height);
+            tegne.resize_framebuffer(&ui_frame, new_width, new_height);
+        }
+
         controller.update(&mut tegne.main_camera, events);
 
         ui::Window::new(im_str!("Stats"))
