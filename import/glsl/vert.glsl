@@ -21,7 +21,7 @@ void main() {
     vec4 modelspace_position = vec4(in_modelspace_position, 1.0);
     vec4 worldspace_position = object.model_matrix * modelspace_position;
     vec4 screenspace_position = world.world_matrix * worldspace_position;
-    vec4 lightspace_position = world.light_matrix * worldspace_position;
+    vec4 lightspace_position = world.light_matrices[0] * worldspace_position;
 
     out_modelspace_position = modelspace_position.xyz;
     out_worldspace_position = worldspace_position.xyz;
@@ -31,9 +31,7 @@ void main() {
     out_normal = mat3(transpose(inverse(object.model_matrix))) * in_normal;
     out_uv = in_uv;
 
-#if defined(VERTEX_POSITION_LIGHTSPACE)
-    gl_Position = lightspace_position;
-#elif defined(VERTEX_POSITION_WORLDSPACE)
+#if defined(VERTEX_POSITION_WORLDSPACE)
     gl_Position = worldspace_position;
 #elif defined(VERTEX_POSITION_MODELSPACE)
     gl_Position = modelspace_position;

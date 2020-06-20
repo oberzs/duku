@@ -1,5 +1,4 @@
 #define PHONG
-#define SRGB
 
 void fragment() {
     float depth = in_screenspace_position.z;

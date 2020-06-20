@@ -22,7 +22,6 @@ struct Defines {
     phong: bool,
     srgb: bool,
     vertex_color_srgb: bool,
-    vertex_position_lightspace: bool,
     vertex_position_worldspace: bool,
     vertex_position_modelspace: bool,
 }
@@ -79,9 +78,6 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
     }
     if defines.srgb {
         real_src.push_str("#define SRGB\n");
-    }
-    if defines.vertex_position_lightspace {
-        real_src.push_str("#define VERTEX_POSITION_LIGHTSPACE\n");
     }
     if defines.vertex_position_worldspace {
         real_src.push_str("#define VERTEX_POSITION_WORLDSPACE\n");
@@ -175,7 +171,6 @@ impl Defines {
             phong: src.contains("#define PHONG"),
             srgb: src.contains("#define SRGB"),
             vertex_color_srgb: src.contains("#define VERTEX_COLOR_SRGB"),
-            vertex_position_lightspace: src.contains("#define VERTEX_POSITION_LIGHTSPACE"),
             vertex_position_worldspace: src.contains("#define VERTEX_POSITION_WORLDSPACE"),
             vertex_position_modelspace: src.contains("#define VERTEX_POSITION_MODELSPACE"),
         }

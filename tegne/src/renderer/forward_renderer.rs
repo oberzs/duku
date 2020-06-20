@@ -135,32 +135,17 @@ impl ForwardRenderer {
             (Matrix4::identity(), 1.0)
         };
 
-        // setup lights
-        let main_light = Light {
-            coords: light_dir.extend(0.0),
-            color: colors::WHITE.to_rgba_norm_vec(),
-        };
-        let other_lights = options.target.lights();
-
-        // update world uniform
-        let world_data = WorldData {
-            shadow_index: shadow_framebuffer.image_index(),
-            lights: [
-                main_light,
-                other_lights[0],
-                other_lights[1],
-                other_lights[2],
-            ],
-            world_matrix: framebuffer.camera.matrix(),
-            light_matrix,
-            camera_position: framebuffer.camera.transform.position,
-            cascade_splits: Vector3::from(CASCADE_SPLITS) * depth,
-            time: self.start_time.elapsed().as_secs_f32(),
-        };
-        framebuffer.world_uniform().update(world_data)?;
-        shadow_framebuffer.world_uniform().update(world_data)?;
-
         // shadow mapping
+        shadow_framebuffer.world_uniform().update(WorldData {
+            lights: [Default::default(); 4],
+            world_matrix: light_matrix,
+            camera_position: framebuffer.camera.transform.position,
+            time: self.start_time.elapsed().as_secs_f32(),
+            shadow_indices: [0; 4],
+            cascade_splits: [0.0; 4],
+            light_matrices: [Matrix4::identity(); 4],
+        })?;
+
         if options.target.has_shadows() {
             device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
             self.setup_pass(device, shadow_framebuffer);
@@ -179,7 +164,46 @@ impl ForwardRenderer {
             device.cmd_end_render_pass(cmd);
             shadow_framebuffer.update_shader_image(cmd);
         }
+
         // normal render
+        // setup lights
+        let main_light = Light {
+            coords: light_dir.extend(0.0),
+            color: colors::WHITE.to_rgba_norm_vec(),
+        };
+        let other_lights = options.target.lights();
+
+        // update world uniform
+        framebuffer.world_uniform().update(WorldData {
+            lights: [
+                main_light,
+                other_lights[0],
+                other_lights[1],
+                other_lights[2],
+            ],
+            world_matrix: framebuffer.camera.matrix(),
+            camera_position: framebuffer.camera.transform.position,
+            time: self.start_time.elapsed().as_secs_f32(),
+            shadow_indices: [
+                shadow_framebuffer.image_index(),
+                shadow_framebuffer.image_index(),
+                shadow_framebuffer.image_index(),
+                0,
+            ],
+            cascade_splits: [
+                CASCADE_SPLITS[0] * depth,
+                CASCADE_SPLITS[1] * depth,
+                CASCADE_SPLITS[2] * depth,
+                0.0,
+            ],
+            light_matrices: [
+                light_matrix,
+                light_matrix,
+                light_matrix,
+                Matrix4::identity(),
+            ],
+        })?;
+
         device.cmd_begin_render_pass(cmd, framebuffer, clear);
         self.setup_pass(device, framebuffer);
         self.bind_world(device, framebuffer, &options);

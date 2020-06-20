@@ -13,12 +13,12 @@ use crate::math::Vector4;
 #[repr(C)]
 pub(crate) struct WorldData {
     pub(crate) world_matrix: Matrix4,
-    pub(crate) light_matrix: Matrix4,
     pub(crate) lights: [Light; 4],
     pub(crate) camera_position: Vector3,
     pub(crate) time: f32,
-    pub(crate) cascade_splits: Vector3,
-    pub(crate) shadow_index: i32,
+    pub(crate) light_matrices: [Matrix4; 4],
+    pub(crate) cascade_splits: [f32; 4],
+    pub(crate) shadow_indices: [i32; 4],
 }
 
 #[derive(Copy, Clone)]
