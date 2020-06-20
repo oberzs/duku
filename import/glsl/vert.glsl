@@ -3,7 +3,7 @@
 
 // base vertex shader
 
-layout(location = 0) in vec3 in_worldspace_position;
+layout(location = 0) in vec3 in_modelspace_position;
 layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_uv;
 layout(location = 3) in vec4 in_color;
@@ -11,29 +11,39 @@ layout(location = 3) in vec4 in_color;
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out vec4 out_color;
-layout(location = 3) out vec4 out_screenspace_position;
-layout(location = 4) out vec4 out_modelspace_position;
-layout(location = 5) out vec4 out_worldspace_position;
+layout(location = 3) out vec3 out_modelspace_position;
+layout(location = 4) out vec3 out_worldspace_position;
+layout(location = 5) out vec4 out_screenspace_position;
 layout(location = 6) out vec4 out_lightspace_position;
 
 
 void main() {
+    vec4 modelspace_position = vec4(in_modelspace_position, 1.0);
+    vec4 worldspace_position = object.model_matrix * modelspace_position;
+    vec4 screenspace_position = world.world_matrix * worldspace_position;
+    vec4 lightspace_position = world.light_matrix * worldspace_position;
+
+    out_modelspace_position = modelspace_position.xyz;
+    out_worldspace_position = worldspace_position.xyz;
+    out_screenspace_position = screenspace_position;
+    out_lightspace_position = lightspace_position;
+
     out_normal = mat3(transpose(inverse(object.model_matrix))) * in_normal;
     out_uv = in_uv;
+
+#if defined(VERTEX_POSITION_LIGHTSPACE)
+    gl_Position = lightspace_position;
+#elif defined(VERTEX_POSITION_WORLDSPACE)
+    gl_Position = worldspace_position;
+#elif defined(VERTEX_POSITION_MODELSPACE)
+    gl_Position = modelspace_position;
+#else
+    gl_Position = screenspace_position;
+#endif
+
 #if defined(VERTEX_COLOR_SRGB)
     out_color = srgb_to_linear_color(in_color);
 #else
     out_color = in_color;
-#endif
-    out_worldspace_position = vec4(in_worldspace_position, 1.0);
-    out_modelspace_position = object.model_matrix * out_worldspace_position;
-    out_screenspace_position = world.world_matrix * out_modelspace_position;
-    out_lightspace_position = world.light_matrix * out_modelspace_position;
-#if defined(VERTEX_POSITION_LIGHTSPACE)
-    gl_Position = out_lightspace_position;
-#elif defined(VERTEX_POSITION_WORLDSPACE)
-    gl_Position = out_worldspace_position;
-#else
-    gl_Position = out_screenspace_position;
 #endif
 }

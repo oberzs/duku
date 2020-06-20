@@ -35,7 +35,7 @@ fn main() {
         TegneOptions {
             anisotropy: 16.0,
             msaa: 4,
-            vsync: false,
+            // vsync: false,
             ..Default::default()
         },
     );
@@ -67,8 +67,8 @@ fn main() {
 
     {
         let cam_t = &mut tegne.main_camera.transform;
-        cam_t.move_by([0.0, 5.0, -10.0]);
-        cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
+        cam_t.move_by([0.5, 1.1, -0.5]);
+        cam_t.look_in_dir(Vector3::forward(), Vector3::up());
     }
 
     let mut controller = Controller::default();
@@ -85,7 +85,7 @@ fn main() {
 
         ui::Window::new(im_str!("Stats"))
             .position([0.0, 0.0], ui::Condition::FirstUseEver)
-            .size([100.0, 100.0], ui::Condition::FirstUseEver)
+            .size([180.0, 80.0], ui::Condition::FirstUseEver)
             .always_auto_resize(true)
             .resizable(false)
             .build(&ui, || {
@@ -102,6 +102,7 @@ fn main() {
         tegne.draw_on_window(|target| {
             target.set_shader(&shader);
             floor.draw(target);
+            target.set_shader(&shader);
             target.set_albedo_texture(&cube_tex);
             for cube in &cubes {
                 cube.draw(target);

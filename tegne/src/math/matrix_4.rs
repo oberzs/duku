@@ -515,4 +515,11 @@ mod test {
         let precision = 0.99999994;
         assert_eq!(m * m.inverse().unwrap(), Matrix4::identity() * precision);
     }
+
+    #[test]
+    fn projection() {
+        let matrix = Matrix4::perspective(90.0, 16.0 / 9.0, 0.1, 10.0);
+        let point = Vector4::new(0.0, 0.0, 10.0, 1.0);
+        assert_eq!(matrix * point, Vector4::new(0.0, 0.0, 1.0, 1.0));
+    }
 }

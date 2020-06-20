@@ -54,6 +54,7 @@ pub struct WindowOptions<'title> {
 pub struct Events {
     mouse_position: (u32, u32),
     mouse_delta: (f32, f32),
+    mouse_grab: bool,
     keys: Keys,
     delta_time: f32,
     fps: u32,
@@ -142,6 +143,7 @@ impl Window {
         let mut events = Events {
             mouse_position: (0, 0),
             mouse_delta: (0.0, 0.0),
+            mouse_grab: false,
             keys: Keys::default(),
             delta_time: 0.0,
             fps: 0,
@@ -331,6 +333,10 @@ impl Events {
         }
     }
 
+    pub fn mouse_grab(&self) -> bool {
+        self.mouse_grab
+    }
+
     pub fn fullscreen(&self) -> bool {
         self.window.fullscreen().is_some()
     }
@@ -349,10 +355,11 @@ impl Events {
         }
     }
 
-    pub fn set_mouse_grab(&self, grab: bool) {
+    pub fn set_mouse_grab(&mut self, grab: bool) {
         if let Err(err) = self.window.set_cursor_grab(grab) {
             error!("{}", err);
         }
+        self.mouse_grab = grab;
     }
 
     pub fn set_mouse_visible(&self, visible: bool) {

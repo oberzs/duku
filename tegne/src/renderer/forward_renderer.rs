@@ -100,7 +100,7 @@ impl ForwardRenderer {
 
         let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
 
-        let light_matrix = if options.target.has_shadows() {
+        let (light_matrix, depth) = if options.target.has_shadows() {
             // frustum-fit light camera
             // get view frustum corners from NDC
             let cam_inv = framebuffer.camera.matrix().inverse().unwrap();
@@ -130,9 +130,9 @@ impl ForwardRenderer {
             depth_cam.transform.look_in_dir(light_dir, Vector3::up());
             depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
 
-            depth_cam.matrix()
+            (depth_cam.matrix(), r)
         } else {
-            Matrix4::identity()
+            (Matrix4::identity(), 1.0)
         };
 
         // setup lights
@@ -154,7 +154,7 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             light_matrix,
             camera_position: framebuffer.camera.transform.position,
-            cascade_splits: CASCADE_SPLITS.into(),
+            cascade_splits: Vector3::from(CASCADE_SPLITS) * depth,
             time: self.start_time.elapsed().as_secs_f32(),
         };
         framebuffer.world_uniform().update(world_data)?;

@@ -43,10 +43,10 @@ vec3 calc_point_light(Light light, vec3 cam_dir, vec3 pos, float shadow) {
 float calc_shadow(Light light) {
     float shadow = 0.0;
 
+    vec3 projected = in_lightspace_position.xyz / in_lightspace_position.w;
     vec3 normal = normalize(in_normal);
-    vec3 proj_coords = in_lightspace_position.xyz / in_lightspace_position.w;
-    vec2 uv = proj_coords.xy * 0.5 + 0.5;
-    float current_depth = proj_coords.z;
+    vec2 uv = projected.xy * 0.5 + 0.5;
+    float current_depth = projected.z;
     vec3 light_dir = normalize(-light.coords.xyz);
 
     // depth bias

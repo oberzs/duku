@@ -14,7 +14,6 @@ use crate::surface::Key;
 #[derive(Default)]
 pub struct Controller {
     camera_angle: f32,
-    mouse_grab: bool,
     lockon_point: Vector3,
     lockon: bool,
 }
@@ -30,9 +29,8 @@ impl Controller {
         }
 
         if events.is_key_typed(Key::Escape) {
-            self.mouse_grab = !self.mouse_grab;
-            events.set_mouse_grab(self.mouse_grab);
-            events.set_mouse_visible(!self.mouse_grab);
+            events.set_mouse_grab(!events.mouse_grab());
+            events.set_mouse_visible(!events.mouse_grab());
         }
 
         if events.is_key_typed(Key::LAlt) {
@@ -73,7 +71,7 @@ impl Controller {
         }
 
         // look direction
-        if self.mouse_grab {
+        if events.mouse_grab() {
             let (x, y) = events.mouse_delta();
 
             let mouse_x = x * rotate_speed * events.delta_time();
