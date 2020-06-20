@@ -254,7 +254,7 @@ impl Window {
             Some(w) => w,
             None => {
                 error!("this is not an xlib window");
-                exit(1);
+                std::process::exit(1);
             }
         }
     }
@@ -266,7 +266,7 @@ impl Window {
             Some(d) => d,
             None => {
                 error!("this is not an xlib window");
-                exit(1);
+                std::process::exit(1);
             }
         }
     }

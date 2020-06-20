@@ -12,7 +12,6 @@ mod swapchain;
 mod window;
 
 use ash::vk;
-use std::os::raw::c_void;
 use std::sync::Arc;
 
 use crate::error::Result;
@@ -44,6 +43,7 @@ impl Surface {
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
         profile_scope!("new");
 
+        use std::os::raw::c_void;
         use std::ptr;
         use winapi::um::libloaderapi::GetModuleHandleW;
 
