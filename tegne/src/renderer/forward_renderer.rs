@@ -29,8 +29,7 @@ use crate::pipeline::WorldData;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
-const CASCADE_COUNT: usize = 3;
-const CASCADE_SPLITS: [f32; CASCADE_COUNT] = [0.2, 0.5, 1.0];
+const CASCADE_SPLITS: [f32; 3] = [0.2, 0.4, 1.0];
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffers: Vec<Vec<Framebuffer>>,
@@ -57,7 +56,7 @@ impl ForwardRenderer {
         let shadow_map_size = 2048;
 
         let mut shadow_framebuffers = vec![];
-        for cascade in 0..CASCADE_COUNT {
+        for cascade in 0..CASCADE_SPLITS.len() {
             shadow_framebuffers.push(vec![]);
             for _ in 0..IN_FLIGHT_FRAME_COUNT {
                 shadow_framebuffers[cascade].push(Framebuffer::new(
@@ -96,73 +95,82 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
-        let shadow_framebuffer = &self.shadow_framebuffers[0][device.current_frame()];
-
         let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
 
-        let (light_matrix, depth) = if options.target.has_shadows() {
-            // frustum-fit light camera
-            // get view frustum corners from NDC
-            let cam_inv = framebuffer.camera.matrix().inverse().unwrap();
-            let mut corners = vec![];
-            for x in &[-1.0, 1.0] {
-                for y in &[-1.0, 1.0] {
-                    for z in &[0.0, 1.0] {
-                        let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
-                        corners.push(corner.shrink() / corner.w);
-                    }
-                }
-            }
-
-            // get bounding sphere radius
-            // sphere makes it axis-aligned
-            let corner_count = corners.len() as f32;
-            let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
-            let r =
-                corners.iter().map(|v| (center - *v).length()).sum::<f32>() / corners.len() as f32;
-
-            // create depth camera
-            let light_pos = center - light_dir * r;
-            let size = (r * 2.0) as u32;
-            let texel_size = size as f32 / self.shadow_map_size as f32;
-            let mut depth_cam = Camera::orthographic(size, size);
-            depth_cam.depth = size;
-            depth_cam.transform.look_in_dir(light_dir, Vector3::up());
-            depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
-
-            (depth_cam.matrix(), r)
-        } else {
-            (Matrix4::identity(), 1.0)
-        };
+        let mut light_matrices = [Matrix4::identity(); 4];
+        let mut shadow_indices = [0; 4];
+        let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
-        shadow_framebuffer.world_uniform().update(WorldData {
-            lights: [Default::default(); 4],
-            world_matrix: light_matrix,
-            camera_position: framebuffer.camera.transform.position,
-            time: self.start_time.elapsed().as_secs_f32(),
-            shadow_indices: [0; 4],
-            cascade_splits: [0.0; 4],
-            light_matrices: [Matrix4::identity(); 4],
-        })?;
-
         if options.target.has_shadows() {
-            device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
-            self.setup_pass(device, shadow_framebuffer);
-            self.bind_world(device, shadow_framebuffer, &options);
-            device.cmd_bind_shader(cmd, &self.shadow_shader);
-            for s_order in options.target.orders_by_shader() {
-                for m_order in s_order.orders_by_material() {
-                    self.bind_material(device, m_order.material(), &options)?;
-                    for order in m_order.orders() {
-                        if order.has_shadows {
-                            self.draw_order(device, order, &options)?;
+            // render shadow map for each cascade
+            for (i, cs) in CASCADE_SPLITS.iter().enumerate() {
+                let shadow_framebuffer = &self.shadow_framebuffers[i][device.current_frame()];
+
+                // frustum-fit light camera
+                // get view frustum corners from NDC
+                let mut view_cam = framebuffer.camera.clone();
+                view_cam.depth *= cs;
+
+                let cam_inv = view_cam.matrix().inverse().unwrap();
+                let mut corners = vec![];
+                for x in &[-1.0, 1.0] {
+                    for y in &[-1.0, 1.0] {
+                        for z in &[0.0, 1.0] {
+                            let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
+                            corners.push(corner.shrink() / corner.w);
                         }
                     }
                 }
+
+                // get bounding sphere radius
+                // sphere makes it axis-aligned
+                let corner_count = corners.len() as f32;
+                let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
+                let r = corners.iter().map(|v| (center - *v).length()).sum::<f32>()
+                    / corners.len() as f32;
+
+                // create depth camera
+                let light_pos = center - light_dir * r;
+                let size = r * 2.0;
+                let texel_size = size / self.shadow_map_size as f32;
+                let mut depth_cam = Camera::orthographic(size as u32, size as u32);
+                depth_cam.depth = size;
+                depth_cam.transform.look_in_dir(light_dir, Vector3::up());
+                depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
+
+                shadow_framebuffer.world_uniform().update(WorldData {
+                    lights: [Default::default(); 4],
+                    world_matrix: depth_cam.matrix(),
+                    camera_position: framebuffer.camera.transform.position,
+                    time: self.start_time.elapsed().as_secs_f32(),
+                    shadow_indices: [0; 4],
+                    cascade_splits: [0.0; 4],
+                    light_matrices: [Matrix4::identity(); 4],
+                })?;
+
+                device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
+                self.setup_pass(device, shadow_framebuffer);
+                self.bind_world(device, shadow_framebuffer, &options);
+                device.cmd_bind_shader(cmd, &self.shadow_shader);
+                for s_order in options.target.orders_by_shader() {
+                    for m_order in s_order.orders_by_material() {
+                        self.bind_material(device, m_order.material(), &options)?;
+                        for order in m_order.orders() {
+                            if order.has_shadows {
+                                self.draw_order(device, order, &options)?;
+                            }
+                        }
+                    }
+                }
+                device.cmd_end_render_pass(cmd);
+                shadow_framebuffer.update_shader_image(cmd);
+
+                // set uniform variables for normal render
+                light_matrices[i] = depth_cam.matrix();
+                shadow_indices[i] = shadow_framebuffer.image_index();
+                cascade_splits[i] = cs * r;
             }
-            device.cmd_end_render_pass(cmd);
-            shadow_framebuffer.update_shader_image(cmd);
         }
 
         // normal render
@@ -184,24 +192,9 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
-            shadow_indices: [
-                shadow_framebuffer.image_index(),
-                shadow_framebuffer.image_index(),
-                shadow_framebuffer.image_index(),
-                0,
-            ],
-            cascade_splits: [
-                CASCADE_SPLITS[0] * depth,
-                CASCADE_SPLITS[1] * depth,
-                CASCADE_SPLITS[2] * depth,
-                0.0,
-            ],
-            light_matrices: [
-                light_matrix,
-                light_matrix,
-                light_matrix,
-                Matrix4::identity(),
-            ],
+            shadow_indices,
+            cascade_splits,
+            light_matrices,
         })?;
 
         device.cmd_begin_render_pass(cmd, framebuffer, clear);

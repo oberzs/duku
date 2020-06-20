@@ -26,4 +26,4 @@ layout(location = 2) in vec4 in_color;
 layout(location = 3) in vec3 in_modelspace_position;
 layout(location = 4) in vec3 in_worldspace_position;
 layout(location = 5) in vec4 in_screenspace_position;
-layout(location = 6) in vec4 in_lightspace_position;
+layout(location = 6) in vec4 in_lightspace_position[4];

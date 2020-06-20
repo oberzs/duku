@@ -19,7 +19,7 @@ pub struct Camera {
     pub fov: u32,
     pub width: u32,
     pub height: u32,
-    pub depth: u32,
+    pub depth: f32,
     camera_type: CameraType,
 }
 
@@ -34,7 +34,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Perspective,
-            depth: 50,
+            depth: 100.0,
             width,
             height,
             fov,
@@ -45,7 +45,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Orthographic,
-            depth: 50,
+            depth: 100.0,
             fov: 0,
             width,
             height,
@@ -55,7 +55,7 @@ impl Camera {
     pub fn new(camera_type: CameraType, width: u32, height: u32) -> Self {
         Self {
             transform: Transform::default(),
-            depth: 50,
+            depth: 100.0,
             fov: 90,
             camera_type,
             width,
@@ -68,7 +68,7 @@ impl Camera {
             return;
         }
         if enable {
-            let height = (self.fov as f32).to_radians().tan() * self.depth as f32;
+            let height = (self.fov as f32).to_radians().tan() * self.depth;
             let zoom = height / self.height as f32;
             self.transform.scale = Vector3::new(zoom, zoom, zoom);
         } else {
@@ -78,17 +78,14 @@ impl Camera {
 
     pub(crate) fn matrix(&self) -> Matrix4 {
         let projection = match self.camera_type {
-            CameraType::Orthographic => Matrix4::orthographic_center(
-                self.width as f32,
-                self.height as f32,
-                0.1,
-                self.depth as f32,
-            ),
+            CameraType::Orthographic => {
+                Matrix4::orthographic_center(self.width as f32, self.height as f32, 0.1, self.depth)
+            }
             CameraType::Perspective => Matrix4::perspective(
                 self.fov as f32,
                 self.width as f32 / self.height as f32,
                 0.1,
-                self.depth as f32,
+                self.depth,
             ),
         };
 
