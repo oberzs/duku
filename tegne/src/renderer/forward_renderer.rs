@@ -20,11 +20,11 @@ use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::AttachmentType;
-use crate::pipeline::ImageUniform;
 use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
@@ -33,6 +33,7 @@ const CASCADE_SPLITS: [f32; 3] = [0.2, 0.4, 1.0];
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffers: Vec<Vec<Framebuffer>>,
+    shadow_uniforms: Vec<ShadowMapUniform>,
     shadow_shader: Shader,
     shadow_map_size: u32,
     start_time: Instant,
@@ -46,22 +47,18 @@ pub(crate) struct ForwardDrawOptions<'a> {
 }
 
 impl ForwardRenderer {
-    pub(crate) fn new(
-        device: &Arc<Device>,
-        image_uniform: &ImageUniform,
-        shader_layout: &ShaderLayout,
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
         profile_scope!("new");
 
         let shadow_map_size = 2048;
 
         let mut shadow_framebuffers = vec![];
-        for cascade in 0..CASCADE_SPLITS.len() {
+        let mut shadow_uniforms = vec![];
+        for frame in 0..IN_FLIGHT_FRAME_COUNT {
             shadow_framebuffers.push(vec![]);
-            for _ in 0..IN_FLIGHT_FRAME_COUNT {
-                shadow_framebuffers[cascade].push(Framebuffer::new(
+            for _ in 0..CASCADE_SPLITS.len() {
+                shadow_framebuffers[frame].push(Framebuffer::new(
                     device,
-                    image_uniform,
                     shader_layout,
                     FramebufferOptions {
                         attachment_types: &[AttachmentType::Depth],
@@ -72,6 +69,15 @@ impl ForwardRenderer {
                     },
                 )?);
             }
+
+            shadow_uniforms.push(ShadowMapUniform::new(
+                shader_layout,
+                [
+                    shadow_framebuffers[frame][0].stored_view(),
+                    shadow_framebuffers[frame][1].stored_view(),
+                    shadow_framebuffers[frame][2].stored_view(),
+                ],
+            )?);
         }
 
         let shadow_shader = Shader::new(
@@ -85,6 +91,7 @@ impl ForwardRenderer {
         Ok(Self {
             start_time: Instant::now(),
             shadow_framebuffers,
+            shadow_uniforms,
             shadow_shader,
             shadow_map_size,
         })
@@ -98,14 +105,21 @@ impl ForwardRenderer {
         let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
 
         let mut light_matrices = [Matrix4::identity(); 4];
-        let mut shadow_indices = [0; 4];
         let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
         if options.target.has_shadows() {
+            // bind other random shadow map set
+            device.cmd_bind_descriptor(
+                cmd,
+                self.shadow_uniforms[(device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT]
+                    .descriptor(),
+                &options.shader_layout,
+            );
+
             // render shadow map for each cascade
             for (i, cs) in CASCADE_SPLITS.iter().enumerate() {
-                let shadow_framebuffer = &self.shadow_framebuffers[i][device.current_frame()];
+                let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
                 // frustum-fit light camera
                 // get view frustum corners from NDC
@@ -144,7 +158,6 @@ impl ForwardRenderer {
                     world_matrix: depth_cam.matrix(),
                     camera_position: framebuffer.camera.transform.position,
                     time: self.start_time.elapsed().as_secs_f32(),
-                    shadow_indices: [0; 4],
                     cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
                 })?;
@@ -164,13 +177,18 @@ impl ForwardRenderer {
                     }
                 }
                 device.cmd_end_render_pass(cmd);
-                shadow_framebuffer.update_shader_image(cmd);
 
                 // set uniform variables for normal render
                 light_matrices[i] = depth_cam.matrix();
-                shadow_indices[i] = shadow_framebuffer.image_index();
                 cascade_splits[i] = cs * r;
             }
+
+            // bind current shadow map set
+            device.cmd_bind_descriptor(
+                cmd,
+                self.shadow_uniforms[device.current_frame()].descriptor(),
+                &options.shader_layout,
+            );
         }
 
         // normal render
@@ -192,7 +210,6 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
-            shadow_indices,
             cascade_splits,
             light_matrices,
         })?;
@@ -218,7 +235,11 @@ impl ForwardRenderer {
         }
 
         device.cmd_end_render_pass(cmd);
-        framebuffer.update_shader_image(cmd);
+
+        // reset shadow framebuffers so they can be cleared
+        // for frame in &self.shadow_framebuffers[device.current_frame()] {
+        //     frame.reset_stored_image(cmd);
+        // }
 
         Ok(())
     }
@@ -271,10 +292,7 @@ impl ForwardRenderer {
     ) -> Result<()> {
         let cmd = device.command_buffer();
         let resources = options.resources;
-        let albedo = resources
-            .with_texture(order.albedo, |t| t.image_index())
-            .or_else(|| resources.with_framebuffer(order.albedo, |f| f.image_index()));
-        if let Some(albedo_index) = albedo {
+        if let Some(albedo_index) = resources.with_texture(order.albedo, |t| t.image_index()) {
             if let Some((vb, ib, n)) = resources.with_mesh(order.mesh, |m| {
                 (m.vertex_buffer(), m.index_buffer(), m.index_count())
             }) {

@@ -5,6 +5,8 @@
 
 layout(set = 2, binding = 0) uniform texture2D textures[100];
 layout(set = 2, binding = 1) uniform sampler samplers[8];
+layout(set = 3, binding = 0) uniform texture2D shadow_maps[3];
+layout(set = 4, binding = 0) uniform texture2D framebuffer;
 
 // sampler combinations
 #define sampler samplers[0] // linear, repeat, mipmaps
@@ -18,7 +20,6 @@ layout(set = 2, binding = 1) uniform sampler samplers[8];
 
 // textures
 #define albedo sampler2D(textures[object.albedo_index], samplers[object.sampler_index])
-#define shadow_map sampler2D(textures[world.shadow_indices.x], sampler_c)
 
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec2 in_uv;

@@ -218,7 +218,7 @@ impl ImageMemory {
                         base_mip: i - 1,
                         mip_count: 1,
                         old_layout: ImageLayout::TransferSrc,
-                        new_layout: ImageLayout::Shader,
+                        new_layout: ImageLayout::ShaderColor,
                     },
                 );
             }
@@ -229,7 +229,7 @@ impl ImageMemory {
                     base_mip: self.mip_count - 1,
                     mip_count: 1,
                     old_layout: ImageLayout::TransferDst,
-                    new_layout: ImageLayout::Shader,
+                    new_layout: ImageLayout::ShaderColor,
                 },
             );
             Ok(())

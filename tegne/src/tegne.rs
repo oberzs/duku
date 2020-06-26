@@ -160,11 +160,7 @@ impl Tegne {
             &image_uniform,
         ));
 
-        let forward_renderer = check!(ForwardRenderer::new(
-            &device,
-            &image_uniform,
-            &shader_layout,
-        ));
+        let forward_renderer = check!(ForwardRenderer::new(&device, &shader_layout,));
 
         let main_camera = Camera::new(options.camera, window.width, window.height);
 
@@ -411,7 +407,6 @@ impl Tegne {
     pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
         let framebuffer = check!(Framebuffer::new(
             &self.device,
-            &self.image_uniform,
             &self.shader_layout,
             FramebufferOptions {
                 attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
@@ -426,7 +421,7 @@ impl Tegne {
 
     pub fn resize_framebuffer(&self, framebuffer: &Id<Framebuffer>, width: u32, height: u32) {
         self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
-            check!(f.resize(width, height, &self.image_uniform));
+            check!(f.resize(width, height, &self.shader_layout));
         });
     }
 

@@ -31,7 +31,8 @@ pub(crate) enum ImageLayout {
     Undefined,
     Depth,
     Color,
-    Shader,
+    ShaderColor,
+    ShaderDepth,
     Present,
     TransferSrc,
     TransferDst,
@@ -94,7 +95,8 @@ impl ImageLayout {
             Self::Undefined => vk::ImageLayout::UNDEFINED,
             Self::Color => vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
             Self::Depth => vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            Self::Shader => vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            Self::ShaderColor => vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            Self::ShaderDepth => vk::ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL,
             Self::Present => vk::ImageLayout::PRESENT_SRC_KHR,
             Self::TransferSrc => vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
             Self::TransferDst => vk::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -105,7 +107,8 @@ impl ImageLayout {
         match *self {
             Self::TransferSrc => vk::AccessFlags::TRANSFER_READ,
             Self::TransferDst => vk::AccessFlags::TRANSFER_WRITE,
-            Self::Shader => vk::AccessFlags::SHADER_READ,
+            Self::ShaderColor => vk::AccessFlags::SHADER_READ,
+            Self::ShaderDepth => vk::AccessFlags::SHADER_READ,
             Self::Color => vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
             Self::Depth => vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
             _ => vk::AccessFlags::TRANSFER_READ,
@@ -116,7 +119,8 @@ impl ImageLayout {
         match *self {
             Self::TransferSrc => vk::PipelineStageFlags::TRANSFER,
             Self::TransferDst => vk::PipelineStageFlags::TRANSFER,
-            Self::Shader => vk::PipelineStageFlags::FRAGMENT_SHADER,
+            Self::ShaderColor => vk::PipelineStageFlags::FRAGMENT_SHADER,
+            Self::ShaderDepth => vk::PipelineStageFlags::FRAGMENT_SHADER,
             Self::Color => vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
             Self::Depth => {
                 vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS

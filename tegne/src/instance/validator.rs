@@ -31,10 +31,43 @@ extern "system" fn callback(
         CStr::from_ptr(message).to_str().unwrap()
     };
 
+    // remove beginning ramble
+    let rest = msg.split('|').nth(2).expect("bad message").trim();
+
+    // extract final link if exists
+    let (link, rest) = {
+        let link_index = rest.find("(https:");
+        if let Some(index) = link_index {
+            let (r, l) = rest.split_at(index);
+            (l.trim_start_matches('(').trim_end_matches(')'), r)
+        } else {
+            ("", rest)
+        }
+    };
+
+    // extract detailed explanation if exists
+    let (states, rest) = {
+        let states_index = rest.find("The Vulkan spec states:");
+        if let Some(index) = states_index {
+            let (r, s) = rest.split_at(index);
+            (s.trim(), r)
+        } else {
+            ("", rest)
+        }
+    };
+
+    let mut formatted_msg = rest.to_string();
+    if !states.is_empty() {
+        formatted_msg = format!("{}\n\n\x1b[93m{}\x1b[0m", formatted_msg, states);
+    }
+    if !link.is_empty() {
+        formatted_msg = format!("{}\n\n{}\n", formatted_msg, link);
+    }
+
     if severity.contains(vk::DebugUtilsMessageSeverityFlagsEXT::ERROR) {
-        error!("{}", msg);
+        error!("{}", formatted_msg);
     } else {
-        warn!("{}", msg);
+        warn!("{}", formatted_msg);
     }
 
     vk::FALSE

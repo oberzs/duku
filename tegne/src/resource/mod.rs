@@ -236,9 +236,9 @@ impl ResourceManager {
         remove_unused(&mut self.textures.lock().unwrap())
             .iter()
             .for_each(|tex| uniform.remove(tex.image_index()));
-        remove_unused(&mut self.framebuffers.lock().unwrap())
-            .iter()
-            .for_each(|frame| uniform.remove(frame.image_index()));
+        remove_unused(&mut self.framebuffers.lock().unwrap());
+        // .iter()
+        // .for_each(|frame| uniform.remove(frame.image_index()));
     }
 
     fn get_id(&self) -> Arc<u32> {

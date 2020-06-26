@@ -44,18 +44,16 @@ float calc_shadow(Light light) {
     float shadow = 0.0;
 
     // choose shadow map
-    vec3 projected;
     int shadow_index;
     if (in_screenspace_position.z < world.cascade_splits.x) {
-        projected = in_lightspace_position[0].xyz / in_lightspace_position[0].w;
-        shadow_index = world.shadow_indices.x;
+        shadow_index = 0;
     } else if (in_screenspace_position.z < world.cascade_splits.y) {
-        projected = in_lightspace_position[1].xyz / in_lightspace_position[1].w;
-        shadow_index = world.shadow_indices.y;
+        shadow_index = 1;
     } else {
-        projected = in_lightspace_position[2].xyz / in_lightspace_position[2].w;
-        shadow_index = world.shadow_indices.z;
+        shadow_index = 2;
     }
+
+    vec3 projected = in_lightspace_position[shadow_index].xyz / in_lightspace_position[shadow_index].w;
 
     vec3 normal = normalize(in_normal);
     vec2 uv = projected.xy * 0.5 + 0.5;
@@ -66,16 +64,16 @@ float calc_shadow(Light light) {
     float bias = max(0.001 * (1.0 - dot(normal, light_dir)), 0.0001);
 
     // PCF
-    int strength = 1;
-    vec2 texel_size = 1.0 / textureSize(shadow_map, 0);
+    int strength = 3;
+    vec2 texel_size = 1.0 / textureSize(sampler2D(shadow_maps[shadow_index], sampler_c), 0);
     for (int x = -strength; x <= strength; ++x) {
         for (int y = -strength; y <= strength; ++y) {
             vec2 pcf_uv = uv + vec2(x, y) * texel_size;
-            float pcf_depth = texture(sampler2D(textures[shadow_index], sampler_c), pcf_uv).r;
+            float pcf_depth = texture(sampler2D(shadow_maps[shadow_index], sampler_c), pcf_uv).r;
             shadow += current_depth - bias > pcf_depth ? 1.0 : 0.0;
         }
     }
-    shadow /= pow(strength * 2 + 1, 2);
+    shadow /= pow(strength * 2.0 + 1.0, 2.0);
 
     if (current_depth > 1.0) {
         shadow = 0.0;

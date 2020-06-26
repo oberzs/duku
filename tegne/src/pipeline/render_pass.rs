@@ -48,11 +48,16 @@ impl RenderPass {
                         } else {
                             ImageSamples(1)
                         };
+                        let layout = if is_last {
+                            ImageLayout::ShaderDepth
+                        } else {
+                            ImageLayout::Depth
+                        };
                         let o = AttachmentOptions {
-                            layout: ImageLayout::Depth,
                             format: ImageFormat::Depth,
                             clear: true,
                             store: is_last,
+                            layout,
                             samples,
                             index,
                         };
@@ -67,6 +72,8 @@ impl RenderPass {
 
                         let layout = if present && is_last {
                             ImageLayout::Present
+                        } else if is_last {
+                            ImageLayout::ShaderColor
                         } else {
                             ImageLayout::Color
                         };

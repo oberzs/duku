@@ -26,10 +26,11 @@ pub(crate) struct AttachmentOptions {
 
 impl Attachment {
     pub(crate) fn new(options: AttachmentOptions) -> Self {
-        let layout = if options.layout == ImageLayout::Present {
-            ImageLayout::Color
-        } else {
-            options.layout
+        let layout = match options.layout {
+            ImageLayout::Present => ImageLayout::Color,
+            ImageLayout::ShaderColor => ImageLayout::Color,
+            ImageLayout::ShaderDepth => ImageLayout::Depth,
+            _ => options.layout,
         };
 
         let load_op = if options.clear {
@@ -72,18 +73,5 @@ impl Attachment {
 
     pub(crate) fn reference(&self) -> vk::AttachmentReference {
         self.reference
-    }
-}
-
-impl Default for AttachmentOptions {
-    fn default() -> Self {
-        Self {
-            index: 0,
-            layout: ImageLayout::Undefined,
-            format: ImageFormat::Depth,
-            samples: ImageSamples(1),
-            clear: false,
-            store: false,
-        }
     }
 }
