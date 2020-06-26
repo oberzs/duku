@@ -296,6 +296,14 @@ impl ForwardRenderer {
             if let Some((vb, ib, n)) = resources.with_mesh(order.mesh, |m| {
                 (m.vertex_buffer(), m.index_buffer(), m.index_count())
             }) {
+                if let Some(framebuffer) = order.framebuffer {
+                    if let Some(frame_descriptor) =
+                        resources.with_framebuffer(framebuffer, |f| f.descriptor())
+                    {
+                        device.cmd_bind_descriptor(cmd, frame_descriptor, &options.shader_layout);
+                    }
+                }
+
                 device.cmd_push_constants(
                     cmd,
                     PushConstants {

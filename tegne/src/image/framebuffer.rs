@@ -16,6 +16,7 @@ use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::AttachmentType;
+use crate::pipeline::Descriptor;
 use crate::pipeline::FramebufferUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
@@ -333,6 +334,13 @@ impl Framebuffer {
 
     pub(crate) fn world_uniform(&self) -> &WorldUniform {
         &self.world_uniform
+    }
+
+    pub(crate) fn descriptor(&self) -> Descriptor {
+        self.framebuffer_uniform
+            .as_ref()
+            .expect("bad code")
+            .descriptor()
     }
 }
 

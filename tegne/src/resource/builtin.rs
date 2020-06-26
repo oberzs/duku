@@ -77,13 +77,13 @@ pub(crate) fn create_builtins(
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/passthru.shader"),
+            include_bytes!("../../assets/shaders/blit.shader"),
             ShaderOptions {
                 depth_test: false,
                 ..Default::default()
             },
         )?,
-        Some("passthru_sh"),
+        Some("blit_sh"),
     );
 
     resources.add_shader(

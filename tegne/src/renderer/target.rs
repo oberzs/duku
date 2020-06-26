@@ -27,6 +27,7 @@ pub struct Target<'a> {
     current_shader: IdRef,
     current_material: IdRef,
     current_albedo: IdRef,
+    current_framebuffer: Option<IdRef>,
     current_font: IdRef,
     has_shadows: bool,
     wireframes: bool,
@@ -50,6 +51,7 @@ pub(crate) struct OrdersByMaterial {
 pub(crate) struct Order {
     pub(crate) mesh: IdRef,
     pub(crate) albedo: IdRef,
+    pub(crate) framebuffer: Option<IdRef>,
     pub(crate) model: Matrix4,
     pub(crate) has_shadows: bool,
     pub(crate) sampler_index: i32,
@@ -65,6 +67,7 @@ impl<'a> Target<'a> {
             current_shader: resources.builtin("phong_sh"),
             current_material: resources.builtin("white_mat"),
             current_albedo: resources.builtin("white_tex"),
+            current_framebuffer: None,
             current_font: resources.builtin("roboto_font"),
             has_shadows: false,
             wireframes: false,
@@ -79,6 +82,7 @@ impl<'a> Target<'a> {
         self.add_order(Order {
             mesh: mesh.id_ref(),
             albedo: self.current_albedo,
+            framebuffer: self.current_framebuffer,
             model: transform.into().as_matrix(),
             has_shadows: true,
             sampler_index: self.sampler_combination(),
@@ -89,6 +93,7 @@ impl<'a> Target<'a> {
         self.add_order(Order {
             mesh: self.resources.builtin("cube_mesh"),
             albedo: self.current_albedo,
+            framebuffer: self.current_framebuffer,
             model: transform.into().as_matrix(),
             has_shadows: true,
             sampler_index: self.sampler_combination(),
@@ -99,6 +104,7 @@ impl<'a> Target<'a> {
         self.add_order(Order {
             mesh: self.resources.builtin("sphere_mesh"),
             albedo: self.current_albedo,
+            framebuffer: self.current_framebuffer,
             model: transform.into().as_matrix(),
             has_shadows: true,
             sampler_index: self.sampler_combination(),
@@ -109,6 +115,7 @@ impl<'a> Target<'a> {
         self.add_order(Order {
             mesh: self.resources.builtin("surface_mesh"),
             albedo: self.current_albedo,
+            framebuffer: self.current_framebuffer,
             model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
             has_shadows: false,
             sampler_index: self.sampler_combination(),
@@ -117,14 +124,13 @@ impl<'a> Target<'a> {
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
         let temp_shader = self.current_shader;
-        let temp_albedo = self.current_albedo;
-        self.current_shader = self.resources.builtin("passthru_sh");
-        self.current_albedo = framebuffer.id_ref();
+        self.current_shader = self.resources.builtin("blit_sh");
+        self.current_framebuffer = Some(framebuffer.id_ref());
 
         self.draw_surface();
 
         self.current_shader = temp_shader;
-        self.current_albedo = temp_albedo;
+        self.current_framebuffer = None;
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
@@ -150,6 +156,7 @@ impl<'a> Target<'a> {
                 self.add_order(Order {
                     mesh,
                     albedo,
+                    framebuffer: self.current_framebuffer,
                     model: current_transform.as_matrix(),
                     has_shadows: false,
                     sampler_index: self.sampler_combination(),
@@ -208,6 +215,7 @@ impl<'a> Target<'a> {
         self.add_order(Order {
             mesh,
             albedo: self.resources.builtin("ui_tex"),
+            framebuffer: self.current_framebuffer,
             model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
             has_shadows: false,
             sampler_index: self.sampler_combination(),
@@ -239,12 +247,12 @@ impl<'a> Target<'a> {
         self.current_albedo = texture.id_ref();
     }
 
-    pub fn set_albedo_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
-        self.current_albedo = framebuffer.id_ref();
-    }
-
     pub fn set_shader(&mut self, shader: &Id<Shader>) {
         self.current_shader = shader.id_ref();
+    }
+
+    pub fn set_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
+        self.current_framebuffer = Some(framebuffer.id_ref());
     }
 
     pub fn enable_wireframes(&mut self) {
@@ -267,6 +275,7 @@ impl<'a> Target<'a> {
         self.current_material = self.resources.builtin("white_mat");
         self.current_albedo = self.resources.builtin("white_tex");
         self.current_shader = self.resources.builtin("phong_sh");
+        self.current_framebuffer = None;
         self.wireframes = false;
         self.sampler_nearest = false;
         self.sampler_clamp = false;

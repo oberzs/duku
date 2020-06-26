@@ -90,10 +90,10 @@ fn main() {
             });
         let ui_data = ui.render();
 
-        // tegne.draw(&ui_frame, |target| {
-        //     target.set_clear([0, 0, 0, 0]);
-        //     target.draw_ui(ui_data);
-        // });
+        tegne.draw(&ui_frame, |target| {
+            target.set_clear([0, 0, 0, 0]);
+            target.draw_ui(ui_data);
+        });
 
         tegne.draw_on_window(|target| {
             floor.draw(target);
@@ -102,7 +102,7 @@ fn main() {
                 cube.draw(target);
             }
             target.reset();
-            // target.blit_framebuffer(&ui_frame);
+            target.blit_framebuffer(&ui_frame);
         });
     });
 }
