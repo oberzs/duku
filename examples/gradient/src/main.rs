@@ -60,14 +60,13 @@ fn main() {
             .build(&ui, || {
                 ui::ColorPicker::new(im_str!("color"), &mut color_2).build(&ui);
             });
-        let ui_data = ui.render();
 
         // render
+        tegne.draw_ui(ui);
         tegne.draw_on_window(|target| {
             target.set_shader(&shader);
             target.set_material(&material);
             target.draw_surface();
-            target.draw_ui(ui_data);
         });
     });
 }

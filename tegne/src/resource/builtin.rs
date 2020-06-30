@@ -112,35 +112,6 @@ pub(crate) fn create_builtins(
         Some("roboto_font"),
     );
 
-    // ui
-    #[cfg(feature = "ui")]
-    {
-        resources.add_mesh(
-            Mesh::new(
-                device,
-                MeshOptions {
-                    vertices: &[Vector3::new(0.0, 0.0, 0.0)],
-                    triangles: &[[0, 0, 0]],
-                    ..Default::default()
-                },
-            )?,
-            Some("ui_mesh"),
-        );
-        resources.add_shader(
-            Shader::new(
-                device,
-                framebuffer,
-                layout,
-                include_bytes!("../../assets/shaders/ui.shader"),
-                ShaderOptions {
-                    depth_test: false,
-                    ..Default::default()
-                },
-            )?,
-            Some("ui_sh"),
-        );
-    }
-
     Ok(())
 }
 

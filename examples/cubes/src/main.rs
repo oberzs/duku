@@ -10,7 +10,6 @@ use rand::Rng;
 use std::time::Instant;
 use tegne::ui;
 use tegne::ui::im_str;
-use tegne::CameraType;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -59,8 +58,6 @@ fn main() {
 
     let load_time = start_time.elapsed().as_secs_f32();
 
-    let ui_frame = tegne.create_framebuffer(CameraType::Orthographic, width, height);
-
     {
         let cam_t = &mut tegne.main_camera.transform;
         cam_t.move_by([0.5, 1.1, -0.5]);
@@ -74,7 +71,6 @@ fn main() {
 
         if let Some((new_width, new_height)) = events.resized() {
             tegne.resize(new_width, new_height);
-            tegne.resize_framebuffer(&ui_frame, new_width, new_height);
             width = new_width;
             height = new_height;
         }
@@ -88,12 +84,8 @@ fn main() {
                 ui.text(format!("Load time: {}s", load_time));
                 ui.text(format!("Fps: {}", events.fps()));
             });
-        let ui_data = ui.render();
 
-        tegne.draw(&ui_frame, |target| {
-            target.set_clear([0, 0, 0, 0]);
-            target.draw_ui(ui_data);
-        });
+        tegne.draw_ui(ui);
 
         tegne.draw_on_window(|target| {
             floor.draw(target);
@@ -102,7 +94,6 @@ fn main() {
                 cube.draw(target);
             }
             target.reset();
-            target.blit_framebuffer(&ui_frame);
         });
     });
 }

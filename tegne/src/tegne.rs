@@ -53,6 +53,9 @@ use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
 use crate::surface::WindowHandle;
 
+#[cfg(feature = "ui")]
+use crate::renderer::UiRenderer;
+
 #[cfg(feature = "window")]
 use crate::surface::Window;
 
@@ -71,6 +74,10 @@ pub struct Tegne {
     render_stage: RenderStage,
     thread_kill: ThreadKill,
     forward_renderer: ForwardRenderer,
+    #[cfg(feature = "ui")]
+    ui_renderer: UiRenderer,
+    #[cfg(feature = "ui")]
+    is_ui_rendered: bool,
     resources: Arc<ResourceManager>,
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
     image_uniform: ImageUniform,
@@ -160,7 +167,15 @@ impl Tegne {
             &image_uniform,
         ));
 
-        let forward_renderer = check!(ForwardRenderer::new(&device, &shader_layout,));
+        let forward_renderer = check!(ForwardRenderer::new(&device, &shader_layout));
+        #[cfg(feature = "ui")]
+        let ui_renderer = check!(UiRenderer::new(
+            &device,
+            &shader_layout,
+            &resources,
+            window.width,
+            window.height
+        ));
 
         let main_camera = Camera::new(options.camera, window.width, window.height);
 
@@ -179,6 +194,11 @@ impl Tegne {
             instance,
             main_camera,
             camera_type: options.camera,
+
+            #[cfg(feature = "ui")]
+            ui_renderer,
+            #[cfg(feature = "ui")]
+            is_ui_rendered: false,
         }
     }
 
@@ -209,24 +229,12 @@ impl Tegne {
             height,
         };
 
-        let s = Self::new(handle, options);
+        let mut s = Self::new(handle, options);
 
         #[cfg(feature = "ui")]
         {
             let ui_texture = window.build_ui_texture();
-            s.resources.add_texture(
-                check!(Texture::new(
-                    &s.device,
-                    &s.image_uniform,
-                    TextureOptions {
-                        data: &ui_texture.0,
-                        width: ui_texture.1,
-                        height: ui_texture.2,
-                        format: TextureFormat::Rgba,
-                    }
-                )),
-                Some("ui_tex"),
-            );
+            check!(s.ui_renderer.set_font_texture(&s.image_uniform, ui_texture));
         }
 
         s
@@ -256,6 +264,10 @@ impl Tegne {
                 height: 1,
             }
         ));
+
+        #[cfg(feature = "ui")]
+        self.ui_renderer
+            .resize(&self.shader_layout, &self.resources, width, height);
     }
 
     pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) {
@@ -266,6 +278,11 @@ impl Tegne {
         {
             let mut target = check!(Target::new(&self.resources));
             draw_callback(&mut target);
+
+            #[cfg(feature = "ui")]
+            if self.is_ui_rendered {
+                target.blit_framebuffer(self.ui_renderer.framebuffer());
+            }
 
             let framebuffer =
                 &mut self.window_framebuffers.lock().unwrap()[self.swapchain.current()];
@@ -304,6 +321,18 @@ impl Tegne {
                 }
             ));
         });
+    }
+
+    #[cfg(feature = "ui")]
+    pub fn draw_ui(&mut self, ui: imgui::Ui<'_>) {
+        if let RenderStage::Before = self.render_stage {
+            self.begin_draw();
+        }
+
+        check!(self
+            .ui_renderer
+            .draw(ui, &self.shader_layout, &self.resources));
+        self.is_ui_rendered = true;
     }
 
     pub fn create_texture(&self, pixels: &[Color], width: u32) -> Id<Texture> {
@@ -514,6 +543,11 @@ impl Tegne {
             self.image_uniform.descriptor(),
             &self.shader_layout,
         );
+
+        #[cfg(feature = "ui")]
+        {
+            self.is_ui_rendered = false;
+        }
     }
 
     fn end_draw(&mut self) {

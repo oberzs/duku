@@ -9,7 +9,6 @@ use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Transform;
-use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::pipeline::Light;
@@ -164,61 +163,6 @@ impl<'a> Target<'a> {
 
                 current_transform.position.x += font.char_advance(c) * x_scale;
             }
-        });
-
-        self.current_shader = temp_shader;
-    }
-
-    #[cfg(feature = "ui")]
-    pub fn draw_ui(&mut self, draw_data: &imgui::DrawData) {
-        let half_width = draw_data.display_size[0] / 2.0;
-        let half_height = draw_data.display_size[1] / 2.0;
-
-        // generate mesh data
-        let mut triangles = vec![];
-        let mut vertices = vec![];
-        let mut normals = vec![];
-        let mut colors = vec![];
-        let mut uvs = vec![];
-        let mut to = 0;
-        for draw_list in draw_data.draw_lists() {
-            for tri in draw_list.idx_buffer().chunks(3) {
-                triangles.push([tri[0] as u32 + to, tri[1] as u32 + to, tri[2] as u32 + to]);
-            }
-            for vert in draw_list.vtx_buffer() {
-                let vertex =
-                    Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
-                let uv = Vector2::new(vert.uv[0], vert.uv[1]);
-                let color = Color::from(vert.col);
-                vertices.push(vertex);
-                uvs.push(uv);
-                colors.push(color);
-                normals.push(Vector3::backward());
-            }
-            to = vertices.len() as u32;
-        }
-
-        // update mesh
-        let mesh = self.resources.builtin("ui_mesh");
-        self.resources.with_mesh(mesh, |m| {
-            m.set_vertices(&vertices);
-            m.set_normals(&normals);
-            m.set_colors(&colors);
-            m.set_uvs(&uvs);
-            m.set_triangles(&triangles);
-        });
-
-        // draw mesh
-        let temp_shader = self.current_shader;
-        self.current_shader = self.resources.builtin("ui_sh");
-
-        self.add_order(Order {
-            mesh,
-            albedo: self.resources.builtin("ui_tex"),
-            framebuffer: self.current_framebuffer,
-            model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
-            has_shadows: false,
-            sampler_index: self.sampler_combination(),
         });
 
         self.current_shader = temp_shader;
