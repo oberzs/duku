@@ -37,12 +37,8 @@ fn main() {
         }
 
         ui.show_demo_window(&mut show_demo);
-        // let ui_data = ui.render();
 
         tegne.draw_ui(ui);
-
-        tegne.draw_on_window(|_| {
-            // target.draw_ui(ui);
-        });
+        tegne.draw_on_window(|_| {});
     });
 }

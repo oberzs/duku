@@ -1,3 +1,5 @@
+#define VERTEX_POSITION_MODELSPACE
+
 void fragment() {
     float percent = in_uv.x;
     vec3 color = mix(material.arg_1.rgb, material.arg_2.rgb, percent);

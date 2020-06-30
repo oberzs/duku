@@ -3,13 +3,10 @@
 
 // example that draws a framebuffer with a custom ray-marching shader
 
-mod ui;
-
+use tegne::ui;
 use tegne::Tegne;
 use tegne::Window;
 use tegne::WindowOptions;
-
-use ui::Ui;
 
 fn main() {
     let (width, height) = (900, 900);
@@ -29,15 +26,13 @@ fn main() {
         )
         .unwrap();
 
-    let ui = Ui::new(&tegne, width, height);
+    window.main_loop(|events, ui| {
+        ui::stats_window(&ui, &tegne, events);
 
-    window.main_loop(|events, _| {
-        ui.draw_ui(&mut tegne, &events);
-
+        tegne.draw_ui(ui);
         tegne.draw_on_window(|target| {
             target.set_shader(&shader);
             target.draw_surface();
-            target.blit_framebuffer(ui.framebuffer());
         });
     });
 }
