@@ -44,6 +44,7 @@ use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
+use crate::renderer::RenderStats;
 use crate::renderer::Target;
 use crate::resource::create_builtins;
 use crate::resource::Id;
@@ -88,6 +89,7 @@ pub struct Tegne {
     gpu_index: usize,
     instance: Arc<Instance>,
     camera_type: CameraType,
+    render_stats: RenderStats,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -194,6 +196,7 @@ impl Tegne {
             instance,
             main_camera,
             camera_type: options.camera,
+            render_stats: Default::default(),
 
             #[cfg(feature = "ui")]
             ui_renderer,
@@ -288,7 +291,7 @@ impl Tegne {
                 &mut self.window_framebuffers.lock().unwrap()[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
-            check!(self.forward_renderer.draw(
+            self.render_stats += check!(self.forward_renderer.draw(
                 &self.device,
                 ForwardDrawOptions {
                     framebuffer,
@@ -310,7 +313,7 @@ impl Tegne {
         let mut target = check!(Target::new(&self.resources));
         draw_callback(&mut target);
 
-        self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
+        if let Some(render_stats) = self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
             check!(self.forward_renderer.draw(
                 &self.device,
                 ForwardDrawOptions {
@@ -319,8 +322,10 @@ impl Tegne {
                     resources: &self.resources,
                     target,
                 }
-            ));
-        });
+            ))
+        }) {
+            self.render_stats += render_stats;
+        }
     }
 
     #[cfg(feature = "ui")]
@@ -533,12 +538,13 @@ impl Tegne {
         Ok(id)
     }
 
-    pub fn time(&self) -> f32 {
-        self.forward_renderer.time()
+    pub fn render_stats(&self) -> RenderStats {
+        self.render_stats
     }
 
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
+        self.render_stats = Default::default();
         check!(self.device.next_frame(&self.swapchain));
         self.resources.clean_unused(&self.image_uniform);
         self.image_uniform.update_if_needed();

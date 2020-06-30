@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use super::Order;
+use super::RenderStats;
 use super::Target;
 use crate::camera::Camera;
 use crate::camera::CameraType;
@@ -97,7 +98,11 @@ impl ForwardRenderer {
         })
     }
 
-    pub(crate) fn draw(&self, device: &Device, options: ForwardDrawOptions<'_>) -> Result<()> {
+    pub(crate) fn draw(
+        &self,
+        device: &Device,
+        options: ForwardDrawOptions<'_>,
+    ) -> Result<RenderStats> {
         let framebuffer = options.framebuffer;
         let clear = options.target.clear();
         let cmd = device.command_buffer();
@@ -171,7 +176,7 @@ impl ForwardRenderer {
                         self.bind_material(device, m_order.material(), &options)?;
                         for order in m_order.orders() {
                             if order.has_shadows {
-                                self.draw_order(device, order, &options)?;
+                                self.draw_order(device, order, &options, &mut 0)?;
                             }
                         }
                     }
@@ -218,34 +223,44 @@ impl ForwardRenderer {
         self.setup_pass(device, framebuffer);
         self.bind_world(device, framebuffer, &options);
 
+        let mut drawn_indices = 0;
+        let mut shaders_used = 0;
+        let mut materials_used = 0;
+        let mut draw_calls = 0;
+
         for s_order in options.target.orders_by_shader() {
             self.bind_shader(device, s_order.shader(), &options);
+            shaders_used += 1;
             for m_order in s_order.orders_by_material() {
                 self.bind_material(device, m_order.material(), &options)?;
+                materials_used += 1;
                 for order in m_order.orders() {
-                    self.draw_order(device, order, &options)?;
+                    self.draw_order(device, order, &options, &mut drawn_indices)?;
+                    draw_calls += 1;
                 }
             }
         }
 
         // wireframe render
-        self.bind_shader(device, options.resources.builtin("wireframe_sh"), &options);
-        for order in options.target.wireframe_orders() {
-            self.draw_order(device, order, &options)?;
+        if options.target.wireframe_orders().count() != 0 {
+            self.bind_shader(device, options.resources.builtin("wireframe_sh"), &options);
+            shaders_used += 1;
+            for order in options.target.wireframe_orders() {
+                self.draw_order(device, order, &options, &mut drawn_indices)?;
+                draw_calls += 1;
+            }
         }
 
         device.cmd_end_render_pass(cmd);
 
-        // reset shadow framebuffers so they can be cleared
-        // for frame in &self.shadow_framebuffers[device.current_frame()] {
-        //     frame.reset_stored_image(cmd);
-        // }
-
-        Ok(())
-    }
-
-    pub(crate) fn time(&self) -> f32 {
-        self.start_time.elapsed().as_secs_f32()
+        Ok(RenderStats {
+            time: self.start_time.elapsed().as_secs_f32(),
+            drawn_triangles: drawn_indices / 3,
+            drawn_indices,
+            shaders_used,
+            materials_used,
+            draw_calls,
+        })
     }
 
     fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {
@@ -293,6 +308,7 @@ impl ForwardRenderer {
         device: &Device,
         order: Order,
         options: &ForwardDrawOptions<'_>,
+        drawn_indices: &mut u32,
     ) -> Result<()> {
         let cmd = device.command_buffer();
         let resources = options.resources;
@@ -320,6 +336,8 @@ impl ForwardRenderer {
                 device.cmd_bind_vertex_buffer(cmd, vb?);
                 device.cmd_bind_index_buffer(cmd, ib?);
                 device.cmd_draw(cmd, n);
+
+                *drawn_indices += n;
             }
         }
         Ok(())
