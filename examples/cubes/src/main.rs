@@ -7,9 +7,7 @@ mod cube;
 mod floor;
 
 use rand::Rng;
-use std::time::Instant;
 use tegne::ui;
-use tegne::ui::im_str;
 use tegne::Controller;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -39,8 +37,6 @@ fn main() {
         },
     );
 
-    let start_time = Instant::now();
-
     let floor = Floor::new(&tegne);
 
     let mut rng = rand::thread_rng();
@@ -55,8 +51,6 @@ fn main() {
     let cube_tex = tegne
         .create_texture_from_file("examples/cubes/assets/images/orange.png")
         .unwrap();
-
-    let load_time = start_time.elapsed().as_secs_f32();
 
     {
         let cam_t = &mut tegne.main_camera.transform;
@@ -75,16 +69,7 @@ fn main() {
             height = new_height;
         }
 
-        ui::Window::new(im_str!("Stats"))
-            .position([0.0, 0.0], ui::Condition::FirstUseEver)
-            .size([180.0, 80.0], ui::Condition::FirstUseEver)
-            .always_auto_resize(true)
-            .resizable(false)
-            .build(&ui, || {
-                ui.text(format!("Load time: {}s", load_time));
-                ui.text(format!("Fps: {}", events.fps()));
-            });
-
+        ui::stats_window(&ui, &tegne, events);
         tegne.draw_ui(ui);
 
         tegne.draw_on_window(|target| {

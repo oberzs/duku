@@ -60,7 +60,7 @@ pub use resource::Id;
 #[cfg(feature = "controller")]
 pub use camera::Controller;
 #[cfg(feature = "ui")]
-pub use imgui as ui;
+pub use surface::ui;
 #[cfg(feature = "window")]
 pub use surface::Events;
 #[cfg(feature = "window")]

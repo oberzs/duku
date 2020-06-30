@@ -244,6 +244,10 @@ impl ForwardRenderer {
         Ok(())
     }
 
+    pub(crate) fn time(&self) -> f32 {
+        self.start_time.elapsed().as_secs_f32()
+    }
+
     fn setup_pass(&self, device: &Device, framebuffer: &Framebuffer) {
         let cmd = device.command_buffer();
         device.cmd_set_view(cmd, framebuffer.width(), framebuffer.height());

@@ -533,6 +533,10 @@ impl Tegne {
         Ok(id)
     }
 
+    pub fn time(&self) -> f32 {
+        self.forward_renderer.time()
+    }
+
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         check!(self.device.next_frame(&self.swapchain));

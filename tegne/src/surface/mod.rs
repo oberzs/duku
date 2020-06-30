@@ -11,6 +11,9 @@ mod swapchain;
 #[cfg(feature = "window")]
 mod window;
 
+#[cfg(feature = "ui")]
+pub mod ui;
+
 use ash::vk;
 use std::sync::Arc;
 

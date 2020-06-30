@@ -4,7 +4,7 @@
 // gradient example with custom shader arguments
 
 use tegne::ui;
-use tegne::ui::im_str;
+use tegne::ui::ui_str;
 use tegne::CameraType;
 use tegne::Color;
 use tegne::Tegne;
@@ -48,17 +48,17 @@ fn main() {
         });
 
         // build ui
-        ui::Window::new(im_str!("Left control"))
+        ui::Window::new(ui_str!("Left control"))
             .size([300.0, 300.0], ui::Condition::FirstUseEver)
             .position([5.0, 5.0], ui::Condition::FirstUseEver)
             .build(&ui, || {
-                ui::ColorPicker::new(im_str!("color"), &mut color_1).build(&ui);
+                ui::ColorPicker::new(ui_str!("color"), &mut color_1).build(&ui);
             });
-        ui::Window::new(im_str!("Right control"))
+        ui::Window::new(ui_str!("Right control"))
             .size([300.0, 300.0], ui::Condition::FirstUseEver)
             .position([310.0, 5.0], ui::Condition::FirstUseEver)
             .build(&ui, || {
-                ui::ColorPicker::new(im_str!("color"), &mut color_2).build(&ui);
+                ui::ColorPicker::new(ui_str!("color"), &mut color_2).build(&ui);
             });
 
         // render
