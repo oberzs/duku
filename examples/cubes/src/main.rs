@@ -9,6 +9,7 @@ mod floor;
 use rand::Rng;
 use tegne::ui;
 use tegne::Controller;
+use tegne::Key;
 use tegne::Tegne;
 use tegne::TegneOptions;
 use tegne::Vector3;
@@ -60,25 +61,38 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    window.main_loop(|events, ui| {
-        controller.update(&mut tegne.main_camera, events);
+    let mut paused = false;
 
-        if let Some((new_width, new_height)) = events.resized() {
-            tegne.resize(new_width, new_height);
-            width = new_width;
-            height = new_height;
+    window.main_loop(|events, ui| {
+        if events.is_key_typed(Key::P) {
+            paused = !paused;
+            events.set_title(if paused {
+                "Tegne example: Cubes (paused)"
+            } else {
+                "Tegne example: Cubes"
+            });
         }
 
-        ui::stats_window(&ui, &tegne, events);
-        tegne.draw_ui(ui);
+        if !paused {
+            controller.update(&mut tegne.main_camera, events);
 
-        tegne.draw_on_window(|target| {
-            floor.draw(target);
-            target.set_albedo_texture(&cube_tex);
-            for cube in &cubes {
-                cube.draw(target);
+            if let Some((new_width, new_height)) = events.resized() {
+                tegne.resize(new_width, new_height);
+                width = new_width;
+                height = new_height;
             }
-            target.reset();
-        });
+
+            ui::stats_window(&ui, &tegne, events);
+            tegne.draw_ui(ui);
+
+            tegne.draw_on_window(|target| {
+                floor.draw(target);
+                target.set_albedo_texture(&cube_tex);
+                for cube in &cubes {
+                    cube.draw(target);
+                }
+                target.reset();
+            });
+        }
     });
 }
