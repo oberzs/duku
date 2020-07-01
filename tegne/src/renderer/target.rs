@@ -33,6 +33,7 @@ pub struct Target<'a> {
     sampler_nearest: bool,
     sampler_clamp: bool,
     sampler_no_mipmaps: bool,
+    bias: f32,
     resources: &'a ResourceManager,
 }
 
@@ -73,6 +74,7 @@ impl<'a> Target<'a> {
             sampler_nearest: false,
             sampler_clamp: false,
             sampler_no_mipmaps: false,
+            bias: 0.004,
             resources,
         })
     }
@@ -215,6 +217,10 @@ impl<'a> Target<'a> {
         self.sampler_no_mipmaps = true;
     }
 
+    pub fn set_bias(&mut self, amount: f32) {
+        self.bias = amount;
+    }
+
     pub fn reset(&mut self) {
         self.current_material = self.resources.builtin("white_mat");
         self.current_albedo = self.resources.builtin("white_tex");
@@ -246,6 +252,10 @@ impl<'a> Target<'a> {
 
     pub(crate) fn has_shadows(&self) -> bool {
         self.has_shadows
+    }
+
+    pub(crate) fn bias(&self) -> f32 {
+        self.bias
     }
 
     fn add_order(&mut self, order: Order) {

@@ -25,6 +25,7 @@ use crate::pipeline::Light;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
 use crate::resource::IdRef;
@@ -86,7 +87,10 @@ impl ForwardRenderer {
             &shadow_framebuffers[0][0],
             shader_layout,
             include_bytes!("../../assets/shaders/shadow.shader"),
-            Default::default(),
+            ShaderOptions {
+                front_cull: false,
+                ..Default::default()
+            },
         )?;
 
         Ok(Self {
@@ -165,6 +169,7 @@ impl ForwardRenderer {
                     time: self.start_time.elapsed().as_secs_f32(),
                     cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
+                    bias: 0.0,
                 })?;
 
                 device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
@@ -215,6 +220,7 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
+            bias: options.target.bias(),
             cascade_splits,
             light_matrices,
         })?;
