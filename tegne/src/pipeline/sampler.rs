@@ -31,6 +31,10 @@ impl Sampler {
             SamplerMipmaps::Enabled => 16.0,
             SamplerMipmaps::Disabled => 0.0,
         };
+        let anisotropy = match options.mipmaps {
+            SamplerMipmaps::Enabled => options.anisotropy,
+            SamplerMipmaps::Disabled => 0.0,
+        };
 
         let info = vk::SamplerCreateInfo::builder()
             .mag_filter(options.filter.flag())
@@ -38,8 +42,8 @@ impl Sampler {
             .address_mode_u(options.address.flag())
             .address_mode_v(options.address.flag())
             .address_mode_w(options.address.flag())
-            .anisotropy_enable(options.anisotropy != 0.0)
-            .max_anisotropy(options.anisotropy)
+            .anisotropy_enable(anisotropy != 0.0)
+            .max_anisotropy(anisotropy)
             .border_color(vk::BorderColor::FLOAT_OPAQUE_WHITE)
             .unnormalized_coordinates(false)
             .compare_enable(true)

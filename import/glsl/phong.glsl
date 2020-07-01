@@ -65,11 +65,11 @@ float calc_shadow(Light light) {
     float depth = (shadow_coord.z - bias) / shadow_coord.w;
 
     float shadow = 0.0;
-    vec2 texel_size = 1.0 / textureSize(sampler2DShadow(shadow_maps[shadow_index], sampler_c), 0);
+    vec2 texel_size = 1.0 / textureSize(sampler2DShadow(shadow_maps[shadow_index], sampler_cm), 0);
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             vec2 off = vec2(x, y) * texel_size;
-            shadow += texture(sampler2DShadow(shadow_maps[shadow_index], sampler_c), vec3(uv + off, depth));
+            shadow += texture(sampler2DShadow(shadow_maps[shadow_index], sampler_cm), vec3(uv + off, depth));
         }
     }
     shadow /= 9.0;
