@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
+use super::Id;
 use super::ResourceManager;
 use crate::device::Device;
 use crate::error::Result;
@@ -23,57 +24,61 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 
-pub(crate) fn create_builtins(
-    device: &Arc<Device>,
-    resources: &ResourceManager,
-    framebuffer: &Framebuffer,
-    layout: &ShaderLayout,
-    uniform: &ImageUniform,
-) -> Result<()> {
-    profile_scope!("create_builtins");
+#[derive(Clone)]
+pub(crate) struct Builtins {
+    pub(crate) white_texture: Id<Texture>,
+    pub(crate) white_material: Id<Material>,
+    pub(crate) surface_mesh: Id<Mesh>,
+    pub(crate) cube_mesh: Id<Mesh>,
+    pub(crate) sphere_mesh: Id<Mesh>,
+    pub(crate) phong_shader: Id<Shader>,
+    pub(crate) font_shader: Id<Shader>,
+    pub(crate) blit_shader: Id<Shader>,
+    pub(crate) wireframe_shader: Id<Shader>,
+    pub(crate) roboto_font: Id<Font>,
+}
 
-    // textures
-    resources.add_texture(
-        Texture::new(device, uniform, Default::default())?,
-        Some("white_tex"),
-    );
+impl Builtins {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        resources: &ResourceManager,
+        framebuffer: &Framebuffer,
+        layout: &ShaderLayout,
+        uniform: &ImageUniform,
+    ) -> Result<Self> {
+        profile_scope!("new");
 
-    // materials
-    resources.add_material(
-        Material::new(device, layout, Default::default())?,
-        Some("white_mat"),
-    );
+        // textures
+        let white_texture =
+            resources.add_texture(Texture::new(device, uniform, Default::default())?);
 
-    // meshes
-    resources.add_mesh(create_surface(device)?, Some("surface_mesh"));
-    resources.add_mesh(create_cube(device)?, Some("cube_mesh"));
-    resources.add_mesh(create_sphere(device, 2)?, Some("sphere_mesh"));
+        // materials
+        let white_material =
+            resources.add_material(Material::new(device, layout, Default::default())?);
 
-    // shaders
-    resources.add_shader(
-        Shader::new(
+        // meshes
+        let surface_mesh = resources.add_mesh(create_surface(device)?);
+        let cube_mesh = resources.add_mesh(create_cube(device)?);
+        let sphere_mesh = resources.add_mesh(create_sphere(device, 2)?);
+
+        // shaders
+        let phong_shader = resources.add_shader(Shader::new(
             device,
             framebuffer,
             layout,
             include_bytes!("../../assets/shaders/phong.shader"),
             Default::default(),
-        )?,
-        Some("phong_sh"),
-    );
+        )?);
 
-    resources.add_shader(
-        Shader::new(
+        let font_shader = resources.add_shader(Shader::new(
             device,
             framebuffer,
             layout,
             include_bytes!("../../assets/shaders/font.shader"),
             Default::default(),
-        )?,
-        Some("font_sh"),
-    );
+        )?);
 
-    resources.add_shader(
-        Shader::new(
+        let blit_shader = resources.add_shader(Shader::new(
             device,
             framebuffer,
             layout,
@@ -82,12 +87,9 @@ pub(crate) fn create_builtins(
                 depth_test: false,
                 ..Default::default()
             },
-        )?,
-        Some("blit_sh"),
-    );
+        )?);
 
-    resources.add_shader(
-        Shader::new(
+        let wireframe_shader = resources.add_shader(Shader::new(
             device,
             framebuffer,
             layout,
@@ -97,22 +99,29 @@ pub(crate) fn create_builtins(
                 depth_test: false,
                 ..Default::default()
             },
-        )?,
-        Some("wireframe_sh"),
-    );
+        )?);
 
-    // fonts
-    resources.add_font(
-        Font::new(
+        // fonts
+        let roboto_font = resources.add_font(Font::new(
             device,
             uniform,
             resources,
             include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
-        )?,
-        Some("roboto_font"),
-    );
+        )?);
 
-    Ok(())
+        Ok(Self {
+            white_texture,
+            white_material,
+            surface_mesh,
+            cube_mesh,
+            sphere_mesh,
+            phong_shader,
+            font_shader,
+            blit_shader,
+            wireframe_shader,
+            roboto_font,
+        })
+    }
 }
 
 fn create_surface(device: &Arc<Device>) -> Result<Mesh> {

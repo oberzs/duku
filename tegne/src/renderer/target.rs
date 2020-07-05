@@ -14,13 +14,13 @@ use crate::mesh::Mesh;
 use crate::pipeline::Light;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::resource::Builtins;
 use crate::resource::Id;
 use crate::resource::IdRef;
 use crate::resource::ResourceManager;
 
 pub struct Target<'a> {
     orders_by_shader: Vec<OrdersByShader>,
-    wireframe_orders: Vec<Order>,
     clear: Color,
     lights: Vec<Light>,
     current_shader: IdRef,
@@ -35,6 +35,7 @@ pub struct Target<'a> {
     sampler_no_mipmaps: bool,
     bias: f32,
     resources: &'a ResourceManager,
+    builtins: Builtins,
 }
 
 pub(crate) struct OrdersByShader {
@@ -58,23 +59,23 @@ pub(crate) struct Order {
 }
 
 impl<'a> Target<'a> {
-    pub(crate) fn new(resources: &'a ResourceManager) -> Result<Self> {
+    pub(crate) fn new(resources: &'a ResourceManager, builtins: &Builtins) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
-            wireframe_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             lights: vec![],
-            current_shader: resources.builtin("phong_sh"),
-            current_material: resources.builtin("white_mat"),
-            current_albedo: resources.builtin("white_tex"),
+            current_shader: builtins.phong_shader.id_ref(),
+            current_material: builtins.white_material.id_ref(),
+            current_albedo: builtins.white_texture.id_ref(),
             current_framebuffer: None,
-            current_font: resources.builtin("roboto_font"),
+            current_font: builtins.roboto_font.id_ref(),
             has_shadows: false,
             wireframes: false,
             sampler_nearest: false,
             sampler_clamp: false,
             sampler_no_mipmaps: false,
             bias: 0.004,
+            builtins: builtins.clone(),
             resources,
         })
     }
@@ -92,7 +93,7 @@ impl<'a> Target<'a> {
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
         self.add_order(Order {
-            mesh: self.resources.builtin("cube_mesh"),
+            mesh: self.builtins.cube_mesh.id_ref(),
             albedo: self.current_albedo,
             framebuffer: self.current_framebuffer,
             model: transform.into().as_matrix(),
@@ -103,7 +104,7 @@ impl<'a> Target<'a> {
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
         self.add_order(Order {
-            mesh: self.resources.builtin("sphere_mesh"),
+            mesh: self.builtins.sphere_mesh.id_ref(),
             albedo: self.current_albedo,
             framebuffer: self.current_framebuffer,
             model: transform.into().as_matrix(),
@@ -114,7 +115,7 @@ impl<'a> Target<'a> {
 
     pub fn draw_surface(&mut self) {
         self.add_order(Order {
-            mesh: self.resources.builtin("surface_mesh"),
+            mesh: self.builtins.surface_mesh.id_ref(),
             albedo: self.current_albedo,
             framebuffer: self.current_framebuffer,
             model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
@@ -125,7 +126,7 @@ impl<'a> Target<'a> {
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
         let temp_shader = self.current_shader;
-        self.current_shader = self.resources.builtin("blit_sh");
+        self.current_shader = self.builtins.blit_shader.id_ref();
         self.current_framebuffer = Some(framebuffer.id_ref());
 
         self.draw_surface();
@@ -136,7 +137,7 @@ impl<'a> Target<'a> {
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let temp_shader = self.current_shader;
-        self.current_shader = self.resources.builtin("font_sh");
+        self.current_shader = self.builtins.font_shader.id_ref();
         let text_str = text.as_ref();
 
         self.resources.with_font(self.current_font, |font| {
@@ -205,6 +206,10 @@ impl<'a> Target<'a> {
         self.wireframes = true;
     }
 
+    pub fn set_wireframes(&mut self, enable: bool) {
+        self.wireframes = enable;
+    }
+
     pub fn enable_sampler_nearest(&mut self) {
         self.sampler_nearest = true;
     }
@@ -222,9 +227,9 @@ impl<'a> Target<'a> {
     }
 
     pub fn reset(&mut self) {
-        self.current_material = self.resources.builtin("white_mat");
-        self.current_albedo = self.resources.builtin("white_tex");
-        self.current_shader = self.resources.builtin("phong_sh");
+        self.current_material = self.builtins.white_material.id_ref();
+        self.current_albedo = self.builtins.white_texture.id_ref();
+        self.current_shader = self.builtins.phong_shader.id_ref();
         self.current_framebuffer = None;
         self.wireframes = false;
         self.sampler_nearest = false;
@@ -238,10 +243,6 @@ impl<'a> Target<'a> {
 
     pub(crate) fn orders_by_shader(&self) -> impl Iterator<Item = &OrdersByShader> {
         self.orders_by_shader.iter()
-    }
-
-    pub(crate) fn wireframe_orders(&self) -> impl Iterator<Item = Order> + '_ {
-        self.wireframe_orders.iter().cloned()
     }
 
     pub(crate) fn lights(&self) -> [Light; 3] {
@@ -292,7 +293,21 @@ impl<'a> Target<'a> {
         }
 
         if self.wireframes {
-            self.wireframe_orders.push(order);
+            let wireframe_shader = self.builtins.wireframe_shader.id_ref();
+            match self
+                .orders_by_shader
+                .iter_mut()
+                .find(|so| so.shader == wireframe_shader)
+            {
+                Some(so) => so.orders_by_material[0].orders.push(order),
+                None => self.orders_by_shader.push(OrdersByShader {
+                    shader: wireframe_shader,
+                    orders_by_material: vec![OrdersByMaterial {
+                        material: self.builtins.white_material.id_ref(),
+                        orders: vec![order],
+                    }],
+                }),
+            }
         }
     }
 

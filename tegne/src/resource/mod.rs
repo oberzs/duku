@@ -4,6 +4,7 @@
 // ResourceManager - resource manager
 
 mod builtin;
+mod reference;
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -22,8 +23,7 @@ use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-
-pub(crate) use builtin::create_builtins;
+pub(crate) use builtin::Builtins;
 
 pub(crate) struct ResourceManager {
     // storage
@@ -33,12 +33,6 @@ pub(crate) struct ResourceManager {
     shaders: Storage<Shader>,
     fonts: Storage<Font>,
     framebuffers: Storage<Framebuffer>,
-    // builtins
-    builtin_textures: Builtins<Texture>,
-    builtin_materials: Builtins<Material>,
-    builtin_meshes: Builtins<Mesh>,
-    builtin_shaders: Builtins<Shader>,
-    builtin_fonts: Builtins<Font>,
     // id counter
     max_id: AtomicU32,
 }
@@ -49,7 +43,6 @@ pub struct Id<T>(Arc<u32>, PhantomData<*const T>);
 pub(crate) type IdRef = u32;
 
 type Storage<T> = Mutex<HashMap<Id<T>, T>>;
-type Builtins<T> = Mutex<HashMap<String, Id<T>>>;
 
 impl ResourceManager {
     pub(crate) fn new() -> Self {
@@ -62,94 +55,38 @@ impl ResourceManager {
             shaders: Mutex::new(HashMap::new()),
             fonts: Mutex::new(HashMap::new()),
             framebuffers: Mutex::new(HashMap::new()),
-            builtin_textures: Mutex::new(HashMap::new()),
-            builtin_materials: Mutex::new(HashMap::new()),
-            builtin_meshes: Mutex::new(HashMap::new()),
-            builtin_shaders: Mutex::new(HashMap::new()),
-            builtin_fonts: Mutex::new(HashMap::new()),
             max_id: AtomicU32::new(0),
         }
     }
 
-    pub(crate) fn add_texture(&self, texture: Texture, builtin: Option<&str>) -> Id<Texture> {
+    pub(crate) fn add_texture(&self, texture: Texture) -> Id<Texture> {
         let id = Id(self.get_id(), PhantomData);
         self.textures.lock().unwrap().insert(id.clone(), texture);
-        if let Some(name) = builtin {
-            self.builtin_textures
-                .lock()
-                .unwrap()
-                .insert(name.to_string(), id.clone());
-        }
         id
     }
 
-    pub(crate) fn add_material(&self, material: Material, builtin: Option<&str>) -> Id<Material> {
+    pub(crate) fn add_material(&self, material: Material) -> Id<Material> {
         let id = Id(self.get_id(), PhantomData);
         self.materials.lock().unwrap().insert(id.clone(), material);
-        if let Some(name) = builtin {
-            self.builtin_materials
-                .lock()
-                .unwrap()
-                .insert(name.to_string(), id.clone());
-        }
         id
     }
 
-    pub(crate) fn add_mesh(&self, mesh: Mesh, builtin: Option<&str>) -> Id<Mesh> {
+    pub(crate) fn add_mesh(&self, mesh: Mesh) -> Id<Mesh> {
         let id = Id(self.get_id(), PhantomData);
         self.meshes.lock().unwrap().insert(id.clone(), mesh);
-        if let Some(name) = builtin {
-            self.builtin_meshes
-                .lock()
-                .unwrap()
-                .insert(name.to_string(), id.clone());
-        }
         id
     }
 
-    pub(crate) fn add_shader(&self, shader: Shader, builtin: Option<&str>) -> Id<Shader> {
+    pub(crate) fn add_shader(&self, shader: Shader) -> Id<Shader> {
         let id = Id(self.get_id(), PhantomData);
         self.shaders.lock().unwrap().insert(id.clone(), shader);
-        if let Some(name) = builtin {
-            self.builtin_shaders
-                .lock()
-                .unwrap()
-                .insert(name.to_string(), id.clone());
-        }
         id
     }
 
-    pub(crate) fn add_font(&self, font: Font, builtin: Option<&str>) -> Id<Font> {
+    pub(crate) fn add_font(&self, font: Font) -> Id<Font> {
         let id = Id(self.get_id(), PhantomData);
         self.fonts.lock().unwrap().insert(id.clone(), font);
-        if let Some(name) = builtin {
-            self.builtin_fonts
-                .lock()
-                .unwrap()
-                .insert(name.to_string(), id.clone());
-        }
         id
-    }
-
-    pub(crate) fn builtin(&self, name: impl AsRef<str>) -> IdRef {
-        let name = name.as_ref();
-        if let Some(id) = self.builtin_textures.lock().unwrap().get(name) {
-            return id.id_ref();
-        }
-        if let Some(id) = self.builtin_materials.lock().unwrap().get(name) {
-            return id.id_ref();
-        }
-        if let Some(id) = self.builtin_meshes.lock().unwrap().get(name) {
-            return id.id_ref();
-        }
-        if let Some(id) = self.builtin_shaders.lock().unwrap().get(name) {
-            return id.id_ref();
-        }
-        if let Some(id) = self.builtin_fonts.lock().unwrap().get(name) {
-            return id.id_ref();
-        }
-
-        panic!("bad code: builtin not found '{}'", name);
     }
 
     pub(crate) fn add_framebuffer(&self, framebuffer: Framebuffer) -> Id<Framebuffer> {
@@ -237,8 +174,6 @@ impl ResourceManager {
             .iter()
             .for_each(|tex| uniform.remove(tex.image_index()));
         remove_unused(&mut self.framebuffers.lock().unwrap());
-        // .iter()
-        // .for_each(|frame| uniform.remove(frame.image_index()));
     }
 
     fn get_id(&self) -> Arc<u32> {

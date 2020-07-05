@@ -66,19 +66,16 @@ impl Font {
         let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
         // create font atlas texture
-        let texture = resources.add_texture(
-            Texture::new(
-                device,
-                uniform,
-                TextureOptions {
-                    data: &image_source,
-                    width: atlas.atlas_size,
-                    height: atlas.atlas_size,
-                    ..Default::default()
-                },
-            )?,
-            None,
-        );
+        let texture = resources.add_texture(Texture::new(
+            device,
+            uniform,
+            TextureOptions {
+                data: &image_source,
+                width: atlas.atlas_size,
+                height: atlas.atlas_size,
+                ..Default::default()
+            },
+        )?);
 
         let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
@@ -112,18 +109,15 @@ impl Font {
 
             let triangles = &[[0, 2, 3], [0, 3, 1]];
 
-            let mesh = resources.add_mesh(
-                Mesh::new(
-                    device,
-                    MeshOptions {
-                        vertices,
-                        triangles,
-                        uvs,
-                        ..Default::default()
-                    },
-                )?,
-                None,
-            );
+            let mesh = resources.add_mesh(Mesh::new(
+                device,
+                MeshOptions {
+                    vertices,
+                    triangles,
+                    uvs,
+                    ..Default::default()
+                },
+            )?);
 
             let data = CharData {
                 mesh,

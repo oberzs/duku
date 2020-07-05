@@ -46,7 +46,7 @@ use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStats;
 use crate::renderer::Target;
-use crate::resource::create_builtins;
+use crate::resource::Builtins;
 use crate::resource::Id;
 use crate::resource::ResourceManager;
 use crate::surface::Surface;
@@ -79,6 +79,7 @@ pub struct Tegne {
     ui_renderer: UiRenderer,
     #[cfg(feature = "ui")]
     is_ui_rendered: bool,
+    builtins: Builtins,
     resources: Arc<ResourceManager>,
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
     image_uniform: ImageUniform,
@@ -161,12 +162,12 @@ impl Tegne {
         ));
 
         let resources = ResourceManager::new();
-        check!(create_builtins(
+        let builtins = check!(Builtins::new(
             &device,
             &resources,
             &window_framebuffers[0],
             &shader_layout,
-            &image_uniform,
+            &image_uniform
         ));
 
         let forward_renderer = check!(ForwardRenderer::new(&device, &shader_layout));
@@ -185,6 +186,7 @@ impl Tegne {
             render_stage: RenderStage::Before,
             thread_kill: ThreadKill::new(),
             forward_renderer,
+            builtins,
             resources: Arc::new(resources),
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             image_uniform,
@@ -279,7 +281,7 @@ impl Tegne {
         }
 
         {
-            let mut target = check!(Target::new(&self.resources));
+            let mut target = check!(Target::new(&self.resources, &self.builtins));
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
@@ -310,7 +312,7 @@ impl Tegne {
             self.begin_draw();
         }
 
-        let mut target = check!(Target::new(&self.resources));
+        let mut target = check!(Target::new(&self.resources, &self.builtins));
         draw_callback(&mut target);
 
         if let Some(render_stats) = self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
@@ -356,7 +358,7 @@ impl Tegne {
                 width,
             }
         ));
-        self.resources.add_texture(texture, None)
+        self.resources.add_texture(texture)
     }
 
     #[cfg(feature = "image")]
@@ -376,12 +378,12 @@ impl Tegne {
                 height,
             }
         ));
-        Ok(self.resources.add_texture(texture, None))
+        Ok(self.resources.add_texture(texture))
     }
 
     pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
         let mesh = check!(Mesh::new(&self.device, options));
-        self.resources.add_mesh(mesh, None)
+        self.resources.add_mesh(mesh)
     }
 
     pub fn combine_meshes(&self, meshes: &[Id<Mesh>]) -> Id<Mesh> {
@@ -416,12 +418,12 @@ impl Tegne {
                 triangles: &triangles,
             }
         ));
-        self.resources.add_mesh(mesh, None)
+        self.resources.add_mesh(mesh)
     }
 
     pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
         let material = check!(Material::new(&self.device, &self.shader_layout, options));
-        self.resources.add_material(material, None)
+        self.resources.add_material(material)
     }
 
     pub fn with_material<F, R>(&self, material: &Id<Material>, fun: F) -> Option<R>
@@ -468,7 +470,7 @@ impl Tegne {
             source,
             options,
         ));
-        self.resources.add_shader(shader, None)
+        self.resources.add_shader(shader)
     }
 
     pub fn create_shader_from_file(

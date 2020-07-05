@@ -247,16 +247,6 @@ impl ForwardRenderer {
             }
         }
 
-        // wireframe render
-        if options.target.wireframe_orders().count() != 0 {
-            self.bind_shader(device, options.resources.builtin("wireframe_sh"), &options);
-            shaders_used += 1;
-            for order in options.target.wireframe_orders() {
-                self.draw_order(device, order, &options, &mut drawn_indices)?;
-                draw_calls += 1;
-            }
-        }
-
         device.cmd_end_render_pass(cmd);
 
         Ok(RenderStats {
