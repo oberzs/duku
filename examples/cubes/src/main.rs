@@ -8,6 +8,7 @@ mod floor;
 
 use rand::Rng;
 use tegne::ui;
+use tegne::ui::ui_str;
 use tegne::Controller;
 use tegne::Key;
 use tegne::Tegne;
@@ -63,6 +64,8 @@ fn main() {
 
     let mut paused = false;
 
+    let mut bias = 0.004;
+
     window.main_loop(|events, ui| {
         if events.is_key_typed(Key::P) {
             paused = !paused;
@@ -83,9 +86,20 @@ fn main() {
             }
 
             ui::stats_window(&ui, &tegne, events);
-            tegne.draw_ui(ui);
 
+            ui::Window::new(ui_str!("Bias"))
+                .position([10.0, 10.0], ui::Condition::FirstUseEver)
+                .size([1.0, 1.0], ui::Condition::FirstUseEver)
+                .always_auto_resize(true)
+                .build(&ui, || {
+                    ui.drag_float(ui_str!("bias"), &mut bias)
+                        .speed(0.001)
+                        .build();
+                });
+
+            tegne.draw_ui(ui);
             tegne.draw_on_window(|target| {
+                target.set_bias(bias);
                 floor.draw(target);
                 target.set_albedo_texture(&cube_tex);
                 for cube in &cubes {

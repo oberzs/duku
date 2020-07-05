@@ -209,6 +209,11 @@ impl Window {
                             info!("resized window to {}x{}", new_width, new_height);
                             events.resized = true;
                             last_resize = None;
+
+                            #[cfg(feature = "ui")]
+                            {
+                                imgui.io_mut().display_size = [new_width as f32, new_height as f32];
+                            }
                         }
                     } else {
                         events.resized = false;

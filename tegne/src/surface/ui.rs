@@ -12,32 +12,34 @@ pub use imgui::Window;
 
 pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
     let render_stats = tegne.render_stats();
-    let width = 14;
+    let pad = 14;
 
-    let fps = format!("{1:0$} : {2}", width, "Fps", events.fps());
+    let fps = format!("{1:0$} : {2}", pad, "Fps", events.fps());
     let frame_time = format!(
         "{1:0$} : {2:.2}ms",
-        width,
+        pad,
         "Frame Time",
         events.delta_time() * 1000.0
     );
-    let total_time = format!("{1:0$} : {2:.2}s", width, "Total Time", render_stats.time);
+    let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", render_stats.time);
     let drawn_indices = format!(
         "{1:0$} : {2}({3})",
-        width, "Drawn Indices", render_stats.drawn_indices, render_stats.drawn_triangles
+        pad, "Drawn Indices", render_stats.drawn_indices, render_stats.drawn_triangles
     );
     let shader_rebinds = format!(
         "{1:0$} : {2}",
-        width, "Shaders Used", render_stats.shaders_used
+        pad, "Shaders Used", render_stats.shaders_used
     );
     let material_rebinds = format!(
         "{1:0$} : {2}",
-        width, "Materials Used", render_stats.materials_used
+        pad, "Materials Used", render_stats.materials_used
     );
-    let draw_calls = format!("{1:0$} : {2}", width, "Draw Calls", render_stats.draw_calls);
+    let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", render_stats.draw_calls);
+
+    let [display_width, _] = ui.io().display_size;
 
     Window::new(ui_str!("Stats"))
-        .position([10.0, 10.0], Condition::FirstUseEver)
+        .position([display_width - (180.0 + 10.0), 10.0], Condition::Always)
         .size([1.0, 1.0], Condition::FirstUseEver)
         .always_auto_resize(true)
         .resizable(false)
