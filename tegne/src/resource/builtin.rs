@@ -41,7 +41,7 @@ pub(crate) struct Builtins {
 impl Builtins {
     pub(crate) fn new(
         device: &Arc<Device>,
-        resources: &ResourceManager,
+        resources: &mut ResourceManager,
         framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         uniform: &ImageUniform,
@@ -102,12 +102,15 @@ impl Builtins {
         )?);
 
         // fonts
-        let roboto_font = resources.add_font(Font::new(
-            device,
-            uniform,
-            resources,
-            include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
-        )?);
+        let roboto_font = {
+            let font = Font::new(
+                device,
+                uniform,
+                resources,
+                include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
+            )?;
+            resources.add_font(font)
+        };
 
         Ok(Self {
             white_texture,

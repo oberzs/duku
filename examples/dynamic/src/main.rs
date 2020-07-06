@@ -40,7 +40,7 @@ fn main() {
         cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let square = Square::new(&tegne);
+    let square = Square::new(&mut tegne);
 
     window.main_loop(|events, _| {
         controller.update(&mut tegne.main_camera, events);

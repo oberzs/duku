@@ -17,7 +17,7 @@ pub struct Cube {
 }
 
 impl Cube {
-    pub fn new(tegne: &Tegne, pos: impl Into<Vector3>, size: f32) -> Self {
+    pub fn new(tegne: &mut Tegne, pos: impl Into<Vector3>, size: f32) -> Self {
         let mesh = cube(tegne, size);
         let transform = Transform::from(pos.into());
 
@@ -29,7 +29,7 @@ impl Cube {
     }
 }
 
-fn cube(tegne: &Tegne, size: f32) -> Mesh {
+fn cube(tegne: &mut Tegne, size: f32) -> Mesh {
     let top = rectangle(
         tegne,
         [0.0, size, 0.0],
@@ -81,7 +81,7 @@ fn cube(tegne: &Tegne, size: f32) -> Mesh {
     tegne.combine_meshes(&[top, bottom, front, back, left, right])
 }
 
-fn rectangle<V: Into<Vector3>>(tegne: &Tegne, p1: V, p2: V, p3: V, p4: V) -> Mesh {
+fn rectangle<V: Into<Vector3>>(tegne: &mut Tegne, p1: V, p2: V, p3: V, p4: V) -> Mesh {
     let vertices = &[p1.into(), p2.into(), p3.into(), p4.into()];
     let uvs = &[
         Vector2::new(0.0, 0.0),

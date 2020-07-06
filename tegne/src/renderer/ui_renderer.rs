@@ -39,7 +39,7 @@ impl UiRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        resources: &ResourceManager,
+        resources: &mut ResourceManager,
         width: u32,
         height: u32,
     ) -> Result<Self> {

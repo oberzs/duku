@@ -19,7 +19,7 @@ pub struct Floor {
 }
 
 impl Floor {
-    pub fn new(tegne: &Tegne) -> Self {
+    pub fn new(tegne: &mut Tegne) -> Self {
         let mesh = plane(tegne, 150.0);
         let color_1 = Color::rgb(240, 240, 240);
         let color_2 = Color::rgb(200, 200, 200);
@@ -37,7 +37,7 @@ impl Floor {
     }
 }
 
-fn plane(tegne: &Tegne, size: f32) -> Mesh {
+fn plane(tegne: &mut Tegne, size: f32) -> Mesh {
     let half_size = size / 2.0;
     let vertices = &[
         Vector3::new(-half_size, 0.0, half_size),

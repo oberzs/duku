@@ -18,7 +18,7 @@ pub struct Square {
 }
 
 impl Square {
-    pub fn new(tegne: &Tegne) -> Self {
+    pub fn new(tegne: &mut Tegne) -> Self {
         let size = 10;
 
         Self {
@@ -43,7 +43,7 @@ impl Square {
     }
 }
 
-fn square(tegne: &Tegne, size: u32) -> Mesh {
+fn square(tegne: &mut Tegne, size: u32) -> Mesh {
     let vertices = square_vertices(size, 0.0);
     let triangles = square_triangles(size);
 

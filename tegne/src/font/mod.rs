@@ -39,7 +39,7 @@ impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &ImageUniform,
-        resources: &ResourceManager,
+        resources: &mut ResourceManager,
         source: &[u8],
     ) -> Result<Self> {
         // read font data from archive

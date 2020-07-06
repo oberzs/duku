@@ -80,7 +80,7 @@ pub struct Tegne {
     #[cfg(feature = "ui")]
     is_ui_rendered: bool,
     builtins: Builtins,
-    resources: Arc<ResourceManager>,
+    resources: ResourceManager,
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
@@ -161,10 +161,10 @@ impl Tegne {
             }
         ));
 
-        let resources = ResourceManager::new();
+        let mut resources = ResourceManager::new();
         let builtins = check!(Builtins::new(
             &device,
-            &resources,
+            &mut resources,
             &window_framebuffers[0],
             &shader_layout,
             &image_uniform
@@ -175,7 +175,7 @@ impl Tegne {
         let ui_renderer = check!(UiRenderer::new(
             &device,
             &shader_layout,
-            &resources,
+            &mut resources,
             window.width,
             window.height
         ));
@@ -187,7 +187,7 @@ impl Tegne {
             thread_kill: ThreadKill::new(),
             forward_renderer,
             builtins,
-            resources: Arc::new(resources),
+            resources,
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             image_uniform,
             shader_layout: Arc::new(shader_layout),
@@ -335,7 +335,7 @@ impl Tegne {
         self.is_ui_rendered = true;
     }
 
-    pub fn create_texture(&self, pixels: &[Color], width: u32) -> Ref<Texture> {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Ref<Texture> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -355,7 +355,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "image")]
-    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
+    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
         use image_file::GenericImageView;
         let img = image_file::open(path)?;
         let (width, height) = img.dimensions();
@@ -374,12 +374,12 @@ impl Tegne {
         Ok(self.resources.add_texture(texture))
     }
 
-    pub fn create_mesh(&self, options: MeshOptions<'_>) -> Ref<Mesh> {
+    pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Ref<Mesh> {
         let mesh = check!(Mesh::new(&self.device, options));
         self.resources.add_mesh(mesh)
     }
 
-    pub fn combine_meshes(&self, meshes: &[Ref<Mesh>]) -> Ref<Mesh> {
+    pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Ref<Mesh> {
         let mut offset = 0;
         let mut triangles = vec![];
         let mut vertices = vec![];
@@ -414,12 +414,17 @@ impl Tegne {
         self.resources.add_mesh(mesh)
     }
 
-    pub fn create_material(&self, options: MaterialOptions) -> Ref<Material> {
+    pub fn create_material(&mut self, options: MaterialOptions) -> Ref<Material> {
         let material = check!(Material::new(&self.device, &self.shader_layout, options));
         self.resources.add_material(material)
     }
 
-    pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Ref<Framebuffer> {
+    pub fn create_framebuffer(
+        &mut self,
+        t: CameraType,
+        width: u32,
+        height: u32,
+    ) -> Ref<Framebuffer> {
         let framebuffer = check!(Framebuffer::new(
             &self.device,
             &self.shader_layout,
@@ -440,7 +445,7 @@ impl Tegne {
         });
     }
 
-    pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Ref<Shader> {
+    pub fn create_shader(&mut self, source: &[u8], options: ShaderOptions) -> Ref<Shader> {
         let framebuffer = &self.window_framebuffers.lock().unwrap()[0];
         let shader = check!(Shader::new(
             &self.device,
@@ -453,7 +458,7 @@ impl Tegne {
     }
 
     pub fn create_shader_from_file(
-        &self,
+        &mut self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
     ) -> Result<Ref<Shader>> {
@@ -462,7 +467,7 @@ impl Tegne {
     }
 
     pub fn create_shader_from_file_watch(
-        &self,
+        &mut self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
     ) -> Result<Ref<Shader>> {

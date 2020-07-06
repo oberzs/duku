@@ -38,7 +38,7 @@ fn main() {
         },
     );
 
-    let floor = Floor::new(&tegne);
+    let floor = Floor::new(&mut tegne);
 
     let mut rng = rand::thread_rng();
     let cubes = (0..20)
@@ -46,7 +46,7 @@ fn main() {
             let y = rng.gen_range(0.0, 3.0);
             let z = rng.gen_range(-10.0, 10.0);
             let size = rng.gen_range(0.5, 1.0);
-            Cube::new(&tegne, [10.0 - i as f32, y, z], size)
+            Cube::new(&mut tegne, [10.0 - i as f32, y, z], size)
         })
         .collect::<Vec<_>>();
     let cube_tex = tegne

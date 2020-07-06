@@ -6,9 +6,6 @@
 mod builtin;
 mod reference;
 
-use std::sync::Mutex;
-use std::sync::MutexGuard;
-
 use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
@@ -20,78 +17,76 @@ pub(crate) use builtin::Builtins;
 pub use reference::Ref;
 
 pub(crate) struct ResourceManager {
-    textures: Storage<Texture>,
-    materials: Storage<Material>,
-    meshes: Storage<Mesh>,
-    shaders: Storage<Shader>,
-    fonts: Storage<Font>,
-    framebuffers: Storage<Framebuffer>,
+    textures: Vec<Ref<Texture>>,
+    materials: Vec<Ref<Material>>,
+    meshes: Vec<Ref<Mesh>>,
+    shaders: Vec<Ref<Shader>>,
+    fonts: Vec<Ref<Font>>,
+    framebuffers: Vec<Ref<Framebuffer>>,
 }
-
-type Storage<T> = Mutex<Vec<Ref<T>>>;
 
 impl ResourceManager {
     pub(crate) fn new() -> Self {
         profile_scope!("new");
 
         Self {
-            textures: Mutex::new(vec![]),
-            materials: Mutex::new(vec![]),
-            meshes: Mutex::new(vec![]),
-            shaders: Mutex::new(vec![]),
-            fonts: Mutex::new(vec![]),
-            framebuffers: Mutex::new(vec![]),
+            textures: vec![],
+            materials: vec![],
+            meshes: vec![],
+            shaders: vec![],
+            fonts: vec![],
+            framebuffers: vec![],
         }
     }
 
-    pub(crate) fn add_texture(&self, texture: Texture) -> Ref<Texture> {
+    pub(crate) fn add_texture(&mut self, texture: Texture) -> Ref<Texture> {
         let reference = Ref::new(texture);
-        self.textures.lock().unwrap().push(reference.clone());
+        self.textures.push(reference.clone());
         reference
     }
 
-    pub(crate) fn add_material(&self, material: Material) -> Ref<Material> {
+    pub(crate) fn add_material(&mut self, material: Material) -> Ref<Material> {
         let reference = Ref::new(material);
-        self.materials.lock().unwrap().push(reference.clone());
+        self.materials.push(reference.clone());
         reference
     }
 
-    pub(crate) fn add_mesh(&self, mesh: Mesh) -> Ref<Mesh> {
+    pub(crate) fn add_mesh(&mut self, mesh: Mesh) -> Ref<Mesh> {
         let reference = Ref::new(mesh);
-        self.meshes.lock().unwrap().push(reference.clone());
+        self.meshes.push(reference.clone());
         reference
     }
 
-    pub(crate) fn add_shader(&self, shader: Shader) -> Ref<Shader> {
+    pub(crate) fn add_shader(&mut self, shader: Shader) -> Ref<Shader> {
         let reference = Ref::new(shader);
-        self.shaders.lock().unwrap().push(reference.clone());
+        self.shaders.push(reference.clone());
         reference
     }
 
-    pub(crate) fn add_font(&self, font: Font) -> Ref<Font> {
+    pub(crate) fn add_font(&mut self, font: Font) -> Ref<Font> {
         let reference = Ref::new(font);
-        self.fonts.lock().unwrap().push(reference.clone());
+        self.fonts.push(reference.clone());
         reference
     }
 
-    pub(crate) fn add_framebuffer(&self, framebuffer: Framebuffer) -> Ref<Framebuffer> {
+    pub(crate) fn add_framebuffer(&mut self, framebuffer: Framebuffer) -> Ref<Framebuffer> {
         let reference = Ref::new(framebuffer);
-        self.framebuffers.lock().unwrap().push(reference.clone());
+        self.framebuffers.push(reference.clone());
         reference
     }
 
-    pub(crate) fn clean_unused(&self, uniform: &ImageUniform) {
-        remove_unused(&mut self.fonts.lock().unwrap());
-        remove_unused(&mut self.meshes.lock().unwrap());
-        remove_unused(&mut self.materials.lock().unwrap());
-        remove_unused(&mut self.shaders.lock().unwrap());
-        remove_unused(&mut self.textures.lock().unwrap())
+    pub(crate) fn clean_unused(&mut self, uniform: &ImageUniform) {
+        remove_unused(&mut self.fonts);
+        remove_unused(&mut self.meshes);
+        remove_unused(&mut self.materials);
+        remove_unused(&mut self.shaders);
+        remove_unused(&mut self.textures)
             .iter()
             .for_each(|tex| uniform.remove(tex.with(|t| t.image_index())));
-        remove_unused(&mut self.framebuffers.lock().unwrap());
+        remove_unused(&mut self.framebuffers);
     }
 }
 
-fn remove_unused<T>(storage: &mut MutexGuard<'_, Vec<Ref<T>>>) -> Vec<Ref<T>> {
+fn remove_unused<T>(storage: &mut Vec<Ref<T>>) -> Vec<Ref<T>> {
     storage.drain_filter(|r| r.count() == 1).collect()
 }
