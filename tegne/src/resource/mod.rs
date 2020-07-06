@@ -76,17 +76,13 @@ impl ResourceManager {
     }
 
     pub(crate) fn clean_unused(&mut self, uniform: &ImageUniform) {
-        remove_unused(&mut self.fonts);
-        remove_unused(&mut self.meshes);
-        remove_unused(&mut self.materials);
-        remove_unused(&mut self.shaders);
-        remove_unused(&mut self.textures)
-            .iter()
-            .for_each(|tex| uniform.remove(tex.with(|t| t.image_index())));
-        remove_unused(&mut self.framebuffers);
+        self.fonts.retain(|r| r.count() != 1);
+        self.meshes.retain(|r| r.count() != 1);
+        self.materials.retain(|r| r.count() != 1);
+        self.shaders.retain(|r| r.count() != 1);
+        self.framebuffers.retain(|r| r.count() != 1);
+        self.textures
+            .drain_filter(|r| r.count() == 1)
+            .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
     }
-}
-
-fn remove_unused<T>(storage: &mut Vec<Ref<T>>) -> Vec<Ref<T>> {
-    storage.drain_filter(|r| r.count() == 1).collect()
 }
