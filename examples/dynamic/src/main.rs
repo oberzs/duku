@@ -44,7 +44,7 @@ fn main() {
 
     window.main_loop(|events, _| {
         controller.update(&mut tegne.main_camera, events);
-        square.update(&tegne);
+        square.update();
 
         tegne.draw_on_window(|target| {
             target.enable_wireframes();

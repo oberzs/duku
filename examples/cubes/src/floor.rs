@@ -4,7 +4,6 @@
 // Floor mesh struct with custom texture
 
 use tegne::Color;
-use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
@@ -15,8 +14,8 @@ use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Floor {
-    mesh: Id<Mesh>,
-    texture: Id<Texture>,
+    mesh: Mesh,
+    texture: Texture,
 }
 
 impl Floor {
@@ -38,7 +37,7 @@ impl Floor {
     }
 }
 
-fn plane(tegne: &Tegne, size: f32) -> Id<Mesh> {
+fn plane(tegne: &Tegne, size: f32) -> Mesh {
     let half_size = size / 2.0;
     let vertices = &[
         Vector3::new(-half_size, 0.0, half_size),

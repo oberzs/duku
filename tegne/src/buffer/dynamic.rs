@@ -68,3 +68,9 @@ impl DynamicBuffer {
         self.memory.borrow().handle()
     }
 }
+
+impl PartialEq for DynamicBuffer {
+    fn eq(&self, other: &Self) -> bool {
+        self.memory == other.memory
+    }
+}

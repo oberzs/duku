@@ -47,7 +47,7 @@ use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStats;
 use crate::renderer::Target;
 use crate::resource::Builtins;
-use crate::resource::Id;
+use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::surface::Surface;
 use crate::surface::SurfaceProperties;
@@ -271,17 +271,16 @@ impl Tegne {
         ));
 
         #[cfg(feature = "ui")]
-        self.ui_renderer
-            .resize(&self.shader_layout, &self.resources, width, height);
+        self.ui_renderer.resize(&self.shader_layout, width, height);
     }
 
-    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) {
+    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
         {
-            let mut target = check!(Target::new(&self.resources, &self.builtins));
+            let mut target = check!(Target::new(&self.builtins));
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
@@ -298,7 +297,6 @@ impl Tegne {
                 ForwardDrawOptions {
                     framebuffer,
                     shader_layout: &self.shader_layout,
-                    resources: &self.resources,
                     target,
                 }
             ));
@@ -307,27 +305,24 @@ impl Tegne {
         self.end_draw();
     }
 
-    pub fn draw(&mut self, framebuffer: &Id<Framebuffer>, draw_callback: impl Fn(&mut Target<'_>)) {
+    pub fn draw(&mut self, framebuffer: &Ref<Framebuffer>, draw_callback: impl Fn(&mut Target)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
-        let mut target = check!(Target::new(&self.resources, &self.builtins));
+        let mut target = check!(Target::new(&self.builtins));
         draw_callback(&mut target);
 
-        if let Some(render_stats) = self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
+        self.render_stats += framebuffer.with(|f| {
             check!(self.forward_renderer.draw(
                 &self.device,
                 ForwardDrawOptions {
                     framebuffer: f,
                     shader_layout: &self.shader_layout,
-                    resources: &self.resources,
                     target,
                 }
             ))
-        }) {
-            self.render_stats += render_stats;
-        }
+        });
     }
 
     #[cfg(feature = "ui")]
@@ -336,13 +331,11 @@ impl Tegne {
             self.begin_draw();
         }
 
-        check!(self
-            .ui_renderer
-            .draw(ui, &self.shader_layout, &self.resources));
+        check!(self.ui_renderer.draw(ui, &self.shader_layout));
         self.is_ui_rendered = true;
     }
 
-    pub fn create_texture(&self, pixels: &[Color], width: u32) -> Id<Texture> {
+    pub fn create_texture(&self, pixels: &[Color], width: u32) -> Ref<Texture> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -362,7 +355,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "image")]
-    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Id<Texture>> {
+    pub fn create_texture_from_file(&self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
         use image_file::GenericImageView;
         let img = image_file::open(path)?;
         let (width, height) = img.dimensions();
@@ -381,29 +374,29 @@ impl Tegne {
         Ok(self.resources.add_texture(texture))
     }
 
-    pub fn create_mesh(&self, options: MeshOptions<'_>) -> Id<Mesh> {
+    pub fn create_mesh(&self, options: MeshOptions<'_>) -> Ref<Mesh> {
         let mesh = check!(Mesh::new(&self.device, options));
         self.resources.add_mesh(mesh)
     }
 
-    pub fn combine_meshes(&self, meshes: &[Id<Mesh>]) -> Id<Mesh> {
+    pub fn combine_meshes(&self, meshes: &[Ref<Mesh>]) -> Ref<Mesh> {
         let mut offset = 0;
         let mut triangles = vec![];
         let mut vertices = vec![];
         let mut normals = vec![];
         let mut uvs = vec![];
         let mut colors = vec![];
-        for id in meshes {
-            self.resources.with_mesh(id.id_ref(), |mesh| {
+        for mesh in meshes {
+            mesh.with(|m| {
                 triangles.extend(
-                    mesh.triangles()
+                    m.triangles()
                         .iter()
                         .map(|t| [t[0] + offset, t[1] + offset, t[2] + offset]),
                 );
-                vertices.extend(mesh.vertices());
-                normals.extend(mesh.normals());
-                uvs.extend(mesh.uvs());
-                colors.extend(mesh.colors());
+                vertices.extend(m.vertices());
+                normals.extend(m.normals());
+                uvs.extend(m.uvs());
+                colors.extend(m.colors());
                 offset = vertices.len() as u32;
             });
         }
@@ -421,26 +414,12 @@ impl Tegne {
         self.resources.add_mesh(mesh)
     }
 
-    pub fn create_material(&self, options: MaterialOptions) -> Id<Material> {
+    pub fn create_material(&self, options: MaterialOptions) -> Ref<Material> {
         let material = check!(Material::new(&self.device, &self.shader_layout, options));
         self.resources.add_material(material)
     }
 
-    pub fn with_material<F, R>(&self, material: &Id<Material>, fun: F) -> Option<R>
-    where
-        F: FnOnce(&mut Material) -> R,
-    {
-        self.resources.with_material(material.id_ref(), fun)
-    }
-
-    pub fn with_mesh<F, R>(&self, mesh: &Id<Mesh>, fun: F) -> Option<R>
-    where
-        F: FnOnce(&mut Mesh) -> R,
-    {
-        self.resources.with_mesh(mesh.id_ref(), fun)
-    }
-
-    pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Id<Framebuffer> {
+    pub fn create_framebuffer(&self, t: CameraType, width: u32, height: u32) -> Ref<Framebuffer> {
         let framebuffer = check!(Framebuffer::new(
             &self.device,
             &self.shader_layout,
@@ -455,13 +434,13 @@ impl Tegne {
         self.resources.add_framebuffer(framebuffer)
     }
 
-    pub fn resize_framebuffer(&self, framebuffer: &Id<Framebuffer>, width: u32, height: u32) {
-        self.resources.with_framebuffer(framebuffer.id_ref(), |f| {
+    pub fn resize_framebuffer(&self, framebuffer: &Ref<Framebuffer>, width: u32, height: u32) {
+        framebuffer.with(|f| {
             check!(f.resize(width, height, &self.shader_layout));
         });
     }
 
-    pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Id<Shader> {
+    pub fn create_shader(&self, source: &[u8], options: ShaderOptions) -> Ref<Shader> {
         let framebuffer = &self.window_framebuffers.lock().unwrap()[0];
         let shader = check!(Shader::new(
             &self.device,
@@ -477,7 +456,7 @@ impl Tegne {
         &self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
-    ) -> Result<Id<Shader>> {
+    ) -> Result<Ref<Shader>> {
         let source = fs::read(path.as_ref())?;
         Ok(self.create_shader(&source, options))
     }
@@ -486,17 +465,16 @@ impl Tegne {
         &self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
-    ) -> Result<Id<Shader>> {
+    ) -> Result<Ref<Shader>> {
         let path_buf = path.as_ref().to_path_buf();
-        let id = self.create_shader_from_file(&path_buf, options)?;
+        let shader = self.create_shader_from_file(&path_buf, options)?;
 
         // setup watcher
         let framebuffers = self.window_framebuffers.clone();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
-        let resources = self.resources.clone();
+        let shader_ref = shader.clone();
         let kill_recv = self.thread_kill.receiver();
-        let id_ref = id.id_ref();
 
         thread::spawn(move || {
             let (sender, receiver) = unbounded();
@@ -522,14 +500,14 @@ impl Tegne {
                             let framebuffer = &framebuffers.lock().unwrap()[0];
 
                             let source = check!(fs::read(&path_buf));
-                            let shader = check!(Shader::new(
+                            let new_shader = check!(Shader::new(
                                 &device,
                                 framebuffer,
                                 &shader_layout,
                                 &source,
                                 options,
                             ));
-                            resources.replace_shader(id_ref, shader);
+                            shader_ref.with(|s| *s = new_shader);
                             info!("shader {:?} was reloaded", path_buf);
                         }
                     }
@@ -537,7 +515,7 @@ impl Tegne {
             }
         });
 
-        Ok(id)
+        Ok(shader)
     }
 
     pub fn render_stats(&self) -> RenderStats {

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
-use super::Id;
+use super::Ref;
 use super::ResourceManager;
 use crate::device::Device;
 use crate::error::Result;
@@ -26,16 +26,16 @@ use crate::pipeline::ShaderOptions;
 
 #[derive(Clone)]
 pub(crate) struct Builtins {
-    pub(crate) white_texture: Id<Texture>,
-    pub(crate) white_material: Id<Material>,
-    pub(crate) surface_mesh: Id<Mesh>,
-    pub(crate) cube_mesh: Id<Mesh>,
-    pub(crate) sphere_mesh: Id<Mesh>,
-    pub(crate) phong_shader: Id<Shader>,
-    pub(crate) font_shader: Id<Shader>,
-    pub(crate) blit_shader: Id<Shader>,
-    pub(crate) wireframe_shader: Id<Shader>,
-    pub(crate) roboto_font: Id<Font>,
+    pub(crate) white_texture: Ref<Texture>,
+    pub(crate) white_material: Ref<Material>,
+    pub(crate) surface_mesh: Ref<Mesh>,
+    pub(crate) cube_mesh: Ref<Mesh>,
+    pub(crate) sphere_mesh: Ref<Mesh>,
+    pub(crate) phong_shader: Ref<Shader>,
+    pub(crate) font_shader: Ref<Shader>,
+    pub(crate) blit_shader: Ref<Shader>,
+    pub(crate) wireframe_shader: Ref<Shader>,
+    pub(crate) roboto_font: Ref<Font>,
 }
 
 impl Builtins {

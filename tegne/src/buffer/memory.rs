@@ -65,3 +65,9 @@ impl Drop for BufferMemory {
         self.device.free_buffer(self.handle, self.memory);
     }
 }
+
+impl PartialEq for BufferMemory {
+    fn eq(&self, other: &Self) -> bool {
+        self.handle == other.handle
+    }
+}

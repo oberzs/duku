@@ -19,19 +19,18 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
-use crate::resource::Id;
-use crate::resource::IdRef;
+use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use json::JsonAtlasMetrics;
 
 pub struct Font {
-    texture: Id<Texture>,
+    texture: Ref<Texture>,
     _margin: f32,
     char_data: HashMap<char, CharData>,
 }
 
 struct CharData {
-    mesh: Id<Mesh>,
+    mesh: Ref<Mesh>,
     advance: f32,
     bearing: f32,
 }
@@ -135,10 +134,10 @@ impl Font {
         })
     }
 
-    pub(crate) fn char_mesh(&self, c: char) -> IdRef {
+    pub(crate) fn char_mesh(&self, c: char) -> Ref<Mesh> {
         match self.char_data.get(&c) {
-            Some(data) => data.mesh.id_ref(),
-            None => self.char_data.get(&'?').unwrap().mesh.id_ref(),
+            Some(data) => data.mesh.clone(),
+            None => self.char_data.get(&'?').unwrap().mesh.clone(),
         }
     }
 
@@ -156,7 +155,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn texture(&self) -> IdRef {
-        self.texture.id_ref()
+    pub(crate) fn texture(&self) -> Ref<Texture> {
+        self.texture.clone()
     }
 }

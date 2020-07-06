@@ -42,7 +42,7 @@ fn main() {
 
     window.main_loop(|_, ui| {
         // update material
-        tegne.with_material(&material, |m| {
+        material.with(|m| {
             m.set_arg_1(Color::from(color_1));
             m.set_arg_2(Color::from(color_2));
         });
