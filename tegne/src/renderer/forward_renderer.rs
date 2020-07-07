@@ -31,7 +31,7 @@ use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
 use crate::resource::Ref;
 
-const CASCADE_SPLITS: [f32; 3] = [0.2, 0.4, 1.0];
+const CASCADE_SPLITS: [f32; 3] = [0.05, 0.1, 1.0];
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffers: Vec<Vec<Framebuffer>>,
@@ -134,8 +134,6 @@ impl ForwardRenderer {
                 let mut view_cam = framebuffer.camera.clone();
                 // view_cam.depth = 25.0; // TODO: configurable max depth
                 view_cam.depth *= cs;
-                let view_cam =
-                    Camera::perspective(view_cam.width, view_cam.height, view_cam.depth, 90);
 
                 let cam_inv = view_cam.matrix().inverse().expect("bad matrix");
                 let mut corners = vec![];
@@ -152,8 +150,10 @@ impl ForwardRenderer {
                 // sphere makes it axis-aligned
                 let corner_count = corners.len() as f32;
                 let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
-                let r = corners.iter().map(|v| (center - *v).length()).sum::<f32>()
-                    / corners.len() as f32;
+                let r = corners
+                    .iter()
+                    .map(|v| (center - *v).length())
+                    .fold(-1.0 / 0.0, f32::max);
 
                 // stabilize shadow map by using texel units
                 let texel_size = (r * 2.0) / self.shadow_map_size as f32;
@@ -199,7 +199,7 @@ impl ForwardRenderer {
 
                 // set uniform variables for normal render
                 light_matrices[i] = depth_cam.matrix();
-                cascade_splits[i] = cs * r;
+                cascade_splits[i] = view_cam.depth;
             }
 
             // bind current shadow map set

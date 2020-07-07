@@ -3,3 +3,4 @@ target/
 import.exe
 build-import.bat
 import-shaders.bat
+*.cap
