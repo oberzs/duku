@@ -6,6 +6,8 @@
 use tegne::Color;
 use tegne::Mesh;
 use tegne::MeshOptions;
+use tegne::SamplerFilter;
+use tegne::SamplerOptions;
 use tegne::Target;
 use tegne::Tegne;
 use tegne::Texture;
@@ -31,9 +33,12 @@ impl Floor {
 
     pub fn draw(&self, target: &mut Target) {
         target.set_albedo_texture(&self.texture);
-        target.enable_sampler_nearest();
+        target.set_sampler(SamplerOptions {
+            filter: SamplerFilter::Nearest,
+            ..Default::default()
+        });
         target.draw(&self.mesh, Transform::default());
-        target.reset();
+        target.set_sampler(Default::default());
     }
 }
 

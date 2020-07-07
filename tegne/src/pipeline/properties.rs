@@ -12,19 +12,19 @@ pub(crate) enum AttachmentType {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum SamplerFilter {
+pub enum SamplerFilter {
     Linear,
     Nearest,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum SamplerAddress {
+pub enum SamplerAddress {
     Repeat,
     Clamp,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum SamplerMipmaps {
+pub enum SamplerMipmaps {
     Enabled,
     Disabled,
 }

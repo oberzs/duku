@@ -46,9 +46,13 @@ pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::MeshOptions;
 pub use pipeline::MaterialOptions;
+pub use pipeline::SamplerAddress;
+pub use pipeline::SamplerFilter;
+pub use pipeline::SamplerMipmaps;
 pub use pipeline::ShaderOptions;
 pub use profiler::begin_profile;
 pub use profiler::end_profile;
+pub use renderer::SamplerOptions;
 pub use renderer::Target;
 
 pub type Mesh = resource::Ref<mesh::Mesh>;

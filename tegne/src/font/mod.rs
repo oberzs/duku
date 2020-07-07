@@ -134,10 +134,10 @@ impl Font {
         })
     }
 
-    pub(crate) fn char_mesh(&self, c: char) -> Ref<Mesh> {
+    pub(crate) fn char_mesh(&self, c: char) -> &Ref<Mesh> {
         match self.char_data.get(&c) {
-            Some(data) => data.mesh.clone(),
-            None => self.char_data.get(&'?').unwrap().mesh.clone(),
+            Some(data) => &data.mesh,
+            None => &self.char_data.get(&'?').unwrap().mesh,
         }
     }
 
@@ -155,7 +155,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn texture(&self) -> Ref<Texture> {
-        self.texture.clone()
+    pub(crate) fn texture(&self) -> &Ref<Texture> {
+        &self.texture
     }
 }

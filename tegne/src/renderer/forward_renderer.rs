@@ -116,7 +116,7 @@ impl ForwardRenderer {
         let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
-        if options.target.has_shadows() {
+        if options.target.do_shadow_mapping() {
             // bind other random shadow map set
             device.cmd_bind_descriptor(
                 cmd,
@@ -179,7 +179,7 @@ impl ForwardRenderer {
                     for m_order in s_order.orders_by_material() {
                         self.bind_material(device, m_order.material(), &options)?;
                         for order in m_order.orders() {
-                            if order.has_shadows {
+                            if order.cast_shadows {
                                 self.draw_order(device, order, &options, &mut 0)?;
                             }
                         }

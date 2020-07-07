@@ -91,11 +91,9 @@ fn main() {
                 target.set_wireframes(wireframes);
                 floor.draw(target);
                 target.set_albedo_texture(&cube_tex);
-                target.set_wireframes(wireframes);
                 for cube in &cubes {
                     cube.draw(target);
                 }
-                target.reset();
             });
         }
     });

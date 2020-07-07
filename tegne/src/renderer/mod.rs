@@ -15,4 +15,5 @@ pub(crate) use target::Order;
 pub(crate) use ui_renderer::UiRenderer;
 
 pub use stats::RenderStats;
+pub use target::SamplerOptions;
 pub use target::Target;

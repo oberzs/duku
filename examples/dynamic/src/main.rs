@@ -47,7 +47,7 @@ fn main() {
         square.update();
 
         tegne.draw_on_window(|target| {
-            target.enable_wireframes();
+            target.set_wireframes(true);
             square.draw(target);
         });
     });
