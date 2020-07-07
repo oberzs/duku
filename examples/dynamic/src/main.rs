@@ -40,14 +40,14 @@ fn main() {
         cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    let square = Square::new(&tegne);
+    let square = Square::new(&mut tegne);
 
     window.main_loop(|events, _| {
         controller.update(&mut tegne.main_camera, events);
-        square.update(&tegne);
+        square.update();
 
         tegne.draw_on_window(|target| {
-            target.enable_wireframes();
+            target.set_wireframes(true);
             square.draw(target);
         });
     });

@@ -57,7 +57,7 @@ float get_dist_to_scene(vec3 pos) {
     float plane_dist = pos.y;
 
     vec3 box_pos = pos;
-    box_pos -= vec3(0.0, 1.0, 6.0);
+    box_pos -= vec3(0.0, 2.0, 6.0);
     box_pos.xz *= rotate(world.time);
     float box_dist = box(box_pos, vec3(1.0));
 

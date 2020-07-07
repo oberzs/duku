@@ -19,19 +19,18 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
-use crate::resource::Id;
-use crate::resource::IdRef;
+use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use json::JsonAtlasMetrics;
 
 pub struct Font {
-    texture: Id<Texture>,
+    texture: Ref<Texture>,
     _margin: f32,
     char_data: HashMap<char, CharData>,
 }
 
 struct CharData {
-    mesh: Id<Mesh>,
+    mesh: Ref<Mesh>,
     advance: f32,
     bearing: f32,
 }
@@ -40,7 +39,7 @@ impl Font {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &ImageUniform,
-        resources: &ResourceManager,
+        resources: &mut ResourceManager,
         source: &[u8],
     ) -> Result<Self> {
         // read font data from archive
@@ -66,19 +65,16 @@ impl Font {
         let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
 
         // create font atlas texture
-        let texture = resources.add_texture(
-            Texture::new(
-                device,
-                uniform,
-                TextureOptions {
-                    data: &image_source,
-                    width: atlas.atlas_size,
-                    height: atlas.atlas_size,
-                    ..Default::default()
-                },
-            )?,
-            None,
-        );
+        let texture = resources.add_texture(Texture::new(
+            device,
+            uniform,
+            TextureOptions {
+                data: &image_source,
+                width: atlas.atlas_size,
+                height: atlas.atlas_size,
+                ..Default::default()
+            },
+        )?);
 
         let margin = atlas.margin as f32 / atlas.sdf_size as f32;
 
@@ -112,18 +108,15 @@ impl Font {
 
             let triangles = &[[0, 2, 3], [0, 3, 1]];
 
-            let mesh = resources.add_mesh(
-                Mesh::new(
-                    device,
-                    MeshOptions {
-                        vertices,
-                        triangles,
-                        uvs,
-                        ..Default::default()
-                    },
-                )?,
-                None,
-            );
+            let mesh = resources.add_mesh(Mesh::new(
+                device,
+                MeshOptions {
+                    vertices,
+                    triangles,
+                    uvs,
+                    ..Default::default()
+                },
+            )?);
 
             let data = CharData {
                 mesh,
@@ -141,10 +134,10 @@ impl Font {
         })
     }
 
-    pub(crate) fn char_mesh(&self, c: char) -> IdRef {
+    pub(crate) fn char_mesh(&self, c: char) -> &Ref<Mesh> {
         match self.char_data.get(&c) {
-            Some(data) => data.mesh.id_ref(),
-            None => self.char_data.get(&'?').unwrap().mesh.id_ref(),
+            Some(data) => &data.mesh,
+            None => &self.char_data.get(&'?').unwrap().mesh,
         }
     }
 
@@ -162,7 +155,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn texture(&self) -> IdRef {
-        self.texture.id_ref()
+    pub(crate) fn texture(&self) -> &Ref<Texture> {
+        &self.texture
     }
 }

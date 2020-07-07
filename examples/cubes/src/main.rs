@@ -8,7 +8,6 @@ mod floor;
 
 use rand::Rng;
 use tegne::ui;
-use tegne::ui::ui_str;
 use tegne::Controller;
 use tegne::Key;
 use tegne::Tegne;
@@ -39,7 +38,7 @@ fn main() {
         },
     );
 
-    let floor = Floor::new(&tegne);
+    let floor = Floor::new(&mut tegne);
 
     let mut rng = rand::thread_rng();
     let cubes = (0..20)
@@ -47,7 +46,7 @@ fn main() {
             let y = rng.gen_range(0.0, 3.0);
             let z = rng.gen_range(-10.0, 10.0);
             let size = rng.gen_range(0.5, 1.0);
-            Cube::new(&tegne, [10.0 - i as f32, y, z], size)
+            Cube::new(&mut tegne, [10.0 - i as f32, y, z], size)
         })
         .collect::<Vec<_>>();
     let cube_tex = tegne
@@ -64,8 +63,6 @@ fn main() {
 
     let mut paused = false;
 
-    let mut bias = 0.004;
-
     window.main_loop(|events, ui| {
         if events.is_key_typed(Key::P) {
             paused = !paused;
@@ -79,6 +76,8 @@ fn main() {
         if !paused {
             controller.update(&mut tegne.main_camera, events);
 
+            let wireframes = events.is_key_pressed(Key::E);
+
             if let Some((new_width, new_height)) = events.resized() {
                 tegne.resize(new_width, new_height);
                 width = new_width;
@@ -87,25 +86,14 @@ fn main() {
 
             ui::stats_window(&ui, &tegne, events);
 
-            ui::Window::new(ui_str!("Bias"))
-                .position([10.0, 10.0], ui::Condition::FirstUseEver)
-                .size([1.0, 1.0], ui::Condition::FirstUseEver)
-                .always_auto_resize(true)
-                .build(&ui, || {
-                    ui.drag_float(ui_str!("bias"), &mut bias)
-                        .speed(0.001)
-                        .build();
-                });
-
             tegne.draw_ui(ui);
             tegne.draw_on_window(|target| {
-                target.set_bias(bias);
+                target.set_wireframes(wireframes);
                 floor.draw(target);
                 target.set_albedo_texture(&cube_tex);
                 for cube in &cubes {
                     cube.draw(target);
                 }
-                target.reset();
             });
         }
     });

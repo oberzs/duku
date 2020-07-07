@@ -234,6 +234,12 @@ impl Drop for Shader {
     }
 }
 
+impl PartialEq for Shader {
+    fn eq(&self, other: &Self) -> bool {
+        self.handle == other.handle
+    }
+}
+
 impl Default for ShaderOptions {
     fn default() -> Self {
         Self {

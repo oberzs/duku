@@ -22,14 +22,14 @@ use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::AttachmentType;
 use crate::pipeline::Light;
+use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
-use crate::resource::IdRef;
-use crate::resource::ResourceManager;
+use crate::resource::Ref;
 
 const CASCADE_SPLITS: [f32; 3] = [0.2, 0.4, 1.0];
 
@@ -44,8 +44,7 @@ pub(crate) struct ForwardRenderer {
 pub(crate) struct ForwardDrawOptions<'a> {
     pub(crate) framebuffer: &'a Framebuffer,
     pub(crate) shader_layout: &'a ShaderLayout,
-    pub(crate) resources: &'a ResourceManager,
-    pub(crate) target: Target<'a>,
+    pub(crate) target: Target,
 }
 
 impl ForwardRenderer {
@@ -117,7 +116,7 @@ impl ForwardRenderer {
         let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
-        if options.target.has_shadows() {
+        if options.target.do_shadow_mapping() {
             // bind other random shadow map set
             device.cmd_bind_descriptor(
                 cmd,
@@ -180,7 +179,7 @@ impl ForwardRenderer {
                     for m_order in s_order.orders_by_material() {
                         self.bind_material(device, m_order.material(), &options)?;
                         for order in m_order.orders() {
-                            if order.has_shadows {
+                            if order.cast_shadows {
                                 self.draw_order(device, order, &options, &mut 0)?;
                             }
                         }
@@ -235,7 +234,7 @@ impl ForwardRenderer {
         let mut draw_calls = 0;
 
         for s_order in options.target.orders_by_shader() {
-            self.bind_shader(device, s_order.shader(), &options);
+            self.bind_shader(device, s_order.shader());
             shaders_used += 1;
             for m_order in s_order.orders_by_material() {
                 self.bind_material(device, m_order.material(), &options)?;
@@ -244,16 +243,6 @@ impl ForwardRenderer {
                     self.draw_order(device, order, &options, &mut drawn_indices)?;
                     draw_calls += 1;
                 }
-            }
-        }
-
-        // wireframe render
-        if options.target.wireframe_orders().count() != 0 {
-            self.bind_shader(device, options.resources.builtin("wireframe_sh"), &options);
-            shaders_used += 1;
-            for order in options.target.wireframe_orders() {
-                self.draw_order(device, order, &options, &mut drawn_indices)?;
-                draw_calls += 1;
             }
         }
 
@@ -289,23 +278,20 @@ impl ForwardRenderer {
         );
     }
 
-    fn bind_shader(&self, device: &Device, shader: IdRef, options: &ForwardDrawOptions<'_>) {
+    fn bind_shader(&self, device: &Device, shader: &Ref<Shader>) {
         let cmd = device.command_buffer();
-        let resources = options.resources;
-        resources.with_shader(shader, |s| device.cmd_bind_shader(cmd, s));
+        shader.with(|s| device.cmd_bind_shader(cmd, s));
     }
 
     fn bind_material(
         &self,
         device: &Device,
-        material: IdRef,
+        material: &Ref<Material>,
         options: &ForwardDrawOptions<'_>,
     ) -> Result<()> {
         let cmd = device.command_buffer();
-        let resources = options.resources;
-        if let Some(descriptor) = resources.with_material(material, |m| m.descriptor()) {
-            device.cmd_bind_descriptor(cmd, descriptor?, options.shader_layout);
-        }
+        let descriptor = material.with(|m| m.descriptor())?;
+        device.cmd_bind_descriptor(cmd, descriptor, options.shader_layout);
         Ok(())
     }
 
@@ -317,35 +303,31 @@ impl ForwardRenderer {
         drawn_indices: &mut u32,
     ) -> Result<()> {
         let cmd = device.command_buffer();
-        let resources = options.resources;
-        if let Some(albedo_index) = resources.with_texture(order.albedo, |t| t.image_index()) {
-            if let Some((vb, ib, n)) = resources.with_mesh(order.mesh, |m| {
-                (m.vertex_buffer(), m.index_buffer(), m.index_count())
-            }) {
-                if let Some(framebuffer) = order.framebuffer {
-                    if let Some(frame_descriptor) =
-                        resources.with_framebuffer(framebuffer, |f| f.descriptor())
-                    {
-                        device.cmd_bind_descriptor(cmd, frame_descriptor, &options.shader_layout);
-                    }
-                }
+        let albedo_index = order.albedo.with(|t| t.image_index());
+        let (vb, ib, n) = order
+            .mesh
+            .with(|m| (m.vertex_buffer(), m.index_buffer(), m.index_count()));
 
-                device.cmd_push_constants(
-                    cmd,
-                    PushConstants {
-                        model_matrix: order.model,
-                        sampler_index: order.sampler_index,
-                        albedo_index,
-                    },
-                    options.shader_layout,
-                );
-                device.cmd_bind_vertex_buffer(cmd, vb?);
-                device.cmd_bind_index_buffer(cmd, ib?);
-                device.cmd_draw(cmd, n);
-
-                *drawn_indices += n;
-            }
+        if let Some(framebuffer) = order.framebuffer {
+            let frame_descriptor = framebuffer.with(|f| f.descriptor());
+            device.cmd_bind_descriptor(cmd, frame_descriptor, &options.shader_layout);
         }
+
+        device.cmd_push_constants(
+            cmd,
+            PushConstants {
+                model_matrix: order.model,
+                sampler_index: order.sampler_index,
+                albedo_index,
+            },
+            options.shader_layout,
+        );
+        device.cmd_bind_vertex_buffer(cmd, vb?);
+        device.cmd_bind_index_buffer(cmd, ib?);
+        device.cmd_draw(cmd, n);
+
+        *drawn_indices += n;
+
         Ok(())
     }
 }

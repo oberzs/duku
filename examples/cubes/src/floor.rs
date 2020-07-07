@@ -4,9 +4,10 @@
 // Floor mesh struct with custom texture
 
 use tegne::Color;
-use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
+use tegne::SamplerFilter;
+use tegne::SamplerOptions;
 use tegne::Target;
 use tegne::Tegne;
 use tegne::Texture;
@@ -15,12 +16,12 @@ use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Floor {
-    mesh: Id<Mesh>,
-    texture: Id<Texture>,
+    mesh: Mesh,
+    texture: Texture,
 }
 
 impl Floor {
-    pub fn new(tegne: &Tegne) -> Self {
+    pub fn new(tegne: &mut Tegne) -> Self {
         let mesh = plane(tegne, 150.0);
         let color_1 = Color::rgb(240, 240, 240);
         let color_2 = Color::rgb(200, 200, 200);
@@ -32,13 +33,16 @@ impl Floor {
 
     pub fn draw(&self, target: &mut Target) {
         target.set_albedo_texture(&self.texture);
-        target.enable_sampler_nearest();
+        target.set_sampler(SamplerOptions {
+            filter: SamplerFilter::Nearest,
+            ..Default::default()
+        });
         target.draw(&self.mesh, Transform::default());
-        target.reset();
+        target.set_sampler(Default::default());
     }
 }
 
-fn plane(tegne: &Tegne, size: f32) -> Id<Mesh> {
+fn plane(tegne: &mut Tegne, size: f32) -> Mesh {
     let half_size = size / 2.0;
     let vertices = &[
         Vector3::new(-half_size, 0.0, half_size),

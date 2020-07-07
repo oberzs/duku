@@ -148,6 +148,12 @@ impl Material {
     }
 }
 
+impl PartialEq for Material {
+    fn eq(&self, other: &Self) -> bool {
+        self.uniform == other.uniform
+    }
+}
+
 impl Default for MaterialOptions {
     fn default() -> Self {
         Self {

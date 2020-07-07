@@ -5,6 +5,7 @@
 
 use crate::color::Color;
 use crate::error::Result;
+use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Matrix4;
@@ -13,120 +14,112 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::pipeline::Light;
 use crate::pipeline::Material;
+use crate::pipeline::SamplerAddress;
+use crate::pipeline::SamplerFilter;
+use crate::pipeline::SamplerMipmaps;
 use crate::pipeline::Shader;
-use crate::resource::Id;
-use crate::resource::IdRef;
-use crate::resource::ResourceManager;
+use crate::resource::Builtins;
+use crate::resource::Ref;
 
-pub struct Target<'a> {
+pub struct Target {
     orders_by_shader: Vec<OrdersByShader>,
-    wireframe_orders: Vec<Order>,
     clear: Color,
     lights: Vec<Light>,
-    current_shader: IdRef,
-    current_material: IdRef,
-    current_albedo: IdRef,
-    current_framebuffer: Option<IdRef>,
-    current_font: IdRef,
-    has_shadows: bool,
+    current_shader: Ref<Shader>,
+    current_material: Ref<Material>,
+    current_albedo: Ref<Texture>,
+    current_framebuffer: Option<Ref<Framebuffer>>,
+    current_font: Ref<Font>,
+    current_sampler: i32,
+    cast_shadows: bool,
     wireframes: bool,
-    sampler_nearest: bool,
-    sampler_clamp: bool,
-    sampler_no_mipmaps: bool,
+    do_shadow_mapping: bool,
     bias: f32,
-    resources: &'a ResourceManager,
+    builtins: Builtins,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct SamplerOptions {
+    pub filter: SamplerFilter,
+    pub address: SamplerAddress,
+    pub mipmaps: SamplerMipmaps,
 }
 
 pub(crate) struct OrdersByShader {
-    shader: IdRef,
+    shader: Ref<Shader>,
     orders_by_material: Vec<OrdersByMaterial>,
 }
 
 pub(crate) struct OrdersByMaterial {
-    material: IdRef,
+    material: Ref<Material>,
     orders: Vec<Order>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub(crate) struct Order {
-    pub(crate) mesh: IdRef,
-    pub(crate) albedo: IdRef,
-    pub(crate) framebuffer: Option<IdRef>,
+    pub(crate) mesh: Ref<Mesh>,
+    pub(crate) albedo: Ref<Texture>,
+    pub(crate) framebuffer: Option<Ref<Framebuffer>>,
     pub(crate) model: Matrix4,
-    pub(crate) has_shadows: bool,
+    pub(crate) cast_shadows: bool,
     pub(crate) sampler_index: i32,
 }
 
-impl<'a> Target<'a> {
-    pub(crate) fn new(resources: &'a ResourceManager) -> Result<Self> {
+impl Target {
+    pub(crate) fn new(builtins: &Builtins) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
-            wireframe_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             lights: vec![],
-            current_shader: resources.builtin("phong_sh"),
-            current_material: resources.builtin("white_mat"),
-            current_albedo: resources.builtin("white_tex"),
+            current_shader: builtins.phong_shader.clone(),
+            current_material: builtins.white_material.clone(),
+            current_albedo: builtins.white_texture.clone(),
             current_framebuffer: None,
-            current_font: resources.builtin("roboto_font"),
-            has_shadows: false,
+            current_font: builtins.roboto_font.clone(),
+            current_sampler: 0,
+            cast_shadows: true,
             wireframes: false,
-            sampler_nearest: false,
-            sampler_clamp: false,
-            sampler_no_mipmaps: false,
+            do_shadow_mapping: false,
             bias: 0.004,
-            resources,
+            builtins: builtins.clone(),
         })
     }
 
-    pub fn draw(&mut self, mesh: &Id<Mesh>, transform: impl Into<Transform>) {
+    pub fn draw(&mut self, mesh: &Ref<Mesh>, transform: impl Into<Transform>) {
         self.add_order(Order {
-            mesh: mesh.id_ref(),
-            albedo: self.current_albedo,
-            framebuffer: self.current_framebuffer,
+            mesh: mesh.clone(),
+            albedo: self.current_albedo.clone(),
+            framebuffer: self.current_framebuffer.clone(),
             model: transform.into().as_matrix(),
-            has_shadows: true,
-            sampler_index: self.sampler_combination(),
+            cast_shadows: self.cast_shadows,
+            sampler_index: self.current_sampler,
         });
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        self.add_order(Order {
-            mesh: self.resources.builtin("cube_mesh"),
-            albedo: self.current_albedo,
-            framebuffer: self.current_framebuffer,
-            model: transform.into().as_matrix(),
-            has_shadows: true,
-            sampler_index: self.sampler_combination(),
-        });
+        let mesh = self.builtins.cube_mesh.clone();
+        self.draw(&mesh, transform);
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        self.add_order(Order {
-            mesh: self.resources.builtin("sphere_mesh"),
-            albedo: self.current_albedo,
-            framebuffer: self.current_framebuffer,
-            model: transform.into().as_matrix(),
-            has_shadows: true,
-            sampler_index: self.sampler_combination(),
-        });
+        let mesh = self.builtins.sphere_mesh.clone();
+        self.draw(&mesh, transform);
     }
 
     pub fn draw_surface(&mut self) {
-        self.add_order(Order {
-            mesh: self.resources.builtin("surface_mesh"),
-            albedo: self.current_albedo,
-            framebuffer: self.current_framebuffer,
-            model: Transform::from([0.0, 0.0, 0.0]).as_matrix(),
-            has_shadows: false,
-            sampler_index: self.sampler_combination(),
-        });
+        let temp_shadows = self.cast_shadows;
+        self.cast_shadows = false;
+
+        let mesh = self.builtins.surface_mesh.clone();
+        self.draw(&mesh, [0.0, 0.0, 0.0]);
+
+        self.cast_shadows = temp_shadows;
     }
 
-    pub fn blit_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
-        let temp_shader = self.current_shader;
-        self.current_shader = self.resources.builtin("blit_sh");
-        self.current_framebuffer = Some(framebuffer.id_ref());
+    pub fn blit_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
+        let temp_shader = self.current_shader.clone();
+        self.current_shader = self.builtins.blit_shader.clone();
+        self.current_framebuffer = Some(framebuffer.clone());
 
         self.draw_surface();
 
@@ -135,16 +128,21 @@ impl<'a> Target<'a> {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let temp_shader = self.current_shader;
-        self.current_shader = self.resources.builtin("font_sh");
         let text_str = text.as_ref();
+        let used_font = self.current_font.clone();
 
-        self.resources.with_font(self.current_font, |font| {
+        used_font.with(|font| {
             let mut current_transform = transform.into();
             let x_scale = current_transform.scale.x;
             current_transform.position.x -=
                 font.char_bearing(text_str.chars().next().unwrap()) * x_scale;
-            let albedo = font.texture();
+
+            let temp_shader = self.current_shader.clone();
+            let temp_shadows = self.cast_shadows;
+            let temp_albedo = self.current_albedo.clone();
+            self.cast_shadows = false;
+            self.current_shader = self.builtins.font_shader.clone();
+            self.current_albedo = font.texture().clone();
 
             for c in text_str.chars() {
                 if c == ' ' {
@@ -153,21 +151,15 @@ impl<'a> Target<'a> {
                     continue;
                 }
 
-                let mesh = font.char_mesh(c);
-                self.add_order(Order {
-                    mesh,
-                    albedo,
-                    framebuffer: self.current_framebuffer,
-                    model: current_transform.as_matrix(),
-                    has_shadows: false,
-                    sampler_index: self.sampler_combination(),
-                });
+                self.draw(font.char_mesh(c), current_transform);
 
                 current_transform.position.x += font.char_advance(c) * x_scale;
             }
-        });
 
-        self.current_shader = temp_shader;
+            self.current_shader = temp_shader;
+            self.cast_shadows = temp_shadows;
+            self.current_albedo = temp_albedo;
+        });
     }
 
     pub fn add_directional_light(
@@ -185,51 +177,58 @@ impl<'a> Target<'a> {
         self.clear = clear.into();
     }
 
-    pub fn set_material(&mut self, material: &Id<Material>) {
-        self.current_material = material.id_ref();
+    pub fn set_material(&mut self, material: &Ref<Material>) {
+        self.current_material = material.clone();
     }
 
-    pub fn set_albedo_texture(&mut self, texture: &Id<Texture>) {
-        self.current_albedo = texture.id_ref();
+    pub fn set_albedo_texture(&mut self, texture: &Ref<Texture>) {
+        self.current_albedo = texture.clone();
     }
 
-    pub fn set_shader(&mut self, shader: &Id<Shader>) {
-        self.current_shader = shader.id_ref();
+    pub fn set_shader(&mut self, shader: &Ref<Shader>) {
+        self.current_shader = shader.clone();
     }
 
-    pub fn set_framebuffer(&mut self, framebuffer: &Id<Framebuffer>) {
-        self.current_framebuffer = Some(framebuffer.id_ref());
+    pub fn set_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
+        self.current_framebuffer = Some(framebuffer.clone());
     }
 
-    pub fn enable_wireframes(&mut self) {
-        self.wireframes = true;
+    pub fn set_wireframes(&mut self, enable: bool) {
+        self.wireframes = enable;
     }
 
-    pub fn enable_sampler_nearest(&mut self) {
-        self.sampler_nearest = true;
-    }
-
-    pub fn enable_sampler_clamp(&mut self) {
-        self.sampler_clamp = true;
-    }
-
-    pub fn enable_sampler_no_mipmaps(&mut self) {
-        self.sampler_no_mipmaps = true;
+    pub fn set_sampler(&mut self, options: SamplerOptions) {
+        let mut index = 0;
+        if options.filter == SamplerFilter::Nearest {
+            index += 4;
+        }
+        if options.address == SamplerAddress::Clamp {
+            index += 2;
+        }
+        if options.mipmaps == SamplerMipmaps::Disabled {
+            index += 1;
+        }
+        self.current_sampler = index;
     }
 
     pub fn set_bias(&mut self, amount: f32) {
         self.bias = amount;
     }
 
-    pub fn reset(&mut self) {
-        self.current_material = self.resources.builtin("white_mat");
-        self.current_albedo = self.resources.builtin("white_tex");
-        self.current_shader = self.resources.builtin("phong_sh");
+    pub fn set_shader_phong(&mut self) {
+        self.current_shader = self.builtins.phong_shader.clone();
+    }
+
+    pub fn set_texture_white(&mut self) {
+        self.current_albedo = self.builtins.white_texture.clone();
+    }
+
+    pub fn set_material_white(&mut self) {
+        self.current_material = self.builtins.white_material.clone();
+    }
+
+    pub fn set_framebuffer_none(&mut self) {
         self.current_framebuffer = None;
-        self.wireframes = false;
-        self.sampler_nearest = false;
-        self.sampler_clamp = false;
-        self.sampler_no_mipmaps = false;
     }
 
     pub(crate) fn clear(&self) -> [f32; 4] {
@@ -240,18 +239,14 @@ impl<'a> Target<'a> {
         self.orders_by_shader.iter()
     }
 
-    pub(crate) fn wireframe_orders(&self) -> impl Iterator<Item = Order> + '_ {
-        self.wireframe_orders.iter().cloned()
-    }
-
     pub(crate) fn lights(&self) -> [Light; 3] {
         let mut lights: [Light; 3] = Default::default();
         lights[..self.lights.len()].clone_from_slice(&self.lights[..]);
         lights
     }
 
-    pub(crate) fn has_shadows(&self) -> bool {
-        self.has_shadows
+    pub(crate) fn do_shadow_mapping(&self) -> bool {
+        self.do_shadow_mapping
     }
 
     pub(crate) fn bias(&self) -> f32 {
@@ -259,11 +254,11 @@ impl<'a> Target<'a> {
     }
 
     fn add_order(&mut self, order: Order) {
-        let material = self.current_material;
-        let shader = self.current_shader;
+        let material = self.current_material.clone();
+        let shader = self.current_shader.clone();
 
-        if order.has_shadows {
-            self.has_shadows = true;
+        if self.cast_shadows {
+            self.do_shadow_mapping = true;
         }
 
         match self
@@ -276,44 +271,44 @@ impl<'a> Target<'a> {
                 .iter_mut()
                 .find(|mo| mo.material == material)
             {
-                Some(mo) => mo.orders.push(order),
+                Some(mo) => mo.orders.push(order.clone()),
                 None => so.orders_by_material.push(OrdersByMaterial {
                     material,
-                    orders: vec![order],
+                    orders: vec![order.clone()],
                 }),
             },
             None => self.orders_by_shader.push(OrdersByShader {
                 shader,
                 orders_by_material: vec![OrdersByMaterial {
                     material,
-                    orders: vec![order],
+                    orders: vec![order.clone()],
                 }],
             }),
         }
 
         if self.wireframes {
-            self.wireframe_orders.push(order);
+            let wireframe_shader = self.builtins.wireframe_shader.clone();
+            match self
+                .orders_by_shader
+                .iter_mut()
+                .find(|so| so.shader == wireframe_shader)
+            {
+                Some(so) => so.orders_by_material[0].orders.push(order),
+                None => self.orders_by_shader.push(OrdersByShader {
+                    shader: wireframe_shader,
+                    orders_by_material: vec![OrdersByMaterial {
+                        material: self.builtins.white_material.clone(),
+                        orders: vec![order],
+                    }],
+                }),
+            }
         }
-    }
-
-    fn sampler_combination(&self) -> i32 {
-        let mut index = 0;
-        if self.sampler_nearest {
-            index += 4;
-        }
-        if self.sampler_clamp {
-            index += 2;
-        }
-        if self.sampler_no_mipmaps {
-            index += 1;
-        }
-        index
     }
 }
 
 impl OrdersByShader {
-    pub(crate) fn shader(&self) -> IdRef {
-        self.shader
+    pub(crate) fn shader(&self) -> &Ref<Shader> {
+        &self.shader
     }
 
     pub(crate) fn orders_by_material(&self) -> impl Iterator<Item = &OrdersByMaterial> {
@@ -322,11 +317,21 @@ impl OrdersByShader {
 }
 
 impl OrdersByMaterial {
-    pub(crate) fn material(&self) -> IdRef {
-        self.material
+    pub(crate) fn material(&self) -> &Ref<Material> {
+        &self.material
     }
 
     pub(crate) fn orders(&self) -> impl Iterator<Item = Order> + '_ {
         self.orders.iter().cloned()
+    }
+}
+
+impl Default for SamplerOptions {
+    fn default() -> Self {
+        Self {
+            filter: SamplerFilter::Linear,
+            address: SamplerAddress::Repeat,
+            mipmaps: SamplerMipmaps::Enabled,
+        }
     }
 }

@@ -4,7 +4,6 @@
 // grid mesh struct with changing vertices
 
 use std::time::Instant;
-use tegne::Id;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
@@ -13,13 +12,13 @@ use tegne::Transform;
 use tegne::Vector3;
 
 pub struct Square {
-    mesh: Id<Mesh>,
+    mesh: Mesh,
     size: u32,
     time: Instant,
 }
 
 impl Square {
-    pub fn new(tegne: &Tegne) -> Self {
+    pub fn new(tegne: &mut Tegne) -> Self {
         let size = 10;
 
         Self {
@@ -29,11 +28,11 @@ impl Square {
         }
     }
 
-    pub fn update(&self, tegne: &Tegne) {
+    pub fn update(&self) {
         let time = self.time.elapsed().as_secs_f32();
         let vertices = square_vertices(self.size, time);
 
-        tegne.with_mesh(&self.mesh, |mesh| {
+        self.mesh.with(|mesh| {
             mesh.set_vertices(&vertices);
         });
     }
@@ -44,7 +43,7 @@ impl Square {
     }
 }
 
-fn square(tegne: &Tegne, size: u32) -> Id<Mesh> {
+fn square(tegne: &mut Tegne, size: u32) -> Mesh {
     let vertices = square_vertices(size, 0.0);
     let triangles = square_triangles(size);
 

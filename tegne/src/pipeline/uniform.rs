@@ -89,6 +89,12 @@ impl MaterialUniform {
     }
 }
 
+impl PartialEq for MaterialUniform {
+    fn eq(&self, other: &Self) -> bool {
+        self.buffer == other.buffer
+    }
+}
+
 impl ImageUniform {
     pub(crate) fn new(
         device: &Arc<Device>,

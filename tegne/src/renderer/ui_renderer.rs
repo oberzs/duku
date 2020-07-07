@@ -24,11 +24,11 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::pipeline::WorldData;
-use crate::resource::Id;
+use crate::resource::Ref;
 use crate::resource::ResourceManager;
 
 pub(crate) struct UiRenderer {
-    framebuffer: Id<Framebuffer>,
+    framebuffer: Ref<Framebuffer>,
     shader: Shader,
     mesh: Mesh,
     texture: Option<Texture>,
@@ -39,7 +39,7 @@ impl UiRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        resources: &ResourceManager,
+        resources: &mut ResourceManager,
         width: u32,
         height: u32,
     ) -> Result<Self> {
@@ -86,12 +86,7 @@ impl UiRenderer {
         })
     }
 
-    pub(crate) fn draw(
-        &mut self,
-        ui: Ui<'_>,
-        shader_layout: &ShaderLayout,
-        resources: &ResourceManager,
-    ) -> Result<()> {
+    pub(crate) fn draw(&mut self, ui: Ui<'_>, shader_layout: &ShaderLayout) -> Result<()> {
         let draw_data = ui.render();
 
         let half_width = draw_data.display_size[0] / 2.0;
@@ -131,7 +126,7 @@ impl UiRenderer {
         // render ui
         let cmd = self.device.command_buffer();
 
-        resources.with_framebuffer(self.framebuffer.id_ref(), |f| {
+        self.framebuffer.with(|f| {
             // update world uniform
             f.world_uniform()
                 .update(WorldData {
@@ -147,7 +142,7 @@ impl UiRenderer {
 
             // begin render pass
             self.device
-                .cmd_begin_render_pass(cmd, f, [0.0, 0.0, 0.0, 0.0]);
+                .cmd_begin_render_pass(cmd, &f, [0.0, 0.0, 0.0, 0.0]);
             self.device.cmd_set_view(cmd, f.width(), f.height());
             self.device.cmd_set_line_width(cmd, 1.0);
 
@@ -202,19 +197,12 @@ impl UiRenderer {
         Ok(())
     }
 
-    pub(crate) fn resize(
-        &self,
-        shader_layout: &ShaderLayout,
-        resources: &ResourceManager,
-        width: u32,
-        height: u32,
-    ) {
-        resources.with_framebuffer(self.framebuffer.id_ref(), |f| {
-            f.resize(width, height, shader_layout).expect("bad code");
-        });
+    pub(crate) fn resize(&self, shader_layout: &ShaderLayout, width: u32, height: u32) {
+        self.framebuffer
+            .with(|f| f.resize(width, height, shader_layout).expect("bad code"));
     }
 
-    pub(crate) fn framebuffer(&self) -> &Id<Framebuffer> {
+    pub(crate) fn framebuffer(&self) -> &Ref<Framebuffer> {
         &self.framebuffer
     }
 }

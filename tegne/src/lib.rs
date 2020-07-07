@@ -40,22 +40,26 @@ pub use camera::Camera;
 pub use camera::CameraType;
 pub use color::colors;
 pub use color::Color;
-pub use image::Framebuffer;
-pub use image::Texture;
 pub use math::Transform;
 pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
-pub use mesh::Mesh;
 pub use mesh::MeshOptions;
-pub use pipeline::Material;
 pub use pipeline::MaterialOptions;
-pub use pipeline::Shader;
+pub use pipeline::SamplerAddress;
+pub use pipeline::SamplerFilter;
+pub use pipeline::SamplerMipmaps;
 pub use pipeline::ShaderOptions;
 pub use profiler::begin_profile;
 pub use profiler::end_profile;
+pub use renderer::SamplerOptions;
 pub use renderer::Target;
-pub use resource::Id;
+
+pub type Mesh = resource::Ref<mesh::Mesh>;
+pub type Material = resource::Ref<pipeline::Material>;
+pub type Texture = resource::Ref<image::Texture>;
+pub type Shader = resource::Ref<pipeline::Shader>;
+pub type Framebuffer = resource::Ref<image::Framebuffer>;
 
 #[cfg(feature = "controller")]
 pub use camera::Controller;
