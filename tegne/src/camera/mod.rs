@@ -17,8 +17,8 @@ pub use controller::Controller;
 pub struct Camera {
     pub transform: Transform,
     pub fov: u32,
-    pub width: u32,
-    pub height: u32,
+    pub width: f32,
+    pub height: f32,
     pub depth: f32,
     camera_type: CameraType,
 }
@@ -30,33 +30,33 @@ pub enum CameraType {
 }
 
 impl Camera {
-    pub fn perspective(width: u32, height: u32, fov: u32) -> Self {
+    pub fn perspective(width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Perspective,
-            depth: 75.0,
+            depth,
             width,
             height,
             fov,
         }
     }
 
-    pub fn orthographic(width: u32, height: u32) -> Self {
+    pub fn orthographic(width: f32, height: f32, depth: f32) -> Self {
         Self {
             transform: Transform::default(),
             camera_type: CameraType::Orthographic,
-            depth: 75.0,
+            depth,
             fov: 0,
             width,
             height,
         }
     }
 
-    pub fn new(camera_type: CameraType, width: u32, height: u32) -> Self {
+    pub fn new(camera_type: CameraType, width: f32, height: f32, depth: f32) -> Self {
         Self {
             transform: Transform::default(),
-            depth: 75.0,
             fov: 90,
+            depth,
             camera_type,
             width,
             height,
@@ -78,18 +78,12 @@ impl Camera {
 
     pub(crate) fn matrix(&self) -> Matrix4 {
         let projection = match self.camera_type {
-            CameraType::Orthographic => Matrix4::orthographic_center(
-                self.width as f32,
-                self.height as f32,
-                0.001,
-                self.depth,
-            ),
-            CameraType::Perspective => Matrix4::perspective(
-                self.fov as f32,
-                self.width as f32 / self.height as f32,
-                0.001,
-                self.depth,
-            ),
+            CameraType::Orthographic => {
+                Matrix4::orthographic_center(self.width, self.height, 0.001, self.depth)
+            }
+            CameraType::Perspective => {
+                Matrix4::perspective(self.fov as f32, self.width / self.height, 0.001, self.depth)
+            }
         };
 
         let view = self.transform.as_matrix_for_camera();

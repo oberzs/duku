@@ -132,9 +132,12 @@ impl ForwardRenderer {
                 // frustum-fit light camera
                 // get view frustum corners from NDC
                 let mut view_cam = framebuffer.camera.clone();
+                // view_cam.depth = 25.0; // TODO: configurable max depth
                 view_cam.depth *= cs;
+                let view_cam =
+                    Camera::perspective(view_cam.width, view_cam.height, view_cam.depth, 90);
 
-                let cam_inv = view_cam.matrix().inverse().unwrap();
+                let cam_inv = view_cam.matrix().inverse().expect("bad matrix");
                 let mut corners = vec![];
                 for x in &[-1.0, 1.0] {
                     for y in &[-1.0, 1.0] {
@@ -152,14 +155,21 @@ impl ForwardRenderer {
                 let r = corners.iter().map(|v| (center - *v).length()).sum::<f32>()
                     / corners.len() as f32;
 
+                // stabilize shadow map by using texel units
+                let texel_size = (r * 2.0) / self.shadow_map_size as f32;
+                let light_pos = {
+                    let p = center - light_dir * r;
+                    (p / texel_size).floor() * texel_size
+                };
+                let size = {
+                    let s = r * 2.0;
+                    (s / texel_size).floor() * texel_size
+                };
+
                 // create depth camera
-                let light_pos = center - light_dir * r;
-                let size = r * 2.0;
-                let texel_size = size / self.shadow_map_size as f32;
-                let mut depth_cam = Camera::orthographic(size as u32, size as u32);
-                depth_cam.depth = size;
+                let mut depth_cam = Camera::orthographic(size, size, size);
                 depth_cam.transform.look_in_dir(light_dir, Vector3::up());
-                depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
+                depth_cam.transform.position = light_pos;
 
                 shadow_framebuffer.world_uniform().update(WorldData {
                     lights: [Default::default(); 4],

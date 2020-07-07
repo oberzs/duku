@@ -116,7 +116,7 @@ impl Framebuffer {
                 let handle = device.create_framebuffer(&info)?;
 
                 let world_uniform = WorldUniform::new(device, shader_layout)?;
-                let camera = Camera::new(camera_type, width, height);
+                let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
                 Ok(Self {
                     multisampled: device.is_msaa(),
@@ -207,7 +207,7 @@ impl Framebuffer {
         let world_uniform = WorldUniform::new(device, shader_layout)?;
         let framebuffer_uniform =
             Some(FramebufferUniform::new(shader_layout, views[stored_index])?);
-        let camera = Camera::new(camera_type, width, height);
+        let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
         Ok(Self {
             stored_index,
@@ -296,8 +296,8 @@ impl Framebuffer {
         self.images = images;
         self.stored_index = stored_index;
         self.framebuffer_uniform = framebuffer_uniform;
-        self.camera.width = width;
-        self.camera.height = height;
+        self.camera.width = width as f32;
+        self.camera.height = height as f32;
         self.width = width;
         self.height = height;
 
