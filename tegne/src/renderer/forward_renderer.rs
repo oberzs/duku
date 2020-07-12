@@ -10,7 +10,6 @@ use super::Order;
 use super::RenderStats;
 use super::Target;
 use crate::camera::CameraType;
-use crate::color::colors;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
@@ -20,7 +19,6 @@ use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::AttachmentType;
-use crate::pipeline::Light;
 use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
@@ -109,8 +107,7 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
-        let light_dir = Vector3::new(-1.0, -1.0, -1.0).unit();
-        // let light_dir = Vector3::down();
+        let light_dir = options.target.main_light().coords.shrink();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
@@ -202,21 +199,9 @@ impl ForwardRenderer {
         );
 
         // normal render
-        // setup lights
-        let main_light = Light {
-            coords: light_dir.extend(0.0),
-            color: colors::WHITE.to_rgba_norm_vec(),
-        };
-        let other_lights = options.target.lights();
-
         // update world uniform
         framebuffer.world_uniform().update(WorldData {
-            lights: [
-                main_light,
-                other_lights[0],
-                other_lights[1],
-                other_lights[2],
-            ],
+            lights: options.target.lights(),
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),

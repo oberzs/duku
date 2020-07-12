@@ -3,6 +3,7 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
+use crate::color::colors;
 use crate::color::Color;
 use crate::error::Result;
 use crate::font::Font;
@@ -24,6 +25,7 @@ use crate::resource::Ref;
 pub struct Target {
     orders_by_shader: Vec<OrdersByShader>,
     clear: Color,
+    main_light: Light,
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
@@ -71,6 +73,10 @@ impl Target {
         Ok(Self {
             orders_by_shader: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
+            main_light: Light {
+                coords: Vector3::new(-1.0, -1.0, -1.0).unit().extend(0.0),
+                color: colors::WHITE.to_rgba_norm_vec(),
+            },
             lights: vec![],
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.clone(),
@@ -208,9 +214,23 @@ impl Target {
         color: impl Into<Color>,
     ) {
         self.lights.push(Light {
-            coords: direction.into().extend(0.0),
+            coords: direction.into().unit().extend(0.0),
             color: color.into().to_rgba_norm_vec(),
         });
+    }
+
+    pub fn add_point_light(&mut self, direction: impl Into<Vector3>, color: impl Into<Color>) {
+        self.lights.push(Light {
+            coords: direction.into().unit().extend(1.0),
+            color: color.into().to_rgba_norm_vec(),
+        });
+    }
+
+    pub fn set_main_light(&mut self, direction: impl Into<Vector3>, color: impl Into<Color>) {
+        self.main_light = Light {
+            coords: direction.into().unit().extend(0.0),
+            color: color.into().to_rgba_norm_vec(),
+        };
     }
 
     pub fn set_clear(&mut self, clear: impl Into<Color>) {
@@ -283,9 +303,14 @@ impl Target {
         self.orders_by_shader.iter()
     }
 
-    pub(crate) fn lights(&self) -> [Light; 3] {
-        let mut lights: [Light; 3] = Default::default();
-        lights[..self.lights.len()].clone_from_slice(&self.lights[..]);
+    pub(crate) fn main_light(&self) -> Light {
+        self.main_light
+    }
+
+    pub(crate) fn lights(&self) -> [Light; 4] {
+        let mut lights: [Light; 4] = Default::default();
+        lights[0] = self.main_light;
+        lights[1..self.lights.len() + 1].clone_from_slice(&self.lights[..]);
         lights
     }
 
