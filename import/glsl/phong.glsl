@@ -56,9 +56,13 @@ float calc_shadow(Light light) {
     vec3 light_dir = normalize(-light.coords.xyz);
 
     // depth bias
-    float cosTheta = clamp(dot(normal, light_dir), 0.0, 1.0);
-    float bias = world.bias * tan(acos(cosTheta));
-    bias = clamp(bias, 0.0, 0.01);
+    float angle = acos(clamp(dot(normal, light_dir), 0.0, 1.0));
+    float bias = world.bias * tan(angle);
+    if (angle == 0.0) {
+        bias = 0.01;
+    } else {
+        bias = clamp(bias, 0.0, 0.01);
+    }
 
     vec4 shadow_coord = in_lightspace_position[shadow_index];
     vec2 uv = (shadow_coord.xy / shadow_coord.w) * 0.5 + 0.5;

@@ -110,6 +110,7 @@ impl ForwardRenderer {
         let cmd = device.command_buffer();
 
         let light_dir = Vector3::new(-1.0, -1.0, -1.0).unit();
+        // let light_dir = Vector3::down();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
@@ -133,10 +134,15 @@ impl ForwardRenderer {
                 let bounds = framebuffer.camera.bounding_sphere_for_split(prev_cs, *cs);
                 let diameter = bounds.radius * 2.0;
 
+                let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
+                    Vector3::up()
+                } else {
+                    Vector3::forward()
+                };
+
                 let light_position = bounds.center - light_dir * bounds.radius;
-                let light_view_matrix =
-                    Matrix4::look_rotation(bounds.center - light_position, Vector3::up())
-                        * Matrix4::translation(-light_position);
+                let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
+                    * Matrix4::translation(-light_position);
                 let mut light_ortho_matrix =
                     Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
 
@@ -186,14 +192,14 @@ impl ForwardRenderer {
                 cascade_splits[i] = framebuffer.camera.depth * cs;
                 prev_cs = *cs;
             }
-
-            // bind current shadow map set
-            device.cmd_bind_descriptor(
-                cmd,
-                self.shadow_uniforms[device.current_frame()].descriptor(),
-                &options.shader_layout,
-            );
         }
+
+        // bind current shadow map set
+        device.cmd_bind_descriptor(
+            cmd,
+            self.shadow_uniforms[device.current_frame()].descriptor(),
+            &options.shader_layout,
+        );
 
         // normal render
         // setup lights
