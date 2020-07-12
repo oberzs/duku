@@ -9,7 +9,6 @@ use std::time::Instant;
 use super::Order;
 use super::RenderStats;
 use super::Target;
-use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::color::colors;
 use crate::device::Device;
@@ -31,7 +30,7 @@ use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
 use crate::resource::Ref;
 
-const CASCADE_SPLITS: [f32; 3] = [0.2, 0.4, 1.0];
+const CASCADE_COUNT: usize = 3;
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffers: Vec<Vec<Framebuffer>>,
@@ -57,7 +56,7 @@ impl ForwardRenderer {
         let mut shadow_uniforms = vec![];
         for frame in 0..IN_FLIGHT_FRAME_COUNT {
             shadow_framebuffers.push(vec![]);
-            for _ in 0..CASCADE_SPLITS.len() {
+            for _ in 0..CASCADE_COUNT {
                 shadow_framebuffers[frame].push(Framebuffer::new(
                     device,
                     shader_layout,
@@ -110,7 +109,8 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
-        let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
+        let light_dir = Vector3::new(-1.0, -1.0, -1.0).unit();
+        // let light_dir = Vector3::down();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
@@ -126,45 +126,45 @@ impl ForwardRenderer {
             );
 
             // render shadow map for each cascade
-            for (i, cs) in CASCADE_SPLITS.iter().enumerate() {
+            let mut prev_cs = 0.0;
+            for (i, cs) in options.target.cascade_splits().iter().enumerate() {
                 let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
-                // frustum-fit light camera
-                // get view frustum corners from NDC
-                let mut view_cam = framebuffer.camera.clone();
-                view_cam.depth *= cs;
+                // get view frustum bounding sphere
+                let bounds = framebuffer.camera.bounding_sphere_for_split(prev_cs, *cs);
+                let diameter = bounds.radius * 2.0;
 
-                let cam_inv = view_cam.matrix().inverse().unwrap();
-                let mut corners = vec![];
-                for x in &[-1.0, 1.0] {
-                    for y in &[-1.0, 1.0] {
-                        for z in &[0.0, 1.0] {
-                            let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
-                            corners.push(corner.shrink() / corner.w);
-                        }
-                    }
-                }
+                let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
+                    Vector3::up()
+                } else {
+                    Vector3::forward()
+                };
 
-                // get bounding sphere radius
-                // sphere makes it axis-aligned
-                let corner_count = corners.len() as f32;
-                let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
-                let r = corners.iter().map(|v| (center - *v).length()).sum::<f32>()
-                    / corners.len() as f32;
+                let light_position = bounds.center - light_dir * bounds.radius;
+                let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
+                    * Matrix4::translation(-light_position);
+                let mut light_ortho_matrix =
+                    Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
 
-                // create depth camera
-                let light_pos = center - light_dir * r;
-                let size = r * 2.0;
-                let texel_size = size / self.shadow_map_size as f32;
-                let mut depth_cam = Camera::orthographic(size as u32, size as u32);
-                depth_cam.depth = size;
-                depth_cam.transform.look_in_dir(light_dir, Vector3::up());
-                depth_cam.transform.position = (light_pos / texel_size).floor() * texel_size;
+                // stabilize shadow map by using texel units
+                let shadow_matrix = light_ortho_matrix * light_view_matrix;
+                let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
+                shadow_origin = shadow_matrix * shadow_origin;
+                shadow_origin *= self.shadow_map_size as f32 / 2.0;
+
+                let rounded_origin = shadow_origin.round();
+                let mut round_offset = rounded_origin - shadow_origin;
+                round_offset *= 2.0 / self.shadow_map_size as f32;
+
+                light_ortho_matrix.col_w.x += round_offset.x;
+                light_ortho_matrix.col_w.y += round_offset.y;
+
+                let light_matrix = light_ortho_matrix * light_view_matrix;
 
                 shadow_framebuffer.world_uniform().update(WorldData {
                     lights: [Default::default(); 4],
-                    world_matrix: depth_cam.matrix(),
-                    camera_position: framebuffer.camera.transform.position,
+                    world_matrix: light_matrix,
+                    camera_position: Vector3::default(),
                     time: self.start_time.elapsed().as_secs_f32(),
                     cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
@@ -188,17 +188,18 @@ impl ForwardRenderer {
                 device.cmd_end_render_pass(cmd);
 
                 // set uniform variables for normal render
-                light_matrices[i] = depth_cam.matrix();
-                cascade_splits[i] = cs * r;
+                light_matrices[i] = light_matrix;
+                cascade_splits[i] = framebuffer.camera.depth * cs;
+                prev_cs = *cs;
             }
-
-            // bind current shadow map set
-            device.cmd_bind_descriptor(
-                cmd,
-                self.shadow_uniforms[device.current_frame()].descriptor(),
-                &options.shader_layout,
-            );
         }
+
+        // bind current shadow map set
+        device.cmd_bind_descriptor(
+            cmd,
+            self.shadow_uniforms[device.current_frame()].descriptor(),
+            &options.shader_layout,
+        );
 
         // normal render
         // setup lights

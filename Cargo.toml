@@ -8,5 +8,5 @@ members = [
   "examples/surface",
   "examples/dynamic",
   "examples/ui",
-  "examples/lines"
+  "examples/textures"
 ]

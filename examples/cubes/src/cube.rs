@@ -7,24 +7,31 @@ use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::Target;
 use tegne::Tegne;
+use tegne::Texture;
 use tegne::Transform;
 use tegne::Vector2;
 use tegne::Vector3;
 
 pub struct Cube {
     mesh: Mesh,
+    texture: Texture,
     transform: Transform,
 }
 
 impl Cube {
-    pub fn new(tegne: &mut Tegne, pos: impl Into<Vector3>, size: f32) -> Self {
-        let mesh = cube(tegne, size);
+    pub fn new(tegne: &mut Tegne, texture: &Texture, pos: impl Into<Vector3>) -> Self {
+        let mesh = cube(tegne, 1.0);
         let transform = Transform::from(pos.into());
 
-        Self { mesh, transform }
+        Self {
+            texture: texture.clone(),
+            mesh,
+            transform,
+        }
     }
 
     pub fn draw(&self, target: &mut Target) {
+        target.set_albedo_texture(&self.texture);
         target.draw(&self.mesh, self.transform);
     }
 }

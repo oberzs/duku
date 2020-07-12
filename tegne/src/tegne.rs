@@ -180,7 +180,12 @@ impl Tegne {
             window.height
         ));
 
-        let main_camera = Camera::new(options.camera, window.width, window.height);
+        let main_camera = Camera::new(
+            options.camera,
+            window.width as f32,
+            window.height as f32,
+            100.0,
+        );
 
         Self {
             render_stage: RenderStage::Before,
@@ -248,8 +253,8 @@ impl Tegne {
     pub fn resize(&mut self, width: u32, height: u32) {
         check!(self.device.wait_for_idle());
         self.surface.resize(width, height);
-        self.main_camera.width = width;
-        self.main_camera.height = height;
+        self.main_camera.width = width as f32;
+        self.main_camera.height = height as f32;
         check!(self
             .swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index));

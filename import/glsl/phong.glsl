@@ -44,9 +44,9 @@ vec3 calc_point_light(Light light, vec3 cam_dir, vec3 pos, float shadow) {
 float calc_shadow(Light light) {
     // choose shadow map
     int shadow_index;
-    if (in_screenspace_position.z < world.cascade_splits.x) {
+    if (in_screenspace_position.z < world.cascade_splits[0]) {
         shadow_index = 0;
-    } else if (in_screenspace_position.z < world.cascade_splits.y) {
+    } else if (in_screenspace_position.z < world.cascade_splits[1]) {
         shadow_index = 1;
     } else {
         shadow_index = 2;
@@ -56,23 +56,30 @@ float calc_shadow(Light light) {
     vec3 light_dir = normalize(-light.coords.xyz);
 
     // depth bias
-    float cosTheta = clamp(dot(normal, light_dir), 0.0, 1.0);
-    float bias = world.bias * tan(acos(cosTheta));
-    bias = clamp(bias, 0.0, 0.01);
+    float angle = acos(clamp(dot(normal, light_dir), 0.0, 1.0));
+    float bias = world.bias * tan(angle);
+    if (angle == 0.0) {
+        bias = 0.01;
+    } else {
+        bias = clamp(bias, 0.0, 0.01);
+    }
 
     vec4 shadow_coord = in_lightspace_position[shadow_index];
     vec2 uv = (shadow_coord.xy / shadow_coord.w) * 0.5 + 0.5;
     float depth = (shadow_coord.z - bias) / shadow_coord.w;
 
     float shadow = 0.0;
+    int strength = 1;
     vec2 texel_size = 1.0 / textureSize(sampler2DShadow(shadow_maps[shadow_index], sampler_cm), 0);
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
+    for (int x = -strength; x <= strength; x++) {
+        for (int y = -strength; y <= strength; y++) {
             vec2 off = vec2(x, y) * texel_size;
             shadow += texture(sampler2DShadow(shadow_maps[shadow_index], sampler_cm), vec3(uv + off, depth));
         }
     }
-    shadow /= 9.0;
+    if (strength > 0) {
+        shadow /= pow(strength * 2 + 1, 2);
+    }
 
     if (depth > 1.0) {
         shadow = 0.0;

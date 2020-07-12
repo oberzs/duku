@@ -288,6 +288,10 @@ impl Matrix4 {
     pub fn row_w(&self) -> Vector4 {
         Vector4::new(self.col_x.w, self.col_y.w, self.col_z.w, self.col_w.w)
     }
+
+    pub fn transform_vector(&self, vector: Vector3) -> Vector3 {
+        (*self * vector.extend(1.0)).shrink()
+    }
 }
 
 impl Mul<f32> for Matrix4 {
@@ -520,6 +524,6 @@ mod test {
     fn projection() {
         let matrix = Matrix4::perspective(90.0, 16.0 / 9.0, 0.1, 10.0);
         let point = Vector4::new(0.0, 0.0, 10.0, 1.0);
-        assert_eq!(matrix * point, Vector4::new(0.0, 0.0, 1.0, 1.0));
+        assert_eq!(matrix * point, Vector4::new(0.0, 0.0, 10.000001, 10.0));
     }
 }

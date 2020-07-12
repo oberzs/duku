@@ -35,6 +35,7 @@ pub struct Target {
     wireframes: bool,
     do_shadow_mapping: bool,
     bias: f32,
+    cascade_splits: [f32; 3],
     builtins: Builtins,
 }
 
@@ -80,7 +81,8 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             do_shadow_mapping: false,
-            bias: 0.004,
+            bias: 0.001,
+            cascade_splits: [0.05, 0.3, 1.0],
             builtins: builtins.clone(),
         })
     }
@@ -104,6 +106,19 @@ impl Target {
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
         let mesh = self.builtins.sphere_mesh.clone();
         self.draw(&mesh, transform);
+    }
+
+    pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
+        let temp_albedo = self.current_albedo.clone();
+        let temp_shadows = self.cast_shadows;
+        self.current_albedo = texture.clone();
+        self.cast_shadows = false;
+
+        let mesh = self.builtins.quad_mesh.clone();
+        self.draw(&mesh, transform);
+
+        self.current_albedo = temp_albedo;
+        self.cast_shadows = temp_shadows;
     }
 
     pub fn draw_surface(&mut self) {
@@ -215,6 +230,10 @@ impl Target {
         self.bias = amount;
     }
 
+    pub fn set_cascade_splits(&mut self, splits: [f32; 3]) {
+        self.cascade_splits = splits;
+    }
+
     pub fn set_shader_phong(&mut self) {
         self.current_shader = self.builtins.phong_shader.clone();
     }
@@ -251,6 +270,10 @@ impl Target {
 
     pub(crate) fn bias(&self) -> f32 {
         self.bias
+    }
+
+    pub(crate) fn cascade_splits(&self) -> [f32; 3] {
+        self.cascade_splits
     }
 
     fn add_order(&mut self, order: Order) {
