@@ -29,6 +29,7 @@ pub(crate) struct Builtins {
     pub(crate) white_texture: Ref<Texture>,
     pub(crate) white_material: Ref<Material>,
     pub(crate) surface_mesh: Ref<Mesh>,
+    pub(crate) quad_mesh: Ref<Mesh>,
     pub(crate) cube_mesh: Ref<Mesh>,
     pub(crate) sphere_mesh: Ref<Mesh>,
     pub(crate) phong_shader: Ref<Shader>,
@@ -58,6 +59,7 @@ impl Builtins {
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);
+        let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
         let sphere_mesh = resources.add_mesh(create_sphere(device, 2)?);
 
@@ -116,6 +118,7 @@ impl Builtins {
             white_texture,
             white_material,
             surface_mesh,
+            quad_mesh,
             cube_mesh,
             sphere_mesh,
             phong_shader,
@@ -141,6 +144,32 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(0.0, 0.0),
     ];
     let triangles = &[[0, 2, 1], [0, 3, 2]];
+
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices,
+            triangles,
+            uvs,
+            ..Default::default()
+        },
+    )
+}
+
+fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
+    let vertices = &[
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(1.0, 1.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+    ];
+    let uvs = &[
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 0.0),
+    ];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     Mesh::new(
         device,

@@ -38,20 +38,33 @@ fn main() {
         },
     );
 
+    let cube_textures = [
+        tegne
+            .create_texture_from_file("examples/cubes/textures/Purple/texture_01.png")
+            .unwrap(),
+        tegne
+            .create_texture_from_file("examples/cubes/textures/Orange/texture_05.png")
+            .unwrap(),
+        tegne
+            .create_texture_from_file("examples/cubes/textures/Green/texture_13.png")
+            .unwrap(),
+    ];
+
     let floor = Floor::new(&mut tegne);
 
     let mut rng = rand::thread_rng();
     let cubes = (0..20)
         .map(|i| {
-            let y = rng.gen_range(0.0, 3.0);
-            let z = rng.gen_range(-10.0, 10.0);
-            let size = rng.gen_range(0.5, 1.0);
-            Cube::new(&mut tegne, [10.0 - i as f32, y, z], size)
+            let t = rng.gen_range(0, cube_textures.len());
+            let y = rng.gen_range(0, 3);
+            let z = rng.gen_range(-10, 10);
+            Cube::new(
+                &mut tegne,
+                &cube_textures[t],
+                [10.0 - i as f32, y as f32, z as f32],
+            )
         })
         .collect::<Vec<_>>();
-    let cube_tex = tegne
-        .create_texture_from_file("examples/cubes/assets/images/orange.png")
-        .unwrap();
 
     {
         let cam_t = &mut tegne.main_camera.transform;
@@ -90,7 +103,6 @@ fn main() {
             tegne.draw_on_window(|target| {
                 target.set_wireframes(wireframes);
                 floor.draw(target);
-                target.set_albedo_texture(&cube_tex);
                 for cube in &cubes {
                     cube.draw(target);
                 }

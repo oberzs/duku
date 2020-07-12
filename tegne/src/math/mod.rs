@@ -5,11 +5,14 @@
 
 mod matrix_4;
 mod quaternion;
+mod sphere;
 mod transform;
 mod utils;
 mod vector_2;
 mod vector_3;
 mod vector_4;
+
+pub(crate) use sphere::Sphere;
 
 pub use matrix_4::Matrix4;
 pub use quaternion::Quaternion;

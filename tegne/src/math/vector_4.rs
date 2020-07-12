@@ -37,6 +37,15 @@ impl Vector4 {
     pub fn shrink(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
+
+    pub fn round(self) -> Vector4 {
+        Vector4::new(
+            self.x.round(),
+            self.y.round(),
+            self.z.round(),
+            self.w.round(),
+        )
+    }
 }
 
 impl From<[f32; 4]> for Vector4 {

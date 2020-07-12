@@ -3,7 +3,6 @@
 
 // Floor mesh struct with custom texture
 
-use tegne::Color;
 use tegne::Mesh;
 use tegne::MeshOptions;
 use tegne::SamplerFilter;
@@ -23,10 +22,9 @@ pub struct Floor {
 impl Floor {
     pub fn new(tegne: &mut Tegne) -> Self {
         let mesh = plane(tegne, 150.0);
-        let color_1 = Color::rgb(240, 240, 240);
-        let color_2 = Color::rgb(200, 200, 200);
-        let data = &[color_1, color_2, color_2, color_1];
-        let texture = tegne.create_texture(data, 2);
+        let texture = tegne
+            .create_texture_from_file("examples/cubes/textures/Light/texture_08.png")
+            .unwrap();
 
         Self { mesh, texture }
     }

@@ -7,10 +7,12 @@
 use ash::vk;
 use std::sync::Arc;
 
+use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
+use super::LayoutChangeOptions;
 use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
@@ -208,6 +210,21 @@ impl Framebuffer {
         let framebuffer_uniform =
             Some(FramebufferUniform::new(shader_layout, views[stored_index])?);
         let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
+
+        device.do_commands(|cmd| {
+            device.cmd_change_image_layout(
+                cmd,
+                &images[stored_index],
+                LayoutChangeOptions {
+                    new_layout: match stored_format {
+                        Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                        _ => ImageLayout::ShaderColor,
+                    },
+                    ..Default::default()
+                },
+            );
+            Ok(())
+        })?;
 
         Ok(Self {
             stored_index,

@@ -44,9 +44,9 @@ vec3 calc_point_light(Light light, vec3 cam_dir, vec3 pos, float shadow) {
 float calc_shadow(Light light) {
     // choose shadow map
     int shadow_index;
-    if (in_screenspace_position.z < world.cascade_splits.x) {
+    if (in_screenspace_position.z < world.cascade_splits[0]) {
         shadow_index = 0;
-    } else if (in_screenspace_position.z < world.cascade_splits.y) {
+    } else if (in_screenspace_position.z < world.cascade_splits[1]) {
         shadow_index = 1;
     } else {
         shadow_index = 2;
@@ -65,7 +65,7 @@ float calc_shadow(Light light) {
     float depth = (shadow_coord.z - bias) / shadow_coord.w;
 
     float shadow = 0.0;
-    int strength = 0;
+    int strength = 1;
     vec2 texel_size = 1.0 / textureSize(sampler2DShadow(shadow_maps[shadow_index], sampler_cm), 0);
     for (int x = -strength; x <= strength; x++) {
         for (int y = -strength; y <= strength; y++) {

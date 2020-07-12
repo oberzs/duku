@@ -106,6 +106,19 @@ impl Target {
         self.draw(&mesh, transform);
     }
 
+    pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
+        let temp_albedo = self.current_albedo.clone();
+        let temp_shadows = self.cast_shadows;
+        self.current_albedo = texture.clone();
+        self.cast_shadows = false;
+
+        let mesh = self.builtins.quad_mesh.clone();
+        self.draw(&mesh, transform);
+
+        self.current_albedo = temp_albedo;
+        self.cast_shadows = temp_shadows;
+    }
+
     pub fn draw_surface(&mut self) {
         let temp_shadows = self.cast_shadows;
         self.cast_shadows = false;

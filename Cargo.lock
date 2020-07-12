@@ -401,14 +401,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-lines"
+name = "example-surface"
 version = "0.1.0"
 dependencies = [
  "tegne",
 ]
 
 [[package]]
-name = "example-surface"
+name = "example-textures"
 version = "0.1.0"
 dependencies = [
  "tegne",

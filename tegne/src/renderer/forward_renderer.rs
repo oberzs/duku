@@ -9,7 +9,6 @@ use std::time::Instant;
 use super::Order;
 use super::RenderStats;
 use super::Target;
-use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::color::colors;
 use crate::device::Device;
@@ -110,7 +109,7 @@ impl ForwardRenderer {
         let clear = options.target.clear();
         let cmd = device.command_buffer();
 
-        let light_dir = Vector3::new(-1.0, -2.0, -1.0).unit();
+        let light_dir = Vector3::new(-1.0, -1.0, -1.0).unit();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
@@ -126,55 +125,40 @@ impl ForwardRenderer {
             );
 
             // render shadow map for each cascade
+            let mut prev_cs = 0.0;
             for (i, cs) in CASCADE_SPLITS.iter().enumerate() {
                 let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
-                // frustum-fit light camera
-                // get view frustum corners from NDC
-                let mut view_cam = framebuffer.camera.clone();
-                // view_cam.depth = 25.0; // TODO: configurable max depth
-                view_cam.depth *= cs;
+                // get view frustum bounding sphere
+                let bounds = framebuffer.camera.bounding_sphere_for_split(prev_cs, *cs);
+                let diameter = bounds.radius * 2.0;
 
-                let cam_inv = view_cam.matrix().inverse().expect("bad matrix");
-                let mut corners = vec![];
-                for x in &[-1.0, 1.0] {
-                    for y in &[-1.0, 1.0] {
-                        for z in &[0.0, 1.0] {
-                            let corner = cam_inv * Vector4::new(*x, *y, *z, 1.0);
-                            corners.push(corner.shrink() / corner.w);
-                        }
-                    }
-                }
-
-                // get bounding sphere radius
-                // sphere makes it axis-aligned
-                let corner_count = corners.len() as f32;
-                let center: Vector3 = corners.iter().sum::<Vector3>() / corner_count;
-                let r = corners
-                    .iter()
-                    .map(|v| (center - *v).length())
-                    .fold(-1.0 / 0.0, f32::max);
+                let light_position = bounds.center - light_dir * bounds.radius;
+                let light_view_matrix =
+                    Matrix4::look_rotation(bounds.center - light_position, Vector3::up())
+                        * Matrix4::translation(-light_position);
+                let mut light_ortho_matrix =
+                    Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
 
                 // stabilize shadow map by using texel units
-                let texel_size = (r * 2.0) / self.shadow_map_size as f32;
-                let light_pos = {
-                    let p = center - light_dir * r;
-                    (p / texel_size).floor() * texel_size
-                };
-                let size = {
-                    let s = r * 2.0;
-                    (s / texel_size).floor() * texel_size
-                };
+                let shadow_matrix = light_ortho_matrix * light_view_matrix;
+                let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
+                shadow_origin = shadow_matrix * shadow_origin;
+                shadow_origin *= self.shadow_map_size as f32 / 2.0;
 
-                // create depth camera
-                let mut depth_cam = Camera::orthographic(size, size, size);
-                depth_cam.transform.look_in_dir(light_dir, Vector3::up());
-                depth_cam.transform.position = light_pos;
+                let rounded_origin = shadow_origin.round();
+                let mut round_offset = rounded_origin - shadow_origin;
+                round_offset *= 2.0 / self.shadow_map_size as f32;
+
+                light_ortho_matrix.col_w.x += round_offset.x;
+                light_ortho_matrix.col_w.y += round_offset.y;
+
+                let light_matrix = light_ortho_matrix * light_view_matrix;
 
                 shadow_framebuffer.world_uniform().update(WorldData {
                     lights: [Default::default(); 4],
-                    world_matrix: depth_cam.matrix(),
-                    camera_position: framebuffer.camera.transform.position,
+                    world_matrix: light_matrix,
+                    camera_position: Vector3::default(),
                     time: self.start_time.elapsed().as_secs_f32(),
                     cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
@@ -198,8 +182,9 @@ impl ForwardRenderer {
                 device.cmd_end_render_pass(cmd);
 
                 // set uniform variables for normal render
-                light_matrices[i] = depth_cam.matrix();
-                cascade_splits[i] = view_cam.depth;
+                light_matrices[i] = light_matrix;
+                cascade_splits[i] = framebuffer.camera.depth * cs;
+                prev_cs = *cs;
             }
 
             // bind current shadow map set
