@@ -35,6 +35,7 @@ pub struct Target {
     wireframes: bool,
     do_shadow_mapping: bool,
     bias: f32,
+    cascade_splits: [f32; 3],
     builtins: Builtins,
 }
 
@@ -80,7 +81,8 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             do_shadow_mapping: false,
-            bias: 0.004,
+            bias: 0.001,
+            cascade_splits: [0.05, 0.3, 1.0],
             builtins: builtins.clone(),
         })
     }
@@ -228,6 +230,10 @@ impl Target {
         self.bias = amount;
     }
 
+    pub fn set_cascade_splits(&mut self, splits: [f32; 3]) {
+        self.cascade_splits = splits;
+    }
+
     pub fn set_shader_phong(&mut self) {
         self.current_shader = self.builtins.phong_shader.clone();
     }
@@ -264,6 +270,10 @@ impl Target {
 
     pub(crate) fn bias(&self) -> f32 {
         self.bias
+    }
+
+    pub(crate) fn cascade_splits(&self) -> [f32; 3] {
+        self.cascade_splits
     }
 
     fn add_order(&mut self, order: Order) {

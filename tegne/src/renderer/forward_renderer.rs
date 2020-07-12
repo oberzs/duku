@@ -30,7 +30,7 @@ use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::WorldData;
 use crate::resource::Ref;
 
-const CASCADE_SPLITS: [f32; 3] = [0.05, 0.1, 1.0];
+const CASCADE_COUNT: usize = 3;
 
 pub(crate) struct ForwardRenderer {
     shadow_framebuffers: Vec<Vec<Framebuffer>>,
@@ -56,7 +56,7 @@ impl ForwardRenderer {
         let mut shadow_uniforms = vec![];
         for frame in 0..IN_FLIGHT_FRAME_COUNT {
             shadow_framebuffers.push(vec![]);
-            for _ in 0..CASCADE_SPLITS.len() {
+            for _ in 0..CASCADE_COUNT {
                 shadow_framebuffers[frame].push(Framebuffer::new(
                     device,
                     shader_layout,
@@ -126,7 +126,7 @@ impl ForwardRenderer {
 
             // render shadow map for each cascade
             let mut prev_cs = 0.0;
-            for (i, cs) in CASCADE_SPLITS.iter().enumerate() {
+            for (i, cs) in options.target.cascade_splits().iter().enumerate() {
                 let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
                 // get view frustum bounding sphere
