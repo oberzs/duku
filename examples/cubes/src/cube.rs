@@ -31,7 +31,7 @@ impl Cube {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_albedo_texture(&self.texture);
+        target.set_albedo(&self.texture);
         target.draw(&self.mesh, self.transform);
     }
 }

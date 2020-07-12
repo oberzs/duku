@@ -169,11 +169,16 @@ impl Tegne {
             &image_uniform
         ));
 
-        let forward_renderer = check!(ForwardRenderer::new(&device, &shader_layout));
+        let forward_renderer = check!(ForwardRenderer::new(
+            &device,
+            &shader_layout,
+            &image_uniform
+        ));
         #[cfg(feature = "ui")]
         let ui_renderer = check!(UiRenderer::new(
             &device,
             &shader_layout,
+            &image_uniform,
             &mut resources,
             window.width,
             window.height
@@ -275,7 +280,7 @@ impl Tegne {
         ));
 
         #[cfg(feature = "ui")]
-        self.ui_renderer.resize(&self.shader_layout, width, height);
+        check!(self.ui_renderer.resize(&self.image_uniform, width, height));
     }
 
     pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) {
@@ -425,6 +430,7 @@ impl Tegne {
         let framebuffer = check!(Framebuffer::new(
             &self.device,
             &self.shader_layout,
+            &self.image_uniform,
             FramebufferOptions {
                 attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
                 camera_type: t,
@@ -438,7 +444,7 @@ impl Tegne {
 
     pub fn resize_framebuffer(&self, framebuffer: &Ref<Framebuffer>, width: u32, height: u32) {
         framebuffer.with(|f| {
-            check!(f.resize(width, height, &self.shader_layout));
+            check!(f.resize(width, height, &self.image_uniform));
         });
     }
 

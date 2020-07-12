@@ -9,6 +9,7 @@ mod target;
 mod ui_renderer;
 
 pub(crate) use forward_renderer::ForwardRenderer;
+pub(crate) use target::Albedo;
 pub(crate) use target::Order;
 #[cfg(feature = "ui")]
 pub(crate) use ui_renderer::UiRenderer;

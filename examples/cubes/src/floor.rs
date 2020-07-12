@@ -30,7 +30,7 @@ impl Floor {
     }
 
     pub fn draw(&self, target: &mut Target) {
-        target.set_albedo_texture(&self.texture);
+        target.set_albedo(&self.texture);
         target.set_sampler(SamplerOptions {
             filter: SamplerFilter::Nearest,
             ..Default::default()

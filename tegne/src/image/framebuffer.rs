@@ -18,8 +18,7 @@ use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::AttachmentType;
-use crate::pipeline::Descriptor;
-use crate::pipeline::FramebufferUniform;
+use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
@@ -34,8 +33,9 @@ pub struct Framebuffer {
     images: Vec<ImageMemory>,
     world_uniform: WorldUniform,
     multisampled: bool,
-    framebuffer_uniform: Option<FramebufferUniform>,
     stored_index: usize,
+    texture_image: Option<ImageMemory>,
+    texture_index: Option<i32>,
     device: Arc<Device>,
 }
 
@@ -123,7 +123,8 @@ impl Framebuffer {
                 Ok(Self {
                     multisampled: device.is_msaa(),
                     stored_index: 0,
-                    framebuffer_uniform: None,
+                    texture_image: None,
+                    texture_index: None,
                     handle,
                     render_pass,
                     width,
@@ -140,6 +141,7 @@ impl Framebuffer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
         options: FramebufferOptions<'_>,
     ) -> Result<Self> {
         profile_scope!("new");
@@ -161,7 +163,7 @@ impl Framebuffer {
             .attachments()
             .enumerate()
             .map(|(i, a)| {
-                let mut usage = vec![];
+                let mut usage = vec![ImageUsage::TransferSrc];
 
                 match a.layout {
                     ImageLayout::Color => usage.push(ImageUsage::Color),
@@ -207,10 +209,26 @@ impl Framebuffer {
         let handle = device.create_framebuffer(&info)?;
 
         let world_uniform = WorldUniform::new(device, shader_layout)?;
-        let framebuffer_uniform =
-            Some(FramebufferUniform::new(shader_layout, views[stored_index])?);
         let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
+        let texture_image = ImageMemory::new(
+            device,
+            ImageMemoryOptions {
+                usage: &[
+                    ImageUsage::TransferDst,
+                    ImageUsage::Sampled,
+                    ImageUsage::Color,
+                ],
+                create_view: true,
+                format: ImageFormat::Sbgra,
+                width,
+                height,
+                ..Default::default()
+            },
+        )?;
+        let texture_index = image_uniform.add(texture_image.view().expect("bad view"));
+
+        // ready image layouts
         device.do_commands(|cmd| {
             device.cmd_change_image_layout(
                 cmd,
@@ -223,10 +241,20 @@ impl Framebuffer {
                     ..Default::default()
                 },
             );
+            device.cmd_change_image_layout(
+                cmd,
+                &texture_image,
+                LayoutChangeOptions {
+                    new_layout: ImageLayout::ShaderColor,
+                    ..Default::default()
+                },
+            );
             Ok(())
         })?;
 
         Ok(Self {
+            texture_image: Some(texture_image),
+            texture_index: Some(texture_index),
             stored_index,
             handle,
             render_pass,
@@ -234,7 +262,6 @@ impl Framebuffer {
             height,
             images,
             world_uniform,
-            framebuffer_uniform,
             camera,
             multisampled,
             device: Arc::clone(device),
@@ -245,7 +272,7 @@ impl Framebuffer {
         &mut self,
         width: u32,
         height: u32,
-        shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
     ) -> Result<()> {
         // check if this is not a swapchain framebuffer
         if self.render_pass.attachments().count() > self.images.len() {
@@ -297,9 +324,6 @@ impl Framebuffer {
 
         let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
 
-        let framebuffer_uniform =
-            Some(FramebufferUniform::new(shader_layout, views[stored_index])?);
-
         let info = vk::FramebufferCreateInfo::builder()
             .render_pass(self.render_pass.handle())
             .attachments(&views)
@@ -307,18 +331,143 @@ impl Framebuffer {
             .height(height)
             .layers(1);
 
+        image_uniform.remove(self.texture_index.expect("bad texture index"));
+
+        let texture_image = ImageMemory::new(
+            &self.device,
+            ImageMemoryOptions {
+                usage: &[
+                    ImageUsage::TransferDst,
+                    ImageUsage::Sampled,
+                    ImageUsage::Color,
+                ],
+                create_view: true,
+                format: ImageFormat::Sbgra,
+                width,
+                height,
+                ..Default::default()
+            },
+        )?;
+        let texture_index = image_uniform.add(texture_image.view().expect("bad view"));
+
+        // ready image layouts
+        self.device.do_commands(|cmd| {
+            self.device.cmd_change_image_layout(
+                cmd,
+                &images[stored_index],
+                LayoutChangeOptions {
+                    new_layout: match stored_format {
+                        Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                        _ => ImageLayout::ShaderColor,
+                    },
+                    ..Default::default()
+                },
+            );
+            self.device.cmd_change_image_layout(
+                cmd,
+                &texture_image,
+                LayoutChangeOptions {
+                    new_layout: ImageLayout::ShaderColor,
+                    ..Default::default()
+                },
+            );
+            Ok(())
+        })?;
+
         // reassign new values
         self.device.destroy_framebuffer(self.handle);
         self.handle = self.device.create_framebuffer(&info)?;
         self.images = images;
         self.stored_index = stored_index;
-        self.framebuffer_uniform = framebuffer_uniform;
+        self.texture_image = Some(texture_image);
+        self.texture_index = Some(texture_index);
         self.camera.width = width as f32;
         self.camera.height = height as f32;
         self.width = width;
         self.height = height;
 
         Ok(())
+    }
+
+    pub(crate) fn blit_to_texture(&self, cmd: vk::CommandBuffer) {
+        if let Some(texture_image) = &self.texture_image {
+            let stored_image = &self.images[self.stored_index];
+            if stored_image.has_depth_format() {
+                warn!("Blit to texture for depth framebuffers is not supported");
+                return;
+            }
+
+            // prepare images for transfer
+            self.device.cmd_change_image_layout(
+                cmd,
+                stored_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::ShaderColor,
+                    new_layout: ImageLayout::TransferSrc,
+                    ..Default::default()
+                },
+            );
+            self.device.cmd_change_image_layout(
+                cmd,
+                texture_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::ShaderColor,
+                    new_layout: ImageLayout::TransferDst,
+                    ..Default::default()
+                },
+            );
+
+            // blit to shader image
+            let offsets = [
+                vk::Offset3D::default(),
+                vk::Offset3D {
+                    x: self.width as i32,
+                    y: self.height as i32,
+                    z: 1,
+                },
+            ];
+            let subresource = vk::ImageSubresourceLayers::builder()
+                .aspect_mask(vk::ImageAspectFlags::COLOR)
+                .mip_level(0)
+                .base_array_layer(0)
+                .layer_count(1)
+                .build();
+
+            let blit = vk::ImageBlit::builder()
+                .src_offsets(offsets)
+                .src_subresource(subresource)
+                .dst_offsets(offsets)
+                .dst_subresource(subresource)
+                .build();
+
+            self.device.cmd_blit_image(
+                cmd,
+                stored_image.handle(),
+                texture_image.handle(),
+                blit,
+                vk::Filter::LINEAR,
+            );
+
+            // set images back to initial state
+            self.device.cmd_change_image_layout(
+                cmd,
+                stored_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::TransferSrc,
+                    new_layout: ImageLayout::ShaderColor,
+                    ..Default::default()
+                },
+            );
+            self.device.cmd_change_image_layout(
+                cmd,
+                texture_image,
+                LayoutChangeOptions {
+                    old_layout: ImageLayout::TransferDst,
+                    new_layout: ImageLayout::ShaderColor,
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     pub(crate) fn handle(&self) -> vk::Framebuffer {
@@ -353,11 +502,8 @@ impl Framebuffer {
         &self.world_uniform
     }
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
-        self.framebuffer_uniform
-            .as_ref()
-            .expect("bad code")
-            .descriptor()
+    pub(crate) fn texture_index(&self) -> i32 {
+        self.texture_index.expect("bad framebuffer")
     }
 }
 

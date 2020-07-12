@@ -6,6 +6,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use super::Albedo;
 use super::Order;
 use super::RenderStats;
 use super::Target;
@@ -19,6 +20,7 @@ use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::AttachmentType;
+use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
@@ -39,7 +41,11 @@ pub(crate) struct ForwardRenderer {
 }
 
 impl ForwardRenderer {
-    pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
+    ) -> Result<Self> {
         profile_scope!("new");
 
         let shadow_map_size = 2048;
@@ -52,6 +58,7 @@ impl ForwardRenderer {
                 shadow_framebuffers[frame].push(Framebuffer::new(
                     device,
                     shader_layout,
+                    image_uniform,
                     FramebufferOptions {
                         attachment_types: &[AttachmentType::Depth],
                         camera_type: CameraType::Orthographic,
@@ -227,6 +234,7 @@ impl ForwardRenderer {
         }
 
         device.cmd_end_render_pass(cmd);
+        framebuffer.blit_to_texture(cmd);
 
         Ok(RenderStats {
             time: self.start_time.elapsed().as_secs_f32(),
@@ -274,15 +282,13 @@ impl ForwardRenderer {
         drawn_indices: &mut u32,
     ) -> Result<()> {
         let cmd = device.command_buffer();
-        let albedo_index = order.albedo.with(|t| t.image_index());
+        let albedo_index = match order.albedo {
+            Albedo::Texture(tex) => tex.with(|t| t.image_index()),
+            Albedo::Framebuffer(fra) => fra.with(|f| f.texture_index()),
+        };
         let (vb, ib, n) = order
             .mesh
             .with(|m| (m.vertex_buffer(), m.index_buffer(), m.index_count()));
-
-        if let Some(framebuffer) = order.framebuffer {
-            let frame_descriptor = framebuffer.with(|f| f.descriptor());
-            device.cmd_bind_descriptor(cmd, frame_descriptor, shader_layout);
-        }
 
         device.cmd_push_constants(
             cmd,

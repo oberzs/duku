@@ -44,10 +44,6 @@ pub(crate) struct ShadowMapUniform {
     descriptor: Descriptor,
 }
 
-pub(crate) struct FramebufferUniform {
-    descriptor: Descriptor,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub(crate) struct Descriptor(pub u32, pub vk::DescriptorSet);
 
@@ -227,19 +223,6 @@ impl ShadowMapUniform {
     pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 3]) -> Result<Self> {
         let descriptor_set = layout.shadow_map_set(views)?;
         let descriptor = Descriptor(3, descriptor_set);
-
-        Ok(Self { descriptor })
-    }
-
-    pub(crate) fn descriptor(&self) -> Descriptor {
-        self.descriptor
-    }
-}
-
-impl FramebufferUniform {
-    pub(crate) fn new(layout: &ShaderLayout, view: vk::ImageView) -> Result<Self> {
-        let descriptor_set = layout.framebuffer_set(view)?;
-        let descriptor = Descriptor(4, descriptor_set);
 
         Ok(Self { descriptor })
     }

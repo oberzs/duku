@@ -19,7 +19,6 @@ pub(crate) struct ShaderLayout {
     material_layout: vk::DescriptorSetLayout,
     image_layout: vk::DescriptorSetLayout,
     shadow_map_layout: vk::DescriptorSetLayout,
-    framebuffer_layout: vk::DescriptorSetLayout,
     descriptor_pool: vk::DescriptorPool,
     device: Arc<Device>,
 }
@@ -94,26 +93,12 @@ impl ShaderLayout {
             .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
             .build();
 
-        // framebuffer layout
-        let framebuffer_binding = [vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(1)
-            .binding(0)
-            .build()];
-        let framebuffer_layout = device.create_descriptor_set_layout(&framebuffer_binding)?;
-        let framebuffer_pool_size = vk::DescriptorPoolSize::builder()
-            .descriptor_count(100)
-            .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-            .build();
-
         // descriptor pool
         let pool_sizes = [
             world_pool_size,
             image_pool_size,
             material_pool_size,
             shadow_map_pool_size,
-            framebuffer_pool_size,
         ];
         let descriptor_pool =
             device.create_descriptor_pool(&pool_sizes, 1 + max_world_count + max_material_count)?;
@@ -132,7 +117,6 @@ impl ShaderLayout {
             material_layout,
             image_layout,
             shadow_map_layout,
-            framebuffer_layout,
         ];
         let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder()
             .push_constant_ranges(&constant_ranges)
@@ -145,7 +129,6 @@ impl ShaderLayout {
             material_layout,
             image_layout,
             shadow_map_layout,
-            framebuffer_layout,
             descriptor_pool,
             device: Arc::clone(device),
         })
@@ -233,29 +216,6 @@ impl ShaderLayout {
         Ok(set)
     }
 
-    pub(crate) fn framebuffer_set(&self, view: vk::ImageView) -> Result<vk::DescriptorSet> {
-        let set = self
-            .device
-            .allocate_descriptor_set(self.framebuffer_layout, self.descriptor_pool)?;
-
-        let image_info = [vk::DescriptorImageInfo::builder()
-            .image_layout(ImageLayout::ShaderColor.flag())
-            .image_view(view)
-            .build()];
-
-        let image_write = [vk::WriteDescriptorSet::builder()
-            .dst_set(set)
-            .dst_binding(0)
-            .dst_array_element(0)
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .image_info(&image_info)
-            .build()];
-
-        self.device.update_descriptor_sets(&image_write);
-
-        Ok(set)
-    }
-
     pub(crate) fn handle(&self) -> vk::PipelineLayout {
         self.handle
     }
@@ -270,8 +230,6 @@ impl Drop for ShaderLayout {
         self.device.destroy_descriptor_set_layout(self.image_layout);
         self.device
             .destroy_descriptor_set_layout(self.shadow_map_layout);
-        self.device
-            .destroy_descriptor_set_layout(self.framebuffer_layout);
         self.device.destroy_descriptor_pool(self.descriptor_pool);
     }
 }

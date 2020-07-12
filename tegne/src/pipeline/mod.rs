@@ -22,7 +22,6 @@ pub(crate) use layout::ShaderLayout;
 pub(crate) use properties::AttachmentType;
 pub(crate) use render_pass::RenderPass;
 pub(crate) use uniform::Descriptor;
-pub(crate) use uniform::FramebufferUniform;
 pub(crate) use uniform::ImageUniform;
 pub(crate) use uniform::MaterialUniform;
 pub(crate) use uniform::ShadowMapUniform;

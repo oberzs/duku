@@ -39,6 +39,7 @@ impl UiRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
         resources: &mut ResourceManager,
         width: u32,
         height: u32,
@@ -48,6 +49,7 @@ impl UiRenderer {
         let framebuffer = Framebuffer::new(
             device,
             shader_layout,
+            image_uniform,
             FramebufferOptions {
                 attachment_types: &[AttachmentType::Color],
                 camera_type: CameraType::Orthographic,
@@ -173,6 +175,7 @@ impl UiRenderer {
             self.device.cmd_draw(cmd, self.mesh.index_count());
 
             self.device.cmd_end_render_pass(cmd);
+            f.blit_to_texture(cmd);
         });
 
         Ok(())
@@ -197,9 +200,14 @@ impl UiRenderer {
         Ok(())
     }
 
-    pub(crate) fn resize(&self, shader_layout: &ShaderLayout, width: u32, height: u32) {
+    pub(crate) fn resize(
+        &self,
+        image_uniform: &ImageUniform,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
         self.framebuffer
-            .with(|f| f.resize(width, height, shader_layout).expect("bad code"));
+            .with(|f| f.resize(width, height, image_uniform))
     }
 
     pub(crate) fn framebuffer(&self) -> &Ref<Framebuffer> {

@@ -29,8 +29,7 @@ pub struct Target {
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
-    current_albedo: Ref<Texture>,
-    current_framebuffer: Option<Ref<Framebuffer>>,
+    current_albedo: Albedo,
     current_font: Ref<Font>,
     current_sampler: i32,
     cast_shadows: bool,
@@ -61,11 +60,16 @@ pub(crate) struct OrdersByMaterial {
 #[derive(Clone)]
 pub(crate) struct Order {
     pub(crate) mesh: Ref<Mesh>,
-    pub(crate) albedo: Ref<Texture>,
-    pub(crate) framebuffer: Option<Ref<Framebuffer>>,
+    pub(crate) albedo: Albedo,
     pub(crate) model: Matrix4,
     pub(crate) cast_shadows: bool,
     pub(crate) sampler_index: i32,
+}
+
+#[derive(Clone)]
+pub enum Albedo {
+    Texture(Ref<Texture>),
+    Framebuffer(Ref<Framebuffer>),
 }
 
 impl Target {
@@ -80,8 +84,7 @@ impl Target {
             lights: vec![],
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.clone(),
-            current_albedo: builtins.white_texture.clone(),
-            current_framebuffer: None,
+            current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.roboto_font.clone(),
             current_sampler: 0,
             cast_shadows: true,
@@ -97,7 +100,6 @@ impl Target {
         self.add_order(Order {
             mesh: mesh.clone(),
             albedo: self.current_albedo.clone(),
-            framebuffer: self.current_framebuffer.clone(),
             model: transform.into().as_matrix(),
             cast_shadows: self.cast_shadows,
             sampler_index: self.current_sampler,
@@ -108,7 +110,7 @@ impl Target {
         let temp_albedo = self.current_albedo.clone();
         let temp_shader = self.current_shader.clone();
         let temp_shadows = self.cast_shadows;
-        self.current_albedo = self.builtins.white_texture.clone();
+        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -124,7 +126,7 @@ impl Target {
         let temp_albedo = self.current_albedo.clone();
         let temp_shader = self.current_shader.clone();
         let temp_shadows = self.cast_shadows;
-        self.current_albedo = self.builtins.white_texture.clone();
+        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -140,7 +142,7 @@ impl Target {
         let temp_albedo = self.current_albedo.clone();
         let temp_shader = self.current_shader.clone();
         let temp_shadows = self.cast_shadows;
-        self.current_albedo = texture.clone();
+        self.current_albedo = Albedo::Texture(texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -164,13 +166,14 @@ impl Target {
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
         let temp_shader = self.current_shader.clone();
+        let temp_albedo = self.current_albedo.clone();
         self.current_shader = self.builtins.blit_shader.clone();
-        self.current_framebuffer = Some(framebuffer.clone());
+        self.current_albedo = Albedo::Framebuffer(framebuffer.clone());
 
         self.draw_surface();
 
         self.current_shader = temp_shader;
-        self.current_framebuffer = None;
+        self.current_albedo = temp_albedo;
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
@@ -188,7 +191,7 @@ impl Target {
             let temp_albedo = self.current_albedo.clone();
             self.cast_shadows = false;
             self.current_shader = self.builtins.font_shader.clone();
-            self.current_albedo = font.texture().clone();
+            self.current_albedo = Albedo::Texture(font.texture().clone());
 
             for c in text_str.chars() {
                 if c == ' ' {
@@ -241,16 +244,12 @@ impl Target {
         self.current_material = material.clone();
     }
 
-    pub fn set_albedo_texture(&mut self, texture: &Ref<Texture>) {
-        self.current_albedo = texture.clone();
+    pub fn set_albedo(&mut self, albedo: impl Into<Albedo>) {
+        self.current_albedo = albedo.into();
     }
 
     pub fn set_shader(&mut self, shader: &Ref<Shader>) {
         self.current_shader = shader.clone();
-    }
-
-    pub fn set_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
-        self.current_framebuffer = Some(framebuffer.clone());
     }
 
     pub fn set_wireframes(&mut self, enable: bool) {
@@ -283,16 +282,12 @@ impl Target {
         self.current_shader = self.builtins.phong_shader.clone();
     }
 
-    pub fn set_texture_white(&mut self) {
-        self.current_albedo = self.builtins.white_texture.clone();
+    pub fn set_albedo_white(&mut self) {
+        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
     }
 
     pub fn set_material_white(&mut self) {
         self.current_material = self.builtins.white_material.clone();
-    }
-
-    pub fn set_framebuffer_none(&mut self) {
-        self.current_framebuffer = None;
     }
 
     pub(crate) fn clear(&self) -> [f32; 4] {
@@ -406,5 +401,17 @@ impl Default for SamplerOptions {
             address: SamplerAddress::Repeat,
             mipmaps: SamplerMipmaps::Enabled,
         }
+    }
+}
+
+impl From<&Ref<Texture>> for Albedo {
+    fn from(r: &Ref<Texture>) -> Self {
+        Self::Texture(r.clone())
+    }
+}
+
+impl From<&Ref<Framebuffer>> for Albedo {
+    fn from(r: &Ref<Framebuffer>) -> Self {
+        Self::Framebuffer(r.clone())
     }
 }
