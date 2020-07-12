@@ -98,26 +98,51 @@ impl Target {
         });
     }
 
-    pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
+    pub fn draw_debug_cube(&mut self, transform: impl Into<Transform>) {
+        let temp_albedo = self.current_albedo.clone();
+        let temp_shader = self.current_shader.clone();
+        let temp_shadows = self.cast_shadows;
+        self.current_albedo = self.builtins.white_texture.clone();
+        self.current_shader = self.builtins.unshaded_shader.clone();
+        self.cast_shadows = false;
+
         let mesh = self.builtins.cube_mesh.clone();
         self.draw(&mesh, transform);
+
+        self.current_albedo = temp_albedo;
+        self.current_shader = temp_shader;
+        self.cast_shadows = temp_shadows;
     }
 
-    pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
+    pub fn draw_debug_sphere(&mut self, transform: impl Into<Transform>) {
+        let temp_albedo = self.current_albedo.clone();
+        let temp_shader = self.current_shader.clone();
+        let temp_shadows = self.cast_shadows;
+        self.current_albedo = self.builtins.white_texture.clone();
+        self.current_shader = self.builtins.unshaded_shader.clone();
+        self.cast_shadows = false;
+
         let mesh = self.builtins.sphere_mesh.clone();
         self.draw(&mesh, transform);
+
+        self.current_albedo = temp_albedo;
+        self.current_shader = temp_shader;
+        self.cast_shadows = temp_shadows;
     }
 
     pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
         let temp_albedo = self.current_albedo.clone();
+        let temp_shader = self.current_shader.clone();
         let temp_shadows = self.cast_shadows;
         self.current_albedo = texture.clone();
+        self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
         let mesh = self.builtins.quad_mesh.clone();
         self.draw(&mesh, transform);
 
         self.current_albedo = temp_albedo;
+        self.current_shader = temp_shader;
         self.cast_shadows = temp_shadows;
     }
 

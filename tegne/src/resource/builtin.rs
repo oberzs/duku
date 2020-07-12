@@ -36,6 +36,7 @@ pub(crate) struct Builtins {
     pub(crate) font_shader: Ref<Shader>,
     pub(crate) blit_shader: Ref<Shader>,
     pub(crate) wireframe_shader: Ref<Shader>,
+    pub(crate) unshaded_shader: Ref<Shader>,
     pub(crate) roboto_font: Ref<Font>,
 }
 
@@ -103,6 +104,14 @@ impl Builtins {
             },
         )?);
 
+        let unshaded_shader = resources.add_shader(Shader::new(
+            device,
+            framebuffer,
+            layout,
+            include_bytes!("../../assets/shaders/unshaded.shader"),
+            Default::default(),
+        )?);
+
         // fonts
         let roboto_font = {
             let font = Font::new(
@@ -125,6 +134,7 @@ impl Builtins {
             font_shader,
             blit_shader,
             wireframe_shader,
+            unshaded_shader,
             roboto_font,
         })
     }

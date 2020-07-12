@@ -53,7 +53,7 @@ fn main() {
     let floor = Floor::new(&mut tegne);
 
     let mut rng = rand::thread_rng();
-    let cubes = (0..20)
+    let cubes = (0..1)
         .map(|i| {
             let t = rng.gen_range(0, cube_textures.len());
             let y = rng.gen_range(0, 3);
@@ -68,7 +68,7 @@ fn main() {
 
     {
         let cam_t = &mut tegne.main_camera.transform;
-        cam_t.move_by([0.5, 1.1, -0.5]);
+        cam_t.move_by([0.0, 1.0, -15.0]);
         cam_t.look_in_dir(Vector3::forward(), Vector3::up());
     }
 
@@ -106,6 +106,8 @@ fn main() {
                 for cube in &cubes {
                     cube.draw(target);
                 }
+                target.draw_debug_sphere([0.0, 5.0, 0.0]);
+                target.draw_debug_cube([0.0, 3.0, 0.0]);
             });
         }
     });
