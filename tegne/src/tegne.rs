@@ -42,7 +42,6 @@ use crate::pipeline::MaterialOptions;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
-use crate::renderer::ForwardDrawOptions;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStats;
 use crate::renderer::Target;
@@ -299,11 +298,9 @@ impl Tegne {
 
             self.render_stats += check!(self.forward_renderer.draw(
                 &self.device,
-                ForwardDrawOptions {
-                    framebuffer,
-                    shader_layout: &self.shader_layout,
-                    target,
-                }
+                framebuffer,
+                &self.shader_layout,
+                target,
             ));
         }
 
@@ -319,14 +316,9 @@ impl Tegne {
         draw_callback(&mut target);
 
         self.render_stats += framebuffer.with(|f| {
-            check!(self.forward_renderer.draw(
-                &self.device,
-                ForwardDrawOptions {
-                    framebuffer: f,
-                    shader_layout: &self.shader_layout,
-                    target,
-                }
-            ))
+            check!(self
+                .forward_renderer
+                .draw(&self.device, f, &self.shader_layout, target))
         });
     }
 

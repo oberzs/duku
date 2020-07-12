@@ -53,7 +53,7 @@ fn main() {
     let floor = Floor::new(&mut tegne);
 
     let mut rng = rand::thread_rng();
-    let cubes = (0..1)
+    let cubes = (0..20)
         .map(|i| {
             let t = rng.gen_range(0, cube_textures.len());
             let y = rng.gen_range(0, 3);
@@ -106,8 +106,6 @@ fn main() {
                 for cube in &cubes {
                     cube.draw(target);
                 }
-                target.draw_debug_sphere([0.0, 5.0, 0.0]);
-                target.draw_debug_cube([0.0, 3.0, 0.0]);
             });
         }
     });

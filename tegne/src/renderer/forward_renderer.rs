@@ -38,12 +38,6 @@ pub(crate) struct ForwardRenderer {
     start_time: Instant,
 }
 
-pub(crate) struct ForwardDrawOptions<'a> {
-    pub(crate) framebuffer: &'a Framebuffer,
-    pub(crate) shader_layout: &'a ShaderLayout,
-    pub(crate) target: Target,
-}
-
 impl ForwardRenderer {
     pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
         profile_scope!("new");
@@ -101,30 +95,30 @@ impl ForwardRenderer {
     pub(crate) fn draw(
         &self,
         device: &Device,
-        options: ForwardDrawOptions<'_>,
+        framebuffer: &Framebuffer,
+        shader_layout: &ShaderLayout,
+        target: Target,
     ) -> Result<RenderStats> {
-        let framebuffer = options.framebuffer;
-        let clear = options.target.clear();
         let cmd = device.command_buffer();
 
-        let light_dir = options.target.main_light().coords.shrink();
+        let light_dir = target.main_light().coords.shrink();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
-        if options.target.do_shadow_mapping() {
+        if target.do_shadow_mapping() {
             // bind other random shadow map set
             device.cmd_bind_descriptor(
                 cmd,
                 self.shadow_uniforms[(device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT]
                     .descriptor(),
-                &options.shader_layout,
+                shader_layout,
             );
 
             // render shadow map for each cascade
             let mut prev_cs = 0.0;
-            for (i, cs) in options.target.cascade_splits().iter().enumerate() {
+            for (i, cs) in target.cascade_splits().iter().enumerate() {
                 let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
                 // get view frustum bounding sphere
@@ -168,16 +162,16 @@ impl ForwardRenderer {
                     bias: 0.0,
                 })?;
 
-                device.cmd_begin_render_pass(cmd, shadow_framebuffer, clear);
+                device.cmd_begin_render_pass(cmd, shadow_framebuffer, target.clear());
                 self.setup_pass(device, shadow_framebuffer);
-                self.bind_world(device, shadow_framebuffer, &options);
+                self.bind_world(device, shadow_framebuffer, shader_layout);
                 device.cmd_bind_shader(cmd, &self.shadow_shader);
-                for s_order in options.target.orders_by_shader() {
+                for s_order in target.orders_by_shader() {
                     for m_order in s_order.orders_by_material() {
-                        self.bind_material(device, m_order.material(), &options)?;
+                        self.bind_material(device, m_order.material(), shader_layout)?;
                         for order in m_order.orders() {
                             if order.cast_shadows {
-                                self.draw_order(device, order, &options, &mut 0)?;
+                                self.draw_order(device, order, shader_layout, &mut 0)?;
                             }
                         }
                     }
@@ -195,38 +189,38 @@ impl ForwardRenderer {
         device.cmd_bind_descriptor(
             cmd,
             self.shadow_uniforms[device.current_frame()].descriptor(),
-            &options.shader_layout,
+            shader_layout,
         );
 
         // normal render
         // update world uniform
         framebuffer.world_uniform().update(WorldData {
-            lights: options.target.lights(),
+            lights: target.lights(),
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
-            bias: options.target.bias(),
+            bias: target.bias(),
             cascade_splits,
             light_matrices,
         })?;
 
-        device.cmd_begin_render_pass(cmd, framebuffer, clear);
+        device.cmd_begin_render_pass(cmd, framebuffer, target.clear());
         self.setup_pass(device, framebuffer);
-        self.bind_world(device, framebuffer, &options);
+        self.bind_world(device, framebuffer, shader_layout);
 
         let mut drawn_indices = 0;
         let mut shaders_used = 0;
         let mut materials_used = 0;
         let mut draw_calls = 0;
 
-        for s_order in options.target.orders_by_shader() {
+        for s_order in target.orders_by_shader() {
             self.bind_shader(device, s_order.shader());
             shaders_used += 1;
             for m_order in s_order.orders_by_material() {
-                self.bind_material(device, m_order.material(), &options)?;
+                self.bind_material(device, m_order.material(), shader_layout)?;
                 materials_used += 1;
                 for order in m_order.orders() {
-                    self.draw_order(device, order, &options, &mut drawn_indices)?;
+                    self.draw_order(device, order, shader_layout, &mut drawn_indices)?;
                     draw_calls += 1;
                 }
             }
@@ -250,18 +244,9 @@ impl ForwardRenderer {
         device.cmd_set_line_width(cmd, 1.0);
     }
 
-    fn bind_world(
-        &self,
-        device: &Device,
-        framebuffer: &Framebuffer,
-        options: &ForwardDrawOptions<'_>,
-    ) {
+    fn bind_world(&self, device: &Device, framebuffer: &Framebuffer, shader_layout: &ShaderLayout) {
         let cmd = device.command_buffer();
-        device.cmd_bind_descriptor(
-            cmd,
-            framebuffer.world_uniform().descriptor(),
-            options.shader_layout,
-        );
+        device.cmd_bind_descriptor(cmd, framebuffer.world_uniform().descriptor(), shader_layout);
     }
 
     fn bind_shader(&self, device: &Device, shader: &Ref<Shader>) {
@@ -273,11 +258,11 @@ impl ForwardRenderer {
         &self,
         device: &Device,
         material: &Ref<Material>,
-        options: &ForwardDrawOptions<'_>,
+        shader_layout: &ShaderLayout,
     ) -> Result<()> {
         let cmd = device.command_buffer();
         let descriptor = material.with(|m| m.descriptor())?;
-        device.cmd_bind_descriptor(cmd, descriptor, options.shader_layout);
+        device.cmd_bind_descriptor(cmd, descriptor, shader_layout);
         Ok(())
     }
 
@@ -285,7 +270,7 @@ impl ForwardRenderer {
         &self,
         device: &Device,
         order: Order,
-        options: &ForwardDrawOptions<'_>,
+        shader_layout: &ShaderLayout,
         drawn_indices: &mut u32,
     ) -> Result<()> {
         let cmd = device.command_buffer();
@@ -296,7 +281,7 @@ impl ForwardRenderer {
 
         if let Some(framebuffer) = order.framebuffer {
             let frame_descriptor = framebuffer.with(|f| f.descriptor());
-            device.cmd_bind_descriptor(cmd, frame_descriptor, &options.shader_layout);
+            device.cmd_bind_descriptor(cmd, frame_descriptor, shader_layout);
         }
 
         device.cmd_push_constants(
@@ -306,7 +291,7 @@ impl ForwardRenderer {
                 sampler_index: order.sampler_index,
                 albedo_index,
             },
-            options.shader_layout,
+            shader_layout,
         );
         device.cmd_bind_vertex_buffer(cmd, vb?);
         device.cmd_bind_index_buffer(cmd, ib?);
