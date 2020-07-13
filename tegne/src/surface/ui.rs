@@ -1,14 +1,50 @@
 #![cfg(feature = "ui")]
 
+use imgui::ColorEdit;
+use imgui::ImStr;
 use imgui::Ui;
 
+use crate::color::Color;
+use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::surface::Events;
 use crate::Tegne;
 
-pub use imgui::im_str as ui_str;
+pub use imgui::im_str as label;
 pub use imgui::ColorPicker;
 pub use imgui::Condition;
 pub use imgui::Window;
+
+pub fn color_edit(ui: &Ui<'_>, label: &ImStr, color: &mut Color) {
+    let mut color_array = color.to_rgba_norm();
+    ColorEdit::new(label, &mut color_array).build(ui);
+    *color = color_array.into();
+}
+
+pub fn drag_vector2(ui: &Ui<'_>, label: &ImStr, vector: &mut Vector2) {
+    let mut floats = [vector.x, vector.y];
+    ui.drag_float2(label, &mut floats).build();
+    vector.x = floats[0];
+    vector.y = floats[1];
+}
+
+pub fn drag_vector3(ui: &Ui<'_>, label: &ImStr, vector: &mut Vector3) {
+    let mut floats = [vector.x, vector.y, vector.z];
+    ui.drag_float3(label, &mut floats).build();
+    vector.x = floats[0];
+    vector.y = floats[1];
+    vector.z = floats[2];
+}
+
+pub fn drag_vector4(ui: &Ui<'_>, label: &ImStr, vector: &mut Vector4) {
+    let mut floats = [vector.x, vector.y, vector.z, vector.w];
+    ui.drag_float4(label, &mut floats).build();
+    vector.x = floats[0];
+    vector.y = floats[1];
+    vector.z = floats[2];
+    vector.w = floats[3];
+}
 
 pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
     let render_stats = tegne.render_stats();
@@ -38,7 +74,7 @@ pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
 
     let [display_width, _] = ui.io().display_size;
 
-    Window::new(ui_str!("Stats"))
+    Window::new(label!("Stats"))
         .position([display_width - (180.0 + 10.0), 10.0], Condition::Always)
         .size([1.0, 1.0], Condition::FirstUseEver)
         .always_auto_resize(true)

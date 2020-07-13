@@ -3,10 +3,10 @@
 
 // gradient example with custom shader arguments
 
+use tegne::colors;
 use tegne::ui;
-use tegne::ui::ui_str;
+use tegne::ui::label;
 use tegne::CameraType;
-use tegne::Color;
 use tegne::Tegne;
 use tegne::TegneOptions;
 use tegne::Window;
@@ -16,7 +16,7 @@ fn main() {
     let (width, height) = (800, 500);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Surface",
+        title: "Tegne example: Gradient",
         width,
         height,
         ..Default::default()
@@ -31,34 +31,29 @@ fn main() {
 
     let shader = tegne
         .create_shader_from_file_watch(
-            "examples/gradient/assets/gradient.shader",
+            "examples/gradient/shaders/gradient.shader",
             Default::default(),
         )
         .unwrap();
 
     let material = tegne.create_material();
-    let mut color_1 = [0.0, 0.0, 0.0];
-    let mut color_2 = [0.0, 0.0, 0.0];
+    let mut left_color = colors::GREEN;
+    let mut right_color = colors::BLUE;
 
     window.main_loop(|_, ui| {
         // update material
         material.with(|m| {
-            m.set_arg_1(Color::from(color_1));
-            m.set_arg_2(Color::from(color_2));
+            m.set_arg_1(left_color);
+            m.set_arg_2(right_color);
         });
 
         // build ui
-        ui::Window::new(ui_str!("Left control"))
-            .size([300.0, 300.0], ui::Condition::FirstUseEver)
-            .position([5.0, 5.0], ui::Condition::FirstUseEver)
+        ui::Window::new(label!("Background Control"))
+            .size([1.0, 1.0], ui::Condition::FirstUseEver)
+            .always_auto_resize(true)
             .build(&ui, || {
-                ui::ColorPicker::new(ui_str!("color"), &mut color_1).build(&ui);
-            });
-        ui::Window::new(ui_str!("Right control"))
-            .size([300.0, 300.0], ui::Condition::FirstUseEver)
-            .position([310.0, 5.0], ui::Condition::FirstUseEver)
-            .build(&ui, || {
-                ui::ColorPicker::new(ui_str!("color"), &mut color_2).build(&ui);
+                ui::color_edit(&ui, label!("Left Color"), &mut left_color);
+                ui::color_edit(&ui, label!("Right Color"), &mut right_color);
             });
 
         // render
