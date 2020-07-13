@@ -288,7 +288,7 @@ impl Framebuffer {
             .attachments()
             .enumerate()
             .map(|(i, a)| {
-                let mut usage = vec![];
+                let mut usage = vec![ImageUsage::TransferSrc];
 
                 match a.layout {
                     ImageLayout::Color => usage.push(ImageUsage::Color),
