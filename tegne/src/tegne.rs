@@ -38,7 +38,6 @@ use crate::mesh::MeshOptions;
 use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
-use crate::pipeline::MaterialOptions;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -416,8 +415,8 @@ impl Tegne {
         self.resources.add_mesh(mesh)
     }
 
-    pub fn create_material(&mut self, options: MaterialOptions) -> Ref<Material> {
-        let material = check!(Material::new(&self.device, &self.shader_layout, options));
+    pub fn create_material(&mut self) -> Ref<Material> {
+        let material = check!(Material::new(&self.device, &self.shader_layout));
         self.resources.add_material(material)
     }
 

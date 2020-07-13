@@ -10,139 +10,130 @@ use super::Descriptor;
 use super::MaterialData;
 use super::MaterialUniform;
 use super::ShaderLayout;
+use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::resource::Ref;
 
 pub struct Material {
-    albedo_tint: Vector3,
-    font_width: f32,
-    font_edge: f32,
-    font_border_width: f32,
-    font_border_edge: f32,
-    font_border_tint: Vector3,
-    font_border_offset: Vector2,
-    arg_1: Vector4,
-    arg_2: Vector4,
-    arg_3: Vector4,
-    arg_4: Vector4,
+    data: MaterialData,
     uniform: MaterialUniform,
     should_update: Cell<bool>,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct MaterialOptions {
-    pub albedo_tint: Vector3,
-    pub font_width: f32,
-    pub font_edge: f32,
-    pub font_border_width: f32,
-    pub font_border_edge: f32,
-    pub font_border_tint: Vector3,
-    pub font_border_offset: Vector2,
-    pub arg_1: Vector4,
-    pub arg_2: Vector4,
-    pub arg_3: Vector4,
-    pub arg_4: Vector4,
-}
+pub type Arg = Vector4;
 
 impl Material {
-    pub(crate) fn new(
-        device: &Arc<Device>,
-        shader_layout: &ShaderLayout,
-        options: MaterialOptions,
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
         let uniform = MaterialUniform::new(device, shader_layout)?;
 
         Ok(Self {
-            albedo_tint: options.albedo_tint,
-            font_width: options.font_width,
-            font_edge: options.font_edge,
-            font_border_width: options.font_border_width,
-            font_border_edge: options.font_border_edge,
-            font_border_tint: options.font_border_tint,
-            font_border_offset: options.font_border_offset,
-            arg_1: options.arg_1,
-            arg_2: options.arg_2,
-            arg_3: options.arg_3,
-            arg_4: options.arg_4,
-            uniform,
+            data: MaterialData::default(),
             should_update: Cell::new(true),
+            uniform,
         })
     }
 
-    pub fn set_albedo_tint(&mut self, tint: impl Into<Vector3>) {
-        self.albedo_tint = tint.into();
+    pub fn set_phong_color(&mut self, color: impl Into<Color>) {
+        let c = color.into().to_rgb_norm_vec();
+        self.data.arg_1.x = c.x;
+        self.data.arg_1.y = c.y;
+        self.data.arg_1.z = c.z;
+        self.should_update.set(true);
+    }
+
+    pub fn set_font_color(&mut self, color: impl Into<Color>) {
+        let c = color.into().to_rgb_norm_vec();
+        self.data.arg_1.x = c.x;
+        self.data.arg_1.y = c.y;
+        self.data.arg_1.z = c.z;
         self.should_update.set(true);
     }
 
     pub fn set_font_width(&mut self, width: f32) {
-        self.font_width = width;
+        self.data.arg_1.w = width;
+        self.should_update.set(true);
+    }
+
+    pub fn set_font_border_color(&mut self, color: impl Into<Color>) {
+        let c = color.into().to_rgb_norm_vec();
+        self.data.arg_2.x = c.x;
+        self.data.arg_2.y = c.y;
+        self.data.arg_2.z = c.z;
         self.should_update.set(true);
     }
 
     pub fn set_font_edge(&mut self, edge: f32) {
-        self.font_edge = edge;
-        self.should_update.set(true);
-    }
-
-    pub fn set_font_border_width(&mut self, width: f32) {
-        self.font_border_width = width;
-        self.should_update.set(true);
-    }
-
-    pub fn set_font_border_edge(&mut self, edge: f32) {
-        self.font_border_edge = edge;
-        self.should_update.set(true);
-    }
-
-    pub fn set_font_border_tint(&mut self, tint: impl Into<Vector3>) {
-        self.font_border_tint = tint.into();
+        self.data.arg_2.w = edge;
         self.should_update.set(true);
     }
 
     pub fn set_font_border_offset(&mut self, offset: impl Into<Vector2>) {
-        self.font_border_offset = offset.into();
+        let v = offset.into();
+        self.data.arg_3.x = v.x;
+        self.data.arg_3.y = v.y;
         self.should_update.set(true);
     }
 
-    pub fn set_arg_1(&mut self, arg: impl Into<Vector4>) {
-        self.arg_1 = arg.into();
+    pub fn set_font_border_width(&mut self, width: f32) {
+        self.data.arg_3.z = width;
         self.should_update.set(true);
     }
 
-    pub fn set_arg_2(&mut self, arg: impl Into<Vector4>) {
-        self.arg_2 = arg.into();
+    pub fn set_font_border_edge(&mut self, edge: f32) {
+        self.data.arg_3.w = edge;
         self.should_update.set(true);
     }
 
-    pub fn set_arg_3(&mut self, arg: impl Into<Vector4>) {
-        self.arg_3 = arg.into();
+    pub fn set_arg_1(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_1 = arg.into();
         self.should_update.set(true);
     }
 
-    pub fn set_arg_4(&mut self, arg: impl Into<Vector4>) {
-        self.arg_4 = arg.into();
+    pub fn set_arg_2(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_2 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_3(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_3 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_4(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_4 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_5(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_5 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_6(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_6 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_7(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_7 = arg.into();
+        self.should_update.set(true);
+    }
+
+    pub fn set_arg_8(&mut self, arg: impl Into<Arg>) {
+        self.data.arg_8 = arg.into();
         self.should_update.set(true);
     }
 
     pub(crate) fn descriptor(&self) -> Result<Descriptor> {
         // update material uniform if data has changed
         if self.should_update.get() {
-            self.uniform.update(MaterialData {
-                albedo_tint: self.albedo_tint,
-                font_width: self.font_width,
-                font_edge: self.font_edge,
-                font_border_width: self.font_border_width,
-                font_border_edge: self.font_border_edge,
-                font_border_tint: self.font_border_tint,
-                font_border_offset: self.font_border_offset,
-                arg_1: self.arg_1,
-                arg_2: self.arg_2,
-                arg_3: self.arg_3,
-                arg_4: self.arg_4,
-            })?;
+            self.uniform.update(self.data)?;
+            self.should_update.set(false);
         }
         Ok(self.uniform.descriptor())
     }
@@ -154,20 +145,27 @@ impl PartialEq for Material {
     }
 }
 
-impl Default for MaterialOptions {
-    fn default() -> Self {
-        Self {
-            albedo_tint: Vector3::new(1.0, 1.0, 1.0),
-            font_width: 0.5,
-            font_edge: 0.1,
-            font_border_width: 0.0,
-            font_border_edge: 0.0,
-            font_border_tint: Vector3::default(),
-            font_border_offset: Vector2::default(),
-            arg_1: Vector4::default(),
-            arg_2: Vector4::default(),
-            arg_3: Vector4::default(),
-            arg_4: Vector4::default(),
-        }
+impl From<Color> for Arg {
+    fn from(color: Color) -> Self {
+        color.to_rgba_norm_vec()
+    }
+}
+
+impl From<Vector2> for Arg {
+    fn from(v: Vector2) -> Self {
+        v.extend(0.0).extend(0.0)
+    }
+}
+
+impl From<Vector3> for Arg {
+    fn from(v: Vector3) -> Self {
+        v.extend(0.0)
+    }
+}
+
+impl From<&Ref<Texture>> for Arg {
+    fn from(t: &Ref<Texture>) -> Self {
+        let index = t.with(|tex| tex.image_index()) as f32;
+        Vector4::new(index, 0.0, 0.0, 0.0)
     }
 }

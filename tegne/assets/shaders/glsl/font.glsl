@@ -1,11 +1,11 @@
 void fragment() {
-    vec3 tint = material.albedo_tint;
-    float width = material.font_width;
-    float edge = material.font_edge;
-    float border_width = material.font_border_width;
-    float border_edge = material.font_border_edge;
-    vec3 border_tint = material.font_border_tint;
-    vec2 border_offset = material.font_border_offset;
+    vec3 tint = material.arg_1.rgb;
+    float width = material.arg_1.w;
+    float edge = material.arg_2.w;
+    float border_width = material.arg_3.z;
+    float border_edge = material.arg_3.w;
+    vec3 border_tint = material.arg_2.rgb;
+    vec2 border_offset = material.arg_3.xy;
 
     float dist = 1.0 - texture(albedo, in_uv).a;
     float alpha = 1.0 - smoothstep(width, width + edge, dist);

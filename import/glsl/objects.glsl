@@ -19,17 +19,14 @@ layout(set = 0, binding = 0) uniform WorldObject {
 } world;
 
 layout(set = 1, binding = 0) uniform MaterialObject {
-    vec3 albedo_tint;
-    float font_width;
-    vec3 font_border_tint;
-    float font_edge;
-    vec2 font_border_offset;
-    float font_border_width;
-    float font_border_edge;
     vec4 arg_1;
     vec4 arg_2;
     vec4 arg_3;
     vec4 arg_4;
+    vec4 arg_5;
+    vec4 arg_6;
+    vec4 arg_7;
+    vec4 arg_8;
 } material;
 
 layout(push_constant) uniform Constants {

@@ -32,7 +32,6 @@ pub(crate) use uniform_data::PushConstants;
 pub(crate) use uniform_data::WorldData;
 
 pub use material::Material;
-pub use material::MaterialOptions;
 pub use properties::SamplerAddress;
 pub use properties::SamplerFilter;
 pub use properties::SamplerMipmaps;

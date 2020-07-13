@@ -28,6 +28,7 @@ use crate::pipeline::ShaderOptions;
 pub(crate) struct Builtins {
     pub(crate) white_texture: Ref<Texture>,
     pub(crate) white_material: Ref<Material>,
+    pub(crate) font_material: Ref<Material>,
     pub(crate) surface_mesh: Ref<Mesh>,
     pub(crate) quad_mesh: Ref<Mesh>,
     pub(crate) cube_mesh: Ref<Mesh>,
@@ -55,8 +56,18 @@ impl Builtins {
             resources.add_texture(Texture::new(device, uniform, Default::default())?);
 
         // materials
-        let white_material =
-            resources.add_material(Material::new(device, layout, Default::default())?);
+        let white_material = {
+            let mut mat = Material::new(device, layout)?;
+            mat.set_phong_color([255, 255, 255]);
+            resources.add_material(mat)
+        };
+        let font_material = {
+            let mut mat = Material::new(device, layout)?;
+            mat.set_font_color([0, 0, 0]);
+            mat.set_font_width(0.5);
+            mat.set_font_edge(0.1);
+            resources.add_material(mat)
+        };
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);
@@ -126,6 +137,7 @@ impl Builtins {
         Ok(Self {
             white_texture,
             white_material,
+            font_material,
             surface_mesh,
             quad_mesh,
             cube_mesh,

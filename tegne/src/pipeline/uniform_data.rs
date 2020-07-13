@@ -5,7 +5,6 @@
 // must be compatible with /tegne-import/glsl/objects.glsl
 
 use crate::math::Matrix4;
-use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
 
@@ -21,20 +20,17 @@ pub(crate) struct WorldData {
     pub(crate) bias: f32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
-pub(crate) struct MaterialData {
-    pub(crate) albedo_tint: Vector3,
-    pub(crate) font_width: f32,
-    pub(crate) font_border_tint: Vector3,
-    pub(crate) font_edge: f32,
-    pub(crate) font_border_offset: Vector2,
-    pub(crate) font_border_width: f32,
-    pub(crate) font_border_edge: f32,
+pub struct MaterialData {
     pub(crate) arg_1: Vector4,
     pub(crate) arg_2: Vector4,
     pub(crate) arg_3: Vector4,
     pub(crate) arg_4: Vector4,
+    pub(crate) arg_5: Vector4,
+    pub(crate) arg_6: Vector4,
+    pub(crate) arg_7: Vector4,
+    pub(crate) arg_8: Vector4,
 }
 
 #[derive(Copy, Clone)]

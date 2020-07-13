@@ -35,8 +35,8 @@ fn main() {
             Default::default(),
         )
         .unwrap();
-    let material = tegne.create_material(Default::default());
 
+    let material = tegne.create_material();
     let mut color_1 = [0.0, 0.0, 0.0];
     let mut color_2 = [0.0, 0.0, 0.0];
 
