@@ -65,7 +65,7 @@ float get_dist_to_scene(vec3 pos) {
 
     float morph_dist = mix(box_dist, sphere_dist, sin(world.time) * 0.5 + 0.5);
     
-    float dist = min(box_dist, plane_dist);
+    float dist = min(morph_dist, plane_dist);
 
     return dist;
 }
@@ -124,9 +124,3 @@ void fragment() {
 
     out_color = vec4(color, 1.0);
 }
-
-// void fragment() {
-
-//     float value = sin(world.time) * 0.5 + 0.5;
-//     out_color = vec4(in_uv.x, in_uv.y, 0.0, 1.0);
-// }

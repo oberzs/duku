@@ -29,13 +29,13 @@ use crate::device::DeviceProperties;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
+use crate::image::ImageFormat;
 use crate::image::Texture;
 use crate::image::TextureFormat;
 use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -149,7 +149,7 @@ impl Tegne {
             &swapchain,
             &shader_layout,
             FramebufferOptions {
-                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
                 camera_type: options.camera,
 
                 // does not matter for window framebuffers
@@ -268,7 +268,7 @@ impl Tegne {
             &self.swapchain,
             &self.shader_layout,
             FramebufferOptions {
-                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
                 camera_type: self.camera_type,
 
                 // does not matter for window framebuffers
@@ -431,7 +431,7 @@ impl Tegne {
             &self.shader_layout,
             &self.image_uniform,
             FramebufferOptions {
-                attachment_types: &[AttachmentType::Depth, AttachmentType::Color],
+                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
                 camera_type: t,
                 multisampled: self.device.is_msaa(),
                 width,

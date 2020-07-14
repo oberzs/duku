@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use super::Attachment;
 use super::AttachmentOptions;
-use super::AttachmentType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
@@ -24,7 +23,7 @@ pub(crate) struct RenderPass {
 impl RenderPass {
     pub(crate) fn new(
         device: &Arc<Device>,
-        attachment_types: &[AttachmentType],
+        attachment_formats: &[ImageFormat],
         multisampled: bool,
         present: bool,
     ) -> Result<Self> {
@@ -36,93 +35,92 @@ impl RenderPass {
         let mut attachment_descriptions = vec![];
 
         let mut index = 0;
-        let attachments = attachment_types
+        let attachments = attachment_formats
             .iter()
-            .map(|a_type| {
-                let is_last = index as usize == attachment_types.len() - 1;
+            .map(|format| {
+                let is_last = index as usize == attachment_formats.len() - 1;
 
-                match *a_type {
-                    AttachmentType::Depth => {
-                        let samples = if multisampled {
-                            device.samples()
-                        } else {
-                            ImageSamples(1)
-                        };
-                        let layout = if is_last {
-                            ImageLayout::ShaderDepth
-                        } else {
-                            ImageLayout::Depth
-                        };
-                        let o = AttachmentOptions {
-                            format: ImageFormat::Depth,
+                if format.is_depth() {
+                    let samples = if multisampled {
+                        device.samples()
+                    } else {
+                        ImageSamples(1)
+                    };
+                    let layout = if is_last {
+                        ImageLayout::ShaderDepth
+                    } else {
+                        ImageLayout::Depth
+                    };
+                    let o = AttachmentOptions {
+                        format: *format,
+                        clear: true,
+                        store: is_last,
+                        layout,
+                        samples,
+                        index,
+                    };
+                    index += 1;
+                    let a = Attachment::new(o);
+                    depth_attachment = Some(a.reference());
+                    attachment_descriptions.push(a.description());
+                    vec![o]
+                } else if format.is_color() {
+                    let mut os = vec![];
+
+                    let layout = if present && is_last {
+                        ImageLayout::Present
+                    } else if is_last {
+                        ImageLayout::ShaderColor
+                    } else {
+                        ImageLayout::Color
+                    };
+                    let o = AttachmentOptions {
+                        format: *format,
+                        samples: ImageSamples(1),
+                        clear: !multisampled,
+                        store: is_last,
+                        layout,
+                        index,
+                    };
+                    index += 1;
+                    let a = Attachment::new(o);
+                    if multisampled {
+                        resolve_attachments.push(a.reference());
+                    } else {
+                        color_attachments.push(a.reference());
+                    }
+                    attachment_descriptions.push(a.description());
+                    os.push(o);
+
+                    // color multisampled attachment
+                    if multisampled {
+                        let o_msaa = AttachmentOptions {
+                            format: *format,
+                            layout: ImageLayout::Color,
+                            samples: device.samples(),
                             clear: true,
-                            store: is_last,
-                            layout,
-                            samples,
+                            store: false,
                             index,
                         };
                         index += 1;
-                        let a = Attachment::new(o);
-                        depth_attachment = Some(a.reference());
-                        attachment_descriptions.push(a.description());
-                        vec![o]
+                        let a_msaa = Attachment::new(o_msaa);
+                        color_attachments.push(a_msaa.reference());
+                        attachment_descriptions.push(a_msaa.description());
+                        os.push(o_msaa);
                     }
-                    AttachmentType::Color => {
-                        let mut os = vec![];
 
-                        let layout = if present && is_last {
-                            ImageLayout::Present
-                        } else if is_last {
-                            ImageLayout::ShaderColor
-                        } else {
-                            ImageLayout::Color
-                        };
-                        let o = AttachmentOptions {
-                            format: ImageFormat::Sbgra,
-                            samples: ImageSamples(1),
-                            clear: !multisampled,
-                            store: is_last,
-                            layout,
-                            index,
-                        };
-                        index += 1;
-                        let a = Attachment::new(o);
-                        if multisampled {
-                            resolve_attachments.push(a.reference());
-                        } else {
-                            color_attachments.push(a.reference());
-                        }
-                        attachment_descriptions.push(a.description());
-                        os.push(o);
-
-                        // color multisampled attachment
-                        if multisampled {
-                            let o_msaa = AttachmentOptions {
-                                format: ImageFormat::Sbgra,
-                                layout: ImageLayout::Color,
-                                samples: device.samples(),
-                                clear: true,
-                                store: false,
-                                index,
-                            };
-                            index += 1;
-                            let a_msaa = Attachment::new(o_msaa);
-                            color_attachments.push(a_msaa.reference());
-                            attachment_descriptions.push(a_msaa.description());
-                            os.push(o_msaa);
-                        }
-
-                        os
-                    }
+                    os
+                } else {
+                    error!("cannot use format {:?} for framebuffer", format);
                 }
             })
             .flatten()
             .collect::<Vec<_>>();
 
         // create subpass dependency
-        let last_type = attachment_types[attachment_types.len() - 1];
-        let dependency = [match last_type {
-            AttachmentType::Color => vk::SubpassDependency::builder()
+        let last_format = attachment_formats[attachment_formats.len() - 1];
+        let dependency = [if last_format.is_color() {
+            vk::SubpassDependency::builder()
                 .src_subpass(vk::SUBPASS_EXTERNAL)
                 .dst_subpass(0)
                 .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
@@ -132,8 +130,9 @@ impl RenderPass {
                     vk::AccessFlags::COLOR_ATTACHMENT_READ
                         | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
                 )
-                .build(),
-            AttachmentType::Depth => vk::SubpassDependency::builder()
+                .build()
+        } else {
+            vk::SubpassDependency::builder()
                 .src_subpass(0)
                 .dst_subpass(vk::SUBPASS_EXTERNAL)
                 .src_stage_mask(
@@ -143,7 +142,7 @@ impl RenderPass {
                 .src_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
                 .dst_stage_mask(vk::PipelineStageFlags::TRANSFER)
                 .dst_access_mask(vk::AccessFlags::TRANSFER_READ)
-                .build(),
+                .build()
         }];
 
         // create render pass

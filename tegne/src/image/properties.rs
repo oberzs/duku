@@ -14,6 +14,7 @@ pub(crate) enum ImageFormat {
     Sbgra,
     Depth,
     DepthStencil,
+    Float2,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -85,6 +86,21 @@ impl ImageFormat {
             Self::Sbgra => vk::Format::B8G8R8A8_SRGB,
             Self::Depth => vk::Format::D32_SFLOAT_S8_UINT,
             Self::DepthStencil => vk::Format::D32_SFLOAT_S8_UINT,
+            Self::Float2 => vk::Format::R32G32_SFLOAT,
+        }
+    }
+
+    pub(crate) fn is_color(&self) -> bool {
+        match *self {
+            Self::Float2 | Self::Rgb | Self::Rgba | Self::Sbgra | Self::Srgb | Self::Srgba => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_depth(&self) -> bool {
+        match *self {
+            Self::Depth | Self::DepthStencil => true,
+            _ => false,
         }
     }
 }

@@ -17,7 +17,6 @@ use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
-use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
@@ -39,8 +38,8 @@ pub struct Framebuffer {
     device: Arc<Device>,
 }
 
-pub(crate) struct FramebufferOptions<'types> {
-    pub(crate) attachment_types: &'types [AttachmentType],
+pub(crate) struct FramebufferOptions<'formats> {
+    pub(crate) attachment_formats: &'formats [ImageFormat],
     pub(crate) camera_type: CameraType,
     pub(crate) multisampled: bool,
     pub(crate) width: u32,
@@ -58,7 +57,7 @@ impl Framebuffer {
 
         let vk::Extent2D { width, height } = swapchain.extent();
         let FramebufferOptions {
-            attachment_types,
+            attachment_formats,
             camera_type,
             ..
         } = options;
@@ -68,7 +67,7 @@ impl Framebuffer {
             .iter_images()?
             .map(|img| {
                 let render_pass =
-                    RenderPass::new(device, attachment_types, device.is_msaa(), true)?;
+                    RenderPass::new(device, attachment_formats, device.is_msaa(), true)?;
                 let images = render_pass
                     .attachments()
                     .map(|a| {
@@ -149,12 +148,12 @@ impl Framebuffer {
         let FramebufferOptions {
             width,
             height,
-            attachment_types,
+            attachment_formats,
             multisampled,
             camera_type,
         } = options;
 
-        let render_pass = RenderPass::new(device, attachment_types, multisampled, false)?;
+        let render_pass = RenderPass::new(device, attachment_formats, multisampled, false)?;
 
         let mut stored_format = None;
         let mut stored_index = 0;

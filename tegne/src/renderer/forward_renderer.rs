@@ -16,10 +16,10 @@ use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
+use crate::image::ImageFormat;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::pipeline::AttachmentType;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
@@ -60,7 +60,7 @@ impl ForwardRenderer {
                     shader_layout,
                     image_uniform,
                     FramebufferOptions {
-                        attachment_types: &[AttachmentType::Depth],
+                        attachment_formats: &[ImageFormat::Depth],
                         camera_type: CameraType::Orthographic,
                         multisampled: false,
                         width: shadow_map_size,

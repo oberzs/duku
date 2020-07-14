@@ -9,6 +9,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
+use crate::image::ImageFormat;
 use crate::image::Texture;
 use crate::image::TextureFormat;
 use crate::image::TextureOptions;
@@ -17,7 +18,6 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::pipeline::AttachmentType;
 use crate::pipeline::CullMode;
 use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
@@ -53,7 +53,7 @@ impl UiRenderer {
             shader_layout,
             image_uniform,
             FramebufferOptions {
-                attachment_types: &[AttachmentType::Color],
+                attachment_formats: &[ImageFormat::Sbgra],
                 camera_type: CameraType::Orthographic,
                 multisampled: false,
                 width,

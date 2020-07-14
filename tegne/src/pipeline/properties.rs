@@ -26,12 +26,6 @@ pub enum DepthMode {
     Disabled,
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub(crate) enum AttachmentType {
-    Color,
-    Depth,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SamplerFilter {
     Linear,
