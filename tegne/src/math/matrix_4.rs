@@ -125,7 +125,7 @@ impl Matrix4 {
 
         Self::from_rows(
             [x_scale, 0.0, 0.0, 0.0],
-            [0.0, -y_scale, 0.0, 0.0],
+            [0.0, y_scale, 0.0, 0.0],
             [0.0, 0.0, z_scale, z_move],
             [0.0, 0.0, copy, 0.0],
         )
@@ -142,7 +142,7 @@ impl Matrix4 {
 
         Self::from_rows(
             [x_scale, 0.0, 0.0, 0.0],
-            [0.0, -y_scale, 0.0, 0.0],
+            [0.0, y_scale, 0.0, 0.0],
             [0.0, 0.0, z_scale, z_move],
             [0.0, 0.0, 0.0, 1.0],
         )
@@ -150,7 +150,7 @@ impl Matrix4 {
 
     pub fn orthographic(width: f32, height: f32, near: f32, far: f32) -> Self {
         // L-handed and z = [0, 1]
-        // Y down, Z forward, top-left
+        // Y up, Z forward, top-left
 
         let x_scale = 2.0 / width;
         let y_scale = 2.0 / height;

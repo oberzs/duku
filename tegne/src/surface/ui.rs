@@ -72,10 +72,8 @@ pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
     );
     let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", render_stats.draw_calls);
 
-    let [display_width, _] = ui.io().display_size;
-
     Window::new(label!("Stats"))
-        .position([display_width - (180.0 + 10.0), 10.0], Condition::Always)
+        .position([10.0, 10.0], Condition::Always)
         .size([1.0, 1.0], Condition::FirstUseEver)
         .always_auto_resize(true)
         .resizable(false)

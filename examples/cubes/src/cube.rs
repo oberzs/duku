@@ -96,7 +96,7 @@ fn rectangle<V: Into<Vector3>>(tegne: &mut Tegne, p1: V, p2: V, p3: V, p4: V) ->
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let triangles = &[[0, 2, 1], [0, 3, 2]];
 
     tegne.create_mesh(MeshOptions {
         vertices,

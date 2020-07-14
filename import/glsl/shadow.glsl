@@ -29,6 +29,10 @@ float shadow(Light light) {
     }
 
     vec4 shadow_coord = in_lightspace_position[shadow_index];
+
+    // have to flip Y for some reason
+    shadow_coord.y = -shadow_coord.y;
+
     vec2 uv = (shadow_coord.xy / shadow_coord.w) * 0.5 + 0.5;
     float depth = (shadow_coord.z - bias) / shadow_coord.w;
 

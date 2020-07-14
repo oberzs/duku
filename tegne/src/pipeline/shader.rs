@@ -43,9 +43,11 @@ impl Shader {
         };
 
         let front_face = if options.front_cull {
-            vk::FrontFace::COUNTER_CLOCKWISE
-        } else {
             vk::FrontFace::CLOCKWISE
+        // vk::FrontFace::COUNTER_CLOCKWISE
+        } else {
+            vk::FrontFace::COUNTER_CLOCKWISE
+            // vk::FrontFace::CLOCKWISE
         };
 
         // read shader source from archive

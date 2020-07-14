@@ -7,7 +7,7 @@
 
 vec3 phong_dir_light(Light light) {
     vec3 normal = normalize(in_normal);
-    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 light_dir = normalize(light.coords.xyz);
     vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
     // diffuse shading
     float diff = max(dot(normal, light_dir), 0.0);
@@ -23,8 +23,8 @@ vec3 phong_dir_light(Light light) {
 vec3 phong_point_light(Light light) {
     vec3 normal = normalize(in_normal);
     vec3 pos = in_modelspace_position.xyz;
-    vec3 light_dir = normalize(light.coords.xyz - pos);
-    vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
+    vec3 light_dir = normalize(pos - light.coords.xyz);
+    vec3 cam_dir = normalize(world.camera_position - pos);
     // diffuse shading
     float diff = max(dot(normal, light_dir), 0.0);
     // specular shading

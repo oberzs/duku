@@ -160,10 +160,10 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
         Vector3::new(-1.0, -1.0, 0.0),
     ];
     let uvs = &[
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 1.0),
     ];
     let triangles = &[[0, 2, 1], [0, 3, 2]];
 
@@ -191,7 +191,7 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let triangles = &[[0, 2, 1], [0, 3, 2]];
 
     Mesh::new(
         device,
@@ -270,7 +270,7 @@ fn create_rectangle<V: Into<Vector3>>(
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let triangles = &[[0, 2, 1], [0, 3, 2]];
 
     Mesh::new(
         device,

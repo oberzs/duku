@@ -781,9 +781,9 @@ impl Device {
     pub(crate) fn cmd_set_view(&self, buffer: vk::CommandBuffer, width: u32, height: u32) {
         let viewport = [vk::Viewport {
             x: 0.0,
-            y: 0.0,
+            y: height as f32,
             width: width as f32,
-            height: height as f32,
+            height: -(height as f32),
             min_depth: 0.0,
             max_depth: 1.0,
         }];
