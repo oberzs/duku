@@ -17,9 +17,6 @@ layout(set = 3, binding = 0) uniform texture2D shadow_maps[3];
 #define sampler_nc samplers[6] // nearest, clamp, mipmaps
 #define sampler_ncm samplers[7] // nearest, clamp, no-mipmaps
 
-// textures
-#define albedo sampler2D(textures[object.albedo_index], samplers[object.sampler_index])
-
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in vec4 in_color;
@@ -27,3 +24,8 @@ layout(location = 3) in vec3 in_modelspace_position;
 layout(location = 4) in vec3 in_worldspace_position;
 layout(location = 5) in vec4 in_screenspace_position;
 layout(location = 6) in vec4 in_lightspace_position[4];
+
+// texture lookup
+vec4 tex(int index, vec2 uv) {
+    return texture(sampler2D(textures[index], samplers[object.sampler_index]), uv);
+}

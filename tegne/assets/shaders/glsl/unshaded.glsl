@@ -1,3 +1,3 @@
 void fragment() {
-    out_color = texture(albedo, in_uv) * in_color;
+    out_color = tex(object.albedo_index, in_uv) * in_color;
 }

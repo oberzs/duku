@@ -78,7 +78,7 @@ impl Target {
             orders_by_shader: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             main_light: Light {
-                coords: Vector3::new(-1.0, -1.0, -1.0).unit().extend(0.0),
+                coords: Vector3::new(-0.5, -1.0, 1.0).unit().extend(0.0),
                 color: colors::WHITE.to_rgba_norm_vec(),
             },
             lights: vec![],
@@ -136,6 +136,16 @@ impl Target {
         self.current_albedo = temp_albedo;
         self.current_shader = temp_shader;
         self.cast_shadows = temp_shadows;
+    }
+
+    pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
+        let mesh = self.builtins.cube_mesh.clone();
+        self.draw(&mesh, transform);
+    }
+
+    pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
+        let mesh = self.builtins.sphere_mesh.clone();
+        self.draw(&mesh, transform);
     }
 
     pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {

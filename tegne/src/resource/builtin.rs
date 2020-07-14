@@ -73,7 +73,7 @@ impl Builtins {
         let surface_mesh = resources.add_mesh(create_surface(device)?);
         let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
-        let sphere_mesh = resources.add_mesh(create_sphere(device, 2)?);
+        let sphere_mesh = resources.add_mesh(create_sphere(device, 5)?);
 
         // shaders
         let phong_shader = resources.add_shader(Shader::new(
@@ -205,42 +205,72 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
 }
 
 fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
-    let vertices = &[
-        // bottom
-        Vector3::new(-0.5, -0.5, -0.5),
-        Vector3::new(0.5, -0.5, -0.5),
-        Vector3::new(0.5, -0.5, 0.5),
-        Vector3::new(-0.5, -0.5, 0.5),
-        // top
-        Vector3::new(-0.5, 0.5, -0.5),
-        Vector3::new(0.5, 0.5, -0.5),
-        Vector3::new(0.5, 0.5, 0.5),
-        Vector3::new(-0.5, 0.5, 0.5),
-    ];
+    let top = create_rectangle(
+        device,
+        [-0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, -0.5],
+        [-0.5, 0.5, -0.5],
+    )?;
+
+    let bottom = create_rectangle(
+        device,
+        [0.5, -0.5, 0.5],
+        [-0.5, -0.5, 0.5],
+        [-0.5, -0.5, -0.5],
+        [0.5, -0.5, -0.5],
+    )?;
+
+    let back = create_rectangle(
+        device,
+        [0.5, 0.5, 0.5],
+        [-0.5, 0.5, 0.5],
+        [-0.5, -0.5, 0.5],
+        [0.5, -0.5, 0.5],
+    )?;
+
+    let front = create_rectangle(
+        device,
+        [-0.5, 0.5, -0.5],
+        [0.5, 0.5, -0.5],
+        [0.5, -0.5, -0.5],
+        [-0.5, -0.5, -0.5],
+    )?;
+
+    let left = create_rectangle(
+        device,
+        [-0.5, 0.5, 0.5],
+        [-0.5, 0.5, -0.5],
+        [-0.5, -0.5, -0.5],
+        [-0.5, -0.5, 0.5],
+    )?;
+
+    let right = create_rectangle(
+        device,
+        [0.5, 0.5, -0.5],
+        [0.5, 0.5, 0.5],
+        [0.5, -0.5, 0.5],
+        [0.5, -0.5, -0.5],
+    )?;
+
+    combine_meshes(device, &[top, bottom, front, back, left, right])
+}
+
+fn create_rectangle<V: Into<Vector3>>(
+    device: &Arc<Device>,
+    p1: V,
+    p2: V,
+    p3: V,
+    p4: V,
+) -> Result<Mesh> {
+    let vertices = &[p1.into(), p2.into(), p3.into(), p4.into()];
     let uvs = &[
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[
-        [0, 1, 2],
-        [0, 2, 3], // bottom
-        [4, 7, 6],
-        [4, 6, 5], // top
-        [4, 5, 1],
-        [4, 1, 0], // front
-        [7, 3, 2],
-        [7, 2, 6], // back
-        [5, 6, 2],
-        [5, 2, 1], // right
-        [7, 4, 0],
-        [7, 0, 3], // left
-    ];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     Mesh::new(
         device,
@@ -260,20 +290,20 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     // 12 icosahedron vertices
     let t = (1.0 + 5.0f32.sqrt()) / 2.0;
 
-    vertices.push(Vector3::new(-1.0, t, 0.0).unit());
-    vertices.push(Vector3::new(1.0, t, 0.0).unit());
-    vertices.push(Vector3::new(-1.0, -t, 0.0).unit());
-    vertices.push(Vector3::new(1.0, -t, 0.0).unit());
+    vertices.push(Vector3::new(-1.0, t, 0.0).unit() * 0.5);
+    vertices.push(Vector3::new(1.0, t, 0.0).unit() * 0.5);
+    vertices.push(Vector3::new(-1.0, -t, 0.0).unit() * 0.5);
+    vertices.push(Vector3::new(1.0, -t, 0.0).unit() * 0.5);
 
-    vertices.push(Vector3::new(0.0, -1.0, t).unit());
-    vertices.push(Vector3::new(0.0, 1.0, t).unit());
-    vertices.push(Vector3::new(0.0, -1.0, -t).unit());
-    vertices.push(Vector3::new(0.0, 1.0, -t).unit());
+    vertices.push(Vector3::new(0.0, -1.0, t).unit() * 0.5);
+    vertices.push(Vector3::new(0.0, 1.0, t).unit() * 0.5);
+    vertices.push(Vector3::new(0.0, -1.0, -t).unit() * 0.5);
+    vertices.push(Vector3::new(0.0, 1.0, -t).unit() * 0.5);
 
-    vertices.push(Vector3::new(t, 0.0, -1.0).unit());
-    vertices.push(Vector3::new(t, 0.0, 1.0).unit());
-    vertices.push(Vector3::new(-t, 0.0, -1.0).unit());
-    vertices.push(Vector3::new(-t, 0.0, 1.0).unit());
+    vertices.push(Vector3::new(t, 0.0, -1.0).unit() * 0.5);
+    vertices.push(Vector3::new(t, 0.0, 1.0).unit() * 0.5);
+    vertices.push(Vector3::new(-t, 0.0, -1.0).unit() * 0.5);
+    vertices.push(Vector3::new(-t, 0.0, 1.0).unit() * 0.5);
 
     // 20 icosahedron triangles
     triangles.push([0, 11, 5]);
@@ -350,10 +380,42 @@ fn get_middle_point(
             let point_2 = vertices[p2 as usize];
             let middle = (point_1 + point_2) / 2.0;
 
-            vertices.push(middle.unit());
+            vertices.push(middle.unit() * 0.5);
             let i = vertices.len() as u32 - 1;
             midpoints.insert((p1, p2), i);
             i
         }
     }
+}
+
+fn combine_meshes(device: &Arc<Device>, meshes: &[Mesh]) -> Result<Mesh> {
+    let mut offset = 0;
+    let mut triangles = vec![];
+    let mut vertices = vec![];
+    let mut normals = vec![];
+    let mut uvs = vec![];
+    let mut colors = vec![];
+    for mesh in meshes {
+        triangles.extend(
+            mesh.triangles()
+                .iter()
+                .map(|t| [t[0] + offset, t[1] + offset, t[2] + offset]),
+        );
+        vertices.extend(mesh.vertices());
+        normals.extend(mesh.normals());
+        uvs.extend(mesh.uvs());
+        colors.extend(mesh.colors());
+        offset = vertices.len() as u32;
+    }
+
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices: &vertices,
+            normals: &normals,
+            uvs: &uvs,
+            colors: &colors,
+            triangles: &triangles,
+        },
+    )
 }

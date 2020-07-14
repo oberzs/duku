@@ -7,10 +7,10 @@ void fragment() {
     vec3 border_tint = material.arg_2.rgb;
     vec2 border_offset = material.arg_3.xy;
 
-    float dist = 1.0 - texture(albedo, in_uv).a;
+    float dist = 1.0 - tex(object.albedo_index, in_uv).a;
     float alpha = 1.0 - smoothstep(width, width + edge, dist);
 
-    float border_dist = 1.0 - texture(albedo, in_uv + border_offset).a;
+    float border_dist = 1.0 - tex(object.albedo_index, in_uv + border_offset).a;
     float border_alpha = 1.0 - smoothstep(border_width, border_width + border_edge, border_dist);
 
     float overall_alpha = alpha + (1.0 - alpha) * border_alpha;

@@ -15,7 +15,7 @@ void fragment() {
     vec3 ambient = 0.1 * light.color.rgb;
     vec4 lighting = vec4(ambient + phong_light * shadow, 1.0);
 
-    vec4 color_mix = texture(albedo, in_uv) * albedo_color * in_color;
+    vec4 color_mix = tex(object.albedo_index, in_uv) * albedo_color * in_color;
 
     out_color = color_mix * lighting;
 }
