@@ -379,6 +379,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-blur"
+version = "0.1.0"
+dependencies = [
+ "tegne",
+]
+
+[[package]]
 name = "example-cubes"
 version = "0.1.0"
 dependencies = [

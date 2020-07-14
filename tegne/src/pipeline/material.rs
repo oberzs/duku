@@ -145,6 +145,12 @@ impl PartialEq for Material {
     }
 }
 
+impl From<i32> for Arg {
+    fn from(i: i32) -> Self {
+        Vector4::new(i as f32, 0.0, 0.0, 0.0)
+    }
+}
+
 impl From<Color> for Arg {
     fn from(color: Color) -> Self {
         color.to_rgba_norm_vec()
