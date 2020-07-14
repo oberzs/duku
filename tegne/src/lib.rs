@@ -51,7 +51,6 @@ pub use pipeline::SamplerAddress;
 pub use pipeline::SamplerFilter;
 pub use pipeline::SamplerMipmaps;
 pub use pipeline::ShaderOptions;
-pub use pipeline::WindingMode;
 pub use profiler::begin_profile;
 pub use profiler::end_profile;
 pub use renderer::SamplerOptions;

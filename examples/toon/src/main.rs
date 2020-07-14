@@ -5,13 +5,10 @@
 
 use tegne::colors;
 use tegne::Controller;
-use tegne::CullMode;
-use tegne::ShaderOptions;
 use tegne::Tegne;
 use tegne::TegneOptions;
 use tegne::Transform;
 use tegne::Vector3;
-use tegne::WindingMode;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -33,30 +30,12 @@ fn main() {
         },
     );
 
-    // let texture = tegne
-    //     .create_texture_from_file("examples/toon/textures/texture_09.png")
-    //     .unwrap();
+    let texture = tegne
+        .create_texture_from_file("examples/toon/textures/texture_09.png")
+        .unwrap();
 
-    let shader_normal = tegne
+    let shader = tegne
         .create_shader_from_file_watch("examples/toon/shaders/toon.shader", Default::default())
-        .unwrap();
-    let shader_clockwise = tegne
-        .create_shader_from_file_watch(
-            "examples/toon/shaders/toon.shader",
-            ShaderOptions {
-                winding_mode: WindingMode::Clockwise,
-                ..Default::default()
-            },
-        )
-        .unwrap();
-    let shader_front = tegne
-        .create_shader_from_file_watch(
-            "examples/toon/shaders/toon.shader",
-            ShaderOptions {
-                cull_mode: CullMode::Front,
-                ..Default::default()
-            },
-        )
         .unwrap();
 
     {
@@ -83,19 +62,15 @@ fn main() {
             target.draw_cube(floor_transform);
 
             // toon cube and sphere
-            target.set_shader(&shader_normal);
+            target.set_shader(&shader);
             target.draw_cube([-3.0, 1.0, 0.0]);
-            target.set_shader(&shader_clockwise);
-            target.draw_cube([-1.0, 1.0, 0.0]);
-            target.set_shader(&shader_front);
-            target.draw_cube([1.0, 1.0, 0.0]);
-            // target.draw_sphere([-1.0, 1.0, 0.0]);
+            target.draw_sphere([-1.0, 1.0, 0.0]);
             target.set_shader_phong();
 
             // textured cube and sphere
-            // target.set_albedo(&texture);
-            // target.draw_cube([1.0, 1.0, 0.0]);
-            // target.draw_sphere([3.0, 1.0, 0.0]);
+            target.set_albedo(&texture);
+            target.draw_cube([1.0, 1.0, 0.0]);
+            target.draw_sphere([3.0, 1.0, 0.0]);
         });
     });
 }

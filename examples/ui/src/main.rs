@@ -4,8 +4,6 @@
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use tegne::ui;
-use tegne::ui::label;
 use tegne::CameraType;
 use tegne::Tegne;
 use tegne::TegneOptions;
@@ -38,12 +36,7 @@ fn main() {
             height = new_height;
         }
 
-        // ui.show_demo_window(&mut show_demo);
-        ui::Window::new(label!("window"))
-            .size([100.0, 100.0], ui::Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.separator();
-            });
+        ui.show_demo_window(&mut show_demo);
 
         tegne.draw_ui(ui);
         tegne.draw_on_window(|_| {});

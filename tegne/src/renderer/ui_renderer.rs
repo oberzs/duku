@@ -18,6 +18,8 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::AttachmentType;
+use crate::pipeline::CullMode;
+use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
@@ -59,20 +61,14 @@ impl UiRenderer {
             },
         )?;
 
-        // replicate OpenGL settings
-        // glEnable(GL_BLEND);
-        // glBlendEquation(GL_FUNC_ADD);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // glDisable(GL_CULL_FACE);
-        // glDisable(GL_DEPTH_TEST);
-
         let shader = Shader::new(
             device,
             &framebuffer,
             shader_layout,
             include_bytes!("../../assets/shaders/ui.shader"),
             ShaderOptions {
-                depth_test: false,
+                depth_mode: DepthMode::Disabled,
+                cull_mode: CullMode::Disabled,
                 ..Default::default()
             },
         )?;
@@ -110,8 +106,7 @@ impl UiRenderer {
         let mut to = 0;
         for draw_list in draw_data.draw_lists() {
             for tri in draw_list.idx_buffer().chunks(3) {
-                // TODO: change index direction after front face is figured out
-                triangles.push([tri[0] as u32 + to, tri[2] as u32 + to, tri[1] as u32 + to]);
+                triangles.push([tri[0] as u32 + to, tri[1] as u32 + to, tri[2] as u32 + to]);
             }
             for vert in draw_list.vtx_buffer() {
                 let vertex =

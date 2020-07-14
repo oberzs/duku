@@ -10,9 +10,9 @@ use std::sync::Arc;
 use tar::Archive;
 
 use super::CullMode;
+use super::DepthMode;
 use super::PolygonMode;
 use super::ShaderLayout;
-use super::WindingMode;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
@@ -26,10 +26,9 @@ pub struct Shader {
 
 #[derive(Debug, Copy, Clone)]
 pub struct ShaderOptions {
-    pub depth_test: bool,
+    pub depth_mode: DepthMode,
     pub polygon_mode: PolygonMode,
     pub cull_mode: CullMode,
-    pub winding_mode: WindingMode,
 }
 
 impl Shader {
@@ -118,10 +117,10 @@ impl Shader {
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
             .depth_bias_enable(false)
-            .front_face(options.winding_mode.flag())
-            .line_width(1.0)
+            .front_face(vk::FrontFace::CLOCKWISE)
             .cull_mode(options.cull_mode.flag())
-            .polygon_mode(options.polygon_mode.flag());
+            .polygon_mode(options.polygon_mode.flag())
+            .line_width(1.0);
 
         // configure msaa state
         let samples = if framebuffer.multisampled() {
@@ -136,8 +135,8 @@ impl Shader {
 
         // configure depth stencil state
         let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()
-            .depth_test_enable(options.depth_test)
-            .depth_write_enable(options.depth_test)
+            .depth_test_enable(options.depth_mode.test())
+            .depth_write_enable(options.depth_mode.write())
             .depth_compare_op(vk::CompareOp::LESS)
             .depth_bounds_test_enable(false)
             .stencil_test_enable(false);
@@ -222,10 +221,9 @@ impl PartialEq for Shader {
 impl Default for ShaderOptions {
     fn default() -> Self {
         Self {
-            depth_test: true,
+            depth_mode: DepthMode::TestAndWrite,
             polygon_mode: PolygonMode::Fill,
             cull_mode: CullMode::Back,
-            winding_mode: WindingMode::CounterClockwise,
         }
     }
 }

@@ -9,19 +9,21 @@ use ash::vk;
 pub enum CullMode {
     Back,
     Front,
-    Disable,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum WindingMode {
-    Clockwise,
-    CounterClockwise,
+    Disabled,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum PolygonMode {
     Line,
     Fill,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum DepthMode {
+    Test,
+    Write,
+    TestAndWrite,
+    Disabled,
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -53,16 +55,7 @@ impl CullMode {
         match *self {
             Self::Back => vk::CullModeFlags::BACK,
             Self::Front => vk::CullModeFlags::FRONT,
-            Self::Disable => vk::CullModeFlags::NONE,
-        }
-    }
-}
-
-impl WindingMode {
-    pub(crate) fn flag(&self) -> vk::FrontFace {
-        match *self {
-            Self::CounterClockwise => vk::FrontFace::COUNTER_CLOCKWISE,
-            Self::Clockwise => vk::FrontFace::CLOCKWISE,
+            Self::Disabled => vk::CullModeFlags::NONE,
         }
     }
 }
@@ -72,6 +65,22 @@ impl PolygonMode {
         match *self {
             Self::Fill => vk::PolygonMode::FILL,
             Self::Line => vk::PolygonMode::LINE,
+        }
+    }
+}
+
+impl DepthMode {
+    pub(crate) fn test(&self) -> bool {
+        match *self {
+            Self::Test | Self::TestAndWrite => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn write(&self) -> bool {
+        match *self {
+            Self::Write | Self::TestAndWrite => true,
+            _ => false,
         }
     }
 }

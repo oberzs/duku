@@ -18,6 +18,7 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::PolygonMode;
@@ -99,7 +100,7 @@ impl Builtins {
             layout,
             include_bytes!("../../assets/shaders/blit.shader"),
             ShaderOptions {
-                depth_test: false,
+                depth_mode: DepthMode::Disabled,
                 ..Default::default()
             },
         )?);
@@ -111,7 +112,7 @@ impl Builtins {
             include_bytes!("../../assets/shaders/wireframe.shader"),
             ShaderOptions {
                 polygon_mode: PolygonMode::Line,
-                depth_test: false,
+                depth_mode: DepthMode::Disabled,
                 ..Default::default()
             },
         )?);
@@ -166,7 +167,7 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 2, 1], [0, 3, 2]];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     Mesh::new(
         device,
@@ -192,7 +193,7 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
     ];
-    let triangles = &[[0, 2, 1], [0, 3, 2]];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     Mesh::new(
         device,
@@ -271,7 +272,7 @@ fn create_rectangle<V: Into<Vector3>>(
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 2, 1], [0, 3, 2]];
+    let triangles = &[[0, 1, 2], [0, 2, 3]];
 
     Mesh::new(
         device,

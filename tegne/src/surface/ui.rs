@@ -83,8 +83,10 @@ pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
             ui.text(fps);
             ui.text(frame_time);
             ui.text(total_time);
+            ui.separator();
             ui.text(drawn_indices);
             ui.text(draw_calls);
+            ui.separator();
             ui.text(shader_rebinds);
             ui.text(material_rebinds);
         });

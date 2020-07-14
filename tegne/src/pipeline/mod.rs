@@ -33,10 +33,10 @@ pub(crate) use uniform_data::WorldData;
 
 pub use material::Material;
 pub use properties::CullMode;
+pub use properties::DepthMode;
 pub use properties::PolygonMode;
 pub use properties::SamplerAddress;
 pub use properties::SamplerFilter;
 pub use properties::SamplerMipmaps;
-pub use properties::WindingMode;
 pub use shader::Shader;
 pub use shader::ShaderOptions;
