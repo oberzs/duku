@@ -9,7 +9,10 @@ use std::io::Read;
 use std::sync::Arc;
 use tar::Archive;
 
+use super::CullMode;
+use super::PolygonMode;
 use super::ShaderLayout;
+use super::WindingMode;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
@@ -24,8 +27,9 @@ pub struct Shader {
 #[derive(Debug, Copy, Clone)]
 pub struct ShaderOptions {
     pub depth_test: bool,
-    pub lines: bool,
-    pub front_cull: bool,
+    pub polygon_mode: PolygonMode,
+    pub cull_mode: CullMode,
+    pub winding_mode: WindingMode,
 }
 
 impl Shader {
@@ -36,20 +40,6 @@ impl Shader {
         source: &[u8],
         options: ShaderOptions,
     ) -> Result<Self> {
-        let polygon_mode = if options.lines {
-            vk::PolygonMode::LINE
-        } else {
-            vk::PolygonMode::FILL
-        };
-
-        let front_face = if options.front_cull {
-            vk::FrontFace::CLOCKWISE
-        // vk::FrontFace::COUNTER_CLOCKWISE
-        } else {
-            vk::FrontFace::COUNTER_CLOCKWISE
-            // vk::FrontFace::CLOCKWISE
-        };
-
         // read shader source from archive
         let mut archive: Archive<&[u8]> = Archive::new(source);
 
@@ -103,9 +93,9 @@ impl Shader {
         // configure viewport state
         let viewport = [vk::Viewport {
             x: 0.0,
-            y: 0.0,
+            y: 1.0,
             width: 1.0,
-            height: 1.0,
+            height: -1.0,
             min_depth: 0.0,
             max_depth: 1.0,
         }];
@@ -128,10 +118,10 @@ impl Shader {
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
             .depth_bias_enable(false)
-            .front_face(front_face)
+            .front_face(options.winding_mode.flag())
             .line_width(1.0)
-            .cull_mode(vk::CullModeFlags::BACK)
-            .polygon_mode(polygon_mode);
+            .cull_mode(options.cull_mode.flag())
+            .polygon_mode(options.polygon_mode.flag());
 
         // configure msaa state
         let samples = if framebuffer.multisampled() {
@@ -145,25 +135,12 @@ impl Shader {
             .rasterization_samples(samples.flag());
 
         // configure depth stencil state
-        let stencil = vk::StencilOpState::builder()
-            .fail_op(vk::StencilOp::KEEP)
-            .pass_op(vk::StencilOp::REPLACE)
-            .depth_fail_op(vk::StencilOp::KEEP)
-            .compare_op(vk::CompareOp::ALWAYS)
-            .compare_mask(1)
-            .write_mask(1)
-            .reference(1)
-            .build();
-
         let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()
             .depth_test_enable(options.depth_test)
             .depth_write_enable(options.depth_test)
             .depth_compare_op(vk::CompareOp::LESS)
             .depth_bounds_test_enable(false)
-            .min_depth_bounds(0.0)
-            .max_depth_bounds(1.0)
-            .stencil_test_enable(true)
-            .front(stencil);
+            .stencil_test_enable(false);
 
         // configure color blend state
         let color_blend_attachment = [vk::PipelineColorBlendAttachmentState::builder()
@@ -246,8 +223,9 @@ impl Default for ShaderOptions {
     fn default() -> Self {
         Self {
             depth_test: true,
-            lines: false,
-            front_cull: false,
+            polygon_mode: PolygonMode::Fill,
+            cull_mode: CullMode::Back,
+            winding_mode: WindingMode::CounterClockwise,
         }
     }
 }

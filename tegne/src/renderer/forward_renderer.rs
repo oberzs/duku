@@ -85,7 +85,6 @@ impl ForwardRenderer {
             shader_layout,
             include_bytes!("../../assets/shaders/shadow.shader"),
             ShaderOptions {
-                front_cull: false,
                 ..Default::default()
             },
         )?;

@@ -16,13 +16,14 @@ void fragment() {
     float rim_threshold = 0.1;
 
     Light light = world.lights[0];
-    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 light_dir = normalize(light.coords.xyz);
     vec3 view_dir = normalize(world.camera_position - in_worldspace_position.xyz);
     vec3 normal = normalize(in_normal);
 
     // diffuse
-    float NdotL = dot(normal, light_dir);
-    float diffuse_intensity = smoothstep(0.0, 0.01, NdotL * shadow(light));
+    float NdotL = clamp(dot(normal, light_dir), 0.0, 1.0);
+    // float diffuse_intensity = smoothstep(0.0, 0.01, NdotL * shadow(light));
+    float diffuse_intensity = NdotL;
     vec3 diffuse = diffuse_color * diffuse_intensity;
 
     // specular
@@ -38,5 +39,6 @@ void fragment() {
     rim_intensity = smoothstep(rim_amount - 0.01, rim_amount + 0.01, rim_intensity);
     vec3 rim = rim_color * rim_intensity;
 
-    out_color = vec4(mesh_color * (ambient_color + diffuse + specular + rim), 1.0);
+    // out_color = vec4(mesh_color * (ambient_color + diffuse + specular + rim), 1.0);
+    out_color = vec4(mesh_color * (ambient_color + diffuse), 1.0);
 }

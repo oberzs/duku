@@ -20,6 +20,7 @@ use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
+use crate::pipeline::PolygonMode;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
@@ -109,7 +110,7 @@ impl Builtins {
             layout,
             include_bytes!("../../assets/shaders/wireframe.shader"),
             ShaderOptions {
-                lines: true,
+                polygon_mode: PolygonMode::Line,
                 depth_test: false,
                 ..Default::default()
             },
