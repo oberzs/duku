@@ -9,5 +9,6 @@ members = [
   "examples/dynamic",
   "examples/ui",
   "examples/textures",
-  "examples/toon"
+  "examples/toon",
+  "examples/blur"
 ]

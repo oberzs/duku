@@ -14,6 +14,7 @@ use crate::Tegne;
 pub use imgui::im_str as label;
 pub use imgui::ColorPicker;
 pub use imgui::Condition;
+pub use imgui::Slider;
 pub use imgui::Window;
 
 pub fn color_edit(ui: &Ui<'_>, label: &ImStr, color: &mut Color) {

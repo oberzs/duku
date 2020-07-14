@@ -29,3 +29,7 @@ layout(location = 6) in vec4 in_lightspace_position[4];
 vec4 tex(int index, vec2 uv) {
     return texture(sampler2D(textures[index], samplers[object.sampler_index]), uv);
 }
+
+vec2 tex_size(int index) {
+    return textureSize(sampler2D(textures[index], samplers[object.sampler_index]), 0);
+}

@@ -162,7 +162,7 @@ impl Framebuffer {
             .attachments()
             .enumerate()
             .map(|(i, a)| {
-                let mut usage = vec![ImageUsage::TransferSrc];
+                let mut usage = vec![];
 
                 match a.layout {
                     ImageLayout::Color => usage.push(ImageUsage::Color),
@@ -175,6 +175,7 @@ impl Framebuffer {
                 // attachments that stay in memory can be read from
                 if a.store {
                     usage.push(ImageUsage::Sampled);
+                    usage.push(ImageUsage::TransferSrc);
                     stored_format = Some(a.format);
                     stored_index = i;
                 } else {
@@ -287,7 +288,7 @@ impl Framebuffer {
             .attachments()
             .enumerate()
             .map(|(i, a)| {
-                let mut usage = vec![ImageUsage::TransferSrc];
+                let mut usage = vec![];
 
                 match a.layout {
                     ImageLayout::Color => usage.push(ImageUsage::Color),
@@ -300,6 +301,7 @@ impl Framebuffer {
                 // attachments that stay in memory can be read from
                 if a.store {
                     usage.push(ImageUsage::Sampled);
+                    usage.push(ImageUsage::TransferSrc);
                     stored_format = Some(a.format);
                     stored_index = i;
                 } else {

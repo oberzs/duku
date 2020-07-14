@@ -36,3 +36,9 @@ pub const SKY_BLUE: Color = Color {
     b: 235,
     a: 255,
 };
+pub const ORANGE: Color = Color {
+    r: 255,
+    g: 127,
+    b: 0,
+    a: 255,
+};
