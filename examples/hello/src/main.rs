@@ -1,8 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/tegne-rs
 
-// "Hello, World!" example to open a blue resizable window
-// blue is actually rainbow
+// "Hello, World!" example to open a rainbow resizable window
 
 use tegne::color::Color;
 use tegne::window::Window;
@@ -13,7 +12,7 @@ fn main() {
     let (mut width, mut height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Blue",
+        title: "Tegne example: Hello",
         resizable: true,
         width,
         height,

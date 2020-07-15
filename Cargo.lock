@@ -372,13 +372,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
-name = "example-blue"
-version = "0.1.0"
-dependencies = [
- "tegne",
-]
-
-[[package]]
 name = "example-blur"
 version = "0.1.0"
 dependencies = [
@@ -408,14 +401,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-surface"
+name = "example-hello"
 version = "0.1.0"
 dependencies = [
  "tegne",
 ]
 
 [[package]]
-name = "example-textures"
+name = "example-surface"
 version = "0.1.0"
 dependencies = [
  "tegne",
