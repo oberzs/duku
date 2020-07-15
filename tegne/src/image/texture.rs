@@ -28,12 +28,7 @@ pub(crate) struct TextureOptions<'data> {
     pub data: &'data [u8],
     pub width: u32,
     pub height: u32,
-    pub format: TextureFormat,
-}
-
-pub(crate) enum TextureFormat {
-    Rgba,
-    Srgba,
+    pub format: ImageFormat,
 }
 
 impl Texture {
@@ -42,12 +37,12 @@ impl Texture {
         uniform: &ImageUniform,
         options: TextureOptions<'_>,
     ) -> Result<Self> {
-        let format = match options.format {
-            TextureFormat::Rgba => ImageFormat::Rgba,
-            TextureFormat::Srgba => ImageFormat::Srgba,
+        let pixel_size = match options.format {
+            ImageFormat::Srgba | ImageFormat::Rgba => 4,
+            _ => panic!("unsupported texture format {:?}", options.format),
         };
 
-        let size = (options.width * options.height) as usize * 4;
+        let size = (options.width * options.height) as usize * pixel_size;
 
         let staging_memory =
             BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
@@ -65,7 +60,7 @@ impl Texture {
                     ImageUsage::TransferDst,
                 ],
                 create_view: true,
-                format,
+                format: options.format,
                 ..Default::default()
             },
         )?;
@@ -110,7 +105,7 @@ impl Default for TextureOptions<'_> {
             data: &[255, 255, 255, 255],
             width: 1,
             height: 1,
-            format: TextureFormat::Rgba,
+            format: ImageFormat::Rgba,
         }
     }
 }
