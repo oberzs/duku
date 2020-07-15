@@ -1,5 +1,7 @@
 #define VERTEX_POSITION_MODELSPACE
 
+layout(location = 0) out vec4 out_color;
+
 const int MAX_STEPS = 100;
 const float MAX_DIST = 100.0;
 const float SURF_DIST = 0.001;

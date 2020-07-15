@@ -21,7 +21,7 @@ fn main() {
 
     let shader = tegne
         .create_shader_from_file_watch(
-            "examples/surface/assets/raymarch.shader",
+            "examples/surface/shaders/raymarch.shader",
             Default::default(),
         )
         .unwrap();

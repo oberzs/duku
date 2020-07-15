@@ -3,6 +3,8 @@
 
 // basic phong-blinn shader for 1 light source
 
+layout(location = 0) out vec4 out_color;
+
 #define PHONG
 #define SHADOW
 

@@ -5,6 +5,8 @@
 
 #define SHADOW
 
+layout(location = 0) out vec4 out_color;
+
 void fragment() {
     vec3 mesh_color = vec3(0.1, 0.3, 0.7);
     vec3 ambient_color = vec3(0.4, 0.4, 0.4);

@@ -3,6 +3,8 @@
 
 // variance shadow mapping write shader
 
+layout(location = 0) out vec4 out_color;
+
 void fragment() {
     float depth = gl_FragCoord.z;
     float dx = dFdx(depth);

@@ -1,5 +1,7 @@
 #define VERTEX_POSITION_MODELSPACE
 
+layout(location = 0) out vec4 out_color;
+
 const float KERNEL[7] = {0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598};
 
 void fragment() {

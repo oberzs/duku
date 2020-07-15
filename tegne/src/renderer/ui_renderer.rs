@@ -65,7 +65,7 @@ impl UiRenderer {
             device,
             &framebuffer,
             shader_layout,
-            include_bytes!("../../assets/shaders/ui.shader"),
+            include_bytes!("../../shaders/ui.shader"),
             ShaderOptions {
                 depth_mode: DepthMode::Disabled,
                 cull_mode: CullMode::Disabled,

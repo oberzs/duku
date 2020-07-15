@@ -49,22 +49,22 @@ fn main() {
         .arg(
             Arg::with_name("in")
                 .takes_value(true)
-                .required_unless("dir")
+                .required_unless("directory")
                 .help("Input file to import"),
         )
         .arg(
-            Arg::with_name("dir")
-                .long("dir")
-                .short("d")
-                .takes_value(true)
-                .help("Input directory to import"),
-        )
-        .arg(
-            Arg::with_name("out-dir")
-                .long("out-dir")
+            Arg::with_name("out")
+                .long("out")
                 .short("o")
                 .takes_value(true)
                 .help("Output directory"),
+        )
+        .arg(
+            Arg::with_name("directory")
+                .long("directory")
+                .short("d")
+                .takes_value(true)
+                .help("Input directory to import"),
         )
         .arg(
             Arg::with_name("watch")
@@ -72,15 +72,32 @@ fn main() {
                 .short("w")
                 .help("Watch for file changes"),
         )
+        .arg(
+            Arg::with_name("relative")
+                .long("relative")
+                .short("r")
+                .conflicts_with("out-dir")
+                .help("Uses input directory as output directory"),
+        )
         .get_matches();
 
     let input = opts.value_of("in").map(|p| Path::new(p));
-    let dir = opts.value_of("dir").map(|p| Path::new(p));
-    let out_dir = opts
-        .value_of("out-dir")
-        .map(|p| Path::new(p))
-        .unwrap_or_else(|| Path::new("."));
+    let out = opts.value_of("out").map(|p| Path::new(p));
+    let directory = opts.value_of("directory").map(|p| Path::new(p));
     let watch = opts.is_present("watch");
+    let relative = opts.is_present("relative");
+
+    let out_dir = if relative {
+        if let Some(dir) = directory {
+            dir
+        } else if let Some(i) = input {
+            i.parent().unwrap_or_else(|| Path::new("."))
+        } else {
+            error!("something went wrong");
+        }
+    } else {
+        out.unwrap_or_else(|| Path::new("."))
+    };
 
     // import input file
     if let Some(in_path) = input {
@@ -94,7 +111,7 @@ fn main() {
     }
 
     // import files from input directory
-    if let Some(in_dir) = dir {
+    if let Some(in_dir) = directory {
         let entries = match in_dir.read_dir() {
             Ok(value) => value,
             _ => error!("'{}' is not a directory", in_dir.display()),
@@ -114,7 +131,7 @@ fn main() {
 
     // watch for changes
     if watch {
-        let path = input.or(dir).unwrap();
+        let path = input.or(directory).unwrap();
         let (sender, receiver) = unbounded();
         let start_time = Instant::now();
 
