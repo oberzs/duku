@@ -8,8 +8,8 @@
 use super::Camera;
 use crate::math::Quaternion;
 use crate::math::Vector3;
-use crate::surface::Events;
-use crate::surface::Key;
+use crate::window::Events;
+use crate::window::Key;
 
 #[derive(Default)]
 pub struct Controller {

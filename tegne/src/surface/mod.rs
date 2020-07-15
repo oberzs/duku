@@ -1,18 +1,11 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/tegne-rs
 
-// window represents a drawable surface
-// that connects to a OS window manager
+// a drawable surface that connects to an OS window
 
 mod handle;
 mod properties;
 mod swapchain;
-
-#[cfg(feature = "window")]
-mod window;
-
-#[cfg(feature = "ui")]
-pub mod ui;
 
 use ash::vk;
 use std::sync::Arc;
@@ -24,15 +17,6 @@ pub(crate) use properties::SurfaceProperties;
 pub(crate) use swapchain::Swapchain;
 
 pub use handle::WindowHandle;
-
-#[cfg(feature = "window")]
-pub use window::Events;
-#[cfg(feature = "window")]
-pub use window::Key;
-#[cfg(feature = "window")]
-pub use window::Window;
-#[cfg(feature = "window")]
-pub use window::WindowOptions;
 
 pub(crate) struct Surface {
     handle: vk::SurfaceKHR,

@@ -12,7 +12,7 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 lazy_static! {
-    pub static ref PROFILER: Mutex<Profiler> = Mutex::new(Profiler {
+    static ref PROFILER: Mutex<Profiler> = Mutex::new(Profiler {
         session: None,
         output: None,
         profile_count: 0,
@@ -36,6 +36,14 @@ struct ProfileResult {
     start: u128,
     end: u128,
     thread_id: u64,
+}
+
+pub fn begin_profile(_name: &'static str, _path: impl AsRef<Path>) {
+    PROFILER.lock().unwrap().begin(_name, _path).unwrap();
+}
+
+pub fn end_profile() {
+    PROFILER.lock().unwrap().end();
 }
 
 impl ProfileTimer {

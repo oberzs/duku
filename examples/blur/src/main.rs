@@ -3,16 +3,16 @@
 
 // Gaussian blur example
 
-use tegne::colors;
+use tegne::camera::CameraType;
+use tegne::camera::Controller;
+use tegne::color::colors;
+use tegne::math::Vector3;
 use tegne::ui;
 use tegne::ui::label;
-use tegne::CameraType;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
 use tegne::ContextOptions;
-use tegne::Controller;
-use tegne::Vector3;
-use tegne::Window;
-use tegne::WindowOptions;
 
 fn main() {
     let (width, height) = (720, 640);
