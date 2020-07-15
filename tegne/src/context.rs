@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/tegne-rs
 
-// Tegne - tegne application entrypoint
+// Context - tegne application entrypoint
 
 use crossbeam_channel::bounded;
 use crossbeam_channel::select;
@@ -68,7 +68,7 @@ macro_rules! check {
     };
 }
 
-pub struct Tegne {
+pub struct Context {
     pub main_camera: Camera,
     render_stage: RenderStage,
     thread_kill: ThreadKill,
@@ -92,7 +92,7 @@ pub struct Tegne {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct TegneOptions {
+pub struct ContextOptions {
     pub anisotropy: f32,
     pub vsync: bool,
     pub msaa: u8,
@@ -110,8 +110,8 @@ struct ThreadKill {
     receiver: Receiver<()>,
 }
 
-impl Tegne {
-    pub fn new(window: WindowHandle, options: TegneOptions) -> Self {
+impl Context {
+    pub fn new(window: WindowHandle, options: ContextOptions) -> Self {
         profile_scope!("new");
 
         let instance = Arc::new(check!(Instance::new()));
@@ -216,7 +216,7 @@ impl Tegne {
     }
 
     #[cfg(feature = "window")]
-    pub fn from_window(window: &mut Window, options: TegneOptions) -> Self {
+    pub fn from_window(window: &mut Window, options: ContextOptions) -> Self {
         let (width, height) = window.size();
 
         #[cfg(target_os = "windows")]
@@ -554,14 +554,14 @@ impl Tegne {
     }
 }
 
-impl Drop for Tegne {
+impl Drop for Context {
     fn drop(&mut self) {
         self.thread_kill.kill().unwrap();
         self.device.wait_for_idle().unwrap();
     }
 }
 
-impl Default for TegneOptions {
+impl Default for ContextOptions {
     fn default() -> Self {
         Self {
             anisotropy: 0.0,

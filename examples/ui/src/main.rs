@@ -5,8 +5,8 @@
 // https://github.com/Gekkio/imgui-rs
 
 use tegne::CameraType;
-use tegne::Tegne;
-use tegne::TegneOptions;
+use tegne::Context;
+use tegne::ContextOptions;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -19,9 +19,9 @@ fn main() {
         width,
         height,
     });
-    let mut tegne = Tegne::from_window(
+    let mut context = Context::from_window(
         &mut window,
-        TegneOptions {
+        ContextOptions {
             camera: CameraType::Orthographic,
             ..Default::default()
         },
@@ -31,14 +31,14 @@ fn main() {
 
     window.main_loop(|events, ui| {
         if let Some((new_width, new_height)) = events.resized() {
-            tegne.resize(new_width, new_height);
+            context.resize(new_width, new_height);
             width = new_width;
             height = new_height;
         }
 
         ui.show_demo_window(&mut show_demo);
 
-        tegne.draw_ui(ui);
-        tegne.draw_on_window(|_| {});
+        context.draw_ui(ui);
+        context.draw_on_window(|_| {});
     });
 }

@@ -4,9 +4,9 @@
 // Toon shader example
 
 use tegne::colors;
+use tegne::Context;
+use tegne::ContextOptions;
 use tegne::Controller;
-use tegne::Tegne;
-use tegne::TegneOptions;
 use tegne::Transform;
 use tegne::Vector3;
 use tegne::Window;
@@ -21,25 +21,25 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(
+    let mut context = Context::from_window(
         &mut window,
-        TegneOptions {
+        ContextOptions {
             anisotropy: 16.0,
             msaa: 4,
             ..Default::default()
         },
     );
 
-    let texture = tegne
+    let texture = context
         .create_texture_from_file("examples/toon/textures/texture_09.png")
         .unwrap();
 
-    let shader = tegne
+    let shader = context
         .create_shader_from_file_watch("examples/toon/shaders/toon.shader", Default::default())
         .unwrap();
 
     {
-        let cam_t = &mut tegne.main_camera.transform;
+        let cam_t = &mut context.main_camera.transform;
         cam_t.move_backward(5.0);
         cam_t.move_up(2.0);
         cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
@@ -53,9 +53,9 @@ fn main() {
     };
 
     window.main_loop(|events, _| {
-        controller.update(&mut tegne.main_camera, events);
+        controller.update(&mut context.main_camera, events);
 
-        tegne.draw_on_window(|target| {
+        context.draw_on_window(|target| {
             target.set_clear(colors::SKY_BLUE);
 
             // floor

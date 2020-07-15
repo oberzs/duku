@@ -4,7 +4,7 @@
 // example that draws a framebuffer with a custom ray-marching shader
 
 use tegne::ui;
-use tegne::Tegne;
+use tegne::Context;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -17,9 +17,9 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(&mut window, Default::default());
+    let mut context = Context::from_window(&mut window, Default::default());
 
-    let shader = tegne
+    let shader = context
         .create_shader_from_file_watch(
             "examples/surface/shaders/raymarch.shader",
             Default::default(),
@@ -27,10 +27,10 @@ fn main() {
         .unwrap();
 
     window.main_loop(|events, ui| {
-        ui::stats_window(&ui, &tegne, events);
+        ui::stats_window(&ui, &context, events);
 
-        tegne.draw_ui(ui);
-        tegne.draw_on_window(|target| {
+        context.draw_ui(ui);
+        context.draw_on_window(|target| {
             target.set_shader(&shader);
             target.draw_surface();
         });
