@@ -9,7 +9,7 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::surface::Events;
-use crate::Tegne;
+use crate::Context;
 
 pub use imgui::im_str as label;
 pub use imgui::ColorPicker;
@@ -47,8 +47,8 @@ pub fn drag_vector4(ui: &Ui<'_>, label: &ImStr, vector: &mut Vector4) {
     vector.w = floats[3];
 }
 
-pub fn stats_window(ui: &Ui<'_>, tegne: &Tegne, events: &Events) {
-    let render_stats = tegne.render_stats();
+pub fn stats_window(ui: &Ui<'_>, context: &Context, events: &Events) {
+    let render_stats = context.render_stats();
     let pad = 14;
 
     let fps = format!("{1:0$} : {2}", pad, "Fps", events.fps());

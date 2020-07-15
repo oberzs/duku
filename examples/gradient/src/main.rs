@@ -7,8 +7,8 @@ use tegne::colors;
 use tegne::ui;
 use tegne::ui::label;
 use tegne::CameraType;
-use tegne::Tegne;
-use tegne::TegneOptions;
+use tegne::Context;
+use tegne::ContextOptions;
 use tegne::Window;
 use tegne::WindowOptions;
 
@@ -21,22 +21,22 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(
+    let mut context = Context::from_window(
         &mut window,
-        TegneOptions {
+        ContextOptions {
             camera: CameraType::Orthographic,
             ..Default::default()
         },
     );
 
-    let shader = tegne
+    let shader = context
         .create_shader_from_file_watch(
             "examples/gradient/shaders/gradient.shader",
             Default::default(),
         )
         .unwrap();
 
-    let material = tegne.create_material();
+    let material = context.create_material();
     let mut left_color = colors::GREEN;
     let mut right_color = colors::BLUE;
 
@@ -57,8 +57,8 @@ fn main() {
             });
 
         // render
-        tegne.draw_ui(ui);
-        tegne.draw_on_window(|target| {
+        context.draw_ui(ui);
+        context.draw_on_window(|target| {
             target.set_shader(&shader);
             target.set_material(&material);
             target.draw_surface();

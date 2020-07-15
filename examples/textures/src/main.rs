@@ -4,9 +4,9 @@
 // example to draw textures to the window
 
 use tegne::CameraType;
+use tegne::Context;
+use tegne::ContextOptions;
 use tegne::Key;
-use tegne::Tegne;
-use tegne::TegneOptions;
 use tegne::Transform;
 use tegne::Vector3;
 use tegne::Window;
@@ -23,18 +23,18 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut tegne = Tegne::from_window(
+    let mut context = Context::from_window(
         &mut window,
-        TegneOptions {
+        ContextOptions {
             camera: CameraType::Orthographic,
             ..Default::default()
         },
     );
 
-    let texture_1 = tegne
+    let texture_1 = context
         .create_texture_from_file("examples/textures/textures/ShaderBall_A_CYCLO.png")
         .unwrap();
-    let texture_2 = tegne
+    let texture_2 = context
         .create_texture_from_file("examples/textures/textures/ShaderBall_A_REPERE.png")
         .unwrap();
 
@@ -54,7 +54,7 @@ fn main() {
             transform_1.position.y += 1.0;
         }
 
-        tegne.draw_on_window(|target| {
+        context.draw_on_window(|target| {
             target.draw_texture(&texture_1, transform_1);
             target.draw_texture(&texture_2, transform_2);
         });
