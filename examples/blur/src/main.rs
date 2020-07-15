@@ -21,7 +21,7 @@ fn main() {
     let blur_strengths = [1, 3, 5, 7];
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Toon",
+        title: "Tegne example: Blur",
         width,
         height,
         ..Default::default()
