@@ -4,11 +4,11 @@
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use tegne::CameraType;
+use tegne::camera::CameraType;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
 use tegne::ContextOptions;
-use tegne::Window;
-use tegne::WindowOptions;
 
 fn main() {
     let (mut width, mut height) = (500, 500);

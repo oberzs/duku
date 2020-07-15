@@ -4,9 +4,9 @@
 // example that draws a framebuffer with a custom ray-marching shader
 
 use tegne::ui;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
-use tegne::Window;
-use tegne::WindowOptions;
 
 fn main() {
     let (width, height) = (900, 900);

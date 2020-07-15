@@ -56,7 +56,7 @@ use crate::surface::WindowHandle;
 use crate::renderer::UiRenderer;
 
 #[cfg(feature = "window")]
-use crate::surface::Window;
+use crate::window::Window;
 
 // TODO: remove and pass errors to user
 macro_rules! check {

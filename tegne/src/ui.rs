@@ -8,7 +8,7 @@ use crate::color::Color;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::surface::Events;
+use crate::window::Events;
 use crate::Context;
 
 pub use imgui::im_str as label;

@@ -3,14 +3,14 @@
 
 // example to draw textures to the window
 
-use tegne::CameraType;
+use tegne::camera::CameraType;
+use tegne::math::Transform;
+use tegne::math::Vector3;
+use tegne::window::Key;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
 use tegne::ContextOptions;
-use tegne::Key;
-use tegne::Transform;
-use tegne::Vector3;
-use tegne::Window;
-use tegne::WindowOptions;
 
 const TEXTURE_SIZE: u32 = 512;
 

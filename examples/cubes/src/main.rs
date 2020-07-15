@@ -4,18 +4,18 @@
 // Mesh drawing example
 
 use rand::Rng;
+use tegne::camera::Controller;
+use tegne::math::Transform;
+use tegne::math::Vector3;
+use tegne::reference::Texture;
+use tegne::shader::SamplerFilter;
+use tegne::shader::SamplerOptions;
 use tegne::ui;
+use tegne::window::Key;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
 use tegne::ContextOptions;
-use tegne::Controller;
-use tegne::Key;
-use tegne::SamplerFilter;
-use tegne::SamplerOptions;
-use tegne::Texture;
-use tegne::Transform;
-use tegne::Vector3;
-use tegne::Window;
-use tegne::WindowOptions;
 
 struct Cube {
     texture: Texture,

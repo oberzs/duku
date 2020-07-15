@@ -4,14 +4,14 @@
 // example with dynamicly changing mesh vertices
 
 use std::time::Instant;
-use tegne::colors;
+use tegne::camera::Controller;
+use tegne::color::colors;
+use tegne::math::Vector3;
+use tegne::mesh::MeshOptions;
+use tegne::window::Window;
+use tegne::window::WindowOptions;
 use tegne::Context;
 use tegne::ContextOptions;
-use tegne::Controller;
-use tegne::MeshOptions;
-use tegne::Vector3;
-use tegne::Window;
-use tegne::WindowOptions;
 
 fn main() {
     let (width, height) = (720, 640);
