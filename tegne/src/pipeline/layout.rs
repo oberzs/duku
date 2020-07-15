@@ -198,7 +198,7 @@ impl ShaderLayout {
             .iter()
             .map(|v| {
                 vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::ShaderDepth.flag())
+                    .image_layout(ImageLayout::ShaderColor.flag())
                     .image_view(*v)
                     .build()
             })

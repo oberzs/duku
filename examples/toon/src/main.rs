@@ -63,7 +63,7 @@ fn main() {
 
             // toon cube and sphere
             target.set_shader(&shader);
-            target.draw_cube([-3.0, 1.0, 0.0]);
+            target.draw_cube([-3.0, 0.6, 0.0]);
             target.draw_sphere([-1.0, 1.0, 0.0]);
             target.set_shader_phong();
 

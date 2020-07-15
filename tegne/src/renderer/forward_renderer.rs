@@ -60,7 +60,7 @@ impl ForwardRenderer {
                     shader_layout,
                     image_uniform,
                     FramebufferOptions {
-                        attachment_formats: &[ImageFormat::Depth],
+                        attachment_formats: &[ImageFormat::Float2],
                         camera_type: CameraType::Orthographic,
                         multisampled: false,
                         width: shadow_map_size,
