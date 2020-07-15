@@ -31,7 +31,6 @@ use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Texture;
-use crate::image::TextureFormat;
 use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
@@ -346,7 +345,7 @@ impl Context {
             &self.device,
             &self.image_uniform,
             TextureOptions {
-                format: TextureFormat::Rgba,
+                format: ImageFormat::Rgba,
                 data: &data,
                 height: pixels.len() as u32 / width,
                 width,
@@ -366,7 +365,7 @@ impl Context {
             &self.device,
             &self.image_uniform,
             TextureOptions {
-                format: TextureFormat::Srgba,
+                format: ImageFormat::Srgba,
                 data: &data,
                 width,
                 height,

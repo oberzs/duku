@@ -11,7 +11,6 @@ use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Texture;
-use crate::image::TextureFormat;
 use crate::image::TextureOptions;
 use crate::math::Matrix4;
 use crate::math::Vector2;
@@ -196,7 +195,7 @@ impl UiRenderer {
                 data: &texture.0,
                 width: texture.1,
                 height: texture.2,
-                format: TextureFormat::Rgba,
+                format: ImageFormat::Rgba,
             },
         )?);
 
