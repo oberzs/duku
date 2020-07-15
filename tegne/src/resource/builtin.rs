@@ -82,7 +82,7 @@ impl Builtins {
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/phong.shader"),
+            include_bytes!("../../shaders/phong.shader"),
             Default::default(),
         )?);
 
@@ -90,7 +90,7 @@ impl Builtins {
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/font.shader"),
+            include_bytes!("../../shaders/font.shader"),
             Default::default(),
         )?);
 
@@ -98,7 +98,7 @@ impl Builtins {
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/blit.shader"),
+            include_bytes!("../../shaders/blit.shader"),
             ShaderOptions {
                 depth_mode: DepthMode::Disabled,
                 ..Default::default()
@@ -109,7 +109,7 @@ impl Builtins {
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/wireframe.shader"),
+            include_bytes!("../../shaders/wireframe.shader"),
             ShaderOptions {
                 polygon_mode: PolygonMode::Line,
                 depth_mode: DepthMode::Disabled,
@@ -121,7 +121,7 @@ impl Builtins {
             device,
             framebuffer,
             layout,
-            include_bytes!("../../assets/shaders/unshaded.shader"),
+            include_bytes!("../../shaders/unshaded.shader"),
             Default::default(),
         )?);
 
@@ -131,7 +131,7 @@ impl Builtins {
                 device,
                 uniform,
                 resources,
-                include_bytes!("../../assets/fonts/RobotoMono-Regular.font"),
+                include_bytes!("../../fonts/RobotoMono-Regular.font"),
             )?;
             resources.add_font(font)
         };

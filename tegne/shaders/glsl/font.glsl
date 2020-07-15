@@ -1,3 +1,5 @@
+layout(location = 0) out vec4 out_color;
+
 void fragment() {
     vec3 tint = material.arg_1.rgb;
     float width = material.arg_1.w;

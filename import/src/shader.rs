@@ -137,11 +137,6 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     real_src.push_str(phong_glsl);
     real_src.push_str(shadow_glsl);
 
-    // add out_color if needed
-    if src.contains("out_color") {
-        real_src.push_str("layout(location = 0) out vec4 out_color;\n");
-    }
-
     let pre_line_count = real_src.lines().count() as u32;
 
     // add fragment source

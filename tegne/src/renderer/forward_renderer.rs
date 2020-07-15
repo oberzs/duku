@@ -83,7 +83,7 @@ impl ForwardRenderer {
             device,
             &shadow_framebuffers[0][0],
             shader_layout,
-            include_bytes!("../../assets/shaders/shadow.shader"),
+            include_bytes!("../../shaders/shadow.shader"),
             ShaderOptions {
                 ..Default::default()
             },
