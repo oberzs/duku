@@ -33,10 +33,13 @@ use crate::image::ImageMemory;
 use crate::image::ImageSamples;
 use crate::image::LayoutChangeOptions;
 use crate::instance::Instance;
+use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
+use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::Uniform;
 use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
 use crate::sync::fence;
@@ -679,11 +682,11 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_bind_descriptor(
+    fn cmd_bind_descriptor(
         &self,
         buffer: vk::CommandBuffer,
-        descriptor: Descriptor,
         layout: &ShaderLayout,
+        descriptor: Descriptor,
     ) {
         let sets = [descriptor.1];
         unsafe {
@@ -698,7 +701,30 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_bind_vertex_buffer(&self, buffer: vk::CommandBuffer, v_buffer: vk::Buffer) {
+    pub(crate) fn cmd_bind_uniform(
+        &self,
+        buffer: vk::CommandBuffer,
+        layout: &ShaderLayout,
+        uniform: &impl Uniform,
+    ) {
+        self.cmd_bind_descriptor(buffer, layout, uniform.descriptor());
+    }
+
+    pub(crate) fn cmd_bind_material(
+        &self,
+        buffer: vk::CommandBuffer,
+        layout: &ShaderLayout,
+        material: &Material,
+    ) {
+        self.cmd_bind_uniform(buffer, layout, material.uniform());
+    }
+
+    pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &Mesh) {
+        self.cmd_bind_index_buffer(buffer, mesh.index_buffer());
+        self.cmd_bind_vertex_buffer(buffer, mesh.vertex_buffer());
+    }
+
+    fn cmd_bind_vertex_buffer(&self, buffer: vk::CommandBuffer, v_buffer: vk::Buffer) {
         let buffers = [v_buffer];
         let offsets = [0];
         unsafe {
@@ -707,7 +733,7 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_bind_index_buffer(&self, buffer: vk::CommandBuffer, i_buffer: vk::Buffer) {
+    fn cmd_bind_index_buffer(&self, buffer: vk::CommandBuffer, i_buffer: vk::Buffer) {
         unsafe {
             self.handle
                 .cmd_bind_index_buffer(buffer, i_buffer, 0, vk::IndexType::UINT32);
@@ -717,8 +743,8 @@ impl Device {
     pub(crate) fn cmd_push_constants(
         &self,
         buffer: vk::CommandBuffer,
-        constants: PushConstants,
         layout: &ShaderLayout,
+        constants: PushConstants,
     ) {
         unsafe {
             let data: &[u8] = slice::from_raw_parts(

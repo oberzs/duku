@@ -3,10 +3,8 @@
 
 // Material - struct to pass additional data to shader
 
-use std::cell::Cell;
 use std::sync::Arc;
 
-use super::Descriptor;
 use super::MaterialData;
 use super::MaterialUniform;
 use super::ShaderLayout;
@@ -22,7 +20,7 @@ use crate::resource::Ref;
 pub struct Material {
     data: MaterialData,
     uniform: MaterialUniform,
-    should_update: Cell<bool>,
+    should_update: bool,
 }
 
 pub type Arg = Vector4;
@@ -33,9 +31,17 @@ impl Material {
 
         Ok(Self {
             data: MaterialData::default(),
-            should_update: Cell::new(true),
+            should_update: true,
             uniform,
         })
+    }
+
+    pub(crate) fn update_if_needed(&mut self) -> Result<()> {
+        if self.should_update {
+            self.uniform.update(self.data)?;
+            self.should_update = false;
+        }
+        Ok(())
     }
 
     pub fn set_phong_color(&mut self, color: impl Into<Color>) {
@@ -43,7 +49,7 @@ impl Material {
         self.data.arg_1.x = c.x;
         self.data.arg_1.y = c.y;
         self.data.arg_1.z = c.z;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_color(&mut self, color: impl Into<Color>) {
@@ -51,12 +57,12 @@ impl Material {
         self.data.arg_1.x = c.x;
         self.data.arg_1.y = c.y;
         self.data.arg_1.z = c.z;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_width(&mut self, width: f32) {
         self.data.arg_1.w = width;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_border_color(&mut self, color: impl Into<Color>) {
@@ -64,78 +70,73 @@ impl Material {
         self.data.arg_2.x = c.x;
         self.data.arg_2.y = c.y;
         self.data.arg_2.z = c.z;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_edge(&mut self, edge: f32) {
         self.data.arg_2.w = edge;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_border_offset(&mut self, offset: impl Into<Vector2>) {
         let v = offset.into();
         self.data.arg_3.x = v.x;
         self.data.arg_3.y = v.y;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_border_width(&mut self, width: f32) {
         self.data.arg_3.z = width;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_font_border_edge(&mut self, edge: f32) {
         self.data.arg_3.w = edge;
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_1(&mut self, arg: impl Into<Arg>) {
         self.data.arg_1 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_2(&mut self, arg: impl Into<Arg>) {
         self.data.arg_2 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_3(&mut self, arg: impl Into<Arg>) {
         self.data.arg_3 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_4(&mut self, arg: impl Into<Arg>) {
         self.data.arg_4 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_5(&mut self, arg: impl Into<Arg>) {
         self.data.arg_5 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_6(&mut self, arg: impl Into<Arg>) {
         self.data.arg_6 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_7(&mut self, arg: impl Into<Arg>) {
         self.data.arg_7 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
     pub fn set_arg_8(&mut self, arg: impl Into<Arg>) {
         self.data.arg_8 = arg.into();
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
-    pub(crate) fn descriptor(&self) -> Result<Descriptor> {
-        // update material uniform if data has changed
-        if self.should_update.get() {
-            self.uniform.update(self.data)?;
-            self.should_update.set(false);
-        }
-        Ok(self.uniform.descriptor())
+    pub(crate) fn uniform(&self) -> &MaterialUniform {
+        &self.uniform
     }
 }
 

@@ -27,6 +27,7 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
+use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
 
 const CASCADE_COUNT: usize = 3;
@@ -108,24 +109,23 @@ impl ForwardRenderer {
         let cmd = device.command_buffer();
         device.cmd_set_line_width(cmd, 1.0);
 
-        let light_dir = target.main_light().coords.shrink();
+        let light_dir = target.main_light.coords.shrink();
 
         let mut light_matrices = [Matrix4::identity(); 4];
         let mut cascade_splits = [0.0; 4];
 
         // shadow mapping
-        if target.do_shadow_mapping() {
+        if target.do_shadow_mapping {
             // bind other random shadow map set
-            device.cmd_bind_descriptor(
+            device.cmd_bind_uniform(
                 cmd,
-                self.shadow_uniforms[(device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT]
-                    .descriptor(),
                 shader_layout,
+                &self.shadow_uniforms[(device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT],
             );
 
             // render shadow map for each cascade
             let mut prev_cs = 0.0;
-            for (i, cs) in target.cascade_splits().iter().enumerate() {
+            for (i, cs) in target.cascade_splits.iter().enumerate() {
                 let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
 
                 // get view frustum bounding sphere
@@ -169,20 +169,16 @@ impl ForwardRenderer {
                     bias: 0.0,
                 })?;
 
-                device.cmd_begin_render_pass(cmd, shadow_framebuffer, target.clear());
+                device.cmd_begin_render_pass(cmd, shadow_framebuffer, target.clear.to_rgba_norm());
                 device.cmd_set_view(cmd, shadow_framebuffer.width(), shadow_framebuffer.height());
-                device.cmd_bind_descriptor(
-                    cmd,
-                    shadow_framebuffer.world_uniform().descriptor(),
-                    shader_layout,
-                );
+                device.cmd_bind_uniform(cmd, shader_layout, shadow_framebuffer.world_uniform());
                 device.cmd_bind_shader(cmd, &self.shadow_shader);
 
-                for s_order in target.orders_by_shader() {
+                for s_order in &target.orders_by_shader {
                     for m_order in &s_order.orders_by_material {
                         for order in &m_order.orders {
                             if order.cast_shadows {
-                                self.draw_order(device, order, shader_layout)?;
+                                self.draw_order(device, order, shader_layout);
                             }
                         }
                     }
@@ -197,10 +193,10 @@ impl ForwardRenderer {
         }
 
         // bind current shadow map set
-        device.cmd_bind_descriptor(
+        device.cmd_bind_uniform(
             cmd,
-            self.shadow_uniforms[device.current_frame()].descriptor(),
             shader_layout,
+            &self.shadow_uniforms[device.current_frame()],
         );
 
         // normal render
@@ -210,20 +206,20 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
-            bias: target.bias(),
+            bias: target.bias,
             cascade_splits,
             light_matrices,
         })?;
 
-        device.cmd_begin_render_pass(cmd, framebuffer, target.clear());
+        device.cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
         device.cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-        device.cmd_bind_descriptor(cmd, framebuffer.world_uniform().descriptor(), shader_layout);
+        device.cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
 
         let mut render_stats = RenderStats::default();
         let mut unique_shaders = HashSet::new();
         let mut unique_materials = HashSet::new();
 
-        for s_order in target.orders_by_shader() {
+        for s_order in &target.orders_by_shader {
             s_order.shader.with(|s| {
                 device.cmd_bind_shader(cmd, s);
                 unique_shaders.insert(s.handle());
@@ -231,13 +227,14 @@ impl ForwardRenderer {
             render_stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
-                let material = m_order.material.with(|m| m.descriptor())?;
-                device.cmd_bind_descriptor(cmd, material, shader_layout);
-                unique_materials.insert(material);
+                m_order.material.with(|m| {
+                    device.cmd_bind_material(cmd, shader_layout, m);
+                    unique_materials.insert(m.uniform().descriptor());
+                });
                 render_stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    render_stats.drawn_indices += self.draw_order(device, order, shader_layout)?;
+                    render_stats.drawn_indices += self.draw_order(device, order, shader_layout);
                     render_stats.draw_calls += 1;
                 }
             }
@@ -253,34 +250,25 @@ impl ForwardRenderer {
         Ok(render_stats)
     }
 
-    fn draw_order(
-        &self,
-        device: &Device,
-        order: &Order,
-        shader_layout: &ShaderLayout,
-    ) -> Result<u32> {
+    fn draw_order(&self, device: &Device, order: &Order, shader_layout: &ShaderLayout) -> u32 {
         let cmd = device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
             Albedo::Framebuffer(fra) => fra.with(|f| f.texture_index()),
         };
-        let (vb, ib, n) = order
-            .mesh
-            .with(|m| (m.vertex_buffer(), m.index_buffer(), m.index_count()));
-
-        device.cmd_push_constants(
-            cmd,
-            PushConstants {
-                model_matrix: order.model,
-                sampler_index: order.sampler_index,
-                albedo_index,
-            },
-            shader_layout,
-        );
-        device.cmd_bind_vertex_buffer(cmd, vb?);
-        device.cmd_bind_index_buffer(cmd, ib?);
-        device.cmd_draw(cmd, n);
-
-        Ok(n)
+        order.mesh.with(|m| {
+            device.cmd_push_constants(
+                cmd,
+                shader_layout,
+                PushConstants {
+                    model_matrix: order.model,
+                    sampler_index: order.sampler_index,
+                    albedo_index,
+                },
+            );
+            device.cmd_bind_mesh(cmd, m);
+            device.cmd_draw(cmd, m.index_count());
+            m.index_count()
+        })
     }
 }

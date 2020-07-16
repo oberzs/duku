@@ -24,6 +24,7 @@ pub(crate) use uniform::Descriptor;
 pub(crate) use uniform::ImageUniform;
 pub(crate) use uniform::MaterialUniform;
 pub(crate) use uniform::ShadowMapUniform;
+pub(crate) use uniform::Uniform;
 pub(crate) use uniform::WorldUniform;
 pub(crate) use uniform_data::Light;
 pub(crate) use uniform_data::MaterialData;

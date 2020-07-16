@@ -23,20 +23,21 @@ use crate::resource::Builtins;
 use crate::resource::Ref;
 
 pub struct Target {
-    orders_by_shader: Vec<OrdersByShader>,
-    clear: Color,
-    main_light: Light,
+    pub(crate) orders_by_shader: Vec<OrdersByShader>,
+    pub(crate) clear: Color,
+    pub(crate) do_shadow_mapping: bool,
+    pub(crate) cascade_splits: [f32; 3],
+    pub(crate) bias: f32,
+    pub(crate) main_light: Light,
+
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
     current_sampler: i32,
-    cast_shadows: bool,
     wireframes: bool,
-    do_shadow_mapping: bool,
-    bias: f32,
-    cascade_splits: [f32; 3],
+    cast_shadows: bool,
     builtins: Builtins,
 }
 
@@ -300,35 +301,11 @@ impl Target {
         self.current_material = self.builtins.white_material.clone();
     }
 
-    pub(crate) fn clear(&self) -> [f32; 4] {
-        self.clear.to_rgba_norm()
-    }
-
-    pub(crate) fn orders_by_shader(&self) -> impl Iterator<Item = &OrdersByShader> {
-        self.orders_by_shader.iter()
-    }
-
-    pub(crate) fn main_light(&self) -> Light {
-        self.main_light
-    }
-
     pub(crate) fn lights(&self) -> [Light; 4] {
         let mut lights: [Light; 4] = Default::default();
         lights[0] = self.main_light;
         lights[1..self.lights.len() + 1].clone_from_slice(&self.lights[..]);
         lights
-    }
-
-    pub(crate) fn do_shadow_mapping(&self) -> bool {
-        self.do_shadow_mapping
-    }
-
-    pub(crate) fn bias(&self) -> f32 {
-        self.bias
-    }
-
-    pub(crate) fn cascade_splits(&self) -> [f32; 3] {
-        self.cascade_splits
     }
 
     fn add_order(&mut self, order: Order) {

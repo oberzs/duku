@@ -129,6 +129,7 @@ impl UiRenderer {
         self.mesh.set_colors(&colors);
         self.mesh.set_uvs(&uvs);
         self.mesh.set_triangles(&triangles);
+        self.mesh.update_if_needed()?;
 
         // render ui
         let cmd = self.device.command_buffer();
@@ -145,7 +146,7 @@ impl UiRenderer {
                     light_matrices: [Matrix4::identity(); 4],
                     bias: 0.0,
                 })
-                .expect("bad code");
+                .expect("bad update");
 
             // begin render pass
             self.device
@@ -155,7 +156,7 @@ impl UiRenderer {
 
             // bind resources
             self.device
-                .cmd_bind_descriptor(cmd, f.world_uniform().descriptor(), shader_layout);
+                .cmd_bind_uniform(cmd, shader_layout, f.world_uniform());
             self.device.cmd_bind_shader(cmd, &self.shader);
 
             // render mesh
@@ -166,17 +167,15 @@ impl UiRenderer {
             };
             self.device.cmd_push_constants(
                 cmd,
+                shader_layout,
                 PushConstants {
                     model_matrix: Matrix4::identity(),
                     sampler_index: 0,
                     albedo_index,
                 },
-                shader_layout,
             );
-            self.device
-                .cmd_bind_vertex_buffer(cmd, self.mesh.vertex_buffer().expect("bad code"));
-            self.device
-                .cmd_bind_index_buffer(cmd, self.mesh.index_buffer().expect("bad code"));
+
+            self.device.cmd_bind_mesh(cmd, &self.mesh);
             self.device.cmd_draw(cmd, self.mesh.index_count());
 
             self.device.cmd_end_render_pass(cmd);

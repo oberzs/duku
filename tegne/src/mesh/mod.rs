@@ -6,7 +6,6 @@
 mod vertex;
 
 use ash::vk;
-use std::cell::Cell;
 use std::sync::Arc;
 
 use crate::buffer::BufferUsage;
@@ -27,9 +26,8 @@ pub struct Mesh {
     triangles: Vec<[u32; 3]>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
-    should_update_vertices: Cell<bool>,
-    should_update_triangles: Cell<bool>,
-    index_count: Cell<u32>,
+    should_update_vertices: bool,
+    should_update_triangles: bool,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -91,35 +89,65 @@ impl Mesh {
             triangles,
             vertex_buffer,
             index_buffer,
-            should_update_vertices: Cell::new(true),
-            should_update_triangles: Cell::new(true),
-            index_count: Cell::new(index_count as u32),
+            should_update_vertices: true,
+            should_update_triangles: true,
         })
+    }
+
+    pub(crate) fn update_if_needed(&mut self) -> Result<()> {
+        if self.should_update_vertices {
+            let vertices = self
+                .vertices
+                .iter()
+                .zip(self.uvs.iter())
+                .zip(self.normals.iter())
+                .zip(self.colors.iter())
+                .map(|(((pos, uv), normal), col)| Vertex {
+                    pos: *pos,
+                    uv: *uv,
+                    norm: *normal,
+                    col: col.to_rgba_norm_vec(),
+                })
+                .collect::<Vec<_>>();
+            self.vertex_buffer.update_data(&vertices)?;
+            self.should_update_vertices = false;
+        }
+        if self.should_update_triangles {
+            let indices = self
+                .triangles
+                .iter()
+                .flatten()
+                .cloned()
+                .collect::<Vec<u32>>();
+            self.index_buffer.update_data(&indices)?;
+            self.should_update_triangles = false;
+        }
+        Ok(())
     }
 
     pub fn set_vertices(&mut self, vertices: &[Vector3]) {
         self.vertices = vertices.to_owned();
-        self.should_update_vertices.set(true);
+        self.should_update_vertices = true;
     }
 
     pub fn set_uvs(&mut self, uvs: &[Vector2]) {
         self.uvs = uvs.to_owned();
-        self.should_update_vertices.set(true);
+        self.should_update_vertices = true;
     }
 
     pub fn set_normals(&mut self, normals: &[Vector3]) {
         self.normals = normals.to_owned();
-        self.should_update_vertices.set(true);
+        self.should_update_vertices = true;
     }
 
     pub fn set_colors(&mut self, colors: &[Color]) {
         self.colors = colors.to_owned();
-        self.should_update_vertices.set(true);
+        self.should_update_vertices = true;
     }
 
     pub fn set_triangles(&mut self, triangles: &[[u32; 3]]) {
         self.triangles = triangles.to_owned();
-        self.should_update_triangles.set(true);
+        self.should_update_triangles = true;
     }
 
     pub fn vertices(&self) -> Vec<Vector3> {
@@ -142,45 +170,15 @@ impl Mesh {
         self.triangles.clone()
     }
 
-    pub(crate) fn vertex_buffer(&self) -> Result<vk::Buffer> {
-        // if vertex data has changed, update buffer
-        if self.should_update_vertices.get() {
-            let vertices = self
-                .vertices
-                .iter()
-                .zip(self.uvs.iter())
-                .zip(self.normals.iter())
-                .zip(self.colors.iter())
-                .map(|(((pos, uv), normal), col)| Vertex {
-                    pos: *pos,
-                    uv: *uv,
-                    norm: *normal,
-                    col: col.to_rgba_norm_vec(),
-                })
-                .collect::<Vec<_>>();
-            self.vertex_buffer.update_data(&vertices)?;
-            self.should_update_vertices.set(false);
-        }
-        Ok(self.vertex_buffer.handle())
+    pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
+        self.vertex_buffer.handle()
     }
 
-    pub(crate) fn index_buffer(&self) -> Result<vk::Buffer> {
-        // if index data has changed, update buffer
-        if self.should_update_triangles.get() {
-            let indices = self
-                .triangles
-                .iter()
-                .flatten()
-                .cloned()
-                .collect::<Vec<u32>>();
-            self.index_buffer.update_data(&indices)?;
-            self.index_count.set(self.triangles.len() as u32 * 3);
-            self.should_update_triangles.set(false);
-        }
-        Ok(self.index_buffer.handle())
+    pub(crate) fn index_buffer(&self) -> vk::Buffer {
+        self.index_buffer.handle()
     }
 
     pub(crate) fn index_count(&self) -> u32 {
-        self.index_count.get()
+        self.triangles.len() as u32 * 3
     }
 }

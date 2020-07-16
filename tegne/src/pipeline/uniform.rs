@@ -47,6 +47,10 @@ pub(crate) struct ShadowMapUniform {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Descriptor(pub u32, pub vk::DescriptorSet);
 
+pub(crate) trait Uniform {
+    fn descriptor(&self) -> Descriptor;
+}
+
 impl WorldUniform {
     pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
         let buffer = DynamicBuffer::new::<WorldData>(device, BufferUsage::Uniform, 1)?;
@@ -60,8 +64,10 @@ impl WorldUniform {
     pub(crate) fn update(&self, data: WorldData) -> Result<()> {
         self.buffer.update_data(&[data])
     }
+}
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+impl Uniform for WorldUniform {
+    fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }
@@ -79,8 +85,10 @@ impl MaterialUniform {
     pub(crate) fn update(&self, data: MaterialData) -> Result<()> {
         self.buffer.update_data(&[data])
     }
+}
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+impl Uniform for MaterialUniform {
+    fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }
@@ -213,8 +221,10 @@ impl ImageUniform {
             self.should_update.set(false);
         }
     }
+}
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+impl Uniform for ImageUniform {
+    fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }
@@ -226,8 +236,10 @@ impl ShadowMapUniform {
 
         Ok(Self { descriptor })
     }
+}
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+impl Uniform for ShadowMapUniform {
+    fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }
