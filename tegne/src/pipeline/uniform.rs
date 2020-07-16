@@ -44,7 +44,7 @@ pub(crate) struct ShadowMapUniform {
     descriptor: Descriptor,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Descriptor(pub u32, pub vk::DescriptorSet);
 
 impl WorldUniform {

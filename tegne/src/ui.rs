@@ -61,15 +61,18 @@ pub fn stats_window(ui: &Ui<'_>, context: &Context, events: &Events) {
     let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", render_stats.time);
     let drawn_indices = format!(
         "{1:0$} : {2}({3})",
-        pad, "Drawn Indices", render_stats.drawn_indices, render_stats.drawn_triangles
+        pad,
+        "Drawn Indices",
+        render_stats.drawn_indices,
+        render_stats.drawn_triangles()
     );
     let shader_rebinds = format!(
-        "{1:0$} : {2}",
-        pad, "Shaders Used", render_stats.shaders_used
+        "{1:0$} : {2}({3})",
+        pad, "Shaders Used", render_stats.shaders_used, render_stats.shader_rebinds
     );
     let material_rebinds = format!(
-        "{1:0$} : {2}",
-        pad, "Materials Used", render_stats.materials_used
+        "{1:0$} : {2}({3})",
+        pad, "Materials Used", render_stats.materials_used, render_stats.material_rebinds
     );
     let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", render_stats.draw_calls);
 
