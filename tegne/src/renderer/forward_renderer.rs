@@ -63,6 +63,7 @@ impl ForwardRenderer {
                         attachment_formats: &[ImageFormat::Float2],
                         camera_type: CameraType::Orthographic,
                         multisampled: false,
+                        depth: false,
                         width: shadow_map_size,
                         height: shadow_map_size,
                     },

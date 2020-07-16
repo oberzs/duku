@@ -33,6 +33,7 @@ pub(crate) struct UiRenderer {
     shader: Shader,
     mesh: Mesh,
     texture: Option<Texture>,
+    drawn: bool,
     device: Arc<Device>,
 }
 
@@ -55,6 +56,7 @@ impl UiRenderer {
                 attachment_formats: &[ImageFormat::Sbgra],
                 camera_type: CameraType::Orthographic,
                 multisampled: false,
+                depth: false,
                 width,
                 height,
             },
@@ -85,6 +87,7 @@ impl UiRenderer {
             device: Arc::clone(device),
             framebuffer: resources.add_framebuffer(framebuffer),
             texture: None,
+            drawn: false,
             shader,
             mesh,
         })
@@ -180,6 +183,8 @@ impl UiRenderer {
             f.blit_to_texture(cmd);
         });
 
+        self.drawn = true;
+
         Ok(())
     }
 
@@ -210,6 +215,14 @@ impl UiRenderer {
     ) -> Result<()> {
         self.framebuffer
             .with(|f| f.resize(width, height, image_uniform))
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.drawn = false;
+    }
+
+    pub(crate) fn drawn(&self) -> bool {
+        self.drawn
     }
 
     pub(crate) fn framebuffer(&self) -> &Ref<Framebuffer> {

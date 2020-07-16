@@ -16,7 +16,7 @@ use crate::image::ImageSamples;
 
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
-    attachments: Vec<AttachmentOptions>,
+    attachments: Vec<Attachment>,
     device: Arc<Device>,
 }
 
@@ -25,125 +25,97 @@ impl RenderPass {
         device: &Arc<Device>,
         attachment_formats: &[ImageFormat],
         multisampled: bool,
+        depth: bool,
         present: bool,
     ) -> Result<Self> {
         profile_scope!("new");
+
+        debug_assert!(!present || attachment_formats.len() == 1);
 
         let mut depth_attachment = None;
         let mut color_attachments = vec![];
         let mut resolve_attachments = vec![];
         let mut attachment_descriptions = vec![];
+        let mut attachments = vec![];
 
-        let mut index = 0;
-        let attachments = attachment_formats
-            .iter()
-            .map(|format| {
-                let is_last = index as usize == attachment_formats.len() - 1;
+        // add depth attachment if needed
+        if depth {
+            let samples = if multisampled {
+                device.samples()
+            } else {
+                ImageSamples(1)
+            };
 
-                if format.is_depth() {
-                    let samples = if multisampled {
-                        device.samples()
-                    } else {
-                        ImageSamples(1)
-                    };
-                    let layout = if is_last {
-                        ImageLayout::ShaderDepth
-                    } else {
-                        ImageLayout::Depth
-                    };
-                    let o = AttachmentOptions {
-                        format: *format,
-                        clear: true,
-                        store: is_last,
-                        layout,
-                        samples,
-                        index,
-                    };
-                    index += 1;
-                    let a = Attachment::new(o);
-                    depth_attachment = Some(a.reference());
-                    attachment_descriptions.push(a.description());
-                    vec![o]
-                } else if format.is_color() {
-                    let mut os = vec![];
+            let a = Attachment::new(AttachmentOptions {
+                format: ImageFormat::Depth,
+                layout: ImageLayout::Depth,
+                clear: true,
+                store: false,
+                samples,
+                index: attachments.len() as u32,
+            });
 
-                    let layout = if present && is_last {
-                        ImageLayout::Present
-                    } else if is_last {
-                        ImageLayout::ShaderColor
-                    } else {
-                        ImageLayout::Color
-                    };
-                    let o = AttachmentOptions {
-                        format: *format,
-                        samples: ImageSamples(1),
-                        clear: !multisampled,
-                        store: is_last,
-                        layout,
-                        index,
-                    };
-                    index += 1;
-                    let a = Attachment::new(o);
-                    if multisampled {
-                        resolve_attachments.push(a.reference());
-                    } else {
-                        color_attachments.push(a.reference());
-                    }
-                    attachment_descriptions.push(a.description());
-                    os.push(o);
+            depth_attachment = Some(a.reference());
+            attachment_descriptions.push(a.description());
+            attachments.push(a);
+        }
 
-                    // color multisampled attachment
-                    if multisampled {
-                        let o_msaa = AttachmentOptions {
-                            format: *format,
-                            layout: ImageLayout::Color,
-                            samples: device.samples(),
-                            clear: true,
-                            store: false,
-                            index,
-                        };
-                        index += 1;
-                        let a_msaa = Attachment::new(o_msaa);
-                        color_attachments.push(a_msaa.reference());
-                        attachment_descriptions.push(a_msaa.description());
-                        os.push(o_msaa);
-                    }
+        // add color and resolve attachments
+        for format in attachment_formats {
+            debug_assert!(format.is_color());
 
-                    os
-                } else {
-                    error!("cannot use format {:?} for framebuffer", format);
-                }
-            })
-            .flatten()
-            .collect::<Vec<_>>();
+            // base color attachment
+            let layout = if present {
+                ImageLayout::Present
+            } else {
+                ImageLayout::ShaderColor
+            };
+
+            let a = Attachment::new(AttachmentOptions {
+                format: *format,
+                samples: ImageSamples(1),
+                clear: !multisampled,
+                store: true,
+                index: attachments.len() as u32,
+                layout,
+            });
+
+            if multisampled {
+                resolve_attachments.push(a.reference());
+            } else {
+                color_attachments.push(a.reference());
+            }
+            attachment_descriptions.push(a.description());
+            attachments.push(a);
+
+            // color multisampled attachment
+            if multisampled {
+                let a_msaa = Attachment::new(AttachmentOptions {
+                    format: *format,
+                    layout: ImageLayout::Color,
+                    samples: device.samples(),
+                    clear: true,
+                    store: false,
+                    index: attachments.len() as u32,
+                });
+
+                color_attachments.push(a_msaa.reference());
+                attachment_descriptions.push(a_msaa.description());
+                attachments.push(a_msaa);
+            }
+        }
 
         // create subpass dependency
-        let last_format = attachment_formats[attachment_formats.len() - 1];
-        let dependency = [if last_format.is_color() {
-            vk::SubpassDependency::builder()
-                .src_subpass(vk::SUBPASS_EXTERNAL)
-                .dst_subpass(0)
-                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                .src_access_mask(vk::AccessFlags::empty())
-                .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                .dst_access_mask(
-                    vk::AccessFlags::COLOR_ATTACHMENT_READ
-                        | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-                )
-                .build()
-        } else {
-            vk::SubpassDependency::builder()
-                .src_subpass(0)
-                .dst_subpass(vk::SUBPASS_EXTERNAL)
-                .src_stage_mask(
-                    vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
-                        | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
-                )
-                .src_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
-                .dst_stage_mask(vk::PipelineStageFlags::TRANSFER)
-                .dst_access_mask(vk::AccessFlags::TRANSFER_READ)
-                .build()
-        }];
+        let dependency = [vk::SubpassDependency::builder()
+            .src_subpass(vk::SUBPASS_EXTERNAL)
+            .dst_subpass(0)
+            .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .src_access_mask(vk::AccessFlags::empty())
+            .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+            .dst_access_mask(
+                vk::AccessFlags::COLOR_ATTACHMENT_READ | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
+            )
+            .build()];
 
         // create render pass
         let mut subpass_builder =
@@ -173,7 +145,7 @@ impl RenderPass {
         })
     }
 
-    pub(crate) fn attachments(&self) -> impl Iterator<Item = &AttachmentOptions> {
+    pub(crate) fn attachments(&self) -> impl Iterator<Item = &Attachment> {
         self.attachments.iter()
     }
 

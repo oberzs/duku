@@ -12,6 +12,10 @@ use crate::image::ImageSamples;
 pub(crate) struct Attachment {
     description: vk::AttachmentDescription,
     reference: vk::AttachmentReference,
+    format: ImageFormat,
+    layout: ImageLayout,
+    samples: ImageSamples,
+    is_stored: bool,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -62,6 +66,10 @@ impl Attachment {
             .build();
 
         Self {
+            format: options.format,
+            layout: options.layout,
+            is_stored: options.store,
+            samples: options.samples,
             description,
             reference,
         }
@@ -73,5 +81,21 @@ impl Attachment {
 
     pub(crate) fn reference(&self) -> vk::AttachmentReference {
         self.reference
+    }
+
+    pub(crate) fn format(&self) -> ImageFormat {
+        self.format
+    }
+
+    pub(crate) fn layout(&self) -> ImageLayout {
+        self.layout
+    }
+
+    pub(crate) fn samples(&self) -> ImageSamples {
+        self.samples
+    }
+
+    pub(crate) fn is_stored(&self) -> bool {
+        self.is_stored
     }
 }

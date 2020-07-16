@@ -20,7 +20,7 @@ use crate::error::Result;
 pub(crate) struct ImageMemory {
     handle: vk::Image,
     memory: Option<vk::DeviceMemory>,
-    view: Option<vk::ImageView>,
+    views: Vec<vk::ImageView>,
     width: u32,
     height: u32,
     mip_count: u32,
@@ -37,7 +37,6 @@ pub(crate) struct ImageMemoryOptions<'usage> {
     pub(crate) usage: &'usage [ImageUsage],
     pub(crate) mips: ImageMips,
     pub(crate) samples: ImageSamples,
-    pub(crate) create_view: bool,
 }
 
 impl ImageMemory {
@@ -80,49 +79,48 @@ impl ImageMemory {
             }
         };
 
-        // create view if it is needed
-        let view = if !options.create_view {
-            None
-        } else {
-            let aspect_flags = match options.format {
-                ImageFormat::Sbgra
-                | ImageFormat::Rgb
-                | ImageFormat::Rgba
-                | ImageFormat::Srgba
-                | ImageFormat::Srgb
-                | ImageFormat::Float2 => vk::ImageAspectFlags::COLOR,
-                ImageFormat::Depth => vk::ImageAspectFlags::DEPTH,
-                ImageFormat::DepthStencil => {
-                    vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
-                }
-            };
-
-            let subresource = vk::ImageSubresourceRange::builder()
-                .aspect_mask(aspect_flags)
-                .base_mip_level(0)
-                .base_array_layer(0)
-                .layer_count(1)
-                .level_count(mip_count)
-                .build();
-            let view_info = vk::ImageViewCreateInfo::builder()
-                .image(handle)
-                .view_type(vk::ImageViewType::TYPE_2D)
-                .format(options.format.flag())
-                .subresource_range(subresource);
-
-            Some(device.create_image_view(&view_info)?)
-        };
-
         Ok(Self {
-            handle,
+            device: Arc::clone(device),
             width: options.width,
             height: options.height,
+            format: options.format,
+            views: vec![],
+            handle,
             mip_count,
             memory,
-            view,
-            format: options.format,
-            device: Arc::clone(device),
         })
+    }
+
+    pub(crate) fn add_view(&mut self) -> Result<vk::ImageView> {
+        let aspect_flags = match self.format {
+            ImageFormat::Sbgra
+            | ImageFormat::Rgb
+            | ImageFormat::Rgba
+            | ImageFormat::Srgba
+            | ImageFormat::Srgb
+            | ImageFormat::Float2 => vk::ImageAspectFlags::COLOR,
+            ImageFormat::Depth => vk::ImageAspectFlags::DEPTH,
+            ImageFormat::DepthStencil => {
+                vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
+            }
+        };
+
+        let subresource = vk::ImageSubresourceRange::builder()
+            .aspect_mask(aspect_flags)
+            .base_mip_level(0)
+            .base_array_layer(0)
+            .layer_count(1)
+            .level_count(self.mip_count)
+            .build();
+        let view_info = vk::ImageViewCreateInfo::builder()
+            .image(self.handle)
+            .view_type(vk::ImageViewType::TYPE_2D)
+            .format(self.format.flag())
+            .subresource_range(subresource);
+
+        let view = self.device.create_image_view(&view_info)?;
+        self.views.push(view);
+        Ok(view)
     }
 
     pub(crate) fn copy_from_memory(&self, memory: &BufferMemory) -> Result<()> {
@@ -237,12 +235,12 @@ impl ImageMemory {
         })
     }
 
-    pub(crate) fn handle(&self) -> vk::Image {
-        self.handle
+    pub(crate) fn get_view(&self, index: usize) -> vk::ImageView {
+        self.views[index]
     }
 
-    pub(crate) fn view(&self) -> Option<vk::ImageView> {
-        self.view
+    pub(crate) fn handle(&self) -> vk::Image {
+        self.handle
     }
 
     pub(crate) fn mip_count(&self) -> u32 {
@@ -256,8 +254,8 @@ impl ImageMemory {
 
 impl Drop for ImageMemory {
     fn drop(&mut self) {
-        if let Some(view) = self.view {
-            self.device.destroy_image_view(view);
+        for view in &self.views {
+            self.device.destroy_image_view(*view);
         }
         if let Some(memory) = self.memory {
             self.device.free_image(self.handle, memory);
@@ -275,7 +273,6 @@ impl Default for ImageMemoryOptions<'_> {
             mips: ImageMips::One,
             samples: ImageSamples(1),
             usage: &[],
-            create_view: false,
         }
     }
 }
