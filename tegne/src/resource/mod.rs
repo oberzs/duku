@@ -6,6 +6,7 @@
 mod builtin;
 mod reference;
 
+use crate::error::Result;
 use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
@@ -13,6 +14,7 @@ use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+
 pub(crate) use builtin::Builtins;
 pub use reference::Ref;
 
@@ -84,5 +86,15 @@ impl ResourceManager {
         self.textures
             .drain_filter(|r| r.count() == 1)
             .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
+    }
+
+    pub(crate) fn update_if_needed(&self) -> Result<()> {
+        for mesh in &self.meshes {
+            mesh.with(|m| m.update_if_needed())?;
+        }
+        for material in &self.materials {
+            material.with(|m| m.update_if_needed())?;
+        }
+        Ok(())
     }
 }

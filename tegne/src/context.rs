@@ -520,11 +520,12 @@ impl Context {
         self.render_stats = Default::default();
         check!(self.device.next_frame(&self.swapchain));
         self.resources.clean_unused(&self.image_uniform);
+        check!(self.resources.update_if_needed());
         self.image_uniform.update_if_needed();
-        self.device.cmd_bind_descriptor(
+        self.device.cmd_bind_uniform(
             self.device.command_buffer(),
-            self.image_uniform.descriptor(),
             &self.shader_layout,
+            &self.image_uniform,
         );
 
         #[cfg(feature = "ui")]
