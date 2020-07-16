@@ -48,13 +48,13 @@ pub struct SamplerOptions {
 }
 
 pub(crate) struct OrdersByShader {
-    shader: Ref<Shader>,
-    orders_by_material: Vec<OrdersByMaterial>,
+    pub(crate) shader: Ref<Shader>,
+    pub(crate) orders_by_material: Vec<OrdersByMaterial>,
 }
 
 pub(crate) struct OrdersByMaterial {
-    material: Ref<Material>,
-    orders: Vec<Order>,
+    pub(crate) material: Ref<Material>,
+    pub(crate) orders: Vec<Order>,
 }
 
 #[derive(Clone)]
@@ -381,26 +381,6 @@ impl Target {
                 }),
             }
         }
-    }
-}
-
-impl OrdersByShader {
-    pub(crate) fn shader(&self) -> &Ref<Shader> {
-        &self.shader
-    }
-
-    pub(crate) fn orders_by_material(&self) -> impl Iterator<Item = &OrdersByMaterial> {
-        self.orders_by_material.iter()
-    }
-}
-
-impl OrdersByMaterial {
-    pub(crate) fn material(&self) -> &Ref<Material> {
-        &self.material
-    }
-
-    pub(crate) fn orders(&self) -> impl Iterator<Item = Order> + '_ {
-        self.orders.iter().cloned()
     }
 }
 
