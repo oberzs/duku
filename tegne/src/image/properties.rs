@@ -97,7 +97,8 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) fn is_depth(&self) -> bool {
+    // probably will some day be needed
+    pub(crate) fn _is_depth(&self) -> bool {
         match *self {
             Self::Depth | Self::DepthStencil => true,
             _ => false,

@@ -17,6 +17,7 @@ use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
+use crate::pipeline::Attachment;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
@@ -42,6 +43,7 @@ pub(crate) struct FramebufferOptions<'formats> {
     pub(crate) attachment_formats: &'formats [ImageFormat],
     pub(crate) camera_type: CameraType,
     pub(crate) multisampled: bool,
+    pub(crate) depth: bool,
     pub(crate) width: u32,
     pub(crate) height: u32,
 }
@@ -51,61 +53,36 @@ impl Framebuffer {
         device: &Arc<Device>,
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
-        options: FramebufferOptions<'_>,
+        camera_type: CameraType,
     ) -> Result<Vec<Self>> {
         profile_scope!("for_swapchain");
 
         let vk::Extent2D { width, height } = swapchain.extent();
-        let FramebufferOptions {
-            attachment_formats,
-            camera_type,
-            ..
-        } = options;
+        let attachment_formats = &[ImageFormat::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()?
             .map(|img| {
                 let render_pass =
-                    RenderPass::new(device, attachment_formats, device.is_msaa(), true)?;
-                let images = render_pass
+                    RenderPass::new(device, attachment_formats, device.is_msaa(), true, true)?;
+                let mut images = render_pass
                     .attachments()
-                    .map(|a| {
-                        let mut usage = vec![];
-
-                        match a.layout {
-                            ImageLayout::Color => usage.push(ImageUsage::Color),
-                            ImageLayout::Depth => usage.push(ImageUsage::Depth),
-                            ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
-                            ImageLayout::ShaderDepth => usage.push(ImageUsage::Depth),
-                            _ => (),
-                        }
-
-                        let mut handle = None;
-                        if a.store {
-                            usage.push(ImageUsage::Sampled);
-                            handle = Some(img);
+                    .map(|attachment| {
+                        let handle = if attachment.is_stored() {
+                            Some(img)
                         } else {
-                            usage.push(ImageUsage::Transient);
-                        }
+                            None
+                        };
 
-                        ImageMemory::new(
-                            device,
-                            ImageMemoryOptions {
-                                samples: a.samples,
-                                format: a.format,
-                                usage: &usage,
-                                create_view: true,
-                                width,
-                                height,
-                                handle,
-                                ..Default::default()
-                            },
-                        )
+                        create_attachment_image(device, &attachment, width, height, handle)
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+                let views = images
+                    .iter_mut()
+                    .map(|i| i.add_view())
+                    .collect::<Result<Vec<_>>>()?;
 
                 let info = vk::FramebufferCreateInfo::builder()
                     .render_pass(render_pass.handle())
@@ -150,54 +127,32 @@ impl Framebuffer {
             height,
             attachment_formats,
             multisampled,
+            depth,
             camera_type,
         } = options;
 
-        let render_pass = RenderPass::new(device, attachment_formats, multisampled, false)?;
+        let render_pass = RenderPass::new(device, attachment_formats, multisampled, depth, false)?;
 
         let mut stored_format = None;
         let mut stored_index = 0;
 
-        let images = render_pass
+        let mut images = render_pass
             .attachments()
             .enumerate()
-            .map(|(i, a)| {
-                let mut usage = vec![];
-
-                match a.layout {
-                    ImageLayout::Color => usage.push(ImageUsage::Color),
-                    ImageLayout::Depth => usage.push(ImageUsage::Depth),
-                    ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
-                    ImageLayout::ShaderDepth => usage.push(ImageUsage::Depth),
-                    _ => (),
-                }
-
-                // attachments that stay in memory can be read from
-                if a.store {
-                    usage.push(ImageUsage::Sampled);
-                    usage.push(ImageUsage::TransferSrc);
-                    stored_format = Some(a.format);
+            .map(|(i, attachment)| {
+                if attachment.is_stored() {
+                    stored_format = Some(attachment.format());
                     stored_index = i;
-                } else {
-                    usage.push(ImageUsage::Transient);
                 }
 
-                ImageMemory::new(
-                    device,
-                    ImageMemoryOptions {
-                        samples: a.samples,
-                        usage: &usage,
-                        create_view: true,
-                        format: a.format,
-                        width,
-                        height,
-                        ..Default::default()
-                    },
-                )
+                create_attachment_image(device, &attachment, width, height, None)
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+        let views = images
+            .iter_mut()
+            .map(|i| i.add_view())
+            .collect::<Result<Vec<_>>>()?;
 
         let info = vk::FramebufferCreateInfo::builder()
             .render_pass(render_pass.handle())
@@ -211,7 +166,7 @@ impl Framebuffer {
         let world_uniform = WorldUniform::new(device, shader_layout)?;
         let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
-        let texture_image = ImageMemory::new(
+        let mut texture_image = ImageMemory::new(
             device,
             ImageMemoryOptions {
                 usage: &[
@@ -219,14 +174,13 @@ impl Framebuffer {
                     ImageUsage::Sampled,
                     ImageUsage::Color,
                 ],
-                create_view: true,
                 format: ImageFormat::Sbgra,
                 width,
                 height,
                 ..Default::default()
             },
         )?;
-        let texture_index = image_uniform.add(texture_image.view().expect("bad view"));
+        let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
         device.do_commands(|cmd| {
@@ -274,56 +228,31 @@ impl Framebuffer {
         height: u32,
         image_uniform: &ImageUniform,
     ) -> Result<()> {
-        // check if this is not a swapchain framebuffer
-        if self.render_pass.attachments().count() > self.images.len() {
-            panic!("bad code: trying to resize swapchain framebuffer");
-        }
+        // cannot resize swapchain framebuffer manually
+        debug_assert!(self.render_pass.attachments().count() == self.images.len());
 
         // recreate framebuffer images
         let mut stored_format = None;
         let mut stored_index = 0;
 
-        let images = self
+        let mut images = self
             .render_pass
             .attachments()
             .enumerate()
-            .map(|(i, a)| {
-                let mut usage = vec![];
-
-                match a.layout {
-                    ImageLayout::Color => usage.push(ImageUsage::Color),
-                    ImageLayout::Depth => usage.push(ImageUsage::Depth),
-                    ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
-                    ImageLayout::ShaderDepth => usage.push(ImageUsage::Depth),
-                    _ => (),
-                }
-
-                // attachments that stay in memory can be read from
-                if a.store {
-                    usage.push(ImageUsage::Sampled);
-                    usage.push(ImageUsage::TransferSrc);
-                    stored_format = Some(a.format);
+            .map(|(i, attachment)| {
+                if attachment.is_stored() {
+                    stored_format = Some(attachment.format());
                     stored_index = i;
-                } else {
-                    usage.push(ImageUsage::Transient);
                 }
 
-                ImageMemory::new(
-                    &self.device,
-                    ImageMemoryOptions {
-                        samples: a.samples,
-                        usage: &usage,
-                        format: a.format,
-                        create_view: true,
-                        width,
-                        height,
-                        ..Default::default()
-                    },
-                )
+                create_attachment_image(&self.device, attachment, width, height, None)
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let views = images.iter().filter_map(|i| i.view()).collect::<Vec<_>>();
+        let views = images
+            .iter_mut()
+            .map(|i| i.add_view())
+            .collect::<Result<Vec<_>>>()?;
 
         let info = vk::FramebufferCreateInfo::builder()
             .render_pass(self.render_pass.handle())
@@ -334,7 +263,7 @@ impl Framebuffer {
 
         image_uniform.remove(self.texture_index.expect("bad texture index"));
 
-        let texture_image = ImageMemory::new(
+        let mut texture_image = ImageMemory::new(
             &self.device,
             ImageMemoryOptions {
                 usage: &[
@@ -342,14 +271,13 @@ impl Framebuffer {
                     ImageUsage::Sampled,
                     ImageUsage::Color,
                 ],
-                create_view: true,
                 format: ImageFormat::Sbgra,
                 width,
                 height,
                 ..Default::default()
             },
         )?;
-        let texture_index = image_uniform.add(texture_image.view().expect("bad view"));
+        let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
         self.device.do_commands(|cmd| {
@@ -393,10 +321,6 @@ impl Framebuffer {
     pub(crate) fn blit_to_texture(&self, cmd: vk::CommandBuffer) {
         if let Some(texture_image) = &self.texture_image {
             let stored_image = &self.images[self.stored_index];
-            if stored_image.has_depth_format() {
-                warn!("Blit to texture for depth framebuffers is not supported");
-                return;
-            }
 
             // prepare images for transfer
             self.device.cmd_change_image_layout(
@@ -492,7 +416,7 @@ impl Framebuffer {
     }
 
     pub(crate) fn stored_view(&self) -> vk::ImageView {
-        self.images[self.stored_index].view().expect("bad code")
+        self.images[self.stored_index].get_view(0)
     }
 
     pub(crate) fn iter_images(&self) -> impl Iterator<Item = &ImageMemory> {
@@ -512,4 +436,46 @@ impl Drop for Framebuffer {
     fn drop(&mut self) {
         self.device.destroy_framebuffer(self.handle);
     }
+}
+
+fn create_attachment_image(
+    device: &Arc<Device>,
+    attachment: &Attachment,
+    width: u32,
+    height: u32,
+    handle: Option<vk::Image>,
+) -> Result<ImageMemory> {
+    let mut usage = vec![];
+
+    match attachment.layout() {
+        ImageLayout::Color => usage.push(ImageUsage::Color),
+        ImageLayout::Depth => usage.push(ImageUsage::Depth),
+        ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
+        _ => (),
+    }
+
+    // attachments that stay in memory can be read from
+    if attachment.is_stored() {
+        usage.push(ImageUsage::Sampled);
+
+        if handle.is_none() {
+            // swapchain images don't need to be transfered
+            usage.push(ImageUsage::TransferSrc);
+        }
+    } else {
+        usage.push(ImageUsage::Transient);
+    }
+
+    ImageMemory::new(
+        device,
+        ImageMemoryOptions {
+            samples: attachment.samples(),
+            format: attachment.format(),
+            usage: &usage,
+            handle,
+            width,
+            height,
+            ..Default::default()
+        },
+    )
 }

@@ -68,16 +68,16 @@ macro_rules! check {
 }
 
 pub struct Context {
-    pub main_camera: Camera,
-    render_stage: RenderStage,
-    thread_kill: ThreadKill,
+    // Renderers
     forward_renderer: ForwardRenderer,
     #[cfg(feature = "ui")]
     ui_renderer: UiRenderer,
-    #[cfg(feature = "ui")]
-    is_ui_rendered: bool,
+
+    // Resources
     builtins: Builtins,
     resources: ResourceManager,
+
+    // Vulkan
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
@@ -86,8 +86,13 @@ pub struct Context {
     surface: Surface,
     gpu_index: usize,
     instance: Arc<Instance>,
+
+    // Misc
+    pub main_camera: Camera,
     camera_type: CameraType,
     render_stats: RenderStats,
+    render_stage: RenderStage,
+    thread_kill: ThreadKill,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -147,15 +152,7 @@ impl Context {
             &device,
             &swapchain,
             &shader_layout,
-            FramebufferOptions {
-                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
-                camera_type: options.camera,
-
-                // does not matter for window framebuffers
-                multisampled: false,
-                width: 1,
-                height: 1,
-            }
+            options.camera,
         ));
 
         let mut resources = ResourceManager::new();
@@ -190,27 +187,25 @@ impl Context {
         );
 
         Self {
+            window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
+            shader_layout: Arc::new(shader_layout),
             render_stage: RenderStage::Before,
             thread_kill: ThreadKill::new(),
+            render_stats: Default::default(),
+            camera_type: options.camera,
             forward_renderer,
             builtins,
             resources,
-            window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             image_uniform,
-            shader_layout: Arc::new(shader_layout),
             swapchain,
             device,
             surface,
             gpu_index,
             instance,
             main_camera,
-            camera_type: options.camera,
-            render_stats: Default::default(),
 
             #[cfg(feature = "ui")]
             ui_renderer,
-            #[cfg(feature = "ui")]
-            is_ui_rendered: false,
         }
     }
 
@@ -266,15 +261,7 @@ impl Context {
             &self.device,
             &self.swapchain,
             &self.shader_layout,
-            FramebufferOptions {
-                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
-                camera_type: self.camera_type,
-
-                // does not matter for window framebuffers
-                multisampled: false,
-                width: 1,
-                height: 1,
-            }
+            self.camera_type,
         ));
 
         #[cfg(feature = "ui")]
@@ -291,7 +278,7 @@ impl Context {
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
-            if self.is_ui_rendered {
+            if self.ui_renderer.drawn() {
                 target.blit_framebuffer(self.ui_renderer.framebuffer());
             }
 
@@ -332,7 +319,6 @@ impl Context {
         }
 
         check!(self.ui_renderer.draw(ui, &self.shader_layout));
-        self.is_ui_rendered = true;
     }
 
     pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Ref<Texture> {
@@ -430,9 +416,10 @@ impl Context {
             &self.shader_layout,
             &self.image_uniform,
             FramebufferOptions {
-                attachment_formats: &[ImageFormat::Depth, ImageFormat::Sbgra],
+                attachment_formats: &[ImageFormat::Sbgra],
                 camera_type: t,
                 multisampled: self.device.is_msaa(),
+                depth: true,
                 width,
                 height,
             }
@@ -541,9 +528,7 @@ impl Context {
         );
 
         #[cfg(feature = "ui")]
-        {
-            self.is_ui_rendered = false;
-        }
+        self.ui_renderer.reset();
     }
 
     fn end_draw(&mut self) {

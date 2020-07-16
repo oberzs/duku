@@ -48,7 +48,7 @@ impl Texture {
             BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
         staging_memory.copy_from_data(options.data, size)?;
 
-        let memory = ImageMemory::new(
+        let mut memory = ImageMemory::new(
             device,
             ImageMemoryOptions {
                 width: options.width,
@@ -59,7 +59,6 @@ impl Texture {
                     ImageUsage::TransferSrc,
                     ImageUsage::TransferDst,
                 ],
-                create_view: true,
                 format: options.format,
                 ..Default::default()
             },
@@ -83,10 +82,7 @@ impl Texture {
         memory.copy_from_memory(&staging_memory)?;
         memory.generate_mipmaps()?;
 
-        let mut image_index = 0;
-        if let Some(view) = memory.view() {
-            image_index = uniform.add(view);
-        }
+        let image_index = uniform.add(memory.add_view()?);
 
         Ok(Self {
             _memory: memory,
