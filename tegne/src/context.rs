@@ -286,12 +286,10 @@ impl Context {
                 &mut self.window_framebuffers.lock().unwrap()[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
-            self.render_stats += check!(self.forward_renderer.draw(
-                &self.device,
-                framebuffer,
-                &self.shader_layout,
-                target,
-            ));
+            self.render_stats +=
+                check!(self
+                    .forward_renderer
+                    .draw(framebuffer, &self.shader_layout, target,));
         }
 
         self.end_draw();
@@ -305,11 +303,9 @@ impl Context {
         let mut target = check!(Target::new(&self.builtins));
         draw_callback(&mut target);
 
-        self.render_stats += framebuffer.with(|f| {
-            check!(self
-                .forward_renderer
-                .draw(&self.device, f, &self.shader_layout, target))
-        });
+        let stats = framebuffer
+            .with(|f| check!(self.forward_renderer.draw(f, &self.shader_layout, target)));
+        self.render_stats += stats;
     }
 
     #[cfg(feature = "ui")]

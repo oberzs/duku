@@ -11,6 +11,7 @@ use super::Albedo;
 use super::Order;
 use super::RenderStats;
 use super::Target;
+use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
@@ -30,14 +31,22 @@ use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
 
-const CASCADE_COUNT: usize = 3;
-
 pub(crate) struct ForwardRenderer {
-    shadow_framebuffers: Vec<Vec<Framebuffer>>,
-    shadow_uniforms: Vec<ShadowMapUniform>,
+    shadow_frames: Vec<ShadowMapSet>,
     shadow_shader: Shader,
-    shadow_map_size: u32,
     start_time: Instant,
+    device: Arc<Device>,
+}
+
+#[allow(unused)]
+struct ShadowMapSet {
+    main_framebuffers: [Framebuffer; 3],
+    temp_framebuffers: [Framebuffer; 3],
+    main_uniform: ShadowMapUniform,
+    temp_uniform: ShadowMapUniform,
+    matrices: [Matrix4; 4],
+    cascades: [f32; 4],
+    map_size: u32,
 }
 
 impl ForwardRenderer {
@@ -48,41 +57,13 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let shadow_map_size = 2048;
-
-        let mut shadow_framebuffers = vec![];
-        let mut shadow_uniforms = vec![];
-        for frame in 0..IN_FLIGHT_FRAME_COUNT {
-            shadow_framebuffers.push(vec![]);
-            for _ in 0..CASCADE_COUNT {
-                shadow_framebuffers[frame].push(Framebuffer::new(
-                    device,
-                    shader_layout,
-                    image_uniform,
-                    FramebufferOptions {
-                        attachment_formats: &[ImageFormat::Float2],
-                        camera_type: CameraType::Orthographic,
-                        multisampled: false,
-                        depth: false,
-                        width: shadow_map_size,
-                        height: shadow_map_size,
-                    },
-                )?);
-            }
-
-            shadow_uniforms.push(ShadowMapUniform::new(
-                shader_layout,
-                [
-                    shadow_framebuffers[frame][0].stored_view(),
-                    shadow_framebuffers[frame][1].stored_view(),
-                    shadow_framebuffers[frame][2].stored_view(),
-                ],
-            )?);
-        }
+        let shadow_frames = (0..IN_FLIGHT_FRAME_COUNT)
+            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 2048))
+            .collect::<Result<Vec<_>>>()?;
 
         let shadow_shader = Shader::new(
             device,
-            &shadow_framebuffers[0][0],
+            &shadow_frames[0].main_framebuffers[0],
             shader_layout,
             include_bytes!("../../shaders/shadow.shader"),
             ShaderOptions {
@@ -92,114 +73,39 @@ impl ForwardRenderer {
 
         Ok(Self {
             start_time: Instant::now(),
-            shadow_framebuffers,
-            shadow_uniforms,
+            device: Arc::clone(device),
+            shadow_frames,
             shadow_shader,
-            shadow_map_size,
         })
     }
 
     pub(crate) fn draw(
-        &self,
-        device: &Device,
+        &mut self,
         framebuffer: &Framebuffer,
         shader_layout: &ShaderLayout,
         target: Target,
     ) -> Result<RenderStats> {
-        let cmd = device.command_buffer();
-        device.cmd_set_line_width(cmd, 1.0);
+        let cmd = self.device.command_buffer();
+        self.device.cmd_set_line_width(cmd, 1.0);
 
-        let light_dir = target.main_light.coords.shrink();
+        let current = self.device.current_frame();
 
-        let mut light_matrices = [Matrix4::identity(); 4];
-        let mut cascade_splits = [0.0; 4];
+        // reset current matrices and cascades
+        self.shadow_frames[current].matrices = [Matrix4::identity(); 4];
+        self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
         if target.do_shadow_mapping {
-            // bind other random shadow map set
-            device.cmd_bind_uniform(
-                cmd,
-                shader_layout,
-                &self.shadow_uniforms[(device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT],
-            );
-
-            // render shadow map for each cascade
-            let mut prev_cs = 0.0;
-            for (i, cs) in target.cascade_splits.iter().enumerate() {
-                let shadow_framebuffer = &self.shadow_framebuffers[device.current_frame()][i];
-
-                // get view frustum bounding sphere
-                let bounds = framebuffer.camera.bounding_sphere_for_split(prev_cs, *cs);
-                let diameter = bounds.radius * 2.0;
-
-                let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
-                    Vector3::up()
-                } else {
-                    Vector3::forward()
-                };
-
-                let light_position = bounds.center - light_dir * bounds.radius;
-                let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
-                    * Matrix4::translation(-light_position);
-                let mut light_ortho_matrix =
-                    Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
-
-                // stabilize shadow map by using texel units
-                let shadow_matrix = light_ortho_matrix * light_view_matrix;
-                let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
-                shadow_origin = shadow_matrix * shadow_origin;
-                shadow_origin *= self.shadow_map_size as f32 / 2.0;
-
-                let rounded_origin = shadow_origin.round();
-                let mut round_offset = rounded_origin - shadow_origin;
-                round_offset *= 2.0 / self.shadow_map_size as f32;
-
-                light_ortho_matrix.col_w.x += round_offset.x;
-                light_ortho_matrix.col_w.y += round_offset.y;
-
-                let light_matrix = light_ortho_matrix * light_view_matrix;
-
-                shadow_framebuffer.world_uniform().update(WorldData {
-                    lights: [Default::default(); 4],
-                    world_matrix: light_matrix,
-                    camera_position: Vector3::default(),
-                    time: self.start_time.elapsed().as_secs_f32(),
-                    cascade_splits: [0.0; 4],
-                    light_matrices: [Matrix4::identity(); 4],
-                    bias: 0.0,
-                })?;
-
-                device.cmd_begin_render_pass(cmd, shadow_framebuffer, target.clear.to_rgba_norm());
-                device.cmd_set_view(cmd, shadow_framebuffer.width(), shadow_framebuffer.height());
-                device.cmd_bind_uniform(cmd, shader_layout, shadow_framebuffer.world_uniform());
-                device.cmd_bind_shader(cmd, &self.shadow_shader);
-
-                for s_order in &target.orders_by_shader {
-                    for m_order in &s_order.orders_by_material {
-                        for order in &m_order.orders {
-                            if order.cast_shadows {
-                                self.draw_order(device, order, shader_layout);
-                            }
-                        }
-                    }
-                }
-                device.cmd_end_render_pass(cmd);
-
-                // set uniform variables for normal render
-                light_matrices[i] = light_matrix;
-                cascade_splits[i] = framebuffer.camera.depth * cs;
-                prev_cs = *cs;
-            }
+            self.shadow_pass(shader_layout, &target, &framebuffer.camera)?;
         }
 
         // bind current shadow map set
-        device.cmd_bind_uniform(
+        self.device.cmd_bind_uniform(
             cmd,
             shader_layout,
-            &self.shadow_uniforms[device.current_frame()],
+            &self.shadow_frames[current].main_uniform,
         );
 
-        // normal render
         // update world uniform
         framebuffer.world_uniform().update(WorldData {
             lights: target.lights(),
@@ -207,13 +113,17 @@ impl ForwardRenderer {
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
             bias: target.bias,
-            cascade_splits,
-            light_matrices,
+            cascade_splits: self.shadow_frames[current].cascades,
+            light_matrices: self.shadow_frames[current].matrices,
         })?;
 
-        device.cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
-        device.cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-        device.cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
+        // do render pass
+        self.device
+            .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
+        self.device
+            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+        self.device
+            .cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
 
         let mut render_stats = RenderStats::default();
         let mut unique_shaders = HashSet::new();
@@ -221,26 +131,26 @@ impl ForwardRenderer {
 
         for s_order in &target.orders_by_shader {
             s_order.shader.with(|s| {
-                device.cmd_bind_shader(cmd, s);
+                self.device.cmd_bind_shader(cmd, s);
                 unique_shaders.insert(s.handle());
             });
             render_stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
                 m_order.material.with(|m| {
-                    device.cmd_bind_material(cmd, shader_layout, m);
+                    self.device.cmd_bind_material(cmd, shader_layout, m);
                     unique_materials.insert(m.uniform().descriptor());
                 });
                 render_stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    render_stats.drawn_indices += self.draw_order(device, order, shader_layout);
+                    render_stats.drawn_indices += self.draw_order(order, shader_layout);
                     render_stats.draw_calls += 1;
                 }
             }
         }
 
-        device.cmd_end_render_pass(cmd);
+        self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
 
         render_stats.time = self.start_time.elapsed().as_secs_f32();
@@ -250,14 +160,108 @@ impl ForwardRenderer {
         Ok(render_stats)
     }
 
-    fn draw_order(&self, device: &Device, order: &Order, shader_layout: &ShaderLayout) -> u32 {
-        let cmd = device.command_buffer();
+    fn shadow_pass(
+        &mut self,
+        shader_layout: &ShaderLayout,
+        target: &Target,
+        view: &Camera,
+    ) -> Result<()> {
+        let cmd = self.device.command_buffer();
+
+        let light_dir = target.main_light.coords.shrink();
+
+        let current = self.device.current_frame();
+        let next = (self.device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT;
+
+        // bind next shadow map set
+        self.device
+            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[next].main_uniform);
+
+        // render shadow map for each cascade
+        let mut prev_cs = 0.0;
+        for (i, cs) in target.cascade_splits.iter().enumerate() {
+            let framebuffer = &self.shadow_frames[current].main_framebuffers[i];
+            let map_size = self.shadow_frames[current].map_size as f32;
+
+            // get view frustum bounding sphere
+            let bounds = view.bounding_sphere_for_split(prev_cs, *cs);
+            let diameter = bounds.radius * 2.0;
+
+            let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
+                Vector3::up()
+            } else {
+                Vector3::forward()
+            };
+
+            let light_position = bounds.center - light_dir * bounds.radius;
+            let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
+                * Matrix4::translation(-light_position);
+            let mut light_ortho_matrix =
+                Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
+
+            // stabilize shadow map by using texel units
+            let shadow_matrix = light_ortho_matrix * light_view_matrix;
+            let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
+            shadow_origin = shadow_matrix * shadow_origin;
+            shadow_origin *= map_size / 2.0;
+
+            let rounded_origin = shadow_origin.round();
+            let mut round_offset = rounded_origin - shadow_origin;
+            round_offset *= 2.0 / map_size;
+
+            light_ortho_matrix.col_w.x += round_offset.x;
+            light_ortho_matrix.col_w.y += round_offset.y;
+
+            let light_matrix = light_ortho_matrix * light_view_matrix;
+
+            // update world uniform
+            framebuffer.world_uniform().update(WorldData {
+                lights: [Default::default(); 4],
+                world_matrix: light_matrix,
+                camera_position: Vector3::default(),
+                time: self.start_time.elapsed().as_secs_f32(),
+                cascade_splits: [0.0; 4],
+                light_matrices: [Matrix4::identity(); 4],
+                bias: 0.0,
+            })?;
+
+            // do render pass
+            self.device
+                .cmd_begin_render_pass(cmd, framebuffer, [0.0, 0.0, 0.0, 0.0]);
+            self.device
+                .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+            self.device
+                .cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
+            self.device.cmd_bind_shader(cmd, &self.shadow_shader);
+
+            for s_order in &target.orders_by_shader {
+                for m_order in &s_order.orders_by_material {
+                    for order in &m_order.orders {
+                        if order.cast_shadows {
+                            self.draw_order(order, shader_layout);
+                        }
+                    }
+                }
+            }
+            self.device.cmd_end_render_pass(cmd);
+
+            // set uniform variables for normal render
+            self.shadow_frames[current].matrices[i] = light_matrix;
+            self.shadow_frames[current].cascades[i] = view.depth * cs;
+            prev_cs = *cs;
+        }
+
+        Ok(())
+    }
+
+    fn draw_order(&self, order: &Order, shader_layout: &ShaderLayout) -> u32 {
+        let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
             Albedo::Framebuffer(fra) => fra.with(|f| f.texture_index()),
         };
         order.mesh.with(|m| {
-            device.cmd_push_constants(
+            self.device.cmd_push_constants(
                 cmd,
                 shader_layout,
                 PushConstants {
@@ -266,9 +270,76 @@ impl ForwardRenderer {
                     albedo_index,
                 },
             );
-            device.cmd_bind_mesh(cmd, m);
-            device.cmd_draw(cmd, m.index_count());
+            self.device.cmd_bind_mesh(cmd, m);
+            self.device.cmd_draw(cmd, m.index_count());
             m.index_count()
         })
+    }
+}
+
+impl ShadowMapSet {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
+        map_size: u32,
+    ) -> Result<Self> {
+        let main_framebuffers = [
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+        ];
+        let temp_framebuffers = [
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+        ];
+        let main_uniform = ShadowMapUniform::new(
+            shader_layout,
+            [
+                main_framebuffers[0].stored_view(),
+                main_framebuffers[1].stored_view(),
+                main_framebuffers[2].stored_view(),
+            ],
+        )?;
+        let temp_uniform = ShadowMapUniform::new(
+            shader_layout,
+            [
+                temp_framebuffers[0].stored_view(),
+                temp_framebuffers[1].stored_view(),
+                temp_framebuffers[2].stored_view(),
+            ],
+        )?;
+
+        Ok(Self {
+            matrices: [Matrix4::identity(); 4],
+            cascades: [0.0; 4],
+            main_framebuffers,
+            temp_framebuffers,
+            main_uniform,
+            temp_uniform,
+            map_size,
+        })
+    }
+
+    fn shadow_framebuffer(
+        device: &Arc<Device>,
+        shader_layout: &ShaderLayout,
+        image_uniform: &ImageUniform,
+        size: u32,
+    ) -> Result<Framebuffer> {
+        Framebuffer::new(
+            device,
+            shader_layout,
+            image_uniform,
+            FramebufferOptions {
+                attachment_formats: &[ImageFormat::Float2],
+                camera_type: CameraType::Orthographic,
+                multisampled: false,
+                depth: false,
+                width: size,
+                height: size,
+            },
+        )
     }
 }
