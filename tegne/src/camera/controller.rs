@@ -22,7 +22,7 @@ impl Controller {
     pub fn update(&mut self, camera: &mut Camera, events: &mut Events) {
         let move_speed = 5.0;
         let rotate_speed = 70.0;
-        let mut speed_mod = 1.0;
+        let speed_mod = 1.0;
 
         if events.is_key_typed(Key::F11) {
             events.set_fullscreen(!events.fullscreen());
@@ -37,9 +37,10 @@ impl Controller {
             self.lockon = !self.lockon;
         }
 
-        if events.is_key_pressed(Key::LShift) {
-            speed_mod = 5.0;
-        }
+        // TODO: change speed to scroll wheel
+        // if events.is_key_pressed(Key::LShift) {
+        // speed_mod = 5.0;
+        // }
 
         let transform = &mut camera.transform;
 
@@ -66,7 +67,7 @@ impl Controller {
             transform.move_up(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::LControl) {
+        if events.is_key_pressed(Key::LShift) {
             transform.move_down(final_move_speed);
         }
 

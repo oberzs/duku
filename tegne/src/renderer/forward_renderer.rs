@@ -26,7 +26,6 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
@@ -34,11 +33,11 @@ use crate::pipeline::WorldData;
 pub(crate) struct ForwardRenderer {
     shadow_frames: Vec<ShadowMapSet>,
     shadow_shader: Shader,
+    blur_shader: Shader,
     start_time: Instant,
     device: Arc<Device>,
 }
 
-#[allow(unused)]
 struct ShadowMapSet {
     main_framebuffers: [Framebuffer; 3],
     temp_framebuffers: [Framebuffer; 3],
@@ -58,7 +57,7 @@ impl ForwardRenderer {
         profile_scope!("new");
 
         let shadow_frames = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 2048))
+            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 1024))
             .collect::<Result<Vec<_>>>()?;
 
         let shadow_shader = Shader::new(
@@ -66,9 +65,14 @@ impl ForwardRenderer {
             &shadow_frames[0].main_framebuffers[0],
             shader_layout,
             include_bytes!("../../shaders/shadow.shader"),
-            ShaderOptions {
-                ..Default::default()
-            },
+            Default::default(),
+        )?;
+        let blur_shader = Shader::new(
+            device,
+            &shadow_frames[0].main_framebuffers[0],
+            shader_layout,
+            include_bytes!("../../shaders/shadow-blur.shader"),
+            Default::default(),
         )?;
 
         Ok(Self {
@@ -76,6 +80,7 @@ impl ForwardRenderer {
             device: Arc::clone(device),
             shadow_frames,
             shadow_shader,
+            blur_shader,
         })
     }
 
@@ -112,9 +117,10 @@ impl ForwardRenderer {
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
             time: self.start_time.elapsed().as_secs_f32(),
-            bias: target.bias,
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
+            variance_min: 0.00002,
+            shadow_low: 0.1,
         })?;
 
         // do render pass
@@ -167,32 +173,30 @@ impl ForwardRenderer {
         view: &Camera,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
-
-        let light_dir = target.main_light.coords.shrink();
-
         let current = self.device.current_frame();
-        let next = (self.device.current_frame() + 1) % IN_FLIGHT_FRAME_COUNT;
 
-        // bind next shadow map set
-        self.device
-            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[next].main_uniform);
+        // bind temp shadow map set so we can write to main one
+        self.device.cmd_bind_uniform(
+            cmd,
+            shader_layout,
+            &self.shadow_frames[current].main_uniform,
+        );
 
         // render shadow map for each cascade
+        let light_dir = target.main_light.coords.shrink();
+
         let mut prev_cs = 0.0;
         for (i, cs) in target.cascade_splits.iter().enumerate() {
-            let framebuffer = &self.shadow_frames[current].main_framebuffers[i];
-            let map_size = self.shadow_frames[current].map_size as f32;
+            let map_size = self.shadow_frames[current].map_size;
 
             // get view frustum bounding sphere
             let bounds = view.bounding_sphere_for_split(prev_cs, *cs);
             let diameter = bounds.radius * 2.0;
-
             let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
                 Vector3::up()
             } else {
                 Vector3::forward()
             };
-
             let light_position = bounds.center - light_dir * bounds.radius;
             let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
                 * Matrix4::translation(-light_position);
@@ -203,18 +207,21 @@ impl ForwardRenderer {
             let shadow_matrix = light_ortho_matrix * light_view_matrix;
             let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
             shadow_origin = shadow_matrix * shadow_origin;
-            shadow_origin *= map_size / 2.0;
-
+            shadow_origin *= map_size as f32 / 2.0;
             let rounded_origin = shadow_origin.round();
             let mut round_offset = rounded_origin - shadow_origin;
-            round_offset *= 2.0 / map_size;
-
+            round_offset *= 2.0 / map_size as f32;
             light_ortho_matrix.col_w.x += round_offset.x;
             light_ortho_matrix.col_w.y += round_offset.y;
-
             let light_matrix = light_ortho_matrix * light_view_matrix;
 
+            // set uniform variables for normal render
+            self.shadow_frames[current].matrices[i] = light_matrix;
+            self.shadow_frames[current].cascades[i] = view.depth * cs;
+            prev_cs = *cs;
+
             // update world uniform
+            let framebuffer = &self.shadow_frames[current].main_framebuffers[i];
             framebuffer.world_uniform().update(WorldData {
                 lights: [Default::default(); 4],
                 world_matrix: light_matrix,
@@ -222,12 +229,13 @@ impl ForwardRenderer {
                 time: self.start_time.elapsed().as_secs_f32(),
                 cascade_splits: [0.0; 4],
                 light_matrices: [Matrix4::identity(); 4],
-                bias: 0.0,
+                variance_min: 0.0,
+                shadow_low: 0.0,
             })?;
 
             // do render pass
             self.device
-                .cmd_begin_render_pass(cmd, framebuffer, [0.0, 0.0, 0.0, 0.0]);
+                .cmd_begin_render_pass(cmd, framebuffer, [1.0, 1.0, 1.0, 1.0]);
             self.device
                 .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
             self.device
@@ -245,10 +253,63 @@ impl ForwardRenderer {
             }
             self.device.cmd_end_render_pass(cmd);
 
-            // set uniform variables for normal render
-            self.shadow_frames[current].matrices[i] = light_matrix;
-            self.shadow_frames[current].cascades[i] = view.depth * cs;
-            prev_cs = *cs;
+            if target.shadow_softness > 0.0 {
+                // do post processing - Gaussian blur
+                // using push constants for shader properties for speed
+                self.device.cmd_set_view(cmd, map_size, map_size);
+                self.device.cmd_bind_shader(cmd, &self.blur_shader);
+                let index_count = target.builtins.surface_mesh.with(|m| {
+                    self.device.cmd_bind_mesh(cmd, m);
+                    m.index_count()
+                });
+                let mut model_matrix = Matrix4::identity();
+                let blur_amount = target.shadow_softness / map_size as f32;
+
+                // pass #1 - horizontal
+                self.device.cmd_bind_uniform(
+                    cmd,
+                    shader_layout,
+                    &self.shadow_frames[current].main_uniform,
+                );
+                self.device.cmd_begin_render_pass(
+                    cmd,
+                    &self.shadow_frames[current].temp_framebuffers[i],
+                    [1.0, 1.0, 1.0, 1.0],
+                );
+                model_matrix.col_x = Vector4::new(blur_amount, 0.0, 0.0, 0.0);
+                self.device.cmd_push_constants(
+                    cmd,
+                    shader_layout,
+                    PushConstants {
+                        albedo_index: i as i32,
+                        sampler_index: 0,
+                        model_matrix,
+                    },
+                );
+                self.device.cmd_draw(cmd, index_count);
+                self.device.cmd_end_render_pass(cmd);
+
+                // pass #2 - vertical
+                self.device.cmd_bind_uniform(
+                    cmd,
+                    shader_layout,
+                    &self.shadow_frames[current].temp_uniform,
+                );
+                self.device
+                    .cmd_begin_render_pass(cmd, framebuffer, [1.0, 1.0, 1.0, 1.0]);
+                model_matrix.col_x = Vector4::new(0.0, blur_amount, 0.0, 0.0);
+                self.device.cmd_push_constants(
+                    cmd,
+                    shader_layout,
+                    PushConstants {
+                        albedo_index: i as i32,
+                        sampler_index: 0,
+                        model_matrix,
+                    },
+                );
+                self.device.cmd_draw(cmd, index_count);
+                self.device.cmd_end_render_pass(cmd);
+            }
         }
 
         Ok(())

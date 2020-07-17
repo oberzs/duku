@@ -27,8 +27,9 @@ pub struct Target {
     pub(crate) clear: Color,
     pub(crate) do_shadow_mapping: bool,
     pub(crate) cascade_splits: [f32; 3],
-    pub(crate) bias: f32,
+    pub(crate) shadow_softness: f32,
     pub(crate) main_light: Light,
+    pub(crate) builtins: Builtins,
 
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
@@ -38,7 +39,6 @@ pub struct Target {
     current_sampler: i32,
     wireframes: bool,
     cast_shadows: bool,
-    builtins: Builtins,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -91,8 +91,8 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             do_shadow_mapping: false,
-            bias: 0.001,
-            cascade_splits: [0.05, 0.3, 1.0],
+            shadow_softness: 1.0,
+            cascade_splits: [0.1, 0.3, 1.0],
             builtins: builtins.clone(),
         })
     }
@@ -281,8 +281,8 @@ impl Target {
         self.current_sampler = index;
     }
 
-    pub fn set_bias(&mut self, amount: f32) {
-        self.bias = amount;
+    pub fn set_shadow_softness(&mut self, amount: f32) {
+        self.shadow_softness = amount;
     }
 
     pub fn set_cascade_splits(&mut self, splits: [f32; 3]) {

@@ -7,6 +7,8 @@ use tegne::camera::Controller;
 use tegne::color::colors;
 use tegne::math::Transform;
 use tegne::math::Vector3;
+use tegne::ui;
+use tegne::ui::label;
 use tegne::window::Window;
 use tegne::window::WindowOptions;
 use tegne::Context;
@@ -26,6 +28,7 @@ fn main() {
         ContextOptions {
             anisotropy: 16.0,
             msaa: 4,
+            vsync: false,
             ..Default::default()
         },
     );
@@ -51,12 +54,26 @@ fn main() {
         scale: Vector3::new(10.0, 0.2, 10.0),
         ..Default::default()
     };
+    let mut shadow_softness = 1.0;
 
-    window.main_loop(|events, _| {
+    window.main_loop(|events, ui| {
         controller.update(&mut context.main_camera, events);
+
+        ui::stats_window(&ui, &context, events);
+        ui::Window::new(label!("Shadow Settings"))
+            .size([1.0, 1.0], ui::Condition::FirstUseEver)
+            .always_auto_resize(true)
+            .build(&ui, || {
+                ui.drag_float(label!("Softness"), &mut shadow_softness)
+                    .min(0.0)
+                    .speed(0.1)
+                    .build();
+            });
+        context.draw_ui(ui);
 
         context.draw_on_window(|target| {
             target.set_clear(colors::SKY_BLUE);
+            target.set_shadow_softness(shadow_softness);
 
             // floor
             target.draw_cube(floor_transform);
