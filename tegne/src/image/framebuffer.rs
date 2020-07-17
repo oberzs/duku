@@ -94,7 +94,7 @@ impl Framebuffer {
                 let handle = device.create_framebuffer(&info)?;
 
                 let world_uniform = WorldUniform::new(device, shader_layout)?;
-                let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
+                let camera = Camera::new(camera_type, width as f32, height as f32, 50.0);
 
                 Ok(Self {
                     multisampled: device.is_msaa(),
@@ -164,7 +164,7 @@ impl Framebuffer {
         let handle = device.create_framebuffer(&info)?;
 
         let world_uniform = WorldUniform::new(device, shader_layout)?;
-        let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
+        let camera = Camera::new(camera_type, width as f32, height as f32, 50.0);
 
         let mut texture_image = ImageMemory::new(
             device,

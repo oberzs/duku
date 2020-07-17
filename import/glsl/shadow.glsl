@@ -13,36 +13,58 @@ float tex_vsm(int index, vec2 uv, float compare) {
     vec2 moments = texture(sampler2D(shadow_maps[index], sampler_cm), uv).xy;
 
     float p = step(compare, moments.x);
-    float variance = max(moments.y - moments.x * moments.x, 0.00002);
+    float variance = max(moments.y - moments.x * moments.x, world.variance_min);
 
     float d = compare - moments.x;
-    // might have to make the 0.2 bigger depending on cascade
-    float p_max = linstep(0.2, 1.0, variance / (variance + d * d));
+    float low = world.shadow_low + world.shadow_low * index;
+    float p_max = linstep(low, 1.0, variance / (variance + d * d));
 
     return min(max(p, p_max), 1.0);
 }
 
+vec3 tex_coord(int index) {
+    vec4 coord = in_lightspace_position[index];
+    coord.y = -coord.y;
+
+    vec2 uv = (coord.xy / coord.w) * 0.5 + 0.5;
+    float depth = coord.z / coord.w;
+
+    return vec3(uv.x, uv.y, depth);
+}
+
 float shadow(Light light) {
+    float depth = in_screenspace_position.z;
+    float blend_margin = world.cascade_splits[2] * 0.05;
+
     // choose shadow map
-    int shadow_index;
-    if (in_screenspace_position.z < world.cascade_splits[0]) {
-        shadow_index = 0;
-    } else if (in_screenspace_position.z < world.cascade_splits[1]) {
-        shadow_index = 1;
+    int cascade;
+    if (depth < world.cascade_splits[0]) {
+        cascade = 0;
+    } else if (depth < world.cascade_splits[1]) {
+        cascade = 1;
     } else {
-        shadow_index = 2;
+        cascade = 2;
     }
 
-    vec4 shadow_coord = in_lightspace_position[shadow_index];
-    shadow_coord.y = -shadow_coord.y;
+    vec3 coord = tex_coord(cascade);
 
-    vec2 uv = (shadow_coord.xy / shadow_coord.w) * 0.5 + 0.5;
-    float depth = shadow_coord.z / shadow_coord.w;
-
-    if (depth > 1.0) {
+    if (coord.z > 1.0) {
         return 0.0;
     } else {
-        return tex_vsm(shadow_index, uv, depth);
+        // blend between side-by-side cascades
+        float blend = smoothstep(-blend_margin, 0.0, depth - world.cascade_splits[cascade]);
+        if (blend == 0.0) {
+            return tex_vsm(cascade, coord.xy, coord.z);
+        } else {
+            float shadow = tex_vsm(cascade, coord.xy, coord.z);
+
+            int next_cascade = min(2, cascade + 1);
+            vec3 next_coord = tex_coord(next_cascade);
+            float next_shadow = tex_vsm(next_cascade, next_coord.xy, next_coord.z);
+
+            return mix(shadow, next_shadow, blend);
+        }
+
     }
 }
 
