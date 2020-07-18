@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
-// imports glsl shader for use in tegne
+// imports glsl shader for use in draw-it
 
 use indicatif::ProgressBar;
 use shaderc::CompilationArtifact;

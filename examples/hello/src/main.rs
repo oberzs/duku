@@ -1,18 +1,18 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // "Hello, World!" example to open a rainbow resizable window
 
-use tegne::color::Color;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
+use draw_it::color::Color;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
 
 fn main() {
     let (mut width, mut height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Hello",
+        title: "Draw-it example: Hello",
         resizable: true,
         width,
         height,

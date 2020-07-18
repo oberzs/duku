@@ -1,24 +1,24 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // Toon shader example
 
-use tegne::camera::Controller;
-use tegne::color::colors;
-use tegne::math::Transform;
-use tegne::math::Vector3;
-use tegne::ui;
-use tegne::ui::label;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
+use draw_it::camera::Controller;
+use draw_it::color::colors;
+use draw_it::math::Transform;
+use draw_it::math::Vector3;
+use draw_it::ui;
+use draw_it::ui::label;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 
 fn main() {
     let (width, height) = (720, 640);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Toon",
+        title: "Draw-it example: Toon",
         width,
         height,
         ..Default::default()

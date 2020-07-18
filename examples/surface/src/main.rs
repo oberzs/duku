@@ -1,18 +1,18 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // example that draws a framebuffer with a custom ray-marching shader
 
-use tegne::ui;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
+use draw_it::ui;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
 
 fn main() {
     let (width, height) = (900, 900);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Surface",
+        title: "Draw-it example: Surface",
         width,
         height,
         ..Default::default()

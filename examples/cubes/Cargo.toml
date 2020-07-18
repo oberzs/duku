@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 rand = "0.7.3"
-tegne = { path = "../../tegne", version = "0.1.0" }
+draw-it = { path = "../../draw-it", version = "0.1.0" }

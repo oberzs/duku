@@ -1,5 +1,5 @@
-# tegne-rs
+# draw-it
 
-![](https://github.com/OllieBerzs/tegne-rs/workflows/Build/badge.svg)
+![](https://github.com/OllieBerzs/draw-it/workflows/Build/badge.svg)
 
 Vulkan rendering library in Rust

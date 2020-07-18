@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // fragment shader variables
 

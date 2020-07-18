@@ -1,20 +1,20 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use tegne::camera::CameraType;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
+use draw_it::camera::CameraType;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 
 fn main() {
     let (mut width, mut height) = (500, 500);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: UI",
+        title: "Draw-it example: UI",
         resizable: true,
         width,
         height,

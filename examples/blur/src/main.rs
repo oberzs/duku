@@ -1,18 +1,18 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // Gaussian blur example
 
-use tegne::camera::CameraType;
-use tegne::camera::Controller;
-use tegne::color::colors;
-use tegne::math::Vector3;
-use tegne::ui;
-use tegne::ui::label;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
+use draw_it::camera::CameraType;
+use draw_it::camera::Controller;
+use draw_it::color::colors;
+use draw_it::math::Vector3;
+use draw_it::ui;
+use draw_it::ui::label;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 
 fn main() {
     let (width, height) = (720, 640);
@@ -21,7 +21,7 @@ fn main() {
     let blur_strengths = [1, 3, 5, 7];
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Blur",
+        title: "Draw-it example: Blur",
         width,
         height,
         ..Default::default()

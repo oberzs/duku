@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
-// imports ttf font for use in tegne
+// imports ttf font for use in draw-it
 
 use image::DynamicImage;
 use image::GenericImage;

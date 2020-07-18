@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
-// tegne-import macros
+// draw-it-import macros
 
 #![macro_use]
 

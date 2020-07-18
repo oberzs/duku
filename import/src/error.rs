@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
-// tegne-import error types
+// draw-it-import error types
 
 use image::error::ImageError;
 use std::error::Error;

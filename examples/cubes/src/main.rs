@@ -1,21 +1,21 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // Mesh drawing example
 
+use draw_it::camera::Controller;
+use draw_it::math::Transform;
+use draw_it::math::Vector3;
+use draw_it::reference::Texture;
+use draw_it::shader::SamplerFilter;
+use draw_it::shader::SamplerOptions;
+use draw_it::ui;
+use draw_it::window::Key;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 use rand::Rng;
-use tegne::camera::Controller;
-use tegne::math::Transform;
-use tegne::math::Vector3;
-use tegne::reference::Texture;
-use tegne::shader::SamplerFilter;
-use tegne::shader::SamplerOptions;
-use tegne::ui;
-use tegne::window::Key;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
 
 struct Cube {
     texture: Texture,
@@ -26,7 +26,7 @@ fn main() {
     let (mut width, mut height) = (720, 640);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Cubes",
+        title: "Draw-it example: Cubes",
         resizable: true,
         width,
         height,
@@ -89,9 +89,9 @@ fn main() {
         if events.is_key_typed(Key::P) {
             paused = !paused;
             events.set_title(if paused {
-                "Tegne example: Cubes (paused)"
+                "Draw-it example: Cubes (paused)"
             } else {
-                "Tegne example: Cubes"
+                "Draw-it example: Cubes"
             });
         }
 

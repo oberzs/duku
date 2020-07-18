@@ -1,1 +1,1 @@
-![screenshot](screenshot.png "Tegne example: Blur")
+![screenshot](screenshot.png "Draw-it example: Blur")

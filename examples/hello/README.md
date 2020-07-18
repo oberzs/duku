@@ -1,1 +1,1 @@
-![screenshot](screenshot.png "Tegne example: Hello")
+![screenshot](screenshot.png "Draw-it example: Hello")

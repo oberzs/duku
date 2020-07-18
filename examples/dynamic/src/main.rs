@@ -1,24 +1,24 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // example with dynamicly changing mesh vertices
 
+use draw_it::camera::Controller;
+use draw_it::color::colors;
+use draw_it::math::Vector3;
+use draw_it::mesh::MeshOptions;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 use std::time::Instant;
-use tegne::camera::Controller;
-use tegne::color::colors;
-use tegne::math::Vector3;
-use tegne::mesh::MeshOptions;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
 
 fn main() {
     let (width, height) = (720, 640);
     let square_size = 10;
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Dynamic",
+        title: "Draw-it example: Dynamic",
         width,
         height,
         ..Default::default()

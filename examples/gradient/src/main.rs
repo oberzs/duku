@@ -1,22 +1,22 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
 // gradient example with custom shader arguments
 
-use tegne::camera::CameraType;
-use tegne::color::colors;
-use tegne::ui;
-use tegne::ui::label;
-use tegne::window::Window;
-use tegne::window::WindowOptions;
-use tegne::Context;
-use tegne::ContextOptions;
+use draw_it::camera::CameraType;
+use draw_it::color::colors;
+use draw_it::ui;
+use draw_it::ui::label;
+use draw_it::window::Window;
+use draw_it::window::WindowOptions;
+use draw_it::Context;
+use draw_it::ContextOptions;
 
 fn main() {
     let (width, height) = (800, 500);
 
     let mut window = Window::new(WindowOptions {
-        title: "Tegne example: Gradient",
+        title: "Draw-it example: Gradient",
         width,
         height,
         ..Default::default()

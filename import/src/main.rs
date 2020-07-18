@@ -1,8 +1,8 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/tegne-rs
+// https://github.com/OllieBerzs/draw-it
 
-//! Tegne Import is a utility for converting common file formats
-//! to formats used in Tegne (e.g. shaders and fonts)
+//! Draw-it Import is a utility for converting common file formats
+//! to formats used in Draw-it (e.g. shaders and fonts)
 
 #![warn(
     rust_2018_idioms,
@@ -43,7 +43,7 @@ use font::import_font;
 use shader::import_shader;
 
 fn main() {
-    let opts = App::new("Tegne importer")
+    let opts = App::new("Draw-it importer")
         .version("0.1.0")
         .author("Oliver Berzs <oliver.berzs@gmail.com>")
         .arg(
