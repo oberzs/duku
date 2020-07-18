@@ -73,16 +73,16 @@ Want more? Check out these other [examples](https://github.com/OllieBerzs/draw-i
 
 This library uses these open source projects:
 
-- [Ash]() - Vulkan API support
-- [Kenney]() - Assets for examples and fonts
-- [Serde]() - Deserialize assets
-- [Tar]() - Unarchive assets
-- [Notify]() - Hot-reload
-- [Crossbeam]() - Hot-reload
+- [Ash](https://github.com/MaikKlein/ash) - Vulkan API support
+- [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
+- [Serde](https://github.com/serde-rs/serde) - Deserialize assets
+- [Tar](https://github.com/alexcrichton/tar-rs) - Unarchive assets
+- [Notify](https://github.com/notify-rs/notify) - Hot-reload
+- [Crossbeam](https://github.com/crossbeam-rs/crossbeam) - Hot-reload
 
 Optional projects for extra functionality:
 
-- [Image]() - Image loading
-- [Winit]() - OS Windowing
-- [Imgui]() - Easy UI
-- [Lazy Static]() - Profiling
+- [Image](https://github.com/image-rs/image) - Image loading
+- [Winit](https://github.com/rust-windowing/winit) - OS Windowing
+- [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
+- [Lazy Static](https://github.com/rust-lang-nursery/lazy-static.rs) - Profiling
