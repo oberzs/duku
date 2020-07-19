@@ -78,7 +78,6 @@ This library uses these open source projects:
 - [Serde](https://github.com/serde-rs/serde) - Deserialize assets
 - [Tar](https://github.com/alexcrichton/tar-rs) - Unarchive assets
 - [Notify](https://github.com/notify-rs/notify) - Hot-reload
-- [Crossbeam](https://github.com/crossbeam-rs/crossbeam) - Hot-reload
 
 Optional projects for extra functionality:
 
