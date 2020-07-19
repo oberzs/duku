@@ -3,12 +3,10 @@
 
 // Font - struct for a renderable SDF font
 
-mod json;
+mod format;
 
 use std::collections::HashMap;
-use std::io::Read;
 use std::sync::Arc;
-use tar::Archive;
 
 use crate::device::Device;
 use crate::error::Result;
@@ -21,7 +19,7 @@ use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
-use json::JsonAtlasMetrics;
+use format::FontFile;
 
 pub struct Font {
     texture: Ref<Texture>,
@@ -42,55 +40,35 @@ impl Font {
         resources: &mut ResourceManager,
         source: &[u8],
     ) -> Result<Self> {
-        // read font data from archive
-        let mut archive: Archive<&[u8]> = Archive::new(source);
-
-        let mut atlas_source = vec![];
-        let mut image_source = vec![];
-
-        for file in archive.entries()? {
-            let mut file = file?;
-
-            let path = file.header().path()?.into_owned();
-
-            if path.ends_with("atlas.json") {
-                file.read_to_end(&mut atlas_source)?;
-            }
-            if path.ends_with("atlas.img") {
-                file.read_to_end(&mut image_source)?;
-            }
-        }
-
-        // decode font atlas metrics
-        let atlas: JsonAtlasMetrics = serde_json::from_slice(&atlas_source)?;
+        let data: FontFile = bincode::deserialize(source)?;
 
         // create font atlas texture
         let texture = resources.add_texture(Texture::new(
             device,
             uniform,
             TextureOptions {
-                data: &image_source,
-                width: atlas.atlas_size,
-                height: atlas.atlas_size,
+                data: &data.atlas,
+                width: data.atlas_size,
+                height: data.atlas_size,
                 ..Default::default()
             },
         )?);
 
-        let margin = atlas.margin as f32 / atlas.sdf_size as f32;
+        let margin = data.margin as f32 / data.sdf_size as f32;
 
         // generate mesh for each character in atlas
         let mut char_data = HashMap::new();
-        for (c, metrics) in atlas.char_metrics {
+        for (c, metrics) in data.char_metrics {
             // UV relative metrics
-            let size_norm = atlas.sdf_size as f32 / atlas.atlas_size as f32;
-            let u_min = metrics.x as f32 / atlas.atlas_size as f32;
-            let v_min = metrics.y as f32 / atlas.atlas_size as f32;
+            let size_norm = data.sdf_size as f32 / data.atlas_size as f32;
+            let u_min = metrics.x as f32 / data.atlas_size as f32;
+            let v_min = metrics.y as f32 / data.atlas_size as f32;
             let u_max = u_min + size_norm;
             let v_max = v_min + size_norm;
 
             // vertex relative metrics
-            let advance = metrics.advance as f32 / atlas.sdf_size as f32;
-            let bearing = metrics.bearing as f32 / atlas.sdf_size as f32;
+            let advance = metrics.advance as f32 / data.sdf_size as f32;
+            let bearing = metrics.bearing as f32 / data.sdf_size as f32;
 
             let vertices = &[
                 Vector3::new(0.0, 0.0, 0.0),

@@ -13,8 +13,7 @@
     single_use_lifetimes,
     unused_qualifications,
     trivial_casts,
-    trivial_numeric_casts,
-    box_pointers
+    trivial_numeric_casts
 )]
 
 // should be imported first

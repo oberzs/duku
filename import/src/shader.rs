@@ -3,6 +3,7 @@
 
 // imports glsl shader for use in draw-it
 
+use serde::Serialize;
 use shaderc::CompilationArtifact;
 use shaderc::Compiler;
 use shaderc::ShaderKind;
@@ -11,12 +12,16 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::path::Path;
-use tar::Builder;
-use tar::Header;
 
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
+
+#[derive(Serialize)]
+struct ShaderFile {
+    vert: Vec<u8>,
+    frag: Vec<u8>,
+}
 
 #[derive(Debug)]
 struct Defines {
@@ -40,20 +45,18 @@ pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     let vert_bin = compile_vert(&shader_src)?;
     let frag_bin = compile_frag(&shader_src)?;
 
-    // compress spirv shaders
+    // Create .shader file
+    let data = ShaderFile {
+        vert: vert_bin.as_binary_u8().to_owned(),
+        frag: frag_bin.as_binary_u8().to_owned(),
+    };
+
+    let binary = bincode::serialize(&data)?;
+
     let out_path = out_path.with_extension("shader");
-    let out_file = File::create(out_path)?;
-    let mut archive = Builder::new(out_file);
+    let mut out_file = File::create(out_path)?;
 
-    let mut vert_header = Header::new_gnu();
-    vert_header.set_size(vert_bin.as_binary_u8().len() as u64);
-    vert_header.set_cksum();
-    archive.append_data(&mut vert_header, "vert.spv", vert_bin.as_binary_u8())?;
-
-    let mut frag_header = Header::new_gnu();
-    frag_header.set_size(frag_bin.as_binary_u8().len() as u64);
-    frag_header.set_cksum();
-    archive.append_data(&mut frag_header, "frag.spv", frag_bin.as_binary_u8())?;
+    out_file.write_all(&binary)?;
 
     eprintln!("done");
     Ok(())

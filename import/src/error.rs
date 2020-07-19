@@ -16,7 +16,7 @@ pub enum ErrorType {
     // External error
     Io(io::Error),
     Image(ImageError),
-    Json(serde_json::Error),
+    Binary(Box<bincode::ErrorKind>),
     Shader(shaderc::Error),
     // Internal error
     Internal(ErrorKind),
@@ -53,9 +53,9 @@ impl From<ImageError> for ErrorType {
     }
 }
 
-impl From<serde_json::Error> for ErrorType {
-    fn from(err: serde_json::Error) -> Self {
-        Self::Json(err)
+impl From<Box<bincode::ErrorKind>> for ErrorType {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
+        Self::Binary(err)
     }
 }
 

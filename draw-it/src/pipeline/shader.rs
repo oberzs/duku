@@ -4,10 +4,9 @@
 // Shader - GPU program for execution in the renderer
 
 use ash::vk;
+use serde::Deserialize;
 use std::ffi::CString;
-use std::io::Read;
 use std::sync::Arc;
-use tar::Archive;
 
 use super::CullMode;
 use super::DepthMode;
@@ -31,6 +30,12 @@ pub struct ShaderOptions {
     pub cull_mode: CullMode,
 }
 
+#[derive(Deserialize)]
+struct ShaderFile {
+    vert: Vec<u8>,
+    frag: Vec<u8>,
+}
+
 impl Shader {
     pub(crate) fn new(
         device: &Arc<Device>,
@@ -39,27 +44,10 @@ impl Shader {
         source: &[u8],
         options: ShaderOptions,
     ) -> Result<Self> {
-        // read shader source from archive
-        let mut archive: Archive<&[u8]> = Archive::new(source);
+        let data: ShaderFile = bincode::deserialize(source)?;
 
-        let mut vert_source = vec![];
-        let mut frag_source = vec![];
-
-        for file in archive.entries()? {
-            let mut file = file?;
-
-            let path = file.header().path()?.into_owned();
-
-            if path.ends_with("vert.spv") {
-                file.read_to_end(&mut vert_source)?;
-            }
-            if path.ends_with("frag.spv") {
-                file.read_to_end(&mut frag_source)?;
-            }
-        }
-
-        let vert_module = device.create_shader_module(&vert_source)?;
-        let frag_module = device.create_shader_module(&frag_source)?;
+        let vert_module = device.create_shader_module(&data.vert)?;
+        let frag_module = device.create_shader_module(&data.frag)?;
         let entry_point = CString::new("main").expect("bad code");
 
         // configure vertex stage

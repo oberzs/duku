@@ -86,7 +86,7 @@ impl Target {
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
-            current_font: builtins.roboto_font.clone(),
+            current_font: builtins.kenney_font.clone(),
             current_sampler: 0,
             cast_shadows: true,
             wireframes: false,

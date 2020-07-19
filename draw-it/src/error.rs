@@ -19,7 +19,7 @@ pub enum ErrorType {
     Io(io::Error),
     Nul(ffi::NulError),
     NoNul(ffi::FromBytesWithNulError),
-    Json(serde_json::Error),
+    Binary(Box<bincode::ErrorKind>),
     Poison(sync::PoisonError<()>),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -68,9 +68,9 @@ impl From<ffi::FromBytesWithNulError> for ErrorType {
     }
 }
 
-impl From<serde_json::Error> for ErrorType {
-    fn from(e: serde_json::Error) -> Self {
-        Self::Json(e)
+impl From<Box<bincode::ErrorKind>> for ErrorType {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
+        Self::Binary(err)
     }
 }
 

@@ -40,7 +40,7 @@ pub(crate) struct Builtins {
     pub(crate) blit_shader: Ref<Shader>,
     pub(crate) wireframe_shader: Ref<Shader>,
     pub(crate) unshaded_shader: Ref<Shader>,
-    pub(crate) roboto_font: Ref<Font>,
+    pub(crate) kenney_font: Ref<Font>,
 }
 
 impl Builtins {
@@ -126,12 +126,12 @@ impl Builtins {
         )?);
 
         // fonts
-        let roboto_font = {
+        let kenney_font = {
             let font = Font::new(
                 device,
                 uniform,
                 resources,
-                include_bytes!("../../fonts/RobotoMono-Regular.font"),
+                include_bytes!("../../fonts/kenney-future.font"),
             )?;
             resources.add_font(font)
         };
@@ -149,7 +149,7 @@ impl Builtins {
             blit_shader,
             wireframe_shader,
             unshaded_shader,
-            roboto_font,
+            kenney_font,
         })
     }
 }

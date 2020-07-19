@@ -76,7 +76,7 @@ This library uses these open source projects:
 - [Ash](https://github.com/MaikKlein/ash) - Vulkan API support
 - [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
 - [Serde](https://github.com/serde-rs/serde) - Deserialize assets
-- [Tar](https://github.com/alexcrichton/tar-rs) - Unarchive assets
+- [Bincode](https://github.com/servo/bincode) - Serde helper for binary
 
 Optional projects for extra functionality:
 
