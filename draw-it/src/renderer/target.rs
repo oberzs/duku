@@ -200,9 +200,11 @@ impl Target {
             let temp_shader = self.current_shader.clone();
             let temp_shadows = self.cast_shadows;
             let temp_albedo = self.current_albedo.clone();
+            let temp_material = self.current_material.clone();
             self.cast_shadows = false;
             self.current_shader = self.builtins.font_shader.clone();
             self.current_albedo = Albedo::Texture(font.texture().clone());
+            self.current_material = self.builtins.font_material.clone();
 
             for c in text_str.chars() {
                 if c == ' ' {
@@ -219,6 +221,7 @@ impl Target {
             self.current_shader = temp_shader;
             self.cast_shadows = temp_shadows;
             self.current_albedo = temp_albedo;
+            self.current_material = temp_material;
         });
     }
 
