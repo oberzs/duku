@@ -183,7 +183,7 @@ impl Context {
             options.camera,
             window.width as f32,
             window.height as f32,
-            100.0,
+            50.0,
         );
 
         Self {

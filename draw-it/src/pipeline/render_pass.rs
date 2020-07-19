@@ -106,16 +106,28 @@ impl RenderPass {
         }
 
         // create subpass dependency
-        let dependency = [vk::SubpassDependency::builder()
-            .src_subpass(vk::SUBPASS_EXTERNAL)
-            .dst_subpass(0)
-            .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-            .src_access_mask(vk::AccessFlags::empty())
-            .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-            .dst_access_mask(
-                vk::AccessFlags::COLOR_ATTACHMENT_READ | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-            )
-            .build()];
+        let dependencies = [
+            // start of render pass dependency
+            vk::SubpassDependency::builder()
+                .src_subpass(vk::SUBPASS_EXTERNAL)
+                .dst_subpass(0)
+                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                .src_access_mask(vk::AccessFlags::empty())
+                .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+                .dependency_flags(vk::DependencyFlags::BY_REGION)
+                .build(),
+            // end of render pass dependency
+            vk::SubpassDependency::builder()
+                .src_subpass(0)
+                .dst_subpass(vk::SUBPASS_EXTERNAL)
+                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
+                .src_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+                .dst_access_mask(vk::AccessFlags::empty())
+                .dependency_flags(vk::DependencyFlags::BY_REGION)
+                .build(),
+        ];
 
         // create render pass
         let mut subpass_builder =
@@ -134,7 +146,7 @@ impl RenderPass {
         let info = vk::RenderPassCreateInfo::builder()
             .attachments(&attachment_descriptions)
             .subpasses(&subpass)
-            .dependencies(&dependency);
+            .dependencies(&dependencies);
 
         let handle = device.create_render_pass(&info)?;
 

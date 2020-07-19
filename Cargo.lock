@@ -426,6 +426,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-text"
+version = "0.1.0"
+dependencies = [
+ "draw-it",
+]
+
+[[package]]
 name = "example-toon"
 version = "0.1.0"
 dependencies = [
