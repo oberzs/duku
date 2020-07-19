@@ -3,17 +3,16 @@
 
 // Context - draw-it application entrypoint
 
-use notify::DebouncedEvent;
-use notify::RecommendedWatcher;
-use notify::RecursiveMode;
-use notify::Watcher;
 use std::fs;
 use std::path::Path;
-use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::thread;
 use std::time::Duration;
+
+#[cfg(feature = "hot-reload")]
+use notify::DebouncedEvent;
+#[cfg(feature = "hot-reload")]
+use std::sync::mpsc;
 
 use crate::camera::Camera;
 use crate::camera::CameraType;
@@ -88,7 +87,7 @@ pub struct Context {
     render_stats: RenderStats,
     render_stage: RenderStage,
 
-    // Hot Reload
+    #[cfg(feature = "hot-reload")]
     stop_senders: Vec<mpsc::Sender<DebouncedEvent>>,
 }
 
@@ -182,7 +181,6 @@ impl Context {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
             render_stage: RenderStage::Before,
-            stop_senders: vec![],
             render_stats: Default::default(),
             camera_type: options.camera,
             forward_renderer,
@@ -195,9 +193,10 @@ impl Context {
             gpu_index,
             instance,
             main_camera,
-
             #[cfg(feature = "ui")]
             ui_renderer,
+            #[cfg(feature = "hot-reload")]
+            stop_senders: vec![],
         }
     }
 
@@ -442,11 +441,17 @@ impl Context {
         Ok(self.create_shader(&source, options))
     }
 
+    #[cfg(feature = "hot-reload")]
     pub fn create_shader_from_file_watch(
         &mut self,
         path: impl AsRef<Path>,
         options: ShaderOptions,
     ) -> Result<Ref<Shader>> {
+        use notify::RecommendedWatcher;
+        use notify::RecursiveMode;
+        use notify::Watcher;
+        use std::thread;
+
         let path_buf = path.as_ref().to_path_buf();
         let shader = self.create_shader_from_file(&path_buf, options)?;
 
@@ -521,6 +526,7 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
+        #[cfg(feature = "hot-reload")]
         for stop in &self.stop_senders {
             stop.send(DebouncedEvent::Rescan).unwrap();
         }
