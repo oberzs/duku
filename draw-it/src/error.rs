@@ -20,7 +20,6 @@ pub enum ErrorType {
     Nul(ffi::NulError),
     NoNul(ffi::FromBytesWithNulError),
     Json(serde_json::Error),
-    Signal(crossbeam_channel::SendError<()>),
     Poison(sync::PoisonError<()>),
     VulkanInstance(ash::InstanceError),
     VulkanLoad(ash::LoadingError),
@@ -78,12 +77,6 @@ impl From<serde_json::Error> for ErrorType {
 impl From<sync::PoisonError<()>> for ErrorType {
     fn from(e: sync::PoisonError<()>) -> Self {
         Self::Poison(e)
-    }
-}
-
-impl From<crossbeam_channel::SendError<()>> for ErrorType {
-    fn from(e: crossbeam_channel::SendError<()>) -> Self {
-        Self::Signal(e)
     }
 }
 

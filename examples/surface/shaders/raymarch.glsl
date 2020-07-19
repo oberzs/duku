@@ -63,7 +63,7 @@ float get_dist_to_scene(vec3 pos) {
     box_pos.xz *= rotate(world.time);
     float box_dist = box(box_pos, vec3(1.0));
 
-    float sphere_dist = sphere(pos, vec3(0.0, 1.0, 6.0), 1.1);
+    float sphere_dist = sphere(pos, vec3(0.0, 2.0, 6.0), 1.1);
 
     float morph_dist = mix(box_dist, sphere_dist, sin(world.time) * 0.5 + 0.5);
     

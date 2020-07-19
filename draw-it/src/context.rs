@@ -3,22 +3,17 @@
 
 // Context - draw-it application entrypoint
 
-use crossbeam_channel::bounded;
-use crossbeam_channel::select;
-use crossbeam_channel::unbounded;
-use crossbeam_channel::Receiver;
-use crossbeam_channel::Sender;
+use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
-use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
-use std::time::Instant;
 
 use crate::camera::Camera;
 use crate::camera::CameraType;
@@ -92,7 +87,9 @@ pub struct Context {
     camera_type: CameraType,
     render_stats: RenderStats,
     render_stage: RenderStage,
-    thread_kill: ThreadKill,
+
+    // Hot Reload
+    stop_senders: Vec<mpsc::Sender<DebouncedEvent>>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -107,11 +104,6 @@ pub struct ContextOptions {
 enum RenderStage {
     Before,
     During,
-}
-
-struct ThreadKill {
-    sender: Sender<()>,
-    receiver: Receiver<()>,
 }
 
 impl Context {
@@ -190,7 +182,7 @@ impl Context {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
             render_stage: RenderStage::Before,
-            thread_kill: ThreadKill::new(),
+            stop_senders: vec![],
             render_stats: Default::default(),
             camera_type: options.camera,
             forward_renderer,
@@ -463,43 +455,35 @@ impl Context {
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
         let shader_ref = shader.clone();
-        let kill_recv = self.thread_kill.receiver();
+        let (sender, receiver) = mpsc::channel();
+        self.stop_senders.push(sender.clone());
 
         thread::spawn(move || {
-            let (sender, receiver) = unbounded();
-            let start_time = Instant::now();
-            let mut watcher: RecommendedWatcher = check!(Watcher::new_immediate(move |res| {
-                let time = start_time.elapsed().as_secs();
-                sender.send((check!(res), time)).unwrap()
-            }));
-            check!(watcher.watch(&path_buf, RecursiveMode::NonRecursive));
+            let mut watcher: RecommendedWatcher =
+                Watcher::new(sender, Duration::from_millis(500)).unwrap();
+            watcher
+                .watch(&path_buf, RecursiveMode::NonRecursive)
+                .unwrap();
 
-            let mut same_events = HashSet::new();
-            loop {
-                select! {
-                    recv(kill_recv) -> _ => break,
-                    recv(receiver) -> signal => if let Ok((_, time)) = signal {
-                        // limit events
-                        if !same_events.contains(&time) {
-                            same_events.insert(time);
+            while let Ok(event) = receiver.recv() {
+                match event {
+                    DebouncedEvent::Rescan => break,
+                    DebouncedEvent::Write(_) => {
+                        // recreate shader
+                        let framebuffer = &framebuffers.lock().unwrap()[0];
 
-                            // wait to commit
-                            thread::sleep(Duration::from_millis(500));
-
-                            let framebuffer = &framebuffers.lock().unwrap()[0];
-
-                            let source = check!(fs::read(&path_buf));
-                            let new_shader = check!(Shader::new(
-                                &device,
-                                framebuffer,
-                                &shader_layout,
-                                &source,
-                                options,
-                            ));
-                            shader_ref.with(|s| *s = new_shader);
-                            info!("shader {:?} was reloaded", path_buf);
-                        }
+                        let source = check!(fs::read(&path_buf));
+                        let new_shader = check!(Shader::new(
+                            &device,
+                            framebuffer,
+                            &shader_layout,
+                            &source,
+                            options,
+                        ));
+                        shader_ref.with(|s| *s = new_shader);
+                        info!("shader {:?} was reloaded", path_buf);
                     }
+                    _ => (),
                 }
             }
         });
@@ -537,7 +521,9 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        self.thread_kill.kill().unwrap();
+        for stop in &self.stop_senders {
+            stop.send(DebouncedEvent::Rescan).unwrap();
+        }
         self.device.wait_for_idle().unwrap();
     }
 }
@@ -550,21 +536,5 @@ impl Default for ContextOptions {
             msaa: 1,
             camera: CameraType::Perspective,
         }
-    }
-}
-
-impl ThreadKill {
-    pub(crate) fn new() -> Self {
-        let (sender, receiver) = bounded(1);
-        Self { sender, receiver }
-    }
-
-    pub(crate) fn receiver(&self) -> Receiver<()> {
-        self.receiver.clone()
-    }
-
-    pub(crate) fn kill(&self) -> Result<()> {
-        self.sender.send(())?;
-        Ok(())
     }
 }

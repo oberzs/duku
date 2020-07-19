@@ -27,16 +27,14 @@ mod shader;
 
 use clap::App;
 use clap::Arg;
-use crossbeam_channel::unbounded;
+use notify::DebouncedEvent;
 use notify::RecommendedWatcher;
 use notify::RecursiveMode;
 use notify::Watcher;
-use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
-use std::thread;
+use std::sync::mpsc;
 use std::time::Duration;
-use std::time::Instant;
 
 use error::Result;
 use font::import_font;
@@ -132,31 +130,14 @@ fn main() {
     // watch for changes
     if watch {
         let path = input.or(directory).unwrap();
-        let (sender, receiver) = unbounded();
-        let start_time = Instant::now();
+        let (sender, receiver) = mpsc::channel();
 
-        let mut watcher: RecommendedWatcher = Watcher::new_immediate(move |res| {
-            let time = start_time.elapsed().as_secs();
-            match res {
-                Err(err) => error!("{}", err),
-                Ok(r) => sender.send((r, time)).unwrap(),
-            }
-        })
-        .unwrap();
+        let mut watcher: RecommendedWatcher =
+            Watcher::new(sender, Duration::from_millis(500)).unwrap();
         watcher.watch(path, RecursiveMode::NonRecursive).unwrap();
 
-        let mut same_events = HashSet::new();
-        loop {
-            let (event, time) = receiver.recv().unwrap();
-            let in_path = event.paths[0].clone();
-
-            // limit events
-            if !same_events.contains(&(in_path.clone(), time)) {
-                same_events.insert((in_path.clone(), time));
-
-                // wait to commit
-                thread::sleep(Duration::from_millis(500));
-
+        while let Ok(event) = receiver.recv() {
+            if let DebouncedEvent::Write(in_path) = event {
                 let out_path = create_out_path(&in_path, out_dir);
                 if let Err(err) = import_file(&in_path, &out_path) {
                     warn!("{}", err);

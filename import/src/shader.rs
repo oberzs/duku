@@ -3,12 +3,13 @@
 
 // imports glsl shader for use in draw-it
 
-use indicatif::ProgressBar;
 use shaderc::CompilationArtifact;
 use shaderc::Compiler;
 use shaderc::ShaderKind;
 use std::fs;
 use std::fs::File;
+use std::io;
+use std::io::Write;
 use std::path::Path;
 use tar::Builder;
 use tar::Header;
@@ -28,37 +29,33 @@ struct Defines {
 }
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
-    println!("Converting {:?}", in_path.file_name().unwrap_or_default());
-
-    let progress = ProgressBar::new(6);
+    eprint!(
+        "Converting {:?} ... ",
+        in_path.file_name().unwrap_or_default()
+    );
+    io::stderr().lock().flush()?;
 
     let shader_src = fs::read_to_string(in_path)?;
-    progress.inc(1);
 
     let vert_bin = compile_vert(&shader_src)?;
-    progress.inc(1);
     let frag_bin = compile_frag(&shader_src)?;
-    progress.inc(1);
 
     // compress spirv shaders
     let out_path = out_path.with_extension("shader");
     let out_file = File::create(out_path)?;
     let mut archive = Builder::new(out_file);
-    progress.inc(1);
 
     let mut vert_header = Header::new_gnu();
     vert_header.set_size(vert_bin.as_binary_u8().len() as u64);
     vert_header.set_cksum();
     archive.append_data(&mut vert_header, "vert.spv", vert_bin.as_binary_u8())?;
-    progress.inc(1);
 
     let mut frag_header = Header::new_gnu();
     frag_header.set_size(frag_bin.as_binary_u8().len() as u64);
     frag_header.set_cksum();
     archive.append_data(&mut frag_header, "frag.spv", frag_bin.as_binary_u8())?;
-    progress.inc(1);
 
-    progress.finish_and_clear();
+    eprintln!("done");
     Ok(())
 }
 
