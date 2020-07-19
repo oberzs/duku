@@ -77,11 +77,11 @@ This library uses these open source projects:
 - [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
 - [Serde](https://github.com/serde-rs/serde) - Deserialize assets
 - [Tar](https://github.com/alexcrichton/tar-rs) - Unarchive assets
-- [Notify](https://github.com/notify-rs/notify) - Hot-reload
 
 Optional projects for extra functionality:
 
 - [Image](https://github.com/image-rs/image) - Image loading
 - [Winit](https://github.com/rust-windowing/winit) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
+- [Notify](https://github.com/notify-rs/notify) - Hot-reload
 - [Lazy Static](https://github.com/rust-lang-nursery/lazy-static.rs) - Profiling
