@@ -14,61 +14,130 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+use crate::bitmap;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
-use crate::sdf::generate_sdf;
-use crate::sdf::CharMetrics;
-use crate::sdf::SdfOptions;
+use crate::sdf::Sdf;
 
 #[derive(Serialize)]
 struct FontFile {
-    sdf_size: u32,
-    atlas_size: u32,
+    bitmap_fonts: Vec<BitmapFont>,
+    sdf_font: SdfFont,
+}
+
+#[derive(Serialize)]
+struct BitmapFont {
+    bitmap_size: u32,
+    font_size: u32,
+    char_metrics: HashMap<char, CharMetrics>,
+    bitmap: Vec<u8>,
+}
+
+#[derive(Serialize)]
+struct SdfFont {
+    bitmap_size: u32,
+    font_size: u32,
     margin: u32,
     char_metrics: HashMap<char, CharMetrics>,
-    atlas: Vec<u8>,
+    bitmap: Vec<u8>,
+}
+
+#[derive(Serialize)]
+struct CharMetrics {
+    pub x: u32,
+    pub y: u32,
+    pub advance: u32,
 }
 
 pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
-    eprint!("Converting {:?} ... ", in_path);
+    eprint!(
+        "Converting {} ... ",
+        in_path
+            .file_name()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+    );
     io::stderr().lock().flush()?;
 
     let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?!:-_+=@#(){}[]/";
-    let options = SdfOptions::default();
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
-    let tile_size = options.sdf_size;
-    let atlas_size = tile_count * tile_size;
 
     let font_data = fs::read(in_path)?;
     let font =
         Font::try_from_bytes(&font_data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
 
-    let mut data = FontFile {
-        sdf_size: options.sdf_size,
-        atlas_size,
-        margin: options.scale_to_sdf(options.font_margin as f32),
+    // create sdf font
+    let sdf = Sdf::new(4096, 64, 8);
+    let sdf_tile_size = sdf.sdf_size + sdf.sdf_margin as u32 * 2;
+    let sdf_bitmap_size = tile_count * sdf_tile_size;
+
+    let mut sdf_font = SdfFont {
+        bitmap_size: sdf_bitmap_size,
+        font_size: sdf.sdf_size,
+        margin: sdf.sdf_margin as u32,
         char_metrics: HashMap::new(),
-        atlas: vec![],
+        bitmap: vec![],
     };
 
-    let mut atlas = DynamicImage::new_rgba8(atlas_size, atlas_size).to_rgba();
+    let mut sdf_bitmap = DynamicImage::new_luma8(sdf_bitmap_size, sdf_bitmap_size).to_luma();
 
     for (i, c) in chars.chars().enumerate() {
-        let mut char_data = generate_sdf(&font, c, options)?;
+        let (bitmap, advance) = sdf.generate(&font, c)?;
 
-        let x = (i as u32 % tile_count) * tile_size;
-        let y = (i as u32 / tile_count) * tile_size;
+        let x = (i as u32 % tile_count) * sdf_tile_size;
+        let y = (i as u32 / tile_count) * sdf_tile_size;
 
-        char_data.metrics.x = x;
-        char_data.metrics.y = y;
+        sdf_font
+            .char_metrics
+            .insert(c, CharMetrics { x, y, advance });
 
-        data.char_metrics.insert(c, char_data.metrics);
-
-        atlas.copy_from(&char_data.image, x, y)?;
+        sdf_bitmap.copy_from(&bitmap, x, y)?;
     }
 
-    data.atlas = atlas.into_raw();
+    sdf_font.bitmap = sdf_bitmap.into_raw();
+
+    // create bitmap fonts
+    let bitmap_font_sizes = [18, 24, 32];
+    let mut bitmap_fonts = Vec::with_capacity(bitmap_font_sizes.len());
+    for font_size in &bitmap_font_sizes {
+        let bitmap_size = tile_count * font_size;
+        let mut bitmap = DynamicImage::new_luma8(bitmap_size, bitmap_size).to_luma();
+        let mut char_metrics = HashMap::new();
+
+        for (i, c) in chars.chars().enumerate() {
+            // ttf to png
+            let (char_bitmap, advance) = bitmap::rasterize(&font, *font_size, 0, c)?;
+
+            let x = (i as u32 % tile_count) * *font_size;
+            let y = (i as u32 / tile_count) * *font_size;
+
+            char_metrics.insert(
+                c,
+                CharMetrics {
+                    x,
+                    y,
+                    advance: advance as u32,
+                },
+            );
+
+            bitmap.copy_from(&char_bitmap, x, y)?;
+        }
+
+        bitmap_fonts.push(BitmapFont {
+            font_size: *font_size,
+            bitmap_size,
+            char_metrics,
+            bitmap: bitmap.into_raw(),
+        });
+    }
+
+    // write fonts to file
+    let data = FontFile {
+        bitmap_fonts,
+        sdf_font,
+    };
 
     let binary = bincode::serialize(&data)?;
     let out_path = out_path.with_extension("font");

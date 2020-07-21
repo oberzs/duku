@@ -30,13 +30,13 @@ use crate::pipeline::ShaderOptions;
 pub(crate) struct Builtins {
     pub(crate) white_texture: Ref<Texture>,
     pub(crate) white_material: Ref<Material>,
-    pub(crate) font_material: Ref<Material>,
     pub(crate) surface_mesh: Ref<Mesh>,
     pub(crate) quad_mesh: Ref<Mesh>,
     pub(crate) cube_mesh: Ref<Mesh>,
     pub(crate) sphere_mesh: Ref<Mesh>,
     pub(crate) phong_shader: Ref<Shader>,
-    pub(crate) font_shader: Ref<Shader>,
+    pub(crate) sdf_font_shader: Ref<Shader>,
+    pub(crate) bitmap_font_shader: Ref<Shader>,
     pub(crate) blit_shader: Ref<Shader>,
     pub(crate) wireframe_shader: Ref<Shader>,
     pub(crate) unshaded_shader: Ref<Shader>,
@@ -63,13 +63,6 @@ impl Builtins {
             mat.set_phong_color([255, 255, 255]);
             resources.add_material(mat)
         };
-        let font_material = {
-            let mut mat = Material::new(device, layout)?;
-            mat.set_font_color([0, 0, 0]);
-            mat.set_font_width(0.5);
-            mat.set_font_edge(0.1);
-            resources.add_material(mat)
-        };
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);
@@ -86,12 +79,26 @@ impl Builtins {
             Default::default(),
         )?);
 
-        let font_shader = resources.add_shader(Shader::new(
+        let sdf_font_shader = resources.add_shader(Shader::new(
             device,
             framebuffer,
             layout,
-            include_bytes!("../../shaders/font.shader"),
-            Default::default(),
+            include_bytes!("../../shaders/sdf-font.shader"),
+            ShaderOptions {
+                depth_mode: DepthMode::Write,
+                ..Default::default()
+            },
+        )?);
+
+        let bitmap_font_shader = resources.add_shader(Shader::new(
+            device,
+            framebuffer,
+            layout,
+            include_bytes!("../../shaders/bitmap-font.shader"),
+            ShaderOptions {
+                depth_mode: DepthMode::Write,
+                ..Default::default()
+            },
         )?);
 
         let blit_shader = resources.add_shader(Shader::new(
@@ -126,26 +133,23 @@ impl Builtins {
         )?);
 
         // fonts
-        let kenney_font = {
-            let font = Font::new(
-                device,
-                uniform,
-                resources,
-                include_bytes!("../../fonts/kenney-future.font"),
-            )?;
-            resources.add_font(font)
-        };
+        let kenney_font = resources.add_font(Font::new(
+            device,
+            uniform,
+            layout,
+            include_bytes!("../../fonts/kenney-future.font"),
+        )?);
 
         Ok(Self {
             white_texture,
             white_material,
-            font_material,
             surface_mesh,
             quad_mesh,
             cube_mesh,
             sphere_mesh,
             phong_shader,
-            font_shader,
+            sdf_font_shader,
+            bitmap_font_shader,
             blit_shader,
             wireframe_shader,
             unshaded_shader,

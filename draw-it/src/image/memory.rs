@@ -98,7 +98,8 @@ impl ImageMemory {
             | ImageFormat::Rgba
             | ImageFormat::Srgba
             | ImageFormat::Srgb
-            | ImageFormat::Float2 => vk::ImageAspectFlags::COLOR,
+            | ImageFormat::Float2
+            | ImageFormat::Gray => vk::ImageAspectFlags::COLOR,
             ImageFormat::Depth => vk::ImageAspectFlags::DEPTH,
             ImageFormat::DepthStencil => {
                 vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL

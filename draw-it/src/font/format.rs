@@ -8,17 +8,30 @@ use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub(crate) struct FontFile {
-    pub(crate) sdf_size: u32,
-    pub(crate) atlas_size: u32,
-    pub(crate) margin: u32,
-    pub(crate) char_metrics: HashMap<char, FontCharMetrics>,
-    pub(crate) atlas: Vec<u8>,
+    pub(crate) bitmap_fonts: Vec<BitmapFont>,
+    pub(crate) sdf_font: SdfFont,
 }
 
 #[derive(Deserialize)]
-pub(crate) struct FontCharMetrics {
+pub(crate) struct BitmapFont {
+    pub(crate) bitmap_size: u32,
+    pub(crate) font_size: u32,
+    pub(crate) char_metrics: HashMap<char, CharMetrics>,
+    pub(crate) bitmap: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct SdfFont {
+    pub(crate) bitmap_size: u32,
+    pub(crate) font_size: u32,
+    pub(crate) margin: u32,
+    pub(crate) char_metrics: HashMap<char, CharMetrics>,
+    pub(crate) bitmap: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct CharMetrics {
     pub(crate) x: u32,
     pub(crate) y: u32,
     pub(crate) advance: u32,
-    pub(crate) bearing: u32,
 }

@@ -24,6 +24,7 @@ use crate::resource::Ref;
 
 pub struct Target {
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
+    pub(crate) text_orders: Vec<TextOrder>,
     pub(crate) clear: Color,
     pub(crate) do_shadow_mapping: bool,
     pub(crate) cascade_splits: [f32; 3],
@@ -36,6 +37,7 @@ pub struct Target {
     current_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
+    current_font_size: u32,
     current_sampler: i32,
     wireframes: bool,
     cast_shadows: bool,
@@ -67,6 +69,15 @@ pub(crate) struct Order {
     pub(crate) sampler_index: i32,
 }
 
+pub(crate) struct TextOrder {
+    pub(crate) font: Ref<Font>,
+    pub(crate) size: u32,
+    pub(crate) shader: Ref<Shader>,
+    pub(crate) text: String,
+    pub(crate) transform: Transform,
+    pub(crate) sampler_index: i32,
+}
+
 #[derive(Clone)]
 pub enum Albedo {
     Texture(Ref<Texture>),
@@ -77,6 +88,7 @@ impl Target {
     pub(crate) fn new(builtins: &Builtins) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
+            text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             main_light: Light {
                 coords: Vector3::new(-0.5, -1.0, 1.0).unit().extend(0.0),
@@ -87,6 +99,7 @@ impl Target {
             current_material: builtins.white_material.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
+            current_font_size: 24,
             current_sampler: 0,
             cast_shadows: true,
             wireframes: false,
@@ -188,40 +201,22 @@ impl Target {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let text_str = text.as_ref();
-        let used_font = self.current_font.clone();
+        let (shader, sampler_index) = if self
+            .current_font
+            .with(|f| f.is_bitmap(self.current_font_size))
+        {
+            (self.builtins.bitmap_font_shader.clone(), 7)
+        } else {
+            (self.builtins.sdf_font_shader.clone(), 1)
+        };
 
-        used_font.with(|font| {
-            let mut current_transform = transform.into();
-            let x_scale = current_transform.scale.x;
-            current_transform.position.x -=
-                font.char_bearing(text_str.chars().next().unwrap()) * x_scale;
-
-            let temp_shader = self.current_shader.clone();
-            let temp_shadows = self.cast_shadows;
-            let temp_albedo = self.current_albedo.clone();
-            let temp_material = self.current_material.clone();
-            self.cast_shadows = false;
-            self.current_shader = self.builtins.font_shader.clone();
-            self.current_albedo = Albedo::Texture(font.texture().clone());
-            self.current_material = self.builtins.font_material.clone();
-
-            for c in text_str.chars() {
-                if c == ' ' {
-                    let space_advance = font.char_advance('_');
-                    current_transform.position.x += space_advance * x_scale;
-                    continue;
-                }
-
-                self.draw(font.char_mesh(c), current_transform);
-
-                current_transform.position.x += font.char_advance(c) * x_scale;
-            }
-
-            self.current_shader = temp_shader;
-            self.cast_shadows = temp_shadows;
-            self.current_albedo = temp_albedo;
-            self.current_material = temp_material;
+        self.text_orders.push(TextOrder {
+            font: self.current_font.clone(),
+            size: self.current_font_size,
+            text: text.as_ref().to_string(),
+            transform: transform.into(),
+            sampler_index,
+            shader,
         });
     }
 
@@ -282,6 +277,10 @@ impl Target {
             index += 1;
         }
         self.current_sampler = index;
+    }
+
+    pub fn set_font_size(&mut self, size: u32) {
+        self.current_font_size = size;
     }
 
     pub fn set_shadow_softness(&mut self, amount: f32) {

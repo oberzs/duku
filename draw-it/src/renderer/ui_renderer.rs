@@ -177,7 +177,7 @@ impl UiRenderer {
             );
 
             self.device.cmd_bind_mesh(cmd, &self.mesh);
-            self.device.cmd_draw(cmd, self.mesh.index_count());
+            self.device.cmd_draw(cmd, self.mesh.index_count(), 0);
 
             self.device.cmd_end_render_pass(cmd);
             f.blit_to_texture(cmd);

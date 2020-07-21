@@ -39,6 +39,7 @@ impl Texture {
     ) -> Result<Self> {
         let pixel_size = match options.format {
             ImageFormat::Srgba | ImageFormat::Rgba => 4,
+            ImageFormat::Gray => 1,
             _ => panic!("unsupported texture format {:?}", options.format),
         };
 

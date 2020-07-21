@@ -35,8 +35,12 @@ struct Defines {
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     eprint!(
-        "Converting {:?} ... ",
-        in_path.file_name().unwrap_or_default()
+        "Converting {} ... ",
+        in_path
+            .file_name()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
     );
     io::stderr().lock().flush()?;
 

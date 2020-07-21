@@ -762,9 +762,9 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u32) {
+    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u32, offset: u32) {
         unsafe {
-            self.handle.cmd_draw_indexed(buffer, count, 1, 0, 0, 0);
+            self.handle.cmd_draw_indexed(buffer, count, 1, offset, 0, 0);
         }
     }
 

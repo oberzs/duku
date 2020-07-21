@@ -156,6 +156,66 @@ impl ForwardRenderer {
             }
         }
 
+        // text rendering
+        for t_order in &target.text_orders {
+            t_order.font.with(|f| {
+                t_order.shader.with(|s| {
+                    self.device.cmd_bind_shader(cmd, s);
+                    unique_shaders.insert(s.handle());
+                });
+                render_stats.shader_rebinds += 1;
+
+                self.device
+                    .cmd_bind_material(cmd, shader_layout, f.material());
+                unique_materials.insert(f.material().uniform().descriptor());
+                render_stats.material_rebinds += 1;
+
+                let font_size = t_order.size;
+                let sampler_index = t_order.sampler_index;
+
+                let albedo_index = f.texture(font_size).image_index();
+                let mesh = f.mesh(font_size);
+                let margin = f.margin(font_size);
+                self.device.cmd_bind_mesh(cmd, mesh);
+
+                let mut transform = t_order.transform;
+                let start_x = transform.position.x;
+                transform.scale *= font_size as f32;
+                transform.position.x -= margin * font_size as f32;
+
+                for c in t_order.text.chars() {
+                    // handle whitespace
+                    if c == ' ' {
+                        transform.position.x += transform.scale.x / 3.0;
+                        continue;
+                    }
+                    if c == '\n' {
+                        transform.position.x = start_x;
+                        transform.position.y -= transform.scale.y;
+                        continue;
+                    }
+
+                    self.device.cmd_push_constants(
+                        cmd,
+                        shader_layout,
+                        PushConstants {
+                            model_matrix: transform.as_matrix(),
+                            sampler_index,
+                            albedo_index,
+                        },
+                    );
+
+                    let data = f.char_data(font_size, c);
+                    self.device.cmd_draw(cmd, 6, data.offset);
+
+                    render_stats.drawn_indices += 6;
+                    render_stats.draw_calls += 1;
+
+                    transform.position.x += data.advance * transform.scale.x;
+                }
+            });
+        }
+
         self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
 
@@ -286,7 +346,7 @@ impl ForwardRenderer {
                         model_matrix,
                     },
                 );
-                self.device.cmd_draw(cmd, index_count);
+                self.device.cmd_draw(cmd, index_count, 0);
                 self.device.cmd_end_render_pass(cmd);
 
                 // pass #2 - vertical
@@ -307,7 +367,7 @@ impl ForwardRenderer {
                         model_matrix,
                     },
                 );
-                self.device.cmd_draw(cmd, index_count);
+                self.device.cmd_draw(cmd, index_count, 0);
                 self.device.cmd_end_render_pass(cmd);
             }
         }
@@ -332,7 +392,7 @@ impl ForwardRenderer {
                 },
             );
             self.device.cmd_bind_mesh(cmd, m);
-            self.device.cmd_draw(cmd, m.index_count());
+            self.device.cmd_draw(cmd, m.index_count(), 0);
             m.index_count()
         })
     }

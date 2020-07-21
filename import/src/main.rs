@@ -19,6 +19,8 @@
 // should be imported first
 mod macros;
 
+mod bitmap;
+mod diamond_iterator;
 mod error;
 mod font;
 mod sdf;
