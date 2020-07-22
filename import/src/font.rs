@@ -50,7 +50,14 @@ struct CharMetrics {
     pub advance: u32,
 }
 
-pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
+pub struct FontOptions<'sizes> {
+    pub sdf_sample: u32,
+    pub sdf_size: u32,
+    pub sdf_margin: u16,
+    pub bitmap_sizes: &'sizes [u32],
+}
+
+pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) -> Result<()> {
     eprint!(
         "Converting {} ... ",
         in_path
@@ -69,7 +76,7 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
         Font::try_from_bytes(&font_data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
 
     // create sdf font
-    let sdf = Sdf::new(4096, 64, 8);
+    let sdf = Sdf::new(options.sdf_sample, options.sdf_size, options.sdf_margin);
     let sdf_tile_size = sdf.sdf_size + sdf.sdf_margin as u32 * 2;
     let sdf_bitmap_size = tile_count * sdf_tile_size;
 
@@ -99,9 +106,8 @@ pub fn import_font(in_path: &Path, out_path: &Path) -> Result<()> {
     sdf_font.bitmap = sdf_bitmap.into_raw();
 
     // create bitmap fonts
-    let bitmap_font_sizes = [18, 24, 32];
-    let mut bitmap_fonts = Vec::with_capacity(bitmap_font_sizes.len());
-    for font_size in &bitmap_font_sizes {
+    let mut bitmap_fonts = Vec::with_capacity(options.bitmap_sizes.len());
+    for font_size in options.bitmap_sizes {
         let bitmap_size = tile_count * font_size;
         let mut bitmap = DynamicImage::new_luma8(bitmap_size, bitmap_size).to_luma();
         let mut char_metrics = HashMap::new();

@@ -39,6 +39,7 @@ use std::time::Duration;
 
 use error::Result;
 use font::import_font;
+use font::FontOptions;
 use shader::import_shader;
 
 fn main() {
@@ -78,13 +79,48 @@ fn main() {
                 .conflicts_with("out-dir")
                 .help("Uses input directory as output directory"),
         )
-        .get_matches();
+        .arg(
+            Arg::with_name("sdf")
+                .long("sdf")
+                .short("s")
+                .takes_value(true)
+                .default_value("4096,64,8")
+                .help("If importing font, sets SDF format options separated by commas 'sample-size,font-size,font-margin'"),
+
+        ).arg(
+            Arg::with_name("bitmap")
+                .long("bitmap")
+                .short("b")
+                .takes_value(true)
+                .multiple(true)
+                .default_value("18,24,32")
+                .help("If importing font, sets bitmap format sizes")
+        ).get_matches();
 
     let input = opts.value_of("in").map(|p| Path::new(p));
     let out = opts.value_of("out").map(|p| Path::new(p));
     let directory = opts.value_of("directory").map(|p| Path::new(p));
     let watch = opts.is_present("watch");
     let relative = opts.is_present("relative");
+    let sdf = opts.value_of("sdf").unwrap();
+    let bitmap = opts.values_of("bitmap").unwrap();
+
+    let sdf_options = sdf
+        .split(',')
+        .map(|s| match s.parse::<u32>() {
+            Ok(n) => n,
+            _ => error!("'{}' is not a number", s),
+        })
+        .collect::<Vec<_>>();
+    if sdf_options.len() != 3 {
+        error!("sdf option should have 3 values");
+    }
+    let bitmap_options = bitmap
+        .map(|s| match s.parse::<u32>() {
+            Ok(n) => n,
+            _ => error!("'{}' is not a number", s),
+        })
+        .collect::<Vec<_>>();
 
     let out_dir = if relative {
         if let Some(dir) = directory {
@@ -104,7 +140,7 @@ fn main() {
             error!("'{}' is not a file", in_path.display());
         }
         let out_path = create_out_path(in_path, out_dir);
-        if let Err(err) = import_file(in_path, &out_path) {
+        if let Err(err) = import_file(in_path, &out_path, &sdf_options, &bitmap_options) {
             error!("{}", err);
         }
     }
@@ -120,7 +156,9 @@ fn main() {
                 let in_path = entry.path();
                 if in_path.is_file() {
                     let out_path = create_out_path(&in_path, out_dir);
-                    if let Err(err) = import_file(&in_path, &out_path) {
+                    if let Err(err) =
+                        import_file(&in_path, &out_path, &sdf_options, &bitmap_options)
+                    {
                         error!("{}", err);
                     }
                 }
@@ -140,7 +178,7 @@ fn main() {
         while let Ok(event) = receiver.recv() {
             if let DebouncedEvent::Write(in_path) = event {
                 let out_path = create_out_path(&in_path, out_dir);
-                if let Err(err) = import_file(&in_path, &out_path) {
+                if let Err(err) = import_file(&in_path, &out_path, &sdf_options, &bitmap_options) {
                     warn!("{}", err);
                 }
             }
@@ -148,13 +186,27 @@ fn main() {
     }
 }
 
-fn import_file(in_path: &Path, out_path: &Path) -> Result<()> {
+fn import_file(
+    in_path: &Path,
+    out_path: &Path,
+    sdf_options: &[u32],
+    bitmap_options: &[u32],
+) -> Result<()> {
     let path_str = in_path.to_str().unwrap_or_default();
     if path_str.ends_with(".glsl") {
         import_shader(in_path, out_path)?;
     }
     if path_str.ends_with(".ttf") {
-        import_font(in_path, out_path)?;
+        import_font(
+            in_path,
+            out_path,
+            FontOptions {
+                sdf_sample: sdf_options[0],
+                sdf_size: sdf_options[1],
+                sdf_margin: sdf_options[2] as u16,
+                bitmap_sizes: bitmap_options,
+            },
+        )?;
     }
     Ok(())
 }

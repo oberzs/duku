@@ -91,9 +91,3 @@ impl Sdf {
         (distance * 255.0) as u8
     }
 }
-
-impl Default for Sdf {
-    fn default() -> Self {
-        Self::new(4096, 64, 4)
-    }
-}
