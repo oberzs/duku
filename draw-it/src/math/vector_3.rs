@@ -30,6 +30,10 @@ impl Vector3 {
         Self { x, y, z }
     }
 
+    pub fn uniform(v: f32) -> Self {
+        Self::new(v, v, v)
+    }
+
     pub fn backward() -> Self {
         Self::new(0.0, 0.0, -1.0)
     }

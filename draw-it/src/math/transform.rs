@@ -15,6 +15,31 @@ pub struct Transform {
 }
 
 impl Transform {
+    pub fn positioned(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            position: Vector3::new(x, y, z),
+            ..Default::default()
+        }
+    }
+
+    pub fn scaled(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            scale: Vector3::new(x, y, z),
+            ..Default::default()
+        }
+    }
+
+    pub fn scaled_uniformly(s: f32) -> Self {
+        Self::scaled(s, s, s)
+    }
+
+    pub fn rotated(roll: f32, pitch: f32, yaw: f32) -> Self {
+        Self {
+            rotation: Quaternion::euler_rotation(roll, pitch, yaw),
+            ..Default::default()
+        }
+    }
+
     pub fn as_matrix(self) -> Matrix4 {
         Matrix4::translation(self.position) * Matrix4::scale(self.scale) * self.rotation.as_matrix()
     }
