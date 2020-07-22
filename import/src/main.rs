@@ -115,12 +115,13 @@ fn main() {
     if sdf_options.len() != 3 {
         error!("sdf option should have 3 values");
     }
-    let bitmap_options = bitmap
-        .map(|s| match s.parse::<u32>() {
-            Ok(n) => n,
+    let mut bitmap_options = vec![];
+    bitmap.for_each(|s| {
+        s.split(',').for_each(|s| match s.parse::<u32>() {
+            Ok(n) => bitmap_options.push(n),
             _ => error!("'{}' is not a number", s),
         })
-        .collect::<Vec<_>>();
+    });
 
     let out_dir = if relative {
         if let Some(dir) = directory {
