@@ -59,4 +59,5 @@ pub mod reference {
 
 pub use context::Context;
 pub use context::ContextOptions;
+pub use quality::Quality;
 pub use renderer::Target;

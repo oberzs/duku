@@ -34,6 +34,7 @@ pub struct Target {
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
+    current_font_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
     current_font_size: u32,
@@ -72,6 +73,7 @@ pub(crate) struct TextOrder {
     pub(crate) font: Ref<Font>,
     pub(crate) size: u32,
     pub(crate) shader: Ref<Shader>,
+    pub(crate) material: Ref<Material>,
     pub(crate) text: String,
     pub(crate) transform: Transform,
     pub(crate) sampler_index: i32,
@@ -96,6 +98,7 @@ impl Target {
             lights: vec![],
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.clone(),
+            current_font_material: builtins.font_material.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
             current_font_size: 24,
@@ -213,6 +216,7 @@ impl Target {
             size: self.current_font_size,
             text: text.as_ref().to_string(),
             transform: transform.into(),
+            material: self.current_font_material.clone(),
             sampler_index,
             shader,
         });
@@ -249,6 +253,10 @@ impl Target {
 
     pub fn set_material(&mut self, material: &Ref<Material>) {
         self.current_material = material.clone();
+    }
+
+    pub fn set_font_material(&mut self, material: &Ref<Material>) {
+        self.current_font_material = material.clone();
     }
 
     pub fn set_albedo(&mut self, albedo: impl Into<Albedo>) {
@@ -295,6 +303,10 @@ impl Target {
 
     pub fn set_material_white(&mut self) {
         self.current_material = self.builtins.white_material.clone();
+    }
+
+    pub fn set_font_material_black(&mut self) {
+        self.current_font_material = self.builtins.font_material.clone();
     }
 
     pub(crate) fn lights(&self) -> [Light; 4] {

@@ -18,15 +18,12 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
 use crate::pipeline::ImageUniform;
-use crate::pipeline::Material;
-use crate::pipeline::ShaderLayout;
 use format::CharMetrics;
 use format::FontFile;
 
 pub struct Font {
     bitmap_data: HashMap<u32, FontData>,
     sdf_data: FontData,
-    material: Material,
 }
 
 #[derive(Copy, Clone)]
@@ -43,12 +40,7 @@ struct FontData {
 }
 
 impl Font {
-    pub(crate) fn new(
-        device: &Arc<Device>,
-        uniform: &ImageUniform,
-        shader_layout: &ShaderLayout,
-        source: &[u8],
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Arc<Device>, uniform: &ImageUniform, source: &[u8]) -> Result<Self> {
         let FontFile {
             sdf_font,
             bitmap_fonts,
@@ -80,16 +72,9 @@ impl Font {
             &sdf_font.char_metrics,
         )?;
 
-        let mut material = Material::new(device, shader_layout)?;
-        material.set_font_color([0, 0, 0]);
-        material.set_font_width(0.5);
-        material.set_font_edge(0.1);
-        material.update_if_needed()?;
-
         Ok(Font {
             bitmap_data,
             sdf_data,
-            material,
         })
     }
 
@@ -135,10 +120,6 @@ impl Font {
             Some(data) => data.margin,
             None => self.sdf_data.margin,
         }
-    }
-
-    pub(crate) fn material(&self) -> &Material {
-        &self.material
     }
 }
 

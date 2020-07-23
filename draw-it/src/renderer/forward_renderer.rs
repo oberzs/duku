@@ -172,9 +172,10 @@ impl ForwardRenderer {
                 });
                 render_stats.shader_rebinds += 1;
 
-                self.device
-                    .cmd_bind_material(cmd, shader_layout, f.material());
-                unique_materials.insert(f.material().uniform().descriptor());
+                t_order.material.with(|m| {
+                    self.device.cmd_bind_material(cmd, shader_layout, m);
+                    unique_materials.insert(m.uniform().descriptor());
+                });
                 render_stats.material_rebinds += 1;
 
                 let font_size = t_order.size;

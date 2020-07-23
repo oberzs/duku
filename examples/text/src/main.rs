@@ -6,6 +6,7 @@ use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::Quality;
 use std::time::Instant;
 
 fn main() {
@@ -18,10 +19,25 @@ fn main() {
     let mut context = Context::from_window(
         &mut window,
         ContextOptions {
+            quality: Quality::Low,
             camera: CameraType::Orthographic,
             ..Default::default()
         },
     );
+
+    let material_1 = context.create_material();
+    material_1.with(|m| {
+        m.set_font_color(colors::RED);
+    });
+    let material_2 = context.create_material();
+    material_2.with(|m| {
+        m.set_font_color(colors::BLUE);
+        m.set_font_border_color(colors::WHITE);
+        m.set_font_width(0.5);
+        m.set_font_edge(0.1);
+        m.set_font_border_width(0.8);
+        m.set_font_border_edge(0.1);
+    });
 
     let start_time = Instant::now();
     let left = -250.0;
@@ -39,7 +55,9 @@ fn main() {
                 [left, 200.0, 1.0],
             );
             target.set_font_size(32);
+            target.set_font_material(&material_1);
             target.draw_text("Bitmap 32p text", [left, 100.0, 1.0]);
+            target.set_font_material_black();
             target.set_font_size(24);
             target.draw_text("Bitmap 24p text", [left, 68.0, 1.0]);
             target.set_font_size(18);
@@ -50,6 +68,7 @@ fn main() {
                 scale: Vector3::new(dynamic_size, dynamic_size, dynamic_size),
                 ..Default::default()
             };
+            target.set_font_material(&material_2);
             target.draw_text("Dynamic\n-text-", transform);
         });
     });

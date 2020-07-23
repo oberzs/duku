@@ -30,6 +30,7 @@ use crate::pipeline::ShaderOptions;
 pub(crate) struct Builtins {
     pub(crate) white_texture: Ref<Texture>,
     pub(crate) white_material: Ref<Material>,
+    pub(crate) font_material: Ref<Material>,
     pub(crate) surface_mesh: Ref<Mesh>,
     pub(crate) quad_mesh: Ref<Mesh>,
     pub(crate) cube_mesh: Ref<Mesh>,
@@ -63,12 +64,19 @@ impl Builtins {
             mat.set_phong_color([255, 255, 255]);
             resources.add_material(mat)
         };
+        let font_material = {
+            let mut mat = Material::new(device, layout)?;
+            mat.set_font_color([0, 0, 0]);
+            mat.set_font_width(0.5);
+            mat.set_font_edge(0.1);
+            resources.add_material(mat)
+        };
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);
         let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
-        let sphere_mesh = resources.add_mesh(create_sphere(device, 5)?);
+        let sphere_mesh = resources.add_mesh(create_sphere(device, 3)?);
 
         // shaders
         let phong_shader = resources.add_shader(Shader::new(
@@ -136,13 +144,13 @@ impl Builtins {
         let kenney_font = resources.add_font(Font::new(
             device,
             uniform,
-            layout,
             include_bytes!("../../fonts/kenney-future.font"),
         )?);
 
         Ok(Self {
             white_texture,
             white_material,
+            font_material,
             surface_mesh,
             quad_mesh,
             cube_mesh,
