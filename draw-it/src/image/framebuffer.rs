@@ -451,6 +451,7 @@ fn create_attachment_image(
         ImageLayout::Color => usage.push(ImageUsage::Color),
         ImageLayout::Depth => usage.push(ImageUsage::Depth),
         ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
+        ImageLayout::ShaderDepth => usage.push(ImageUsage::Depth),
         _ => (),
     }
 

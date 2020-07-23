@@ -8,7 +8,6 @@ use draw_it::color::colors;
 use draw_it::math::Transform;
 use draw_it::math::Vector3;
 use draw_it::ui;
-use draw_it::ui::label;
 use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
@@ -54,26 +53,15 @@ fn main() {
         scale: Vector3::new(10.0, 0.2, 10.0),
         ..Default::default()
     };
-    let mut shadow_softness = 1.0;
 
     window.main_loop(|events, ui| {
         controller.update(&mut context.main_camera, events);
 
         ui::stats_window(&ui, &context, events);
-        ui::Window::new(label!("Shadow Settings"))
-            .size([1.0, 1.0], ui::Condition::FirstUseEver)
-            .always_auto_resize(true)
-            .build(&ui, || {
-                ui.drag_float(label!("Softness"), &mut shadow_softness)
-                    .min(0.0)
-                    .speed(0.1)
-                    .build();
-            });
         context.draw_ui(ui);
 
         context.draw_on_window(|target| {
             target.set_clear(colors::SKY_BLUE);
-            target.set_shadow_softness(shadow_softness);
 
             // floor
             target.draw_cube(floor_transform);

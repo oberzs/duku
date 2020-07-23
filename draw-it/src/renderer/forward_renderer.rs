@@ -18,14 +18,15 @@ use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
-use crate::image::ImageFormat;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::pipeline::CullMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
@@ -33,16 +34,13 @@ use crate::pipeline::WorldData;
 pub(crate) struct ForwardRenderer {
     shadow_frames: Vec<ShadowMapSet>,
     shadow_shader: Shader,
-    blur_shader: Shader,
     start_time: Instant,
     device: Arc<Device>,
 }
 
 struct ShadowMapSet {
-    main_framebuffers: [Framebuffer; 3],
-    temp_framebuffers: [Framebuffer; 3],
-    main_uniform: ShadowMapUniform,
-    temp_uniform: ShadowMapUniform,
+    framebuffers: [Framebuffer; 4],
+    uniform: ShadowMapUniform,
     matrices: [Matrix4; 4],
     cascades: [f32; 4],
     map_size: u32,
@@ -57,22 +55,18 @@ impl ForwardRenderer {
         profile_scope!("new");
 
         let shadow_frames = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 1024))
+            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 2048))
             .collect::<Result<Vec<_>>>()?;
 
         let shadow_shader = Shader::new(
             device,
-            &shadow_frames[0].main_framebuffers[0],
+            &shadow_frames[0].framebuffers[0],
             shader_layout,
             include_bytes!("../../shaders/shadow.shader"),
-            Default::default(),
-        )?;
-        let blur_shader = Shader::new(
-            device,
-            &shadow_frames[0].main_framebuffers[0],
-            shader_layout,
-            include_bytes!("../../shaders/shadow-blur.shader"),
-            Default::default(),
+            ShaderOptions {
+                cull_mode: CullMode::Front,
+                ..Default::default()
+            },
         )?;
 
         Ok(Self {
@@ -80,7 +74,6 @@ impl ForwardRenderer {
             device: Arc::clone(device),
             shadow_frames,
             shadow_shader,
-            blur_shader,
         })
     }
 
@@ -105,11 +98,8 @@ impl ForwardRenderer {
         }
 
         // bind current shadow map set
-        self.device.cmd_bind_uniform(
-            cmd,
-            shader_layout,
-            &self.shadow_frames[current].main_uniform,
-        );
+        self.device
+            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
 
         // update world uniform
         framebuffer.world_uniform().update(WorldData {
@@ -119,8 +109,6 @@ impl ForwardRenderer {
             time: self.start_time.elapsed().as_secs_f32(),
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
-            variance_min: 0.00002,
-            shadow_low: 0.1,
         })?;
 
         // do render pass
@@ -236,11 +224,8 @@ impl ForwardRenderer {
         let current = self.device.current_frame();
 
         // bind temp shadow map set so we can write to main one
-        self.device.cmd_bind_uniform(
-            cmd,
-            shader_layout,
-            &self.shadow_frames[current].main_uniform,
-        );
+        self.device
+            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
 
         // render shadow map for each cascade
         let light_dir = target.main_light.coords.shrink();
@@ -281,7 +266,7 @@ impl ForwardRenderer {
             prev_cs = *cs;
 
             // update world uniform
-            let framebuffer = &self.shadow_frames[current].main_framebuffers[i];
+            let framebuffer = &self.shadow_frames[current].framebuffers[i];
             framebuffer.world_uniform().update(WorldData {
                 lights: [Default::default(); 4],
                 world_matrix: light_matrix,
@@ -289,8 +274,6 @@ impl ForwardRenderer {
                 time: self.start_time.elapsed().as_secs_f32(),
                 cascade_splits: [0.0; 4],
                 light_matrices: [Matrix4::identity(); 4],
-                variance_min: 0.0,
-                shadow_low: 0.0,
             })?;
 
             // do render pass
@@ -312,64 +295,6 @@ impl ForwardRenderer {
                 }
             }
             self.device.cmd_end_render_pass(cmd);
-
-            if target.shadow_softness > 0.0 {
-                // do post processing - Gaussian blur
-                // using push constants for shader properties for speed
-                self.device.cmd_set_view(cmd, map_size, map_size);
-                self.device.cmd_bind_shader(cmd, &self.blur_shader);
-                let index_count = target.builtins.surface_mesh.with(|m| {
-                    self.device.cmd_bind_mesh(cmd, m);
-                    m.index_count()
-                });
-                let mut model_matrix = Matrix4::identity();
-                let blur_amount = target.shadow_softness / map_size as f32;
-
-                // pass #1 - horizontal
-                self.device.cmd_bind_uniform(
-                    cmd,
-                    shader_layout,
-                    &self.shadow_frames[current].main_uniform,
-                );
-                self.device.cmd_begin_render_pass(
-                    cmd,
-                    &self.shadow_frames[current].temp_framebuffers[i],
-                    [1.0, 1.0, 1.0, 1.0],
-                );
-                model_matrix.col_x = Vector4::new(blur_amount, 0.0, 0.0, 0.0);
-                self.device.cmd_push_constants(
-                    cmd,
-                    shader_layout,
-                    PushConstants {
-                        albedo_index: i as i32,
-                        sampler_index: 0,
-                        model_matrix,
-                    },
-                );
-                self.device.cmd_draw(cmd, index_count, 0);
-                self.device.cmd_end_render_pass(cmd);
-
-                // pass #2 - vertical
-                self.device.cmd_bind_uniform(
-                    cmd,
-                    shader_layout,
-                    &self.shadow_frames[current].temp_uniform,
-                );
-                self.device
-                    .cmd_begin_render_pass(cmd, framebuffer, [1.0, 1.0, 1.0, 1.0]);
-                model_matrix.col_x = Vector4::new(0.0, blur_amount, 0.0, 0.0);
-                self.device.cmd_push_constants(
-                    cmd,
-                    shader_layout,
-                    PushConstants {
-                        albedo_index: i as i32,
-                        sampler_index: 0,
-                        model_matrix,
-                    },
-                );
-                self.device.cmd_draw(cmd, index_count, 0);
-                self.device.cmd_end_render_pass(cmd);
-            }
         }
 
         Ok(())
@@ -405,40 +330,27 @@ impl ShadowMapSet {
         image_uniform: &ImageUniform,
         map_size: u32,
     ) -> Result<Self> {
-        let main_framebuffers = [
+        let framebuffers = [
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-        ];
-        let temp_framebuffers = [
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
         ];
-        let main_uniform = ShadowMapUniform::new(
+        let uniform = ShadowMapUniform::new(
             shader_layout,
             [
-                main_framebuffers[0].stored_view(),
-                main_framebuffers[1].stored_view(),
-                main_framebuffers[2].stored_view(),
-            ],
-        )?;
-        let temp_uniform = ShadowMapUniform::new(
-            shader_layout,
-            [
-                temp_framebuffers[0].stored_view(),
-                temp_framebuffers[1].stored_view(),
-                temp_framebuffers[2].stored_view(),
+                framebuffers[0].stored_view(),
+                framebuffers[1].stored_view(),
+                framebuffers[2].stored_view(),
+                framebuffers[3].stored_view(),
             ],
         )?;
 
         Ok(Self {
             matrices: [Matrix4::identity(); 4],
             cascades: [0.0; 4],
-            main_framebuffers,
-            temp_framebuffers,
-            main_uniform,
-            temp_uniform,
+            framebuffers,
+            uniform,
             map_size,
         })
     }
@@ -454,10 +366,10 @@ impl ShadowMapSet {
             shader_layout,
             image_uniform,
             FramebufferOptions {
-                attachment_formats: &[ImageFormat::Float2],
+                attachment_formats: &[],
                 camera_type: CameraType::Orthographic,
                 multisampled: false,
-                depth: false,
+                depth: true,
                 width: size,
                 height: size,
             },

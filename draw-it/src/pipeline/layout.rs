@@ -84,7 +84,7 @@ impl ShaderLayout {
         let shadow_map_binding = [vk::DescriptorSetLayoutBinding::builder()
             .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
             .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(3)
+            .descriptor_count(4)
             .binding(0)
             .build()];
         let shadow_map_layout = device.create_descriptor_set_layout(&shadow_map_binding)?;
@@ -189,7 +189,7 @@ impl ShaderLayout {
             .allocate_descriptor_set(self.image_layout, self.descriptor_pool)
     }
 
-    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 3]) -> Result<vk::DescriptorSet> {
+    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Result<vk::DescriptorSet> {
         let set = self
             .device
             .allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool)?;
@@ -198,7 +198,7 @@ impl ShaderLayout {
             .iter()
             .map(|v| {
                 vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::ShaderColor.flag())
+                    .image_layout(ImageLayout::ShaderDepth.flag())
                     .image_view(*v)
                     .build()
             })

@@ -15,8 +15,6 @@ layout(set = 0, binding = 0) uniform WorldObject {
     float time;
     mat4 light_matrices[4];
     vec4 cascade_splits;
-    float variance_min;
-    float shadow_low;
 } world;
 
 layout(set = 1, binding = 0) uniform MaterialObject {

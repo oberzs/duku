@@ -230,7 +230,7 @@ impl Uniform for ImageUniform {
 }
 
 impl ShadowMapUniform {
-    pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 3]) -> Result<Self> {
+    pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 4]) -> Result<Self> {
         let descriptor_set = layout.shadow_map_set(views)?;
         let descriptor = Descriptor(3, descriptor_set);
 

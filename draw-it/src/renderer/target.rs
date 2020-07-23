@@ -27,8 +27,7 @@ pub struct Target {
     pub(crate) text_orders: Vec<TextOrder>,
     pub(crate) clear: Color,
     pub(crate) do_shadow_mapping: bool,
-    pub(crate) cascade_splits: [f32; 3],
-    pub(crate) shadow_softness: f32,
+    pub(crate) cascade_splits: [f32; 4],
     pub(crate) main_light: Light,
     pub(crate) builtins: Builtins,
 
@@ -104,8 +103,7 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             do_shadow_mapping: false,
-            shadow_softness: 1.0,
-            cascade_splits: [0.1, 0.3, 1.0],
+            cascade_splits: [0.05, 0.2, 0.5, 1.0],
             builtins: builtins.clone(),
         })
     }
@@ -283,11 +281,7 @@ impl Target {
         self.current_font_size = size;
     }
 
-    pub fn set_shadow_softness(&mut self, amount: f32) {
-        self.shadow_softness = amount;
-    }
-
-    pub fn set_cascade_splits(&mut self, splits: [f32; 3]) {
+    pub fn set_cascade_splits(&mut self, splits: [f32; 4]) {
         self.cascade_splits = splits;
     }
 

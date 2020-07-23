@@ -31,6 +31,7 @@ impl RenderPass {
         profile_scope!("new");
 
         debug_assert!(!present || attachment_formats.len() == 1);
+        debug_assert!(depth || !attachment_formats.is_empty());
 
         let mut depth_attachment = None;
         let mut color_attachments = vec![];
@@ -45,14 +46,19 @@ impl RenderPass {
             } else {
                 ImageSamples(1)
             };
+            let layout = if attachment_formats.is_empty() {
+                ImageLayout::ShaderDepth
+            } else {
+                ImageLayout::Depth
+            };
 
             let a = Attachment::new(AttachmentOptions {
                 format: ImageFormat::Depth,
-                layout: ImageLayout::Depth,
-                clear: true,
-                store: false,
-                samples,
+                store: attachment_formats.is_empty(),
                 index: attachments.len() as u32,
+                clear: true,
+                samples,
+                layout,
             });
 
             depth_attachment = Some(a.reference());
@@ -106,28 +112,55 @@ impl RenderPass {
         }
 
         // create subpass dependency
-        let dependencies = [
-            // start of render pass dependency
-            vk::SubpassDependency::builder()
-                .src_subpass(vk::SUBPASS_EXTERNAL)
-                .dst_subpass(0)
-                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                .src_access_mask(vk::AccessFlags::empty())
-                .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-                .dependency_flags(vk::DependencyFlags::BY_REGION)
-                .build(),
-            // end of render pass dependency
-            vk::SubpassDependency::builder()
-                .src_subpass(0)
-                .dst_subpass(vk::SUBPASS_EXTERNAL)
-                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
-                .src_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-                .dst_access_mask(vk::AccessFlags::empty())
-                .dependency_flags(vk::DependencyFlags::BY_REGION)
-                .build(),
-        ];
+        let dependencies = if attachment_formats.is_empty() {
+            // depth pass
+            [
+                // start of render pass dependency
+                vk::SubpassDependency::builder()
+                    .src_subpass(vk::SUBPASS_EXTERNAL)
+                    .dst_subpass(0)
+                    .src_stage_mask(vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
+                    .dst_stage_mask(vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
+                    .src_access_mask(vk::AccessFlags::empty())
+                    .dst_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
+                    .dependency_flags(vk::DependencyFlags::BY_REGION)
+                    .build(),
+                // end of render pass dependency
+                vk::SubpassDependency::builder()
+                    .src_subpass(0)
+                    .dst_subpass(vk::SUBPASS_EXTERNAL)
+                    .src_stage_mask(vk::PipelineStageFlags::LATE_FRAGMENT_TESTS)
+                    .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
+                    .src_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
+                    .dst_access_mask(vk::AccessFlags::empty())
+                    .dependency_flags(vk::DependencyFlags::BY_REGION)
+                    .build(),
+            ]
+        } else {
+            // color pass
+            [
+                // start of render pass dependency
+                vk::SubpassDependency::builder()
+                    .src_subpass(vk::SUBPASS_EXTERNAL)
+                    .dst_subpass(0)
+                    .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                    .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                    .src_access_mask(vk::AccessFlags::empty())
+                    .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+                    .dependency_flags(vk::DependencyFlags::BY_REGION)
+                    .build(),
+                // end of render pass dependency
+                vk::SubpassDependency::builder()
+                    .src_subpass(0)
+                    .dst_subpass(vk::SUBPASS_EXTERNAL)
+                    .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                    .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
+                    .src_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+                    .dst_access_mask(vk::AccessFlags::empty())
+                    .dependency_flags(vk::DependencyFlags::BY_REGION)
+                    .build(),
+            ]
+        };
 
         // create render pass
         let mut subpass_builder =
