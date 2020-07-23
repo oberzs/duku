@@ -34,11 +34,11 @@ fn main() {
 
     let square = {
         let vertices = square_vertices(square_size, 0.0);
-        let triangles = square_triangles(square_size);
+        let indices = square_indices(square_size);
 
         context.create_mesh(MeshOptions {
             vertices: &vertices,
-            triangles: &triangles,
+            indices: &indices,
             ..Default::default()
         })
     };
@@ -65,18 +65,24 @@ fn main() {
     });
 }
 
-fn square_triangles(size: u32) -> Vec<[u32; 3]> {
-    let mut triangles = Vec::with_capacity(size as usize * size as usize * 2);
+fn square_indices(size: u32) -> Vec<u32> {
+    let mut indices = Vec::with_capacity(size as usize * size as usize * 2);
     let mut vi = 0;
     for _ in 0..size {
         for _ in 0..size {
-            triangles.push([vi, vi + size + 1, vi + 1]);
-            triangles.push([vi + 1, vi + size + 1, vi + size + 2]);
+            indices.extend(&[
+                vi,
+                vi + size + 1,
+                vi + 1,
+                vi + 1,
+                vi + size + 1,
+                vi + size + 2,
+            ]);
             vi += 1;
         }
         vi += 1;
     }
-    triangles
+    indices
 }
 
 fn square_vertices(size: u32, time: f32) -> Vec<Vector3> {

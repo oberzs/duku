@@ -23,11 +23,11 @@ pub struct Mesh {
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
     colors: Vec<Color>,
-    triangles: Vec<[u32; 3]>,
+    indices: Vec<u32>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
     should_update_vertices: bool,
-    should_update_triangles: bool,
+    should_update_indices: bool,
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -36,15 +36,15 @@ pub struct MeshOptions<'slice> {
     pub uvs: &'slice [Vector2],
     pub normals: &'slice [Vector3],
     pub colors: &'slice [Color],
-    pub triangles: &'slice [[u32; 3]],
+    pub indices: &'slice [u32],
 }
 
 impl Mesh {
     pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Result<Self> {
         let vertices = options.vertices.to_vec();
-        let triangles = options.triangles.to_vec();
+        let indices = options.indices.to_vec();
         let vertex_count = vertices.len();
-        let index_count = triangles.len() * 3;
+        let index_count = indices.len();
 
         let vertex_buffer =
             DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, vertex_count)?;
@@ -63,8 +63,8 @@ impl Mesh {
         colors[..options.colors.len()].clone_from_slice(options.colors);
 
         // calculate smooth normals
-        if options.normals.is_empty() {
-            for tri in options.triangles {
+        if options.normals.is_empty() && index_count % 3 == 0 {
+            for tri in options.indices.chunks(3) {
                 let a = tri[0] as usize;
                 let b = tri[1] as usize;
                 let c = tri[2] as usize;
@@ -86,11 +86,11 @@ impl Mesh {
             uvs,
             normals,
             colors,
-            triangles,
+            indices,
             vertex_buffer,
             index_buffer,
             should_update_vertices: true,
-            should_update_triangles: true,
+            should_update_indices: true,
         })
     }
 
@@ -112,15 +112,9 @@ impl Mesh {
             self.vertex_buffer.update_data(&vertices)?;
             self.should_update_vertices = false;
         }
-        if self.should_update_triangles {
-            let indices = self
-                .triangles
-                .iter()
-                .flatten()
-                .cloned()
-                .collect::<Vec<u32>>();
-            self.index_buffer.update_data(&indices)?;
-            self.should_update_triangles = false;
+        if self.should_update_indices {
+            self.index_buffer.update_data(&self.indices)?;
+            self.should_update_indices = false;
         }
         Ok(())
     }
@@ -145,9 +139,9 @@ impl Mesh {
         self.should_update_vertices = true;
     }
 
-    pub fn set_triangles(&mut self, triangles: &[[u32; 3]]) {
-        self.triangles = triangles.to_owned();
-        self.should_update_triangles = true;
+    pub fn set_indices(&mut self, indices: &[u32]) {
+        self.indices = indices.to_owned();
+        self.should_update_indices = true;
     }
 
     pub fn vertices(&self) -> Vec<Vector3> {
@@ -166,8 +160,8 @@ impl Mesh {
         self.colors.clone()
     }
 
-    pub fn triangles(&self) -> Vec<[u32; 3]> {
-        self.triangles.clone()
+    pub fn indices(&self) -> Vec<u32> {
+        self.indices.clone()
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
@@ -179,6 +173,6 @@ impl Mesh {
     }
 
     pub(crate) fn index_count(&self) -> u32 {
-        self.triangles.len() as u32 * 3
+        self.indices.len() as u32
     }
 }

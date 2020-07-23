@@ -74,7 +74,7 @@ impl Shader {
 
         // configure assembly input state
         let assembly_input_info = vk::PipelineInputAssemblyStateCreateInfo::builder()
-            .topology(vk::PrimitiveTopology::TRIANGLE_LIST)
+            .topology(options.polygon_mode.topology())
             .primitive_restart_enable(false);
 
         // configure viewport state
@@ -107,7 +107,7 @@ impl Shader {
             .depth_bias_enable(false)
             .front_face(vk::FrontFace::CLOCKWISE)
             .cull_mode(options.cull_mode.flag())
-            .polygon_mode(options.polygon_mode.flag())
+            .polygon_mode(options.polygon_mode.polygon())
             .line_width(1.0);
 
         // configure msaa state
@@ -210,7 +210,7 @@ impl Default for ShaderOptions {
     fn default() -> Self {
         Self {
             depth_mode: DepthMode::TestAndWrite,
-            polygon_mode: PolygonMode::Fill,
+            polygon_mode: PolygonMode::FilledTriangles,
             cull_mode: CullMode::Back,
         }
     }

@@ -78,7 +78,7 @@ impl UiRenderer {
             device,
             MeshOptions {
                 vertices: &[Vector3::new(0.0, 0.0, 0.0)],
-                triangles: &[[0, 0, 0]],
+                indices: &[0, 0, 0],
                 ..Default::default()
             },
         )?;
@@ -100,16 +100,14 @@ impl UiRenderer {
         let half_height = draw_data.display_size[1] / 2.0;
 
         // generate mesh data
-        let mut triangles = vec![];
+        let mut indices = vec![];
         let mut vertices = vec![];
         let mut normals = vec![];
         let mut colors = vec![];
         let mut uvs = vec![];
         let mut to = 0;
         for draw_list in draw_data.draw_lists() {
-            for tri in draw_list.idx_buffer().chunks(3) {
-                triangles.push([tri[0] as u32 + to, tri[1] as u32 + to, tri[2] as u32 + to]);
-            }
+            indices.extend(draw_list.idx_buffer().iter().map(|i| *i as u32 + to));
             for vert in draw_list.vtx_buffer() {
                 let vertex =
                     Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
@@ -128,7 +126,7 @@ impl UiRenderer {
         self.mesh.set_normals(&normals);
         self.mesh.set_colors(&colors);
         self.mesh.set_uvs(&uvs);
-        self.mesh.set_triangles(&triangles);
+        self.mesh.set_indices(&indices);
         self.mesh.update_if_needed()?;
 
         // render ui

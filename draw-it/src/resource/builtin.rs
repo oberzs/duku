@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use super::Ref;
 use super::ResourceManager;
+use crate::color::colors;
+use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
@@ -35,11 +37,13 @@ pub(crate) struct Builtins {
     pub(crate) quad_mesh: Ref<Mesh>,
     pub(crate) cube_mesh: Ref<Mesh>,
     pub(crate) sphere_mesh: Ref<Mesh>,
+    pub(crate) grid_mesh: Ref<Mesh>,
     pub(crate) phong_shader: Ref<Shader>,
     pub(crate) sdf_font_shader: Ref<Shader>,
     pub(crate) bitmap_font_shader: Ref<Shader>,
     pub(crate) blit_shader: Ref<Shader>,
     pub(crate) wireframe_shader: Ref<Shader>,
+    pub(crate) line_shader: Ref<Shader>,
     pub(crate) unshaded_shader: Ref<Shader>,
     pub(crate) kenney_font: Ref<Font>,
 }
@@ -77,6 +81,7 @@ impl Builtins {
         let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
         let sphere_mesh = resources.add_mesh(create_sphere(device, 3)?);
+        let grid_mesh = resources.add_mesh(create_grid(device, 50)?);
 
         // shaders
         let phong_shader = resources.add_shader(Shader::new(
@@ -126,8 +131,19 @@ impl Builtins {
             layout,
             include_bytes!("../../shaders/wireframe.shader"),
             ShaderOptions {
-                polygon_mode: PolygonMode::Line,
+                polygon_mode: PolygonMode::LinedTriangles,
                 depth_mode: DepthMode::Disabled,
+                ..Default::default()
+            },
+        )?);
+
+        let line_shader = resources.add_shader(Shader::new(
+            device,
+            framebuffer,
+            layout,
+            include_bytes!("../../shaders/lines.shader"),
+            ShaderOptions {
+                polygon_mode: PolygonMode::Lines,
                 ..Default::default()
             },
         )?);
@@ -155,11 +171,13 @@ impl Builtins {
             quad_mesh,
             cube_mesh,
             sphere_mesh,
+            grid_mesh,
             phong_shader,
             sdf_font_shader,
             bitmap_font_shader,
             blit_shader,
             wireframe_shader,
+            line_shader,
             unshaded_shader,
             kenney_font,
         })
@@ -179,13 +197,13 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let indices = &[0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
         MeshOptions {
             vertices,
-            triangles,
+            indices,
             uvs,
             ..Default::default()
         },
@@ -205,13 +223,13 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let indices = &[0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
         MeshOptions {
             vertices,
-            triangles,
+            indices,
             uvs,
             ..Default::default()
         },
@@ -270,6 +288,52 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
     combine_meshes(device, &[top, bottom, front, back, left, right])
 }
 
+fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
+    let mut vertices = vec![];
+    let mut colors = vec![];
+    let mut indices = vec![];
+    let half = size as i32 / 2;
+
+    for x in -half..=half {
+        let color = if x == 0 {
+            colors::GREEN
+        } else {
+            Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
+        };
+        let vc = vertices.len() as u32;
+        vertices.extend(&[
+            Vector3::new(x as f32, 0.0, half as f32),
+            Vector3::new(x as f32, 0.0, -half as f32),
+        ]);
+        colors.extend(&[color, color]);
+        indices.extend(&[vc, vc + 1]);
+    }
+    for z in -half..=half {
+        let color = if z == 0 {
+            colors::BLUE
+        } else {
+            Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
+        };
+        let vc = vertices.len() as u32;
+        vertices.extend(&[
+            Vector3::new(half as f32, 0.0, z as f32),
+            Vector3::new(-half as f32, 0.0, z as f32),
+        ]);
+        colors.extend(&[color, color]);
+        indices.extend(&[vc, vc + 1]);
+    }
+
+    Mesh::new(
+        device,
+        MeshOptions {
+            vertices: &vertices,
+            indices: &indices,
+            colors: &colors,
+            ..Default::default()
+        },
+    )
+}
+
 fn create_rectangle<V: Into<Vector3>>(
     device: &Arc<Device>,
     p1: V,
@@ -284,13 +348,13 @@ fn create_rectangle<V: Into<Vector3>>(
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let triangles = &[[0, 1, 2], [0, 2, 3]];
+    let indices = &[0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
         MeshOptions {
             vertices,
-            triangles,
+            indices,
             uvs,
             ..Default::default()
         },
@@ -299,7 +363,7 @@ fn create_rectangle<V: Into<Vector3>>(
 
 fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     let mut vertices = vec![];
-    let mut triangles = vec![];
+    let mut indices = vec![];
 
     // 12 icosahedron vertices
     let t = (1.0 + 5.0f32.sqrt()) / 2.0;
@@ -320,46 +384,46 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     vertices.push(Vector3::new(-t, 0.0, 1.0).unit() * 0.5);
 
     // 20 icosahedron triangles
-    triangles.push([0, 11, 5]);
-    triangles.push([0, 5, 1]);
-    triangles.push([0, 1, 7]);
-    triangles.push([0, 7, 10]);
-    triangles.push([0, 10, 11]);
+    indices.extend(&[0, 11, 5]);
+    indices.extend(&[0, 5, 1]);
+    indices.extend(&[0, 1, 7]);
+    indices.extend(&[0, 7, 10]);
+    indices.extend(&[0, 10, 11]);
 
-    triangles.push([1, 5, 9]);
-    triangles.push([5, 11, 4]);
-    triangles.push([11, 10, 2]);
-    triangles.push([10, 7, 6]);
-    triangles.push([7, 1, 8]);
+    indices.extend(&[1, 5, 9]);
+    indices.extend(&[5, 11, 4]);
+    indices.extend(&[11, 10, 2]);
+    indices.extend(&[10, 7, 6]);
+    indices.extend(&[7, 1, 8]);
 
-    triangles.push([3, 9, 4]);
-    triangles.push([3, 4, 2]);
-    triangles.push([3, 2, 6]);
-    triangles.push([3, 6, 8]);
-    triangles.push([3, 8, 9]);
+    indices.extend(&[3, 9, 4]);
+    indices.extend(&[3, 4, 2]);
+    indices.extend(&[3, 2, 6]);
+    indices.extend(&[3, 6, 8]);
+    indices.extend(&[3, 8, 9]);
 
-    triangles.push([4, 9, 5]);
-    triangles.push([2, 4, 11]);
-    triangles.push([6, 2, 10]);
-    triangles.push([8, 6, 7]);
-    triangles.push([9, 8, 1]);
+    indices.extend(&[4, 9, 5]);
+    indices.extend(&[2, 4, 11]);
+    indices.extend(&[6, 2, 10]);
+    indices.extend(&[8, 6, 7]);
+    indices.extend(&[9, 8, 1]);
 
     // refine triangles
     let mut midpoints = HashMap::new();
     for _ in 0..detail_level {
-        let mut new_triangles = vec![];
-        for tri in triangles {
+        let mut new_indices = vec![];
+        for tri in indices.chunks(3) {
             // replace triangle with 4 triangles
             let a = get_middle_point(&mut vertices, tri[0], tri[1], &mut midpoints);
             let b = get_middle_point(&mut vertices, tri[1], tri[2], &mut midpoints);
             let c = get_middle_point(&mut vertices, tri[2], tri[0], &mut midpoints);
 
-            new_triangles.push([tri[0], a, c]);
-            new_triangles.push([tri[1], b, a]);
-            new_triangles.push([tri[2], c, b]);
-            new_triangles.push([a, b, c]);
+            new_indices.extend(&[tri[0], a, c]);
+            new_indices.extend(&[tri[1], b, a]);
+            new_indices.extend(&[tri[2], c, b]);
+            new_indices.extend(&[a, b, c]);
         }
-        triangles = new_triangles;
+        indices = new_indices;
     }
 
     let mut uvs = vec![];
@@ -373,7 +437,7 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
         device,
         MeshOptions {
             vertices: &vertices,
-            triangles: &triangles,
+            indices: &indices,
             uvs: &uvs,
             ..Default::default()
         },
@@ -404,17 +468,13 @@ fn get_middle_point(
 
 fn combine_meshes(device: &Arc<Device>, meshes: &[Mesh]) -> Result<Mesh> {
     let mut offset = 0;
-    let mut triangles = vec![];
+    let mut indices = vec![];
     let mut vertices = vec![];
     let mut normals = vec![];
     let mut uvs = vec![];
     let mut colors = vec![];
     for mesh in meshes {
-        triangles.extend(
-            mesh.triangles()
-                .iter()
-                .map(|t| [t[0] + offset, t[1] + offset, t[2] + offset]),
-        );
+        indices.extend(mesh.indices().iter().map(|t| t + offset));
         vertices.extend(mesh.vertices());
         normals.extend(mesh.normals());
         uvs.extend(mesh.uvs());
@@ -429,7 +489,7 @@ fn combine_meshes(device: &Arc<Device>, meshes: &[Mesh]) -> Result<Mesh> {
             normals: &normals,
             uvs: &uvs,
             colors: &colors,
-            triangles: &triangles,
+            indices: &indices,
         },
     )
 }

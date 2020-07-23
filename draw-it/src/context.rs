@@ -358,18 +358,14 @@ impl Context {
 
     pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Ref<Mesh> {
         let mut offset = 0;
-        let mut triangles = vec![];
+        let mut indices = vec![];
         let mut vertices = vec![];
         let mut normals = vec![];
         let mut uvs = vec![];
         let mut colors = vec![];
         for mesh in meshes {
             mesh.with(|m| {
-                triangles.extend(
-                    m.triangles()
-                        .iter()
-                        .map(|t| [t[0] + offset, t[1] + offset, t[2] + offset]),
-                );
+                indices.extend(m.indices().iter().map(|i| i + offset));
                 vertices.extend(m.vertices());
                 normals.extend(m.normals());
                 uvs.extend(m.uvs());
@@ -385,7 +381,7 @@ impl Context {
                 normals: &normals,
                 uvs: &uvs,
                 colors: &colors,
-                triangles: &triangles,
+                indices: &indices,
             }
         ));
         self.resources.add_mesh(mesh)

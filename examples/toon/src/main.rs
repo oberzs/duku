@@ -4,8 +4,6 @@
 // Toon shader example
 
 use draw_it::camera::Controller;
-use draw_it::color::colors;
-use draw_it::math::Transform;
 use draw_it::math::Vector3;
 use draw_it::ui;
 use draw_it::window::Window;
@@ -14,12 +12,10 @@ use draw_it::Context;
 use draw_it::ContextOptions;
 
 fn main() {
-    let (width, height) = (720, 640);
-
     let mut window = Window::new(WindowOptions {
         title: "Draw-it example: Toon",
-        width,
-        height,
+        width: 720,
+        height: 640,
         ..Default::default()
     });
     let mut context = Context::from_window(
@@ -29,10 +25,6 @@ fn main() {
             ..Default::default()
         },
     );
-
-    let texture = context
-        .create_texture_from_file("examples/toon/textures/texture_09.png")
-        .unwrap();
 
     let shader = context
         .create_shader_from_file_watch("examples/toon/shaders/toon.shader", Default::default())
@@ -47,11 +39,6 @@ fn main() {
 
     let mut controller = Controller::default();
 
-    let floor_transform = Transform {
-        scale: Vector3::new(10.0, 0.2, 10.0),
-        ..Default::default()
-    };
-
     window.main_loop(|events, ui| {
         controller.update(&mut context.main_camera, events);
 
@@ -59,21 +46,14 @@ fn main() {
         context.draw_ui(ui);
 
         context.draw_on_window(|target| {
-            target.set_clear(colors::SKY_BLUE);
+            target.set_clear([128, 128, 128]);
 
-            // floor
-            target.draw_cube(floor_transform);
+            // grid
+            target.draw_grid();
 
             // toon cube and sphere
             target.set_shader(&shader);
-            target.draw_cube([-3.0, 0.6, 0.0]);
-            target.draw_sphere([-1.0, 1.0, 0.0]);
-            target.set_shader_phong();
-
-            // textured cube and sphere
-            target.set_albedo(&texture);
-            target.draw_cube([1.0, 1.0, 0.0]);
-            target.draw_sphere([3.0, 1.0, 0.0]);
+            target.draw_sphere([0.0, 1.0, 0.0]);
         });
     });
 }

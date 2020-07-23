@@ -145,7 +145,7 @@ fn create_font(
 
     let mut vertices = vec![];
     let mut uvs = vec![];
-    let mut triangles = vec![];
+    let mut indices = vec![];
     let mut offset = 0;
 
     let norm_margin = margin as f32 / font_size as f32;
@@ -176,7 +176,7 @@ fn create_font(
             Vector2::new(u_max, v_max),
             Vector2::new(u_min, v_max),
         ]);
-        triangles.extend(&[[o, o + 1, o + 2], [o, o + 2, o + 3]]);
+        indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
 
         char_data.insert(*c, CharData { advance, offset });
         offset += 6;
@@ -186,7 +186,7 @@ fn create_font(
         device,
         MeshOptions {
             vertices: &vertices,
-            triangles: &triangles,
+            indices: &indices,
             uvs: &uvs,
             ..Default::default()
         },

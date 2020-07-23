@@ -96,7 +96,7 @@ impl ForwardRenderer {
         target: Target,
     ) -> Result<RenderStats> {
         let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, 1.0);
+        self.device.cmd_set_line_width(cmd, target.line_width);
 
         let current = self.device.current_frame();
 

@@ -28,6 +28,7 @@ pub struct Target {
     pub(crate) clear: Color,
     pub(crate) do_shadow_mapping: bool,
     pub(crate) cascade_splits: [f32; 4],
+    pub(crate) line_width: f32,
     pub(crate) main_light: Light,
     pub(crate) builtins: Builtins,
 
@@ -107,6 +108,7 @@ impl Target {
             wireframes: false,
             do_shadow_mapping: false,
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
+            line_width: 1.0,
             builtins: builtins.clone(),
         })
     }
@@ -201,6 +203,19 @@ impl Target {
         self.current_albedo = temp_albedo;
     }
 
+    pub fn draw_grid(&mut self) {
+        let temp_shader = self.current_shader.clone();
+        let temp_shadows = self.cast_shadows;
+        self.current_shader = self.builtins.line_shader.clone();
+        self.cast_shadows = false;
+
+        let mesh = self.builtins.grid_mesh.clone();
+        self.draw(&mesh, [0.0, 0.0, 0.0]);
+
+        self.current_shader = temp_shader;
+        self.cast_shadows = temp_shadows;
+    }
+
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
         let (shader, sampler_index) = if self
             .current_font
@@ -285,6 +300,10 @@ impl Target {
         self.current_sampler = index;
     }
 
+    pub fn set_line_width(&mut self, width: f32) {
+        self.line_width = width;
+    }
+
     pub fn set_font_size(&mut self, size: u32) {
         self.current_font_size = size;
     }
@@ -295,6 +314,10 @@ impl Target {
 
     pub fn set_shader_phong(&mut self) {
         self.current_shader = self.builtins.phong_shader.clone();
+    }
+
+    pub fn set_shader_lines(&mut self) {
+        self.current_shader = self.builtins.line_shader.clone();
     }
 
     pub fn set_albedo_white(&mut self) {

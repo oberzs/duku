@@ -14,8 +14,9 @@ pub enum CullMode {
 
 #[derive(Debug, Copy, Clone)]
 pub enum PolygonMode {
-    Line,
-    Fill,
+    LinedTriangles,
+    FilledTriangles,
+    Lines,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -55,10 +56,19 @@ impl CullMode {
 }
 
 impl PolygonMode {
-    pub(crate) fn flag(&self) -> vk::PolygonMode {
+    pub(crate) fn polygon(&self) -> vk::PolygonMode {
         match *self {
-            Self::Fill => vk::PolygonMode::FILL,
-            Self::Line => vk::PolygonMode::LINE,
+            Self::FilledTriangles => vk::PolygonMode::FILL,
+            Self::LinedTriangles => vk::PolygonMode::LINE,
+            Self::Lines => vk::PolygonMode::LINE,
+        }
+    }
+
+    pub(crate) fn topology(&self) -> vk::PrimitiveTopology {
+        match *self {
+            Self::FilledTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
+            Self::LinedTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
+            Self::Lines => vk::PrimitiveTopology::LINE_LIST,
         }
     }
 }
