@@ -91,7 +91,7 @@ impl ForwardRenderer {
 
     pub(crate) fn draw(
         &mut self,
-        framebuffer: &Framebuffer,
+        framebuffer: &mut Framebuffer,
         shader_layout: &ShaderLayout,
         target: Target,
     ) -> Result<RenderStats> {

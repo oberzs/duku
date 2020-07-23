@@ -12,7 +12,6 @@ use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
-use super::LayoutChangeOptions;
 use crate::camera::Camera;
 use crate::camera::CameraType;
 use crate::device::Device;
@@ -183,27 +182,10 @@ impl Framebuffer {
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
-        device.do_commands(|cmd| {
-            device.cmd_change_image_layout(
-                cmd,
-                &images[stored_index],
-                LayoutChangeOptions {
-                    new_layout: match stored_format {
-                        Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
-                        _ => ImageLayout::ShaderColor,
-                    },
-                    ..Default::default()
-                },
-            );
-            device.cmd_change_image_layout(
-                cmd,
-                &texture_image,
-                LayoutChangeOptions {
-                    new_layout: ImageLayout::ShaderColor,
-                    ..Default::default()
-                },
-            );
-            Ok(())
+        texture_image.change_layout(ImageLayout::ShaderColor)?;
+        images[stored_index].change_layout(match stored_format {
+            Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+            _ => ImageLayout::ShaderColor,
         })?;
 
         Ok(Self {
@@ -280,27 +262,10 @@ impl Framebuffer {
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
-        self.device.do_commands(|cmd| {
-            self.device.cmd_change_image_layout(
-                cmd,
-                &images[stored_index],
-                LayoutChangeOptions {
-                    new_layout: match stored_format {
-                        Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
-                        _ => ImageLayout::ShaderColor,
-                    },
-                    ..Default::default()
-                },
-            );
-            self.device.cmd_change_image_layout(
-                cmd,
-                &texture_image,
-                LayoutChangeOptions {
-                    new_layout: ImageLayout::ShaderColor,
-                    ..Default::default()
-                },
-            );
-            Ok(())
+        texture_image.change_layout(ImageLayout::ShaderColor)?;
+        images[stored_index].change_layout(match stored_format {
+            Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+            _ => ImageLayout::ShaderColor,
         })?;
 
         // reassign new values
@@ -318,29 +283,13 @@ impl Framebuffer {
         Ok(())
     }
 
-    pub(crate) fn blit_to_texture(&self, cmd: vk::CommandBuffer) {
-        if let Some(texture_image) = &self.texture_image {
-            let stored_image = &self.images[self.stored_index];
+    pub(crate) fn blit_to_texture(&mut self, cmd: vk::CommandBuffer) {
+        if let Some(texture_image) = &mut self.texture_image {
+            let stored_image = &mut self.images[self.stored_index];
 
             // prepare images for transfer
-            self.device.cmd_change_image_layout(
-                cmd,
-                stored_image,
-                LayoutChangeOptions {
-                    old_layout: ImageLayout::ShaderColor,
-                    new_layout: ImageLayout::TransferSrc,
-                    ..Default::default()
-                },
-            );
-            self.device.cmd_change_image_layout(
-                cmd,
-                texture_image,
-                LayoutChangeOptions {
-                    old_layout: ImageLayout::ShaderColor,
-                    new_layout: ImageLayout::TransferDst,
-                    ..Default::default()
-                },
-            );
+            stored_image.change_layout_sync(cmd, ImageLayout::TransferSrc);
+            texture_image.change_layout_sync(cmd, ImageLayout::TransferDst);
 
             // blit to shader image
             let offsets = [
@@ -374,24 +323,8 @@ impl Framebuffer {
             );
 
             // set images back to initial state
-            self.device.cmd_change_image_layout(
-                cmd,
-                stored_image,
-                LayoutChangeOptions {
-                    old_layout: ImageLayout::TransferSrc,
-                    new_layout: ImageLayout::ShaderColor,
-                    ..Default::default()
-                },
-            );
-            self.device.cmd_change_image_layout(
-                cmd,
-                texture_image,
-                LayoutChangeOptions {
-                    old_layout: ImageLayout::TransferDst,
-                    new_layout: ImageLayout::ShaderColor,
-                    ..Default::default()
-                },
-            );
+            stored_image.change_layout_sync(cmd, ImageLayout::ShaderColor);
+            texture_image.change_layout_sync(cmd, ImageLayout::ShaderColor);
         }
     }
 

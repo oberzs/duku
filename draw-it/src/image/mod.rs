@@ -15,7 +15,6 @@ pub(crate) use properties::ImageFormat;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageMips;
 pub(crate) use properties::ImageUsage;
-pub(crate) use properties::LayoutChangeOptions;
 pub(crate) use properties::Msaa;
 pub(crate) use texture::TextureOptions;
 

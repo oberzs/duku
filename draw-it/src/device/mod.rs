@@ -30,7 +30,6 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
-use crate::image::LayoutChangeOptions;
 use crate::image::Msaa;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
@@ -850,12 +849,15 @@ impl Device {
         &self,
         buffer: vk::CommandBuffer,
         image: &ImageMemory,
-        options: LayoutChangeOptions,
+        old_layout: ImageLayout,
+        new_layout: ImageLayout,
+        base_mip: u32,
+        mip_count: u32,
     ) {
-        let src_access = options.old_layout.access_flag();
-        let dst_access = options.new_layout.access_flag();
-        let src_stage = options.old_layout.stage_flag();
-        let dst_stage = options.new_layout.stage_flag();
+        let src_access = old_layout.access_flag();
+        let dst_access = new_layout.access_flag();
+        let src_stage = old_layout.stage_flag();
+        let dst_stage = new_layout.stage_flag();
         let aspect_mask = if image.has_depth_format() {
             vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
         } else {
@@ -865,17 +867,17 @@ impl Device {
         let subresource = vk::ImageSubresourceRange::builder()
             .aspect_mask(aspect_mask)
             .base_array_layer(0)
-            .base_mip_level(options.base_mip)
+            .base_mip_level(base_mip)
             .layer_count(1)
-            .level_count(options.mip_count)
+            .level_count(mip_count)
             .build();
         let barrier = [vk::ImageMemoryBarrier::builder()
             .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
             .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
             .subresource_range(subresource)
             .image(image.handle())
-            .old_layout(options.old_layout.flag())
-            .new_layout(options.new_layout.flag())
+            .old_layout(old_layout.flag())
+            .new_layout(new_layout.flag())
             .src_access_mask(src_access)
             .dst_access_mask(dst_access)
             .build()];

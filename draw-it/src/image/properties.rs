@@ -46,13 +46,6 @@ pub(crate) enum ImageMips {
     One,
 }
 
-pub(crate) struct LayoutChangeOptions {
-    pub(crate) old_layout: ImageLayout,
-    pub(crate) new_layout: ImageLayout,
-    pub(crate) base_mip: u32,
-    pub(crate) mip_count: u32,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Msaa {
     X4,
@@ -168,17 +161,6 @@ impl Msaa {
             Self::X4 => vk::SampleCountFlags::TYPE_4,
             Self::X8 => vk::SampleCountFlags::TYPE_8,
             Self::X16 => vk::SampleCountFlags::TYPE_16,
-        }
-    }
-}
-
-impl Default for LayoutChangeOptions {
-    fn default() -> Self {
-        Self {
-            old_layout: ImageLayout::Undefined,
-            new_layout: ImageLayout::Undefined,
-            base_mip: 0,
-            mip_count: 1,
         }
     }
 }

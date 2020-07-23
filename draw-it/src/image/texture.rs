@@ -11,7 +11,6 @@ use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageMips;
 use super::ImageUsage;
-use super::LayoutChangeOptions;
 use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
@@ -65,21 +64,8 @@ impl Texture {
             },
         )?;
 
-        // prepare image for data copy
-        device.do_commands(|cmd| {
-            device.cmd_change_image_layout(
-                cmd,
-                &memory,
-                LayoutChangeOptions {
-                    base_mip: 0,
-                    mip_count: memory.mip_count(),
-                    new_layout: ImageLayout::TransferDst,
-                    ..Default::default()
-                },
-            );
-            Ok(())
-        })?;
-
+        // copy image from staging memory
+        memory.change_layout(ImageLayout::TransferDst)?;
         memory.copy_from_memory(&staging_memory)?;
         memory.generate_mipmaps()?;
 

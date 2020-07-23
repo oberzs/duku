@@ -11,7 +11,6 @@ use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageMips;
 use super::ImageUsage;
-use super::LayoutChangeOptions;
 use super::Msaa;
 use crate::buffer::BufferMemory;
 use crate::device::Device;
@@ -25,6 +24,7 @@ pub(crate) struct ImageMemory {
     height: u32,
     mip_count: u32,
     format: ImageFormat,
+    layout: ImageLayout,
     device: Arc<Device>,
 }
 
@@ -52,6 +52,9 @@ impl ImageMemory {
             }
         };
 
+        // initial layout
+        let layout = ImageLayout::Undefined;
+
         // allocate memory if a handle was not supplied
         // swapchain images already have memory allocated
         let (handle, memory) = match options.handle {
@@ -69,7 +72,7 @@ impl ImageMemory {
                     .array_layers(1)
                     .format(options.format.flag())
                     .tiling(vk::ImageTiling::OPTIMAL)
-                    .initial_layout(ImageLayout::Undefined.flag())
+                    .initial_layout(layout.flag())
                     .usage(ImageUsage::combine(options.usage))
                     .sharing_mode(vk::SharingMode::EXCLUSIVE)
                     .samples(options.msaa.flag());
@@ -87,6 +90,7 @@ impl ImageMemory {
             views: vec![],
             handle,
             mip_count,
+            layout,
             memory,
         })
     }
@@ -152,6 +156,28 @@ impl ImageMemory {
         })
     }
 
+    pub(crate) fn change_layout(&mut self, new_layout: ImageLayout) -> Result<()> {
+        self.device.do_commands(|cmd| {
+            self.device.cmd_change_image_layout(
+                cmd,
+                self,
+                self.layout,
+                new_layout,
+                0,
+                self.mip_count,
+            );
+            Ok(())
+        })?;
+        self.layout = new_layout;
+        Ok(())
+    }
+
+    pub(crate) fn change_layout_sync(&mut self, cmd: vk::CommandBuffer, new_layout: ImageLayout) {
+        self.device
+            .cmd_change_image_layout(cmd, self, self.layout, new_layout, 0, self.mip_count);
+        self.layout = new_layout;
+    }
+
     pub(crate) fn generate_mipmaps(&self) -> Result<()> {
         let mut mip_width = self.width as i32;
         let mut mip_height = self.height as i32;
@@ -161,12 +187,10 @@ impl ImageMemory {
                 self.device.cmd_change_image_layout(
                     cmd,
                     self,
-                    LayoutChangeOptions {
-                        base_mip: i - 1,
-                        mip_count: 1,
-                        old_layout: ImageLayout::TransferDst,
-                        new_layout: ImageLayout::TransferSrc,
-                    },
+                    ImageLayout::TransferDst,
+                    ImageLayout::TransferSrc,
+                    i - 1,
+                    1,
                 );
 
                 let src_offsets = [
@@ -214,23 +238,19 @@ impl ImageMemory {
                 self.device.cmd_change_image_layout(
                     cmd,
                     self,
-                    LayoutChangeOptions {
-                        base_mip: i - 1,
-                        mip_count: 1,
-                        old_layout: ImageLayout::TransferSrc,
-                        new_layout: ImageLayout::ShaderColor,
-                    },
+                    ImageLayout::TransferSrc,
+                    ImageLayout::ShaderColor,
+                    i - 1,
+                    1,
                 );
             }
             self.device.cmd_change_image_layout(
                 cmd,
                 self,
-                LayoutChangeOptions {
-                    base_mip: self.mip_count - 1,
-                    mip_count: 1,
-                    old_layout: ImageLayout::TransferDst,
-                    new_layout: ImageLayout::ShaderColor,
-                },
+                ImageLayout::TransferDst,
+                ImageLayout::ShaderColor,
+                self.mip_count - 1,
+                1,
             );
             Ok(())
         })
@@ -242,10 +262,6 @@ impl ImageMemory {
 
     pub(crate) fn handle(&self) -> vk::Image {
         self.handle
-    }
-
-    pub(crate) fn mip_count(&self) -> u32 {
-        self.mip_count
     }
 
     pub(crate) fn has_depth_format(&self) -> bool {
