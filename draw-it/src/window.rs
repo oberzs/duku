@@ -14,6 +14,7 @@ use winit::event::DeviceEvent;
 use winit::event::ElementState;
 use winit::event::Event;
 use winit::event::KeyboardInput;
+use winit::event::MouseScrollDelta;
 pub use winit::event::VirtualKeyCode as Key;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
@@ -54,6 +55,7 @@ pub struct WindowOptions<'title> {
 pub struct Events {
     mouse_position: (u32, u32),
     mouse_delta: (f32, f32),
+    scroll_delta: (f32, f32),
     mouse_grab: bool,
     keys: Keys,
     delta_time: f32,
@@ -143,6 +145,7 @@ impl Window {
         let mut events = Events {
             mouse_position: (0, 0),
             mouse_delta: (0.0, 0.0),
+            scroll_delta: (0.0, 0.0),
             mouse_grab: false,
             keys: Keys::default(),
             delta_time: 0.0,
@@ -192,11 +195,17 @@ impl Window {
                 },
                 Event::DeviceEvent {
                     event: dev_event, ..
-                } => {
-                    if let DeviceEvent::MouseMotion { delta, .. } = dev_event {
+                } => match dev_event {
+                    DeviceEvent::MouseMotion { delta } => {
                         events.mouse_delta = (delta.0 as f32, delta.1 as f32);
                     }
-                }
+                    DeviceEvent::MouseWheel { delta } => {
+                        if let MouseScrollDelta::LineDelta(x, y) = delta {
+                            events.scroll_delta = (x, y);
+                        }
+                    }
+                    _ => (),
+                },
                 Event::MainEventsCleared => {
                     #[cfg(feature = "ui")]
                     platform
@@ -328,6 +337,10 @@ impl Events {
 
     pub fn mouse_delta(&self) -> (f32, f32) {
         self.mouse_delta
+    }
+
+    pub fn scroll_delta(&self) -> (f32, f32) {
+        self.scroll_delta
     }
 
     pub fn resized(&self) -> Option<(u32, u32)> {

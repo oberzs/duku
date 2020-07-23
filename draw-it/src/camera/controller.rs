@@ -11,18 +11,16 @@ use crate::math::Vector3;
 use crate::window::Events;
 use crate::window::Key;
 
-#[derive(Default)]
 pub struct Controller {
     camera_angle: f32,
     lockon_point: Vector3,
     lockon: bool,
+    move_speed: f32,
 }
 
 impl Controller {
     pub fn update(&mut self, camera: &mut Camera, events: &mut Events) {
-        let move_speed = 5.0;
         let rotate_speed = 70.0;
-        let speed_mod = 1.0;
 
         if events.is_key_typed(Key::F11) {
             events.set_fullscreen(!events.fullscreen());
@@ -37,15 +35,14 @@ impl Controller {
             self.lockon = !self.lockon;
         }
 
-        // TODO: change speed to scroll wheel
-        // if events.is_key_pressed(Key::LShift) {
-        // speed_mod = 5.0;
-        // }
+        let (_, scroll_y) = events.scroll_delta();
+        self.move_speed += scroll_y * 0.01;
+        self.move_speed = f32::max(f32::min(self.move_speed, 15.0), 1.0);
 
         let transform = &mut camera.transform;
 
         // camera movement
-        let final_move_speed = move_speed * speed_mod * events.delta_time();
+        let final_move_speed = self.move_speed * events.delta_time();
 
         if events.is_key_pressed(Key::W) {
             transform.move_forward(final_move_speed);
@@ -95,6 +92,17 @@ impl Controller {
 
         if self.lockon {
             transform.look_at(self.lockon_point, Vector3::up());
+        }
+    }
+}
+
+impl Default for Controller {
+    fn default() -> Self {
+        Self {
+            camera_angle: 0.0,
+            lockon_point: Vector3::default(),
+            lockon: false,
+            move_speed: 5.0,
         }
     }
 }
