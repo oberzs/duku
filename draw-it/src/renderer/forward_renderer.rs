@@ -32,7 +32,7 @@ use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
 
 pub(crate) struct ForwardRenderer {
-    shadow_frames: Vec<ShadowMapSet>,
+    shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
     shadow_shader: Shader,
     start_time: Instant,
     pcf: Pcf,
@@ -64,9 +64,10 @@ impl ForwardRenderer {
     ) -> Result<Self> {
         profile_scope!("new");
 
-        let shadow_frames = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size))
-            .collect::<Result<Vec<_>>>()?;
+        let shadow_frames = [
+            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
+            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
+        ];
 
         let shadow_shader = Shader::new(
             device,

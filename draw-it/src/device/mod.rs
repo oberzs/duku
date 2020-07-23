@@ -51,17 +51,17 @@ pub(crate) struct Device {
     handle: VkDevice,
     device_properties: DeviceProperties,
     swapchain_ext: SwapchainExt,
-    command_pools: Vec<vk::CommandPool>,
-    command_buffers: Mutex<Vec<vk::CommandBuffer>>,
+    command_pools: [vk::CommandPool; IN_FLIGHT_FRAME_COUNT],
+    command_buffers: Mutex<[vk::CommandBuffer; IN_FLIGHT_FRAME_COUNT]>,
     graphics_queue: (u32, vk::Queue),
     present_queue: (u32, vk::Queue),
-    sync_acquire_image: Vec<vk::Semaphore>,
-    sync_release_image: Vec<vk::Semaphore>,
-    sync_queue_submit: Vec<vk::Fence>,
+    sync_acquire_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
+    sync_release_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
+    sync_queue_submit: [vk::Fence; IN_FLIGHT_FRAME_COUNT],
     current_frame: AtomicUsize,
-    destroyed_pipelines: Mutex<Vec<Vec<vk::Pipeline>>>,
-    destroyed_buffers: Mutex<Vec<Vec<(vk::Buffer, vk::DeviceMemory)>>>,
-    destroyed_images: Mutex<Vec<Vec<(vk::Image, vk::DeviceMemory)>>>,
+    destroyed_pipelines: Mutex<[Vec<vk::Pipeline>; IN_FLIGHT_FRAME_COUNT]>,
+    destroyed_buffers: Mutex<[Vec<(vk::Buffer, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
+    destroyed_images: Mutex<[Vec<(vk::Image, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
 }
 
 impl Device {
@@ -117,47 +117,41 @@ impl Device {
         let present_queue = unsafe { handle.get_device_queue(p_index, 0) };
 
         // create synchronization objects
-        let mut sync_acquire_image = vec![];
-        let mut sync_release_image = vec![];
-        let mut sync_queue_submit = vec![];
-        for _ in 0..IN_FLIGHT_FRAME_COUNT {
-            sync_acquire_image.push(semaphore::create(&handle)?);
-            sync_release_image.push(semaphore::create(&handle)?);
-            sync_queue_submit.push(fence::create(&handle)?);
-        }
+        let sync_acquire_image = [semaphore::create(&handle)?, semaphore::create(&handle)?];
+        let sync_release_image = [semaphore::create(&handle)?, semaphore::create(&handle)?];
+        let sync_queue_submit = [fence::create(&handle)?, fence::create(&handle)?];
 
         // create command pools and buffers
-        let mut command_pools = vec![];
-        let mut command_buffers = vec![];
-        for _ in 0..IN_FLIGHT_FRAME_COUNT {
-            let pool_info = vk::CommandPoolCreateInfo::builder()
-                .flags(vk::CommandPoolCreateFlags::TRANSIENT)
-                .queue_family_index(g_index);
-            let pool = unsafe { handle.create_command_pool(&pool_info, None)? };
-
-            let buffer_info = vk::CommandBufferAllocateInfo::builder()
-                .command_pool(pool)
-                .level(vk::CommandBufferLevel::PRIMARY)
-                .command_buffer_count(1);
-            let buffer = unsafe { handle.allocate_command_buffers(&buffer_info)?[0] };
-
-            command_pools.push(pool);
-            command_buffers.push(buffer);
-        }
+        let pool_info = vk::CommandPoolCreateInfo::builder()
+            .flags(vk::CommandPoolCreateFlags::TRANSIENT)
+            .queue_family_index(g_index);
+        let command_pools = unsafe {
+            [
+                handle.create_command_pool(&pool_info, None)?,
+                handle.create_command_pool(&pool_info, None)?,
+            ]
+        };
+        let command_buffers = unsafe {
+            [
+                handle.allocate_command_buffers(
+                    &vk::CommandBufferAllocateInfo::builder()
+                        .command_pool(command_pools[0])
+                        .level(vk::CommandBufferLevel::PRIMARY)
+                        .command_buffer_count(1),
+                )?[0],
+                handle.allocate_command_buffers(
+                    &vk::CommandBufferAllocateInfo::builder()
+                        .command_pool(command_pools[1])
+                        .level(vk::CommandBufferLevel::PRIMARY)
+                        .command_buffer_count(1),
+                )?[0],
+            ]
+        };
 
         // create destroyed resource storage
-        let mut destroyed_pipelines = vec![];
-        for _ in 0..IN_FLIGHT_FRAME_COUNT {
-            destroyed_pipelines.push(vec![]);
-        }
-        let mut destroyed_buffers = vec![];
-        for _ in 0..IN_FLIGHT_FRAME_COUNT {
-            destroyed_buffers.push(vec![]);
-        }
-        let mut destroyed_images = vec![];
-        for _ in 0..IN_FLIGHT_FRAME_COUNT {
-            destroyed_images.push(vec![]);
-        }
+        let destroyed_pipelines = [vec![], vec![]];
+        let destroyed_buffers = [vec![], vec![]];
+        let destroyed_images = [vec![], vec![]];
 
         Ok(Self {
             handle,
