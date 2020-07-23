@@ -17,6 +17,7 @@ pub(crate) struct WorldData {
     pub(crate) time: f32,
     pub(crate) light_matrices: [Matrix4; 4],
     pub(crate) cascade_splits: [f32; 4],
+    pub(crate) pcf: f32,
 }
 
 #[derive(Default, Copy, Clone)]

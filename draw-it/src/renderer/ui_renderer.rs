@@ -144,6 +144,7 @@ impl UiRenderer {
                     time: 0.0,
                     cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
+                    pcf: 0.0,
                 })
                 .expect("bad update");
 

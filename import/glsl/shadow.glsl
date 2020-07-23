@@ -9,10 +9,10 @@ float tex_sm(int index, vec3 uvc) {
     return texture(sampler2DShadow(shadow_maps[index], sampler_cm), uvc);
 }
 
-float tex_pcfsm(int index, vec3 uvc, float softer) {
+float tex_pcfsm(int index, vec3 uvc) {
     float depth = 0.0;
     vec2 texel = 1.0 / textureSize(sampler2DShadow(shadow_maps[index], sampler_cm), 0);
-    float softness = 0.5 + softer;
+    float softness = 0.5 + world.pcf;
     for (float x = -softness; x <= softness; x += 1.0) {
         for (float y = -softness; y <= softness; y += 1.0) {
             vec2 offset = vec2(x, y) * texel;
@@ -21,6 +21,14 @@ float tex_pcfsm(int index, vec3 uvc, float softer) {
     }
     depth /= 16.0;
     return pow(depth, 2.2);
+}
+
+float tex_shadow(int index, vec3 uvc) {
+    if (world.pcf == 2.0) {
+        return tex_sm(index, uvc);
+    } else {
+        return tex_pcfsm(index, uvc);
+    }
 }
 
 vec3 tex_coord(int index) {
@@ -57,13 +65,13 @@ float shadow(Light light) {
         // blend between side-by-side cascades
         float blend = smoothstep(-blend_margin, 0.0, depth - world.cascade_splits[cascade]);
         if (blend == 0.0) {
-            return tex_pcfsm(cascade, coord);
+            return tex_shadow(cascade, coord);
         } else {
             int next_cascade = min(3, cascade + 1);
             vec3 next_coord = tex_coord(next_cascade);
 
-            float shadow = tex_pcfsm(cascade, coord);
-            float next_shadow = tex_pcfsm(next_cascade, next_coord);
+            float shadow = tex_shadow(cascade, coord);
+            float next_shadow = tex_shadow(next_cascade, next_coord);
 
             return mix(shadow, next_shadow, blend);
         }

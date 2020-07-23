@@ -12,7 +12,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
-use crate::image::ImageSamples;
+use crate::image::Msaa;
 
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
@@ -41,10 +41,10 @@ impl RenderPass {
 
         // add depth attachment if needed
         if depth {
-            let samples = if multisampled {
-                device.samples()
+            let msaa = if multisampled {
+                device.msaa()
             } else {
-                ImageSamples(1)
+                Msaa::Disabled
             };
             let layout = if attachment_formats.is_empty() {
                 ImageLayout::ShaderDepth
@@ -57,7 +57,7 @@ impl RenderPass {
                 store: attachment_formats.is_empty(),
                 index: attachments.len() as u32,
                 clear: true,
-                samples,
+                msaa,
                 layout,
             });
 
@@ -79,7 +79,7 @@ impl RenderPass {
 
             let a = Attachment::new(AttachmentOptions {
                 format: *format,
-                samples: ImageSamples(1),
+                msaa: Msaa::Disabled,
                 clear: !multisampled,
                 store: true,
                 index: attachments.len() as u32,
@@ -99,7 +99,7 @@ impl RenderPass {
                 let a_msaa = Attachment::new(AttachmentOptions {
                     format: *format,
                     layout: ImageLayout::Color,
-                    samples: device.samples(),
+                    msaa: device.msaa(),
                     clear: true,
                     store: false,
                     index: attachments.len() as u32,

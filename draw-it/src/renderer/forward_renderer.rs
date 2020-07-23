@@ -35,7 +35,15 @@ pub(crate) struct ForwardRenderer {
     shadow_frames: Vec<ShadowMapSet>,
     shadow_shader: Shader,
     start_time: Instant,
+    pcf: Pcf,
     device: Arc<Device>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Pcf {
+    X16,
+    X4,
+    Disabled,
 }
 
 struct ShadowMapSet {
@@ -51,11 +59,13 @@ impl ForwardRenderer {
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &ImageUniform,
+        shadow_map_size: u32,
+        pcf: Pcf,
     ) -> Result<Self> {
         profile_scope!("new");
 
         let shadow_frames = (0..IN_FLIGHT_FRAME_COUNT)
-            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, 2048))
+            .map(|_| ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size))
             .collect::<Result<Vec<_>>>()?;
 
         let shadow_shader = Shader::new(
@@ -74,6 +84,7 @@ impl ForwardRenderer {
             device: Arc::clone(device),
             shadow_frames,
             shadow_shader,
+            pcf,
         })
     }
 
@@ -101,6 +112,12 @@ impl ForwardRenderer {
         self.device
             .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
 
+        let pcf = match self.pcf {
+            Pcf::Disabled => 2.0,
+            Pcf::X4 => 0.0,
+            Pcf::X16 => 1.0,
+        };
+
         // update world uniform
         framebuffer.world_uniform().update(WorldData {
             lights: target.lights(),
@@ -109,6 +126,7 @@ impl ForwardRenderer {
             time: self.start_time.elapsed().as_secs_f32(),
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
+            pcf,
         })?;
 
         // do render pass
@@ -274,6 +292,7 @@ impl ForwardRenderer {
                 time: self.start_time.elapsed().as_secs_f32(),
                 cascade_splits: [0.0; 4],
                 light_matrices: [Matrix4::identity(); 4],
+                pcf: 0.0,
             })?;
 
             // do render pass

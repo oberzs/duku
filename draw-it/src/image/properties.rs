@@ -54,7 +54,12 @@ pub(crate) struct LayoutChangeOptions {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) struct ImageSamples(pub(crate) u8);
+pub enum Msaa {
+    X4,
+    X8,
+    X16,
+    Disabled,
+}
 
 impl ImageUsage {
     pub(crate) fn combine(usages: &[Self]) -> vk::ImageUsageFlags {
@@ -156,17 +161,13 @@ impl ImageLayout {
     }
 }
 
-impl ImageSamples {
+impl Msaa {
     pub(crate) fn flag(&self) -> vk::SampleCountFlags {
-        match self.0 {
-            1 => vk::SampleCountFlags::TYPE_1,
-            2 => vk::SampleCountFlags::TYPE_2,
-            4 => vk::SampleCountFlags::TYPE_4,
-            8 => vk::SampleCountFlags::TYPE_8,
-            16 => vk::SampleCountFlags::TYPE_16,
-            32 => vk::SampleCountFlags::TYPE_32,
-            64 => vk::SampleCountFlags::TYPE_64,
-            _ => vk::SampleCountFlags::TYPE_1,
+        match *self {
+            Self::Disabled => vk::SampleCountFlags::TYPE_1,
+            Self::X4 => vk::SampleCountFlags::TYPE_4,
+            Self::X8 => vk::SampleCountFlags::TYPE_8,
+            Self::X16 => vk::SampleCountFlags::TYPE_16,
         }
     }
 }

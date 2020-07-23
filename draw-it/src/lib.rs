@@ -24,6 +24,7 @@ mod font;
 mod image;
 mod instance;
 mod pipeline;
+mod quality;
 mod renderer;
 mod resource;
 mod surface;

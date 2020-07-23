@@ -12,7 +12,6 @@ use draw_it::ui::label;
 use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
-use draw_it::ContextOptions;
 
 fn main() {
     let (width, height) = (720, 640);
@@ -26,14 +25,7 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut context = Context::from_window(
-        &mut window,
-        ContextOptions {
-            anisotropy: 16.0,
-            msaa: 4,
-            ..Default::default()
-        },
-    );
+    let mut context = Context::from_window(&mut window, Default::default());
 
     let mut controller = Controller::default();
 

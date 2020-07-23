@@ -30,8 +30,8 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
-use crate::image::ImageSamples;
 use crate::image::LayoutChangeOptions;
+use crate::image::Msaa;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
@@ -339,12 +339,12 @@ impl Device {
             .map(|t| t.0 as u32)
     }
 
-    pub(crate) fn samples(&self) -> ImageSamples {
-        self.device_properties.samples
+    pub(crate) fn msaa(&self) -> Msaa {
+        self.device_properties.msaa
     }
 
     pub(crate) fn is_msaa(&self) -> bool {
-        self.samples() != ImageSamples(1)
+        self.msaa() != Msaa::Disabled
     }
 
     pub(crate) fn allocate_buffer(

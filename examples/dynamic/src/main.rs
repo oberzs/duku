@@ -10,7 +10,6 @@ use draw_it::mesh::MeshOptions;
 use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
-use draw_it::ContextOptions;
 use std::time::Instant;
 
 fn main() {
@@ -23,14 +22,7 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut context = Context::from_window(
-        &mut window,
-        ContextOptions {
-            anisotropy: 16.0,
-            msaa: 4,
-            ..Default::default()
-        },
-    );
+    let mut context = Context::from_window(&mut window, Default::default());
 
     let mut controller = Controller::default();
 

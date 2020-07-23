@@ -10,9 +10,9 @@ use std::sync::Arc;
 use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageMips;
-use super::ImageSamples;
 use super::ImageUsage;
 use super::LayoutChangeOptions;
+use super::Msaa;
 use crate::buffer::BufferMemory;
 use crate::device::Device;
 use crate::error::Result;
@@ -36,7 +36,7 @@ pub(crate) struct ImageMemoryOptions<'usage> {
     pub(crate) format: ImageFormat,
     pub(crate) usage: &'usage [ImageUsage],
     pub(crate) mips: ImageMips,
-    pub(crate) samples: ImageSamples,
+    pub(crate) msaa: Msaa,
 }
 
 impl ImageMemory {
@@ -72,7 +72,7 @@ impl ImageMemory {
                     .initial_layout(ImageLayout::Undefined.flag())
                     .usage(ImageUsage::combine(options.usage))
                     .sharing_mode(vk::SharingMode::EXCLUSIVE)
-                    .samples(options.samples.flag());
+                    .samples(options.msaa.flag());
 
                 let (handle, memory) = device.allocate_image(&image_info)?;
                 (handle, Some(memory))
@@ -272,7 +272,7 @@ impl Default for ImageMemoryOptions<'_> {
             height: 1,
             format: ImageFormat::Srgba,
             mips: ImageMips::One,
-            samples: ImageSamples(1),
+            msaa: Msaa::Disabled,
             usage: &[],
         }
     }

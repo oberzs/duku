@@ -470,7 +470,7 @@ fn create_attachment_image(
     ImageMemory::new(
         device,
         ImageMemoryOptions {
-            samples: attachment.samples(),
+            msaa: attachment.msaa(),
             format: attachment.format(),
             usage: &usage,
             handle,

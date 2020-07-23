@@ -14,6 +14,7 @@ pub(crate) use target::Order;
 #[cfg(feature = "ui")]
 pub(crate) use ui_renderer::UiRenderer;
 
+pub use forward_renderer::Pcf;
 pub use stats::RenderStats;
 pub use target::SamplerOptions;
 pub use target::Target;

@@ -34,6 +34,7 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
+use crate::quality::Quality;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStats;
 use crate::renderer::Target;
@@ -93,9 +94,8 @@ pub struct Context {
 
 #[derive(Debug, Copy, Clone)]
 pub struct ContextOptions {
-    pub anisotropy: f32,
+    pub quality: Quality,
     pub vsync: bool,
-    pub msaa: u8,
     pub camera: CameraType,
 }
 
@@ -112,10 +112,12 @@ impl Context {
         let instance = Arc::new(check!(Instance::new()));
         let surface = check!(Surface::new(&instance, window));
 
+        let quality = options.quality.options();
+
         // query GPU properties
         let mut surface_properties_list =
             check!(SurfaceProperties::new(&instance, &surface, options.vsync));
-        let mut device_properties_list = check!(DeviceProperties::new(&instance, options.msaa));
+        let mut device_properties_list = check!(DeviceProperties::new(&instance, quality.msaa));
 
         // pick GPU
         let gpu_index = check!(pick_gpu(&surface_properties_list, &device_properties_list));
@@ -136,7 +138,7 @@ impl Context {
         let image_uniform = check!(ImageUniform::new(
             &device,
             &shader_layout,
-            options.anisotropy
+            quality.anisotropy
         ));
 
         let window_framebuffers = check!(Framebuffer::for_swapchain(
@@ -158,7 +160,9 @@ impl Context {
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
             &shader_layout,
-            &image_uniform
+            &image_uniform,
+            quality.shadow_map_size,
+            quality.pcf,
         ));
         #[cfg(feature = "ui")]
         let ui_renderer = check!(UiRenderer::new(
@@ -537,9 +541,8 @@ impl Drop for Context {
 impl Default for ContextOptions {
     fn default() -> Self {
         Self {
-            anisotropy: 0.0,
+            quality: Quality::Medium,
             vsync: true,
-            msaa: 1,
             camera: CameraType::Perspective,
         }
     }

@@ -15,7 +15,7 @@ use super::ShaderLayout;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
-use crate::image::ImageSamples;
+use crate::image::Msaa;
 use crate::mesh::Vertex;
 
 pub struct Shader {
@@ -111,15 +111,15 @@ impl Shader {
             .line_width(1.0);
 
         // configure msaa state
-        let samples = if framebuffer.multisampled() {
-            device.samples()
+        let msaa = if framebuffer.multisampled() {
+            device.msaa()
         } else {
-            ImageSamples(1)
+            Msaa::Disabled
         };
 
         let multisampling = vk::PipelineMultisampleStateCreateInfo::builder()
             .sample_shading_enable(false)
-            .rasterization_samples(samples.flag());
+            .rasterization_samples(msaa.flag());
 
         // configure depth stencil state
         let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()

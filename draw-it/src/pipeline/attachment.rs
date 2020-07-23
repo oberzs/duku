@@ -7,14 +7,14 @@ use ash::vk;
 
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
-use crate::image::ImageSamples;
+use crate::image::Msaa;
 
 pub(crate) struct Attachment {
     description: vk::AttachmentDescription,
     reference: vk::AttachmentReference,
     format: ImageFormat,
     layout: ImageLayout,
-    samples: ImageSamples,
+    msaa: Msaa,
     is_stored: bool,
 }
 
@@ -23,7 +23,7 @@ pub(crate) struct AttachmentOptions {
     pub(crate) index: u32,
     pub(crate) layout: ImageLayout,
     pub(crate) format: ImageFormat,
-    pub(crate) samples: ImageSamples,
+    pub(crate) msaa: Msaa,
     pub(crate) clear: bool,
     pub(crate) store: bool,
 }
@@ -51,7 +51,7 @@ impl Attachment {
 
         let description = vk::AttachmentDescription::builder()
             .format(options.format.flag())
-            .samples(options.samples.flag())
+            .samples(options.msaa.flag())
             .load_op(load_op)
             .store_op(store_op)
             .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
@@ -69,7 +69,7 @@ impl Attachment {
             format: options.format,
             layout: options.layout,
             is_stored: options.store,
-            samples: options.samples,
+            msaa: options.msaa,
             description,
             reference,
         }
@@ -91,8 +91,8 @@ impl Attachment {
         self.layout
     }
 
-    pub(crate) fn samples(&self) -> ImageSamples {
-        self.samples
+    pub(crate) fn msaa(&self) -> Msaa {
+        self.msaa
     }
 
     pub(crate) fn is_stored(&self) -> bool {
