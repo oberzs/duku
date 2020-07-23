@@ -37,7 +37,7 @@
 - **2D/3D:** can be used for both
 - **shaders:** write custom shaders in a modified GLSL
 - **SDF fonts:** signed distance field font support
-- **shadows**: uses variance shadow maps
+- **shadows**: uses PCF shadow maps
 - **windowing agnostic:** can be used with any OS window
 
 ## Simple Example

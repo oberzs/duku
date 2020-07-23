@@ -9,15 +9,18 @@ float tex_sm(int index, vec3 uvc) {
     return texture(sampler2DShadow(shadow_maps[index], sampler_cm), uvc);
 }
 
-float tex_pcfsm(int index, vec3 uvc) {
+float tex_pcfsm(int index, vec3 uvc, float softer) {
     float depth = 0.0;
     vec2 texel = 1.0 / textureSize(sampler2DShadow(shadow_maps[index], sampler_cm), 0);
-    depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + vec2(-0.5, -0.5) * texel, uvc.z));
-    depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + vec2(0.5, -0.5) * texel, uvc.z));
-    depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + vec2(-0.5, 0.5) * texel, uvc.z));
-    depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + vec2(0.5, 0.5) * texel, uvc.z));
-    depth /= 4.0;
-    return depth;
+    float softness = 0.5 + softer;
+    for (float x = -softness; x <= softness; x += 1.0) {
+        for (float y = -softness; y <= softness; y += 1.0) {
+            vec2 offset = vec2(x, y) * texel;
+            depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + offset, uvc.z));
+        }
+    }
+    depth /= 16.0;
+    return pow(depth, 2.2);
 }
 
 vec3 tex_coord(int index) {
