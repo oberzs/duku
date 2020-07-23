@@ -103,7 +103,7 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             do_shadow_mapping: false,
-            cascade_splits: [0.05, 0.2, 0.5, 1.0],
+            cascade_splits: [0.05, 0.2, 0.7, 1.0],
             builtins: builtins.clone(),
         })
     }
