@@ -20,6 +20,7 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
+use crate::pipeline::CullMode;
 use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
@@ -45,6 +46,7 @@ pub(crate) struct Builtins {
     pub(crate) wireframe_shader: Ref<Shader>,
     pub(crate) line_shader: Ref<Shader>,
     pub(crate) unshaded_shader: Ref<Shader>,
+    pub(crate) skybox_shader: Ref<Shader>,
     pub(crate) kenney_font: Ref<Font>,
 }
 
@@ -156,6 +158,18 @@ impl Builtins {
             Default::default(),
         )?);
 
+        let skybox_shader = resources.add_shader(Shader::new(
+            device,
+            framebuffer,
+            layout,
+            include_bytes!("../../shaders/skybox.shader"),
+            ShaderOptions {
+                cull_mode: CullMode::Disabled,
+                depth_mode: DepthMode::Test,
+                ..Default::default()
+            },
+        )?);
+
         // fonts
         let kenney_font = resources.add_font(Font::new(
             device,
@@ -179,6 +193,7 @@ impl Builtins {
             wireframe_shader,
             line_shader,
             unshaded_shader,
+            skybox_shader,
             kenney_font,
         })
     }

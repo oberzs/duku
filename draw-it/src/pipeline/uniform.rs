@@ -113,7 +113,11 @@ impl ImageUniform {
         // create sampler combinations
         let mut sampler_combinations = vec![];
         for filter in &[SamplerFilter::Linear, SamplerFilter::Nearest] {
-            for address in &[SamplerAddress::Repeat, SamplerAddress::Clamp] {
+            for address in &[
+                SamplerAddress::Repeat,
+                SamplerAddress::Clamp,
+                SamplerAddress::ClampEdge,
+            ] {
                 for mipmaps in &[SamplerMipmaps::Enabled, SamplerMipmaps::Disabled] {
                     sampler_combinations.push(Sampler::new(
                         device,

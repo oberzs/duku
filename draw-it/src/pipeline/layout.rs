@@ -59,7 +59,7 @@ impl ShaderLayout {
 
         // image uniform layout
         let max_image_count = 100;
-        let sampler_count = 2 * 2 * 2;
+        let sampler_count = 2 * 3 * 2;
         let image_binding = vk::DescriptorSetLayoutBinding::builder()
             .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
             .stage_flags(vk::ShaderStageFlags::FRAGMENT)

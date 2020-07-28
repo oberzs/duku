@@ -87,12 +87,13 @@ impl Cubemap {
 
         // copy images from staging memory
         memory.change_layout(ImageLayout::TransferDst)?;
-        memory.copy_from_memory(&top_staging_memory, 0)?;
-        memory.copy_from_memory(&bottom_staging_memory, 1)?;
-        memory.copy_from_memory(&front_staging_memory, 2)?;
-        memory.copy_from_memory(&back_staging_memory, 3)?;
-        memory.copy_from_memory(&left_staging_memory, 4)?;
-        memory.copy_from_memory(&right_staging_memory, 5)?;
+        memory.copy_from_memory(&right_staging_memory, 0)?;
+        memory.copy_from_memory(&left_staging_memory, 1)?;
+        memory.copy_from_memory(&top_staging_memory, 2)?;
+        memory.copy_from_memory(&bottom_staging_memory, 3)?;
+        memory.copy_from_memory(&front_staging_memory, 4)?;
+        memory.copy_from_memory(&back_staging_memory, 5)?;
+        memory.change_layout(ImageLayout::ShaderColor)?;
 
         Ok(Self { memory })
     }

@@ -36,6 +36,8 @@ void main() {
     gl_Position = worldspace_position;
 #elif defined(VERTEX_POSITION_MODELSPACE)
     gl_Position = modelspace_position;
+#elif defined(VERTEX_POSITION_SKYBOXSPACE)
+    gl_Position = screenspace_position.xyww;
 #else
     gl_Position = screenspace_position;
 #endif

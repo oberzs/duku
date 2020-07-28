@@ -122,6 +122,12 @@ impl ImageMemory {
             }
         };
 
+        let view_type = if self.layer_count == 6 {
+            vk::ImageViewType::CUBE
+        } else {
+            vk::ImageViewType::TYPE_2D
+        };
+
         let subresource = vk::ImageSubresourceRange::builder()
             .aspect_mask(aspect_flags)
             .base_mip_level(0)
@@ -131,7 +137,7 @@ impl ImageMemory {
             .build();
         let view_info = vk::ImageViewCreateInfo::builder()
             .image(self.handle)
-            .view_type(vk::ImageViewType::TYPE_2D)
+            .view_type(view_type)
             .format(self.format.flag())
             .subresource_range(subresource);
 

@@ -31,6 +31,7 @@ struct Defines {
     vertex_color_srgb: bool,
     vertex_position_worldspace: bool,
     vertex_position_modelspace: bool,
+    vertex_position_skyboxspace: bool,
 }
 
 pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
@@ -89,6 +90,9 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
     }
     if defines.vertex_position_modelspace {
         real_src.push_str("#define VERTEX_POSITION_MODELSPACE\n");
+    }
+    if defines.vertex_position_skyboxspace {
+        real_src.push_str("#define VERTEX_POSITION_SKYBOXSPACE\n");
     }
 
     // add objects
@@ -179,6 +183,7 @@ impl Defines {
             vertex_color_srgb: src.contains("#define VERTEX_COLOR_SRGB"),
             vertex_position_worldspace: src.contains("#define VERTEX_POSITION_WORLDSPACE"),
             vertex_position_modelspace: src.contains("#define VERTEX_POSITION_MODELSPACE"),
+            vertex_position_skyboxspace: src.contains("#define VERTEX_POSITION_SKYBOXSPACE"),
         }
     }
 }

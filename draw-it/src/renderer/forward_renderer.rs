@@ -19,6 +19,7 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::math::Matrix4;
+use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::CullMode;
@@ -106,7 +107,9 @@ impl ForwardRenderer {
 
         // shadow mapping
         if target.do_shadow_mapping {
-            self.shadow_pass(shader_layout, &target, &framebuffer.camera)?;
+            let mut view = framebuffer.camera.clone();
+            view.depth = 50.0;
+            self.shadow_pass(shader_layout, &target, &view)?;
         }
 
         // bind current shadow map set
@@ -142,6 +145,40 @@ impl ForwardRenderer {
         let mut unique_shaders = HashSet::new();
         let mut unique_materials = HashSet::new();
 
+        // skybox rendering
+        if target.skybox {
+            target.builtins.skybox_shader.with(|s| {
+                self.device.cmd_bind_shader(cmd, s);
+                unique_shaders.insert(s.handle());
+            });
+            render_stats.shader_rebinds += 1;
+
+            target.builtins.cube_mesh.with(|m| {
+                self.device.cmd_bind_mesh(cmd, m);
+
+                let model_matrix = (Transform {
+                    position: framebuffer.camera.transform.position,
+                    scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
+                    ..Default::default()
+                })
+                .as_matrix();
+                self.device.cmd_push_constants(
+                    cmd,
+                    shader_layout,
+                    PushConstants {
+                        sampler_index: 0,
+                        albedo_index: 0,
+                        model_matrix,
+                    },
+                );
+                self.device.cmd_draw(cmd, m.index_count(), 0);
+
+                render_stats.drawn_indices += m.index_count();
+                render_stats.draw_calls += 1;
+            });
+        }
+
+        // normal mesh rendering
         for s_order in &target.orders_by_shader {
             s_order.shader.with(|s| {
                 self.device.cmd_bind_shader(cmd, s);
@@ -224,6 +261,7 @@ impl ForwardRenderer {
             });
         }
 
+        // end rendering
         self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
 

@@ -163,7 +163,7 @@ impl Context {
             options.camera,
             window.width as f32,
             window.height as f32,
-            50.0,
+            100.0,
         );
 
         Ok(Self {

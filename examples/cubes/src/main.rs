@@ -41,12 +41,12 @@ fn main() -> Result<()> {
     )?;
 
     context.set_skybox_from_file([
-        "examples/cubes/textures/Dark/texture_05.png",
-        "examples/cubes/textures/Dark/texture_05.png",
-        "examples/cubes/textures/Dark/texture_05.png",
-        "examples/cubes/textures/Dark/texture_05.png",
-        "examples/cubes/textures/Dark/texture_05.png",
-        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Skybox/top.png",
+        "examples/cubes/textures/Skybox/bottom.png",
+        "examples/cubes/textures/Skybox/side.png",
+        "examples/cubes/textures/Skybox/side.png",
+        "examples/cubes/textures/Skybox/side.png",
+        "examples/cubes/textures/Skybox/side.png",
     ])?;
 
     let cube_textures = [
@@ -112,6 +112,7 @@ fn main() -> Result<()> {
             context.draw_ui(ui)?;
             context.draw_on_window(|target| {
                 target.set_wireframes(wireframes);
+                target.set_skybox(true);
 
                 // draw floor
                 target.set_sampler(SamplerOptions {

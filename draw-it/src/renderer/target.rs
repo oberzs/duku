@@ -13,6 +13,7 @@ use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
+use crate::pipeline::sampler_index;
 use crate::pipeline::Light;
 use crate::pipeline::Material;
 use crate::pipeline::SamplerAddress;
@@ -31,6 +32,7 @@ pub struct Target {
     pub(crate) line_width: f32,
     pub(crate) main_light: Light,
     pub(crate) builtins: Builtins,
+    pub(crate) skybox: bool,
 
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
@@ -93,7 +95,7 @@ impl Target {
             text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             main_light: Light {
-                coords: Vector3::new(-0.5, -1.0, 1.0).unit().extend(0.0),
+                coords: Vector3::new(-1.0, -1.0, 1.0).unit().extend(0.0),
                 color: colors::WHITE.to_rgba_norm_vec(),
             },
             lights: vec![],
@@ -106,6 +108,7 @@ impl Target {
             current_sampler: 0,
             cast_shadows: true,
             wireframes: false,
+            skybox: false,
             do_shadow_mapping: false,
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
             line_width: 1.0,
@@ -286,18 +289,12 @@ impl Target {
         self.wireframes = enable;
     }
 
+    pub fn set_skybox(&mut self, enable: bool) {
+        self.skybox = enable;
+    }
+
     pub fn set_sampler(&mut self, options: SamplerOptions) {
-        let mut index = 0;
-        if options.filter == SamplerFilter::Nearest {
-            index += 4;
-        }
-        if options.address == SamplerAddress::Clamp {
-            index += 2;
-        }
-        if options.mipmaps == SamplerMipmaps::Disabled {
-            index += 1;
-        }
-        self.current_sampler = index;
+        self.current_sampler = sampler_index(options.filter, options.address, options.mipmaps);
     }
 
     pub fn set_line_width(&mut self, width: f32) {

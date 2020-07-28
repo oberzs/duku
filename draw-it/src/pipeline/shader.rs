@@ -125,7 +125,7 @@ impl Shader {
         let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()
             .depth_test_enable(options.depth_mode.test())
             .depth_write_enable(options.depth_mode.write())
-            .depth_compare_op(vk::CompareOp::LESS)
+            .depth_compare_op(vk::CompareOp::LESS_OR_EQUAL)
             .depth_bounds_test_enable(false)
             .stencil_test_enable(false);
 
