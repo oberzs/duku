@@ -868,7 +868,7 @@ impl Device {
             .aspect_mask(aspect_mask)
             .base_array_layer(0)
             .base_mip_level(base_mip)
-            .layer_count(1)
+            .layer_count(image.layer_count())
             .level_count(mip_count)
             .build();
         let barrier = [vk::ImageMemoryBarrier::builder()

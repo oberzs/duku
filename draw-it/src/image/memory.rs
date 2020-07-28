@@ -23,6 +23,7 @@ pub(crate) struct ImageMemory {
     width: u32,
     height: u32,
     mip_count: u32,
+    layer_count: u32,
     format: ImageFormat,
     layout: ImageLayout,
     device: Arc<Device>,
@@ -37,6 +38,7 @@ pub(crate) struct ImageMemoryOptions<'usage> {
     pub(crate) usage: &'usage [ImageUsage],
     pub(crate) mips: ImageMips,
     pub(crate) msaa: Msaa,
+    pub(crate) cubemap: bool,
 }
 
 impl ImageMemory {
@@ -55,6 +57,14 @@ impl ImageMemory {
         // initial layout
         let layout = ImageLayout::Undefined;
 
+        // cubemap info
+        let array_layers = if options.cubemap { 6 } else { 1 };
+        let flags = if options.cubemap {
+            vk::ImageCreateFlags::CUBE_COMPATIBLE
+        } else {
+            vk::ImageCreateFlags::empty()
+        };
+
         // allocate memory if a handle was not supplied
         // swapchain images already have memory allocated
         let (handle, memory) = match options.handle {
@@ -69,13 +79,14 @@ impl ImageMemory {
                         depth: 1,
                     })
                     .mip_levels(mip_count)
-                    .array_layers(1)
+                    .array_layers(array_layers)
                     .format(options.format.flag())
                     .tiling(vk::ImageTiling::OPTIMAL)
                     .initial_layout(layout.flag())
                     .usage(ImageUsage::combine(options.usage))
                     .sharing_mode(vk::SharingMode::EXCLUSIVE)
-                    .samples(options.msaa.flag());
+                    .samples(options.msaa.flag())
+                    .flags(flags);
 
                 let (handle, memory) = device.allocate_image(&image_info)?;
                 (handle, Some(memory))
@@ -88,6 +99,7 @@ impl ImageMemory {
             height: options.height,
             format: options.format,
             views: vec![],
+            layer_count: array_layers,
             handle,
             mip_count,
             layout,
@@ -114,7 +126,7 @@ impl ImageMemory {
             .aspect_mask(aspect_flags)
             .base_mip_level(0)
             .base_array_layer(0)
-            .layer_count(1)
+            .layer_count(self.layer_count)
             .level_count(self.mip_count)
             .build();
         let view_info = vk::ImageViewCreateInfo::builder()
@@ -128,10 +140,12 @@ impl ImageMemory {
         Ok(view)
     }
 
-    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory) -> Result<()> {
+    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory, layer: u32) -> Result<()> {
+        debug_assert!(layer < self.layer_count);
+
         let subresource = vk::ImageSubresourceLayers::builder()
             .aspect_mask(vk::ImageAspectFlags::COLOR)
-            .base_array_layer(0)
+            .base_array_layer(layer)
             .layer_count(1)
             .mip_level(0)
             .build();
@@ -267,6 +281,10 @@ impl ImageMemory {
     pub(crate) fn has_depth_format(&self) -> bool {
         self.format == ImageFormat::Depth || self.format == ImageFormat::DepthStencil
     }
+
+    pub(crate) fn layer_count(&self) -> u32 {
+        self.layer_count
+    }
 }
 
 impl Drop for ImageMemory {
@@ -289,6 +307,7 @@ impl Default for ImageMemoryOptions<'_> {
             format: ImageFormat::Srgba,
             mips: ImageMips::One,
             msaa: Msaa::Disabled,
+            cubemap: false,
             usage: &[],
         }
     }

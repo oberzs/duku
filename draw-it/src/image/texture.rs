@@ -24,10 +24,10 @@ pub struct Texture {
 }
 
 pub(crate) struct TextureOptions<'data> {
-    pub data: &'data [u8],
-    pub width: u32,
-    pub height: u32,
-    pub format: ImageFormat,
+    pub(crate) data: &'data [u8],
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) format: ImageFormat,
 }
 
 impl Texture {
@@ -66,7 +66,7 @@ impl Texture {
 
         // copy image from staging memory
         memory.change_layout(ImageLayout::TransferDst)?;
-        memory.copy_from_memory(&staging_memory)?;
+        memory.copy_from_memory(&staging_memory, 0)?;
         memory.generate_mipmaps()?;
 
         let image_index = uniform.add(memory.add_view()?);

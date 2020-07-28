@@ -91,24 +91,21 @@ impl ImageFormat {
     }
 
     pub(crate) fn is_color(&self) -> bool {
-        match *self {
+        matches!(
+            *self,
             Self::Float2
-            | Self::Gray
-            | Self::Rgb
-            | Self::Rgba
-            | Self::Sbgra
-            | Self::Srgb
-            | Self::Srgba => true,
-            _ => false,
-        }
+                | Self::Gray
+                | Self::Rgb
+                | Self::Rgba
+                | Self::Sbgra
+                | Self::Srgb
+                | Self::Srgba
+        )
     }
 
     // probably will some day be needed
     pub(crate) fn _is_depth(&self) -> bool {
-        match *self {
-            Self::Depth | Self::DepthStencil => true,
-            _ => false,
-        }
+        matches!(*self, Self::Depth | Self::DepthStencil)
     }
 }
 

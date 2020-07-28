@@ -21,6 +21,8 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
 use crate::error::Result;
+use crate::image::Cubemap;
+use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
@@ -71,6 +73,7 @@ pub struct Context {
     // Resources
     builtins: Builtins,
     resources: ResourceManager,
+    skybox: Option<Cubemap>,
 
     // Vulkan
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
@@ -187,6 +190,7 @@ impl Context {
             render_stage: RenderStage::Before,
             render_stats: Default::default(),
             camera_type: options.camera,
+            skybox: None,
             forward_renderer,
             builtins,
             resources,
@@ -334,6 +338,7 @@ impl Context {
     #[cfg(feature = "image")]
     pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
         use image_file::GenericImageView;
+
         let img = image_file::open(path)?;
         let (width, height) = img.dimensions();
         let data = img.to_rgba().into_raw();
@@ -349,6 +354,37 @@ impl Context {
             }
         ));
         Ok(self.resources.add_texture(texture))
+    }
+
+    #[cfg(feature = "image")]
+    pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
+        use image_file::GenericImageView;
+
+        let mut size = 0;
+        let mut data = vec![];
+        for path in &paths {
+            let img = image_file::open(path)?;
+            size = img.dimensions().0;
+            data.push(img.to_rgba().into_raw());
+        }
+
+        let cubemap = check!(Cubemap::new(
+            &self.device,
+            CubemapOptions {
+                format: ImageFormat::Srgba,
+                top: &data[0],
+                bottom: &data[1],
+                front: &data[2],
+                back: &data[3],
+                left: &data[4],
+                right: &data[5],
+                size
+            }
+        ));
+
+        self.skybox = Some(cubemap);
+
+        Ok(())
     }
 
     pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Ref<Mesh> {

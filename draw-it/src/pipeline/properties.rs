@@ -75,17 +75,11 @@ impl PolygonMode {
 
 impl DepthMode {
     pub(crate) fn test(&self) -> bool {
-        match *self {
-            Self::Test | Self::TestAndWrite => true,
-            _ => false,
-        }
+        matches!(*self, Self::Test | Self::TestAndWrite)
     }
 
     pub(crate) fn write(&self) -> bool {
-        match *self {
-            Self::Write | Self::TestAndWrite => true,
-            _ => false,
-        }
+        matches!(*self, Self::Write | Self::TestAndWrite)
     }
 }
 

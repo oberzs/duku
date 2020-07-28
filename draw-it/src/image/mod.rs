@@ -3,11 +3,14 @@
 
 // images store texture data and are use in rendering
 
+mod cubemap;
 mod framebuffer;
 mod memory;
 mod properties;
 mod texture;
 
+pub(crate) use cubemap::Cubemap;
+pub(crate) use cubemap::CubemapOptions;
 pub(crate) use framebuffer::FramebufferOptions;
 pub(crate) use memory::ImageMemory;
 pub(crate) use memory::ImageMemoryOptions;

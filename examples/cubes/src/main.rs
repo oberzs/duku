@@ -39,6 +39,17 @@ fn main() {
         },
     );
 
+    context
+        .set_skybox_from_file([
+            "examples/cubes/textures/Dark/texture_05.png",
+            "examples/cubes/textures/Dark/texture_05.png",
+            "examples/cubes/textures/Dark/texture_05.png",
+            "examples/cubes/textures/Dark/texture_05.png",
+            "examples/cubes/textures/Dark/texture_05.png",
+            "examples/cubes/textures/Dark/texture_05.png",
+        ])
+        .unwrap();
+
     let cube_textures = [
         context
             .create_texture_from_file("examples/cubes/textures/Purple/texture_01.png")
