@@ -1,5 +1,11 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// example that draws text
+
 use draw_it::camera::CameraType;
 use draw_it::color::colors;
+use draw_it::error::Result;
 use draw_it::math::Transform;
 use draw_it::math::Vector3;
 use draw_it::window::Window;
@@ -9,7 +15,7 @@ use draw_it::ContextOptions;
 use draw_it::Quality;
 use std::time::Instant;
 
-fn main() {
+fn main() -> Result<()> {
     let mut window = Window::new(WindowOptions {
         title: "Draw-it example: Text",
         width: 600,
@@ -23,13 +29,13 @@ fn main() {
             camera: CameraType::Orthographic,
             ..Default::default()
         },
-    );
+    )?;
 
-    let material_1 = context.create_material();
+    let material_1 = context.create_material()?;
     material_1.with(|m| {
         m.set_font_color(colors::RED);
     });
-    let material_2 = context.create_material();
+    let material_2 = context.create_material()?;
     material_2.with(|m| {
         m.set_font_color(colors::BLUE);
         m.set_font_border_color(colors::WHITE);
@@ -70,6 +76,10 @@ fn main() {
             };
             target.set_font_material(&material_2);
             target.draw_text("Dynamic\n-text-", transform);
-        });
+        })?;
+
+        Ok(())
     });
+
+    Ok(())
 }

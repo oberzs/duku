@@ -19,7 +19,6 @@ mod macros;
 mod buffer;
 mod context;
 mod device;
-mod error;
 mod font;
 mod image;
 mod instance;
@@ -32,6 +31,7 @@ mod sync;
 
 pub mod camera;
 pub mod color;
+pub mod error;
 pub mod math;
 pub mod mesh;
 

@@ -4,6 +4,7 @@
 // Mesh drawing example
 
 use draw_it::camera::Controller;
+use draw_it::error::Result;
 use draw_it::math::Transform;
 use draw_it::math::Vector3;
 use draw_it::reference::Texture;
@@ -22,7 +23,7 @@ struct Cube {
     position: Vector3,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let (mut width, mut height) = (720, 640);
 
     let mut window = Window::new(WindowOptions {
@@ -37,33 +38,24 @@ fn main() {
             vsync: false,
             ..Default::default()
         },
-    );
+    )?;
 
-    context
-        .set_skybox_from_file([
-            "examples/cubes/textures/Dark/texture_05.png",
-            "examples/cubes/textures/Dark/texture_05.png",
-            "examples/cubes/textures/Dark/texture_05.png",
-            "examples/cubes/textures/Dark/texture_05.png",
-            "examples/cubes/textures/Dark/texture_05.png",
-            "examples/cubes/textures/Dark/texture_05.png",
-        ])
-        .unwrap();
+    context.set_skybox_from_file([
+        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Dark/texture_05.png",
+        "examples/cubes/textures/Dark/texture_05.png",
+    ])?;
 
     let cube_textures = [
-        context
-            .create_texture_from_file("examples/cubes/textures/Purple/texture_01.png")
-            .unwrap(),
-        context
-            .create_texture_from_file("examples/cubes/textures/Orange/texture_05.png")
-            .unwrap(),
-        context
-            .create_texture_from_file("examples/cubes/textures/Green/texture_13.png")
-            .unwrap(),
+        context.create_texture_from_file("examples/cubes/textures/Purple/texture_01.png")?,
+        context.create_texture_from_file("examples/cubes/textures/Orange/texture_05.png")?,
+        context.create_texture_from_file("examples/cubes/textures/Green/texture_13.png")?,
     ];
-    let floor_texture = context
-        .create_texture_from_file("examples/cubes/textures/Light/texture_06.png")
-        .unwrap();
+    let floor_texture =
+        context.create_texture_from_file("examples/cubes/textures/Light/texture_06.png")?;
 
     let floor_transform = Transform {
         scale: Vector3::new(80.0, 0.2, 80.0),
@@ -110,14 +102,14 @@ fn main() {
             let wireframes = events.is_key_pressed(Key::E);
 
             if let Some((new_width, new_height)) = events.resized() {
-                context.resize(new_width, new_height);
+                context.resize(new_width, new_height)?;
                 width = new_width;
                 height = new_height;
             }
 
             ui::stats_window(&ui, &context, events);
 
-            context.draw_ui(ui);
+            context.draw_ui(ui)?;
             context.draw_on_window(|target| {
                 target.set_wireframes(wireframes);
 
@@ -135,7 +127,11 @@ fn main() {
                     target.set_albedo(&cube.texture);
                     target.draw_cube(cube.position);
                 }
-            });
+            })?;
         }
+
+        Ok(())
     });
+
+    Ok(())
 }

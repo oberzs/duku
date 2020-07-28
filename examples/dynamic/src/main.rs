@@ -5,6 +5,7 @@
 
 use draw_it::camera::Controller;
 use draw_it::color::colors;
+use draw_it::error::Result;
 use draw_it::math::Vector3;
 use draw_it::mesh::MeshOptions;
 use draw_it::window::Window;
@@ -12,7 +13,7 @@ use draw_it::window::WindowOptions;
 use draw_it::Context;
 use std::time::Instant;
 
-fn main() {
+fn main() -> Result<()> {
     let (width, height) = (720, 640);
     let square_size = 10;
 
@@ -22,7 +23,7 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut context = Context::from_window(&mut window, Default::default());
+    let mut context = Context::from_window(&mut window, Default::default())?;
 
     let mut controller = Controller::default();
 
@@ -40,7 +41,7 @@ fn main() {
             vertices: &vertices,
             indices: &indices,
             ..Default::default()
-        })
+        })?
     };
     let time = Instant::now();
 
@@ -61,8 +62,12 @@ fn main() {
             // draw square
             let offset = -(square_size as f32 / 2.0);
             target.draw(&square, [offset, offset, 0.0]);
-        });
+        })?;
+
+        Ok(())
     });
+
+    Ok(())
 }
 
 fn square_indices(size: u32) -> Vec<u32> {

@@ -4,6 +4,7 @@
 // Toon shader example
 
 use draw_it::camera::Controller;
+use draw_it::error::Result;
 use draw_it::math::Vector3;
 use draw_it::ui;
 use draw_it::window::Window;
@@ -11,7 +12,7 @@ use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::ContextOptions;
 
-fn main() {
+fn main() -> Result<()> {
     let mut window = Window::new(WindowOptions {
         title: "Draw-it example: Toon",
         width: 720,
@@ -24,11 +25,10 @@ fn main() {
             vsync: false,
             ..Default::default()
         },
-    );
+    )?;
 
     let shader = context
-        .create_shader_from_file_watch("examples/toon/shaders/toon.shader", Default::default())
-        .unwrap();
+        .create_shader_from_file_watch("examples/toon/shaders/toon.shader", Default::default())?;
 
     {
         let cam_t = &mut context.main_camera.transform;
@@ -43,7 +43,7 @@ fn main() {
         controller.update(&mut context.main_camera, events);
 
         ui::stats_window(&ui, &context, events);
-        context.draw_ui(ui);
+        context.draw_ui(ui)?;
 
         context.draw_on_window(|target| {
             target.set_clear([128, 128, 128]);
@@ -54,6 +54,10 @@ fn main() {
             // toon cube and sphere
             target.set_shader(&shader);
             target.draw_sphere([0.0, 1.0, 0.0]);
-        });
+        })?;
+
+        Ok(())
     });
+
+    Ok(())
 }

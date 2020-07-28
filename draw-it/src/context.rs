@@ -54,16 +54,6 @@ use crate::renderer::UiRenderer;
 #[cfg(feature = "window")]
 use crate::window::Window;
 
-// TODO: remove and pass errors to user
-macro_rules! check {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => error!("{}", err),
-        }
-    };
-}
-
 pub struct Context {
     // Renderers
     forward_renderer: ForwardRenderer,
@@ -109,73 +99,65 @@ enum RenderStage {
 }
 
 impl Context {
-    pub fn new(window: WindowHandle, options: ContextOptions) -> Self {
+    pub fn new(window: WindowHandle, options: ContextOptions) -> Result<Self> {
         profile_scope!("new");
 
-        let instance = Arc::new(check!(Instance::new()));
-        let surface = check!(Surface::new(&instance, window));
+        let instance = Arc::new(Instance::new()?);
+        let surface = Surface::new(&instance, window)?;
 
         let quality = options.quality.options();
 
         // query GPU properties
         let mut surface_properties_list =
-            check!(SurfaceProperties::new(&instance, &surface, options.vsync));
-        let mut device_properties_list = check!(DeviceProperties::new(&instance, quality.msaa));
+            SurfaceProperties::new(&instance, &surface, options.vsync)?;
+        let mut device_properties_list = DeviceProperties::new(&instance, quality.msaa)?;
 
         // pick GPU
-        let gpu_index = check!(pick_gpu(&surface_properties_list, &device_properties_list));
+        let gpu_index = pick_gpu(&surface_properties_list, &device_properties_list)?;
         let surface_properties = surface_properties_list.remove(gpu_index);
         let device_properties = device_properties_list.remove(gpu_index);
 
-        let device = Arc::new(check!(Device::new(
+        let device = Arc::new(Device::new(
             &instance,
             &surface_properties,
             device_properties,
-            gpu_index
-        )));
+            gpu_index,
+        )?);
 
-        let swapchain = check!(Swapchain::new(&device, &surface, surface_properties));
+        let swapchain = Swapchain::new(&device, &surface, surface_properties)?;
 
-        let shader_layout = check!(ShaderLayout::new(&device));
+        let shader_layout = ShaderLayout::new(&device)?;
 
-        let mut image_uniform = check!(ImageUniform::new(
-            &device,
-            &shader_layout,
-            quality.anisotropy
-        ));
+        let mut image_uniform = ImageUniform::new(&device, &shader_layout, quality.anisotropy)?;
 
-        let window_framebuffers = check!(Framebuffer::for_swapchain(
-            &device,
-            &swapchain,
-            &shader_layout,
-            options.camera,
-        ));
+        let window_framebuffers =
+            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, options.camera)?;
 
         let mut resources = ResourceManager::new();
-        let builtins = check!(Builtins::new(
+        let builtins = Builtins::new(
             &device,
             &mut resources,
             &window_framebuffers[0],
             &shader_layout,
-            &mut image_uniform
-        ));
+            &mut image_uniform,
+        )?;
 
-        let forward_renderer = check!(ForwardRenderer::new(
+        let forward_renderer = ForwardRenderer::new(
             &device,
             &shader_layout,
             &mut image_uniform,
             quality.shadow_map_size,
             quality.pcf,
-        ));
+        )?;
         #[cfg(feature = "ui")]
-        let ui_renderer = check!(UiRenderer::new(
+        let ui_renderer = UiRenderer::new(
             &device,
             &shader_layout,
             &mut image_uniform,
             &mut resources,
             window.width,
-            window.height
-        ));
+            window.height,
+        )?;
 
         let main_camera = Camera::new(
             options.camera,
@@ -184,7 +166,7 @@ impl Context {
             50.0,
         );
 
-        Self {
+        Ok(Self {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
             render_stage: RenderStage::Before,
@@ -205,11 +187,11 @@ impl Context {
             ui_renderer,
             #[cfg(feature = "hot-reload")]
             stop_senders: vec![],
-        }
+        })
     }
 
     #[cfg(feature = "window")]
-    pub fn from_window(window: &mut Window, options: ContextOptions) -> Self {
+    pub fn from_window(window: &mut Window, options: ContextOptions) -> Result<Self> {
         let (width, height) = window.size();
 
         #[cfg(target_os = "windows")]
@@ -235,49 +217,48 @@ impl Context {
             height,
         };
 
-        let mut s = Self::new(handle, options);
+        let mut s = Self::new(handle, options)?;
 
         #[cfg(feature = "ui")]
         {
             let ui_texture = window.build_ui_texture();
-            check!(s
-                .ui_renderer
-                .set_font_texture(&mut s.image_uniform, ui_texture));
+            s.ui_renderer
+                .set_font_texture(&mut s.image_uniform, ui_texture)?;
         }
 
-        s
+        Ok(s)
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        check!(self.device.wait_for_idle());
+    pub fn resize(&mut self, width: u32, height: u32) -> Result<()> {
+        self.device.wait_for_idle()?;
         self.surface.resize(width, height);
         self.main_camera.width = width as f32;
         self.main_camera.height = height as f32;
-        check!(self
-            .swapchain
-            .recreate(&self.instance, &self.surface, self.gpu_index));
+        self.swapchain
+            .recreate(&self.instance, &self.surface, self.gpu_index)?;
 
         let mut framebuffers = self.window_framebuffers.lock().unwrap();
-        *framebuffers = check!(Framebuffer::for_swapchain(
+        *framebuffers = Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
             self.camera_type,
-        ));
+        )?;
 
         #[cfg(feature = "ui")]
-        check!(self
-            .ui_renderer
-            .resize(&mut self.image_uniform, width, height));
+        self.ui_renderer
+            .resize(&mut self.image_uniform, width, height)?;
+
+        Ok(())
     }
 
-    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) {
+    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
+            self.begin_draw()?;
         }
 
         {
-            let mut target = check!(Target::new(&self.builtins));
+            let mut target = Target::new(&self.builtins)?;
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
@@ -290,43 +271,52 @@ impl Context {
             framebuffer.camera = self.main_camera.clone();
 
             self.render_stats +=
-                check!(self
-                    .forward_renderer
-                    .draw(framebuffer, &self.shader_layout, target,));
+                self.forward_renderer
+                    .draw(framebuffer, &self.shader_layout, target)?;
         }
 
-        self.end_draw();
+        self.end_draw()?;
+
+        Ok(())
     }
 
-    pub fn draw(&mut self, framebuffer: &Ref<Framebuffer>, draw_callback: impl Fn(&mut Target)) {
+    pub fn draw(
+        &mut self,
+        framebuffer: &Ref<Framebuffer>,
+        draw_callback: impl Fn(&mut Target),
+    ) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
+            self.begin_draw()?;
         }
 
-        let mut target = check!(Target::new(&self.builtins));
+        let mut target = Target::new(&self.builtins)?;
         draw_callback(&mut target);
 
-        let stats = framebuffer
-            .with(|f| check!(self.forward_renderer.draw(f, &self.shader_layout, target)));
+        let stats =
+            framebuffer.with(|f| self.forward_renderer.draw(f, &self.shader_layout, target))?;
         self.render_stats += stats;
+
+        Ok(())
     }
 
     #[cfg(feature = "ui")]
-    pub fn draw_ui(&mut self, ui: imgui::Ui<'_>) {
+    pub fn draw_ui(&mut self, ui: imgui::Ui<'_>) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
+            self.begin_draw()?;
         }
 
-        check!(self.ui_renderer.draw(ui, &self.shader_layout));
+        self.ui_renderer.draw(ui, &self.shader_layout)?;
+
+        Ok(())
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Ref<Texture> {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Result<Ref<Texture>> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
             .flatten()
             .collect::<Vec<_>>();
-        let texture = check!(Texture::new(
+        let texture = Texture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -334,9 +324,9 @@ impl Context {
                 data: &data,
                 height: pixels.len() as u32 / width,
                 width,
-            }
-        ));
-        self.resources.add_texture(texture)
+            },
+        )?;
+        Ok(self.resources.add_texture(texture))
     }
 
     #[cfg(feature = "image")]
@@ -347,7 +337,7 @@ impl Context {
         let (width, height) = img.dimensions();
         let data = img.to_rgba().into_raw();
 
-        let texture = check!(Texture::new(
+        let texture = Texture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -355,8 +345,8 @@ impl Context {
                 data: &data,
                 width,
                 height,
-            }
-        ));
+            },
+        )?;
         Ok(self.resources.add_texture(texture))
     }
 
@@ -372,7 +362,7 @@ impl Context {
             data.push(img.to_rgba().into_raw());
         }
 
-        let mut cubemap = check!(Cubemap::new(
+        let mut cubemap = Cubemap::new(
             &self.device,
             CubemapOptions {
                 format: ImageFormat::Srgba,
@@ -382,22 +372,22 @@ impl Context {
                 back: &data[3],
                 left: &data[4],
                 right: &data[5],
-                size
-            }
-        ));
+                size,
+            },
+        )?;
 
-        self.image_uniform.set_skybox(check!(cubemap.add_view()));
+        self.image_uniform.set_skybox(cubemap.add_view()?);
         self.skybox = Some(cubemap);
 
         Ok(())
     }
 
-    pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Ref<Mesh> {
-        let mesh = check!(Mesh::new(&self.device, options));
-        self.resources.add_mesh(mesh)
+    pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Result<Ref<Mesh>> {
+        let mesh = Mesh::new(&self.device, options)?;
+        Ok(self.resources.add_mesh(mesh))
     }
 
-    pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Ref<Mesh> {
+    pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Result<Ref<Mesh>> {
         let mut offset = 0;
         let mut indices = vec![];
         let mut vertices = vec![];
@@ -415,7 +405,7 @@ impl Context {
             });
         }
 
-        let mesh = check!(Mesh::new(
+        let mesh = Mesh::new(
             &self.device,
             MeshOptions {
                 vertices: &vertices,
@@ -423,14 +413,14 @@ impl Context {
                 uvs: &uvs,
                 colors: &colors,
                 indices: &indices,
-            }
-        ));
-        self.resources.add_mesh(mesh)
+            },
+        )?;
+        Ok(self.resources.add_mesh(mesh))
     }
 
-    pub fn create_material(&mut self) -> Ref<Material> {
-        let material = check!(Material::new(&self.device, &self.shader_layout));
-        self.resources.add_material(material)
+    pub fn create_material(&mut self) -> Result<Ref<Material>> {
+        let material = Material::new(&self.device, &self.shader_layout)?;
+        Ok(self.resources.add_material(material))
     }
 
     pub fn create_framebuffer(
@@ -438,8 +428,8 @@ impl Context {
         t: CameraType,
         width: u32,
         height: u32,
-    ) -> Ref<Framebuffer> {
-        let framebuffer = check!(Framebuffer::new(
+    ) -> Result<Ref<Framebuffer>> {
+        let framebuffer = Framebuffer::new(
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
@@ -450,27 +440,30 @@ impl Context {
                 depth: true,
                 width,
                 height,
-            }
-        ));
-        self.resources.add_framebuffer(framebuffer)
+            },
+        )?;
+        Ok(self.resources.add_framebuffer(framebuffer))
     }
 
-    pub fn resize_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>, width: u32, height: u32) {
-        framebuffer.with(|f| {
-            check!(f.resize(width, height, &mut self.image_uniform));
-        });
+    pub fn resize_framebuffer(
+        &mut self,
+        framebuffer: &Ref<Framebuffer>,
+        width: u32,
+        height: u32,
+    ) -> Result<()> {
+        framebuffer.with(|f| f.resize(width, height, &mut self.image_uniform))
     }
 
-    pub fn create_shader(&mut self, source: &[u8], options: ShaderOptions) -> Ref<Shader> {
+    pub fn create_shader(&mut self, source: &[u8], options: ShaderOptions) -> Result<Ref<Shader>> {
         let framebuffer = &self.window_framebuffers.lock().unwrap()[0];
-        let shader = check!(Shader::new(
+        let shader = Shader::new(
             &self.device,
             framebuffer,
             &self.shader_layout,
             source,
             options,
-        ));
-        self.resources.add_shader(shader)
+        )?;
+        Ok(self.resources.add_shader(shader))
     }
 
     pub fn create_shader_from_file(
@@ -479,7 +472,7 @@ impl Context {
         options: ShaderOptions,
     ) -> Result<Ref<Shader>> {
         let source = fs::read(path.as_ref())?;
-        Ok(self.create_shader(&source, options))
+        self.create_shader(&source, options)
     }
 
     #[cfg(feature = "hot-reload")]
@@ -518,14 +511,10 @@ impl Context {
                         // recreate shader
                         let framebuffer = &framebuffers.lock().unwrap()[0];
 
-                        let source = check!(fs::read(&path_buf));
-                        let new_shader = check!(Shader::new(
-                            &device,
-                            framebuffer,
-                            &shader_layout,
-                            &source,
-                            options,
-                        ));
+                        let source = fs::read(&path_buf).unwrap();
+                        let new_shader =
+                            Shader::new(&device, framebuffer, &shader_layout, &source, options)
+                                .unwrap();
                         shader_ref.with(|s| *s = new_shader);
                         info!("shader {:?} was reloaded", path_buf);
                     }
@@ -541,12 +530,12 @@ impl Context {
         self.render_stats
     }
 
-    fn begin_draw(&mut self) {
+    fn begin_draw(&mut self) -> Result<()> {
         self.render_stage = RenderStage::During;
         self.render_stats = Default::default();
-        check!(self.device.next_frame(&mut self.swapchain));
+        self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
-        check!(self.resources.update_if_needed());
+        self.resources.update_if_needed()?;
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_uniform(
             self.device.command_buffer(),
@@ -556,12 +545,16 @@ impl Context {
 
         #[cfg(feature = "ui")]
         self.ui_renderer.reset();
+
+        Ok(())
     }
 
-    fn end_draw(&mut self) {
+    fn end_draw(&mut self) -> Result<()> {
         self.render_stage = RenderStage::Before;
-        check!(self.device.submit());
-        check!(self.device.present(&self.swapchain));
+        self.device.submit()?;
+        self.device.present(&self.swapchain)?;
+
+        Ok(())
     }
 }
 

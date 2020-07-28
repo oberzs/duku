@@ -6,6 +6,7 @@
 use draw_it::camera::CameraType;
 use draw_it::camera::Controller;
 use draw_it::color::colors;
+use draw_it::error::Result;
 use draw_it::math::Vector3;
 use draw_it::ui;
 use draw_it::ui::label;
@@ -13,7 +14,7 @@ use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
 
-fn main() {
+fn main() -> Result<()> {
     let (width, height) = (720, 640);
     let blur_scale = 2;
     let mut blur_strength: i32 = 0;
@@ -25,30 +26,28 @@ fn main() {
         height,
         ..Default::default()
     });
-    let mut context = Context::from_window(&mut window, Default::default());
+    let mut context = Context::from_window(&mut window, Default::default())?;
 
     let mut controller = Controller::default();
 
     let hblur_shader = context
-        .create_shader_from_file("examples/blur/shaders/hblur.shader", Default::default())
-        .unwrap();
+        .create_shader_from_file("examples/blur/shaders/hblur.shader", Default::default())?;
     let vblur_shader = context
-        .create_shader_from_file("examples/blur/shaders/vblur.shader", Default::default())
-        .unwrap();
+        .create_shader_from_file("examples/blur/shaders/vblur.shader", Default::default())?;
 
-    let main_framebuffer = context.create_framebuffer(CameraType::Perspective, width, height);
+    let main_framebuffer = context.create_framebuffer(CameraType::Perspective, width, height)?;
     let hblur_framebuffer = context.create_framebuffer(
         CameraType::Orthographic,
         width / blur_scale,
         height / blur_scale,
-    );
+    )?;
     let vblur_framebuffer = context.create_framebuffer(
         CameraType::Orthographic,
         width / blur_scale,
         height / blur_scale,
-    );
+    )?;
 
-    let blur_material = context.create_material();
+    let blur_material = context.create_material()?;
 
     main_framebuffer.with(|f| {
         let cam_t = &mut f.camera.transform;
@@ -75,7 +74,7 @@ fn main() {
                 ui.text("* This does nothing at this moment");
             });
 
-        context.draw_ui(ui);
+        context.draw_ui(ui)?;
 
         context.draw(&main_framebuffer, |target| {
             target.set_clear(colors::ORANGE);
@@ -83,24 +82,28 @@ fn main() {
             target.draw_sphere([-1.0, 1.0, 0.0]);
             target.draw_cube([1.0, 1.0, 0.0]);
             target.draw_sphere([3.0, 1.0, 0.0]);
-        });
+        })?;
 
         context.draw(&hblur_framebuffer, |target| {
             target.set_albedo(&main_framebuffer);
             target.set_shader(&hblur_shader);
             target.set_material(&blur_material);
             target.draw_surface();
-        });
+        })?;
 
         context.draw(&vblur_framebuffer, |target| {
             target.set_albedo(&hblur_framebuffer);
             target.set_shader(&vblur_shader);
             target.set_material(&blur_material);
             target.draw_surface();
-        });
+        })?;
 
         context.draw_on_window(|target| {
             target.blit_framebuffer(&vblur_framebuffer);
-        });
+        })?;
+
+        Ok(())
     });
+
+    Ok(())
 }

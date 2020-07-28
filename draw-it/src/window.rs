@@ -37,6 +37,8 @@ use imgui_winit_support::HiDpiMode;
 #[cfg(feature = "ui")]
 use imgui_winit_support::WinitPlatform;
 
+use crate::error::Result;
+
 pub struct Window {
     event_loop: EventLoop<()>,
     window: WinitWindow,
@@ -125,8 +127,8 @@ impl Window {
 
     pub fn main_loop(
         self,
-        #[cfg(feature = "ui")] mut draw_fn: impl FnMut(&mut Events, Ui<'_>),
-        #[cfg(not(feature = "ui"))] mut draw_fn: impl FnMut(&mut Events),
+        #[cfg(feature = "ui")] mut draw_fn: impl FnMut(&mut Events, Ui<'_>) -> Result<()>,
+        #[cfg(not(feature = "ui"))] mut draw_fn: impl FnMut(&mut Events) -> Result<()>,
     ) {
         let mut event_loop = self.event_loop;
         let window = self.window;
@@ -232,10 +234,10 @@ impl Window {
                         #[cfg(feature = "ui")]
                         {
                             let ui = imgui.frame();
-                            draw_fn(&mut events, ui);
+                            draw_fn(&mut events, ui).unwrap();
                         }
                         #[cfg(not(feature = "ui"))]
-                        draw_fn(&mut events);
+                        draw_fn(&mut events).unwrap();
                     }
 
                     let delta_time = frame_time.elapsed();
