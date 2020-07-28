@@ -138,7 +138,7 @@ impl Context {
 
         let shader_layout = check!(ShaderLayout::new(&device));
 
-        let image_uniform = check!(ImageUniform::new(
+        let mut image_uniform = check!(ImageUniform::new(
             &device,
             &shader_layout,
             quality.anisotropy
@@ -157,13 +157,13 @@ impl Context {
             &mut resources,
             &window_framebuffers[0],
             &shader_layout,
-            &image_uniform
+            &mut image_uniform
         ));
 
         let forward_renderer = check!(ForwardRenderer::new(
             &device,
             &shader_layout,
-            &image_uniform,
+            &mut image_uniform,
             quality.shadow_map_size,
             quality.pcf,
         ));
@@ -171,7 +171,7 @@ impl Context {
         let ui_renderer = check!(UiRenderer::new(
             &device,
             &shader_layout,
-            &image_uniform,
+            &mut image_uniform,
             &mut resources,
             window.width,
             window.height
@@ -240,7 +240,9 @@ impl Context {
         #[cfg(feature = "ui")]
         {
             let ui_texture = window.build_ui_texture();
-            check!(s.ui_renderer.set_font_texture(&s.image_uniform, ui_texture));
+            check!(s
+                .ui_renderer
+                .set_font_texture(&mut s.image_uniform, ui_texture));
         }
 
         s
@@ -264,7 +266,9 @@ impl Context {
         ));
 
         #[cfg(feature = "ui")]
-        check!(self.ui_renderer.resize(&self.image_uniform, width, height));
+        check!(self
+            .ui_renderer
+            .resize(&mut self.image_uniform, width, height));
     }
 
     pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) {
@@ -324,7 +328,7 @@ impl Context {
             .collect::<Vec<_>>();
         let texture = check!(Texture::new(
             &self.device,
-            &self.image_uniform,
+            &mut self.image_uniform,
             TextureOptions {
                 format: ImageFormat::Rgba,
                 data: &data,
@@ -345,7 +349,7 @@ impl Context {
 
         let texture = check!(Texture::new(
             &self.device,
-            &self.image_uniform,
+            &mut self.image_uniform,
             TextureOptions {
                 format: ImageFormat::Srgba,
                 data: &data,
@@ -368,7 +372,7 @@ impl Context {
             data.push(img.to_rgba().into_raw());
         }
 
-        let cubemap = check!(Cubemap::new(
+        let mut cubemap = check!(Cubemap::new(
             &self.device,
             CubemapOptions {
                 format: ImageFormat::Srgba,
@@ -382,6 +386,7 @@ impl Context {
             }
         ));
 
+        self.image_uniform.set_skybox(check!(cubemap.add_view()));
         self.skybox = Some(cubemap);
 
         Ok(())
@@ -437,7 +442,7 @@ impl Context {
         let framebuffer = check!(Framebuffer::new(
             &self.device,
             &self.shader_layout,
-            &self.image_uniform,
+            &mut self.image_uniform,
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
                 camera_type: t,
@@ -450,9 +455,9 @@ impl Context {
         self.resources.add_framebuffer(framebuffer)
     }
 
-    pub fn resize_framebuffer(&self, framebuffer: &Ref<Framebuffer>, width: u32, height: u32) {
+    pub fn resize_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>, width: u32, height: u32) {
         framebuffer.with(|f| {
-            check!(f.resize(width, height, &self.image_uniform));
+            check!(f.resize(width, height, &mut self.image_uniform));
         });
     }
 
@@ -539,8 +544,8 @@ impl Context {
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.render_stats = Default::default();
-        check!(self.device.next_frame(&self.swapchain));
-        self.resources.clean_unused(&self.image_uniform);
+        check!(self.device.next_frame(&mut self.swapchain));
+        self.resources.clean_unused(&mut self.image_uniform);
         check!(self.resources.update_if_needed());
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_uniform(

@@ -72,7 +72,13 @@ impl ShaderLayout {
             .descriptor_count(sampler_count)
             .binding(1)
             .build();
-        let image_bindings = [image_binding, sampler_binding];
+        let skybox_binding = vk::DescriptorSetLayoutBinding::builder()
+            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
+            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
+            .descriptor_count(1)
+            .binding(2)
+            .build();
+        let image_bindings = [image_binding, sampler_binding, skybox_binding];
         let image_layout = device.create_descriptor_set_layout(&image_bindings)?;
 
         let image_pool_size = vk::DescriptorPoolSize::builder()

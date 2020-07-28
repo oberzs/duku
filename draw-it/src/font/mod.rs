@@ -40,7 +40,11 @@ struct FontData {
 }
 
 impl Font {
-    pub(crate) fn new(device: &Arc<Device>, uniform: &ImageUniform, source: &[u8]) -> Result<Self> {
+    pub(crate) fn new(
+        device: &Arc<Device>,
+        uniform: &mut ImageUniform,
+        source: &[u8],
+    ) -> Result<Self> {
         let FontFile {
             sdf_font,
             bitmap_fonts,
@@ -125,7 +129,7 @@ impl Font {
 
 fn create_font(
     device: &Arc<Device>,
-    uniform: &ImageUniform,
+    uniform: &mut ImageUniform,
     bitmap: &[u8],
     bitmap_size: u32,
     font_size: u32,

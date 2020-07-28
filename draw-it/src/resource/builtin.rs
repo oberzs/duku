@@ -54,7 +54,7 @@ impl Builtins {
         resources: &mut ResourceManager,
         framebuffer: &Framebuffer,
         layout: &ShaderLayout,
-        uniform: &ImageUniform,
+        uniform: &mut ImageUniform,
     ) -> Result<Self> {
         profile_scope!("new");
 

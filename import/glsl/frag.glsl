@@ -5,6 +5,7 @@
 
 layout(set = 2, binding = 0) uniform texture2D textures[100];
 layout(set = 2, binding = 1) uniform sampler samplers[8];
+layout(set = 2, binding = 2) uniform textureCube skybox;
 layout(set = 3, binding = 0) uniform texture2D shadow_maps[4];
 
 // sampler combinations

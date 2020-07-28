@@ -33,7 +33,7 @@ pub(crate) struct TextureOptions<'data> {
 impl Texture {
     pub(crate) fn new(
         device: &Arc<Device>,
-        uniform: &ImageUniform,
+        uniform: &mut ImageUniform,
         options: TextureOptions<'_>,
     ) -> Result<Self> {
         let pixel_size = match options.format {

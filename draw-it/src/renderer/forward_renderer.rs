@@ -58,7 +58,7 @@ impl ForwardRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         shadow_map_size: u32,
         pcf: Pcf,
     ) -> Result<Self> {
@@ -120,7 +120,7 @@ impl ForwardRenderer {
         };
 
         // update world uniform
-        framebuffer.world_uniform().update(WorldData {
+        framebuffer.world_uniform.update(WorldData {
             lights: target.lights(),
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
@@ -136,7 +136,7 @@ impl ForwardRenderer {
         self.device
             .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
         self.device
-            .cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
+            .cmd_bind_uniform(cmd, shader_layout, &framebuffer.world_uniform);
 
         let mut render_stats = RenderStats::default();
         let mut unique_shaders = HashSet::new();
@@ -286,8 +286,8 @@ impl ForwardRenderer {
             prev_cs = *cs;
 
             // update world uniform
-            let framebuffer = &self.shadow_frames[current].framebuffers[i];
-            framebuffer.world_uniform().update(WorldData {
+            let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
+            framebuffer.world_uniform.update(WorldData {
                 lights: [Default::default(); 4],
                 world_matrix: light_matrix,
                 camera_position: Vector3::default(),
@@ -303,7 +303,7 @@ impl ForwardRenderer {
             self.device
                 .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
             self.device
-                .cmd_bind_uniform(cmd, shader_layout, framebuffer.world_uniform());
+                .cmd_bind_uniform(cmd, shader_layout, &framebuffer.world_uniform);
             self.device.cmd_bind_shader(cmd, &self.shadow_shader);
 
             for s_order in &target.orders_by_shader {
@@ -348,7 +348,7 @@ impl ShadowMapSet {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         map_size: u32,
     ) -> Result<Self> {
         let framebuffers = [
@@ -379,7 +379,7 @@ impl ShadowMapSet {
     fn shadow_framebuffer(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         size: u32,
     ) -> Result<Framebuffer> {
         Framebuffer::new(

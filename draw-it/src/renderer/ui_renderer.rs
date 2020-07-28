@@ -41,7 +41,7 @@ impl UiRenderer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         resources: &mut ResourceManager,
         width: u32,
         height: u32,
@@ -134,15 +134,17 @@ impl UiRenderer {
 
         self.framebuffer.with(|f| {
             // update world uniform
-            f.world_uniform()
+            let world_matrix = f.camera.matrix();
+            let camera_position = f.camera.transform.position;
+            f.world_uniform
                 .update(WorldData {
-                    lights: [Default::default(); 4],
-                    world_matrix: f.camera.matrix(),
-                    camera_position: f.camera.transform.position,
-                    time: 0.0,
-                    cascade_splits: [0.0; 4],
                     light_matrices: [Matrix4::identity(); 4],
+                    lights: [Default::default(); 4],
+                    cascade_splits: [0.0; 4],
+                    time: 0.0,
                     pcf: 0.0,
+                    camera_position,
+                    world_matrix,
                 })
                 .expect("bad update");
 
@@ -154,7 +156,7 @@ impl UiRenderer {
 
             // bind resources
             self.device
-                .cmd_bind_uniform(cmd, shader_layout, f.world_uniform());
+                .cmd_bind_uniform(cmd, shader_layout, &f.world_uniform);
             self.device.cmd_bind_shader(cmd, &self.shader);
 
             // render mesh
@@ -187,7 +189,7 @@ impl UiRenderer {
 
     pub(crate) fn set_font_texture(
         &mut self,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         texture: (Vec<u8>, u32, u32),
     ) -> Result<()> {
         self.texture = Some(Texture::new(
@@ -206,7 +208,7 @@ impl UiRenderer {
 
     pub(crate) fn resize(
         &self,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         width: u32,
         height: u32,
     ) -> Result<()> {

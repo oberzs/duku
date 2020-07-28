@@ -25,12 +25,14 @@ use crate::surface::Swapchain;
 
 pub struct Framebuffer {
     pub camera: Camera,
+
+    pub(crate) world_uniform: WorldUniform,
+
     handle: vk::Framebuffer,
     render_pass: RenderPass,
     width: u32,
     height: u32,
     images: Vec<ImageMemory>,
-    world_uniform: WorldUniform,
     multisampled: bool,
     stored_index: usize,
     texture_image: Option<ImageMemory>,
@@ -116,7 +118,7 @@ impl Framebuffer {
     pub(crate) fn new(
         device: &Arc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
         options: FramebufferOptions<'_>,
     ) -> Result<Self> {
         profile_scope!("new");
@@ -208,7 +210,7 @@ impl Framebuffer {
         &mut self,
         width: u32,
         height: u32,
-        image_uniform: &ImageUniform,
+        image_uniform: &mut ImageUniform,
     ) -> Result<()> {
         // cannot resize swapchain framebuffer manually
         debug_assert!(self.render_pass.attachments().count() == self.images.len());
@@ -354,10 +356,6 @@ impl Framebuffer {
 
     pub(crate) fn iter_images(&self) -> impl Iterator<Item = &ImageMemory> {
         self.images.iter()
-    }
-
-    pub(crate) fn world_uniform(&self) -> &WorldUniform {
-        &self.world_uniform
     }
 
     pub(crate) fn texture_index(&self) -> i32 {

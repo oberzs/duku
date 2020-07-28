@@ -4,8 +4,6 @@
 // uniform structs to manage shader accessible uniform data
 
 use ash::vk;
-use std::cell::Cell;
-use std::cell::RefCell;
 use std::sync::Arc;
 
 use super::MaterialData;
@@ -35,8 +33,9 @@ pub(crate) struct MaterialUniform {
 pub(crate) struct ImageUniform {
     descriptor: Descriptor,
     sampler_combinations: Vec<Sampler>,
-    images: RefCell<Vec<Option<vk::ImageView>>>,
-    should_update: Cell<bool>,
+    images: Vec<Option<vk::ImageView>>,
+    skybox: Option<vk::ImageView>,
+    should_update: bool,
     device: Arc<Device>,
 }
 
@@ -61,7 +60,7 @@ impl WorldUniform {
         Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update(&self, data: WorldData) -> Result<()> {
+    pub(crate) fn update(&mut self, data: WorldData) -> Result<()> {
         self.buffer.update_data(&[data])
     }
 }
@@ -82,7 +81,7 @@ impl MaterialUniform {
         Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update(&self, data: MaterialData) -> Result<()> {
+    pub(crate) fn update(&mut self, data: MaterialData) -> Result<()> {
         self.buffer.update_data(&[data])
     }
 }
@@ -132,53 +131,60 @@ impl ImageUniform {
         Ok(Self {
             descriptor,
             sampler_combinations,
-            images: RefCell::new(vec![]),
-            should_update: Cell::new(true),
+            images: vec![],
+            skybox: None,
+            should_update: true,
             device: Arc::clone(device),
         })
     }
 
-    pub(crate) fn add(&self, image: vk::ImageView) -> i32 {
-        let mut images = self.images.borrow_mut();
+    pub(crate) fn add(&mut self, image: vk::ImageView) -> i32 {
+        let next_index = self.images.len();
 
         // find free index
-        let index = images
+        let index = self
+            .images
             .iter()
             .position(|img| img.is_none())
-            .unwrap_or_else(|| images.len());
+            .unwrap_or(next_index);
 
         // add new or replace image
-        if index == images.len() {
-            images.push(Some(image));
+        if index == next_index {
+            self.images.push(Some(image));
         } else {
-            images[index] = Some(image);
+            self.images[index] = Some(image);
         }
 
-        self.should_update.set(true);
+        self.should_update = true;
         index as i32
     }
 
-    pub(crate) fn remove(&self, index: i32) {
-        let mut images = self.images.borrow_mut();
+    pub(crate) fn remove(&mut self, index: i32) {
+        debug_assert!((index as usize) < self.images.len());
 
         // mark image as removed
-        images[index as usize] = None;
+        self.images[index as usize] = None;
 
-        self.should_update.set(true);
+        self.should_update = true;
     }
 
-    pub(crate) fn update_if_needed(&self) {
-        let images = self.images.borrow();
+    pub(crate) fn set_skybox(&mut self, image: vk::ImageView) {
+        self.skybox = Some(image);
+        self.should_update = true;
+    }
 
+    pub(crate) fn update_if_needed(&mut self) {
         // update if image was added/removed
-        if self.should_update.get() {
+        if self.should_update {
+            let mut writes = vec![];
+
             // configure image writes to descriptor
             let image_infos = (0..100)
                 .map(|i| {
                     // get image or default image
-                    let image = match images.get(i) {
+                    let image = match self.images.get(i) {
                         Some(Some(img)) => *img,
-                        _ => images[0].expect("bad code"),
+                        _ => self.images[0].expect("bad code"),
                     };
 
                     vk::DescriptorImageInfo::builder()
@@ -187,13 +193,15 @@ impl ImageUniform {
                         .build()
                 })
                 .collect::<Vec<_>>();
-            let image_write = vk::WriteDescriptorSet::builder()
-                .dst_set(self.descriptor.1)
-                .dst_binding(0)
-                .dst_array_element(0)
-                .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-                .image_info(&image_infos)
-                .build();
+            writes.push(
+                vk::WriteDescriptorSet::builder()
+                    .dst_set(self.descriptor.1)
+                    .dst_binding(0)
+                    .dst_array_element(0)
+                    .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
+                    .image_info(&image_infos)
+                    .build(),
+            );
 
             // configure sampler writes to descriptor
             let sampler_info = self
@@ -206,19 +214,36 @@ impl ImageUniform {
                         .build()
                 })
                 .collect::<Vec<_>>();
+            writes.push(
+                vk::WriteDescriptorSet::builder()
+                    .dst_set(self.descriptor.1)
+                    .dst_binding(1)
+                    .dst_array_element(0)
+                    .descriptor_type(vk::DescriptorType::SAMPLER)
+                    .image_info(&sampler_info)
+                    .build(),
+            );
 
-            let sampler_write = vk::WriteDescriptorSet::builder()
-                .dst_set(self.descriptor.1)
-                .dst_binding(1)
-                .dst_array_element(0)
-                .descriptor_type(vk::DescriptorType::SAMPLER)
-                .image_info(&sampler_info)
-                .build();
+            // configure skybox write to descriptor
+            if let Some(skybox) = self.skybox {
+                let skybox_info = [vk::DescriptorImageInfo::builder()
+                    .image_layout(ImageLayout::ShaderColor.flag())
+                    .image_view(skybox)
+                    .build()];
+                writes.push(
+                    vk::WriteDescriptorSet::builder()
+                        .dst_set(self.descriptor.1)
+                        .dst_binding(2)
+                        .dst_array_element(0)
+                        .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
+                        .image_info(&skybox_info)
+                        .build(),
+                );
+            };
 
             // write data to descriptor
-            let writes = [image_write, sampler_write];
             self.device.update_descriptor_sets(&writes);
-            self.should_update.set(false);
+            self.should_update = false;
         }
     }
 }

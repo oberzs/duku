@@ -4,8 +4,6 @@
 // DynamicBuffer - buffer struct thats memory will change
 
 use ash::vk;
-use std::cell::Cell;
-use std::cell::RefCell;
 use std::mem;
 use std::sync::Arc;
 
@@ -16,10 +14,10 @@ use crate::device::Device;
 use crate::error::Result;
 
 pub(crate) struct DynamicBuffer {
-    memory: RefCell<BufferMemory>,
+    memory: BufferMemory,
     usage: BufferUsage,
     access: BufferAccess,
-    size: Cell<usize>,
+    size: usize,
     device: Arc<Device>,
 }
 
@@ -36,36 +34,35 @@ impl DynamicBuffer {
         let memory = BufferMemory::new(device, &[usage], access, size)?;
 
         Ok(Self {
-            memory: RefCell::new(memory),
+            device: Arc::clone(device),
+            memory,
             usage,
             access,
-            size: Cell::new(size),
-            device: Arc::clone(device),
+            size,
         })
     }
 
-    pub(crate) fn update_data<T: Copy>(&self, data: &[T]) -> Result<()> {
+    pub(crate) fn update_data<T: Copy>(&mut self, data: &[T]) -> Result<()> {
         let size = mem::size_of::<T>() * data.len();
 
-        if size <= self.size.get() {
-            self.memory.borrow().copy_from_data(data, size)?;
+        if size <= self.size {
+            self.memory.copy_from_data(data, size)?;
         } else {
             // reallocate memory if data is too big
-            let mut memory = self.memory.borrow_mut();
-            *memory = BufferMemory::new(&self.device, &[self.usage], self.access, size)?;
-            memory.copy_from_data(data, size)?;
-            self.size.set(size);
+            self.memory = BufferMemory::new(&self.device, &[self.usage], self.access, size)?;
+            self.memory.copy_from_data(data, size)?;
+            self.size = size;
         }
 
         Ok(())
     }
 
     pub(crate) fn size(&self) -> u32 {
-        self.size.get() as u32
+        self.size as u32
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {
-        self.memory.borrow().handle()
+        self.memory.handle()
     }
 }
 

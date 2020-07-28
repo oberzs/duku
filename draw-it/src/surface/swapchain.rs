@@ -4,7 +4,6 @@
 // Swapchain - struct that holds images for specific surface
 
 use ash::vk;
-use std::cell::Cell;
 use std::sync::Arc;
 
 use super::Surface;
@@ -18,7 +17,7 @@ use crate::instance::Instance;
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
     surface_properties: SurfaceProperties,
-    current_image: Cell<u32>,
+    current_image: usize,
     device: Arc<Device>,
 }
 
@@ -36,7 +35,7 @@ impl Swapchain {
         Ok(Self {
             handle,
             surface_properties,
-            current_image: Cell::new(0),
+            current_image: 0,
             device: device.clone(),
         })
     }
@@ -52,7 +51,7 @@ impl Swapchain {
         self.device.destroy_swapchain(self.handle);
         let info = swapchain_info(surface, &self.surface_properties);
         self.handle = self.device.create_swapchain(&info)?;
-        self.current_image.set(0);
+        self.current_image = 0;
         Ok(())
     }
 
@@ -60,14 +59,13 @@ impl Swapchain {
         Ok(self.device.get_swapchain_images(self.handle)?.into_iter())
     }
 
-    pub(crate) fn next(&self, signal: vk::Semaphore) -> Result<()> {
-        self.current_image
-            .set(self.device.get_next_swapchain_image(self.handle, signal)?);
+    pub(crate) fn next(&mut self, signal: vk::Semaphore) -> Result<()> {
+        self.current_image = self.device.get_next_swapchain_image(self.handle, signal)?;
         Ok(())
     }
 
     pub(crate) fn current(&self) -> usize {
-        self.current_image.get() as usize
+        self.current_image as usize
     }
 
     pub(crate) fn extent(&self) -> vk::Extent2D {

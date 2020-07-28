@@ -153,24 +153,24 @@ impl Device {
         let destroyed_images = [vec![], vec![]];
 
         Ok(Self {
-            handle,
-            device_properties,
-            swapchain_ext,
-            command_pools,
-            command_buffers: Mutex::new(command_buffers),
-            graphics_queue: (g_index, graphics_queue),
-            present_queue: (p_index, present_queue),
-            sync_acquire_image,
-            sync_release_image,
-            sync_queue_submit,
-            current_frame: AtomicUsize::new(0),
             destroyed_pipelines: Mutex::new(destroyed_pipelines),
             destroyed_buffers: Mutex::new(destroyed_buffers),
+            command_buffers: Mutex::new(command_buffers),
             destroyed_images: Mutex::new(destroyed_images),
+            graphics_queue: (g_index, graphics_queue),
+            present_queue: (p_index, present_queue),
+            current_frame: AtomicUsize::new(0),
+            sync_release_image,
+            sync_acquire_image,
+            sync_queue_submit,
+            device_properties,
+            command_pools,
+            swapchain_ext,
+            handle,
         })
     }
 
-    pub(crate) fn next_frame(&self, swapchain: &Swapchain) -> Result<()> {
+    pub(crate) fn next_frame(&self, swapchain: &mut Swapchain) -> Result<()> {
         let mut current = self.current_frame();
         current = (current + 1) % IN_FLIGHT_FRAME_COUNT;
 
@@ -303,11 +303,11 @@ impl Device {
         &self,
         handle: vk::SwapchainKHR,
         signal: vk::Semaphore,
-    ) -> Result<u32> {
+    ) -> Result<usize> {
         Ok(unsafe {
             self.swapchain_ext
                 .acquire_next_image(handle, u64::max_value(), signal, Default::default())?
-                .0
+                .0 as usize
         })
     }
 

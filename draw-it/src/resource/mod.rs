@@ -77,7 +77,7 @@ impl ResourceManager {
         reference
     }
 
-    pub(crate) fn clean_unused(&mut self, uniform: &ImageUniform) {
+    pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
         self.fonts.retain(|r| r.count() != 1);
         self.meshes.retain(|r| r.count() != 1);
         self.materials.retain(|r| r.count() != 1);
