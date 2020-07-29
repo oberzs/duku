@@ -63,7 +63,7 @@ pub struct Context {
     // Resources
     builtins: Builtins,
     resources: ResourceManager,
-    skybox: Option<Cubemap>,
+    skybox: Cubemap,
 
     // Vulkan
     window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
@@ -142,6 +142,21 @@ impl Context {
             &mut image_uniform,
         )?;
 
+        let mut skybox = Cubemap::new(
+            &device,
+            CubemapOptions {
+                format: ImageFormat::Rgba,
+                top: &[255, 255, 255, 255],
+                bottom: &[255, 255, 255, 255],
+                front: &[255, 255, 255, 255],
+                back: &[255, 255, 255, 255],
+                left: &[255, 255, 255, 255],
+                right: &[255, 255, 255, 255],
+                size: 1,
+            },
+        )?;
+        image_uniform.set_skybox(skybox.add_view()?);
+
         let forward_renderer = ForwardRenderer::new(
             &device,
             &shader_layout,
@@ -172,7 +187,7 @@ impl Context {
             render_stage: RenderStage::Before,
             render_stats: Default::default(),
             camera_type: options.camera,
-            skybox: None,
+            skybox,
             forward_renderer,
             builtins,
             resources,
@@ -350,6 +365,27 @@ impl Context {
         Ok(self.resources.add_texture(texture))
     }
 
+    pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) -> Result<()> {
+        let mut cubemap = Cubemap::new(
+            &self.device,
+            CubemapOptions {
+                format: ImageFormat::Rgba,
+                top: pixels[0],
+                bottom: pixels[1],
+                front: pixels[2],
+                back: pixels[3],
+                left: pixels[4],
+                right: pixels[5],
+                size,
+            },
+        )?;
+
+        self.image_uniform.set_skybox(cubemap.add_view()?);
+        self.skybox = cubemap;
+
+        Ok(())
+    }
+
     #[cfg(feature = "image")]
     pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
         use image_file::GenericImageView;
@@ -377,7 +413,7 @@ impl Context {
         )?;
 
         self.image_uniform.set_skybox(cubemap.add_view()?);
-        self.skybox = Some(cubemap);
+        self.skybox = cubemap;
 
         Ok(())
     }
