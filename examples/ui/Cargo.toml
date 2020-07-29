@@ -5,4 +5,4 @@ authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-draw-it = { path = "../../draw-it", version = "0.1.0" }
+draw-it = { path = "../../draw-it" }
