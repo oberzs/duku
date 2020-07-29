@@ -7,7 +7,6 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 
 #[cfg(feature = "hot-reload")]
 use notify::DebouncedEvent;
@@ -521,6 +520,7 @@ impl Context {
         use notify::RecursiveMode;
         use notify::Watcher;
         use std::thread;
+        use std::time::Duration;
 
         let path_buf = path.as_ref().to_path_buf();
         let shader = self.create_shader_from_file(&path_buf, options)?;
