@@ -7,13 +7,13 @@
 
 macro_rules! error {
     ($($arg:expr),*) => {{
-        #[cfg(feature = "logger")]
+        #[cfg(debug_assertions)]
         {
             print!("\x1b[91merror\x1b[0m: ");
             println!($($arg),*);
             std::process::exit(1);
         }
-        #[cfg(not(feature = "logger"))]
+        #[cfg(not(debug_assertions))]
         {
             $(let _ = &$arg;)*
             std::process::exit(1);
@@ -23,12 +23,12 @@ macro_rules! error {
 
 macro_rules! warn {
     ($($arg:expr),*) => {{
-        #[cfg(feature = "logger")]
+        #[cfg(debug_assertions)]
         {
             print!("\x1b[93mwarning\x1b[0m: ");
             println!($($arg),*);
         }
-        #[cfg(not(feature = "logger"))]
+        #[cfg(not(debug_assertions))]
         {
             $(let _ = &$arg;)*
         }
@@ -37,12 +37,12 @@ macro_rules! warn {
 
 macro_rules! info {
     ($($arg:expr),*) => {{
-        #[cfg(feature = "logger")]
+        #[cfg(debug_assertions)]
         {
             print!("\x1b[96minfo\x1b[0m: ");
             println!($($arg),*);
         }
-        #[cfg(not(feature = "logger"))]
+        #[cfg(not(debug_assertions))]
         {
             $(let _ = &$arg;)*
         }

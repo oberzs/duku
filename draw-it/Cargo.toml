@@ -5,15 +5,13 @@ authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["controller", "image", "window", "ui", "logger", "hot-reload"]
-minimal = ["window", "logger"]
+default = ["controller", "image", "ui", "hot-reload"]
 profiler = ["lazy_static"]
 image = ["image_file"]
 window = ["winit"]
 controller = ["window"]
 ui = ["window", "imgui", "imgui-winit-support"]
 hot-reload = ["notify"]
-logger = []
 
 [dependencies]
 ash = "0.31.0"
