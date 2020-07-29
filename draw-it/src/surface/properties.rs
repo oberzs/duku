@@ -12,13 +12,24 @@ use crate::math::clamp;
 
 pub(crate) struct SurfaceProperties {
     pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
-    pub(crate) present_modes: Vec<vk::PresentModeKHR>,
     pub(crate) capabilities: vk::SurfaceCapabilitiesKHR,
     pub(crate) graphics_index: Option<u32>,
     pub(crate) present_index: Option<u32>,
     pub(crate) extent: vk::Extent2D,
-    pub(crate) present_mode: vk::PresentModeKHR,
+    pub(crate) present_mode: PresentMode,
     pub(crate) image_count: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ColorSpace {
+    Srgb,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PresentMode {
+    Fifo,
+    Immediate,
+    Disabled,
 }
 
 impl SurfaceProperties {
@@ -39,7 +50,6 @@ impl SurfaceProperties {
 
                 Self {
                     formats: f,
-                    present_modes: p,
                     capabilities: c,
                     graphics_index: q.0,
                     present_index: q.1,
@@ -62,9 +72,6 @@ impl SurfaceProperties {
         self.capabilities = instance
             .get_surface_capabilities(surface)?
             .remove(gpu_index);
-        self.present_modes = instance
-            .get_surface_present_modes(surface)?
-            .remove(gpu_index);
         self.extent = pick_extent(self.capabilities, surface);
         Ok(())
     }
@@ -86,6 +93,22 @@ impl SurfaceProperties {
     }
 }
 
+impl ColorSpace {
+    pub(crate) fn flag(&self) -> vk::ColorSpaceKHR {
+        vk::ColorSpaceKHR::SRGB_NONLINEAR
+    }
+}
+
+impl PresentMode {
+    pub(crate) fn flag(&self) -> vk::PresentModeKHR {
+        match *self {
+            Self::Fifo => vk::PresentModeKHR::FIFO,
+            Self::Immediate => vk::PresentModeKHR::IMMEDIATE,
+            Self::Disabled => unreachable!(),
+        }
+    }
+}
+
 fn pick_extent(capabilities: vk::SurfaceCapabilitiesKHR, surface: &Surface) -> vk::Extent2D {
     let extent = capabilities.current_extent;
     let min_width = capabilities.min_image_extent.width;
@@ -102,13 +125,19 @@ fn pick_extent(capabilities: vk::SurfaceCapabilitiesKHR, surface: &Surface) -> v
     }
 }
 
-fn pick_present_mode(_present_modes: &[vk::PresentModeKHR], vsync: bool) -> vk::PresentModeKHR {
+fn pick_present_mode(present_modes: &[vk::PresentModeKHR], vsync: bool) -> PresentMode {
     info!("using VSync {}", if vsync { "enabled" } else { "disabled" });
-    if vsync {
-        vk::PresentModeKHR::FIFO
+    let mut present_mode = if vsync {
+        PresentMode::Fifo
     } else {
-        vk::PresentModeKHR::IMMEDIATE
+        PresentMode::Immediate
+    };
+
+    if !present_modes.contains(&present_mode.flag()) {
+        present_mode = PresentMode::Disabled;
     }
+
+    present_mode
 }
 
 fn pick_image_count(capabilities: vk::SurfaceCapabilitiesKHR) -> u32 {

@@ -13,6 +13,8 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::instance::Instance;
 
+pub(crate) use properties::ColorSpace;
+pub(crate) use properties::PresentMode;
 pub(crate) use properties::SurfaceProperties;
 pub(crate) use swapchain::Swapchain;
 

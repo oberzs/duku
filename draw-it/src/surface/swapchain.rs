@@ -6,6 +6,7 @@
 use ash::vk;
 use std::sync::Arc;
 
+use super::ColorSpace;
 use super::Surface;
 use super::SurfaceProperties;
 use crate::device::Device;
@@ -95,14 +96,14 @@ fn swapchain_info(
     let mut info = vk::SwapchainCreateInfoKHR::builder()
         .surface(surface.handle())
         .image_format(ImageFormat::Sbgra.flag())
-        .image_color_space(vk::ColorSpaceKHR::SRGB_NONLINEAR)
+        .image_color_space(ColorSpace::Srgb.flag())
         .image_extent(extent)
         .image_array_layers(1)
         .image_usage(ImageUsage::Color.flag())
         .pre_transform(transform)
         .min_image_count(image_count)
         .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
-        .present_mode(present_mode)
+        .present_mode(present_mode.flag())
         .clipped(true);
 
     let indices = surface_properties.indices();

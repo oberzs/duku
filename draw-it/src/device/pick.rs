@@ -9,6 +9,9 @@ use std::ffi::CStr;
 use super::DeviceProperties;
 use crate::error::ErrorKind;
 use crate::error::Result;
+use crate::image::ImageFormat;
+use crate::surface::ColorSpace;
+use crate::surface::PresentMode;
 use crate::surface::SurfaceProperties;
 
 pub(crate) fn pick_gpu(
@@ -22,17 +25,18 @@ pub(crate) fn pick_gpu(
         let supports_extensions = d.supports_extensions;
 
         let has_queue_indices = s.graphics_index.is_some() && s.present_index.is_some();
-        let has_surface_formats = !s.formats.is_empty();
-        let has_surface_present_modes = !s.present_modes.is_empty();
-
         let has_sampler_anisotropy = d.features.sampler_anisotropy > 0;
         let has_line_mode = d.features.fill_mode_non_solid > 0;
         let has_wide_lines = d.features.wide_lines > 0;
+        let has_surface_present_mode = s.present_mode != PresentMode::Disabled;
+        let has_surface_format = s.formats.iter().any(|f| {
+            f.format == ImageFormat::Sbgra.flag() && f.color_space == ColorSpace::Srgb.flag()
+        });
 
         if supports_extensions
             && has_queue_indices
-            && has_surface_formats
-            && has_surface_present_modes
+            && has_surface_format
+            && has_surface_present_mode
             && has_sampler_anisotropy
             && has_line_mode
             && has_wide_lines
