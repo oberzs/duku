@@ -38,8 +38,8 @@ pub mod mesh;
 #[cfg(feature = "window")]
 pub mod window;
 
-// #[cfg(feature = "ui")]
-// pub mod ui;
+#[cfg(feature = "ui")]
+pub mod ui;
 
 #[cfg(feature = "profiler")]
 pub mod profiler;

@@ -48,7 +48,7 @@ use crate::surface::Swapchain;
 use crate::surface::WindowHandle;
 
 #[cfg(feature = "ui")]
-use crate::renderer::UiRenderer;
+use crate::ui::Ui;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
@@ -59,7 +59,7 @@ pub struct Context {
 
     // UI
     #[cfg(feature = "ui")]
-    ui_renderer: UiRenderer,
+    ui: Option<Ui>,
 
     // Resources
     builtins: Builtins,
@@ -180,15 +180,6 @@ impl Context {
             quality.shadow_map_size,
             quality.pcf,
         )?;
-        #[cfg(feature = "ui")]
-        let ui_renderer = UiRenderer::new(
-            &device,
-            &shader_layout,
-            &mut image_uniform,
-            &mut resources,
-            window.width,
-            window.height,
-        )?;
 
         let main_camera = Camera::new(
             options.camera,
@@ -215,7 +206,7 @@ impl Context {
             instance,
             main_camera,
             #[cfg(feature = "ui")]
-            ui_renderer,
+            ui: None,
             #[cfg(feature = "hot-reload")]
             stop_senders: vec![],
             #[cfg(feature = "window")]
@@ -242,7 +233,9 @@ impl Context {
         )?;
 
         #[cfg(feature = "ui")]
-        self.ui_renderer
+        self.ui
+            .as_mut()
+            .unwrap()
             .resize(&mut self.image_uniform, width, height)?;
 
         Ok(())
@@ -258,8 +251,11 @@ impl Context {
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
-            if self.ui_renderer.drawn() {
-                target.blit_framebuffer(self.ui_renderer.framebuffer());
+            {
+                let ui = self.ui.as_ref().unwrap();
+                if ui.drawn() {
+                    target.blit_framebuffer(ui.framebuffer());
+                }
             }
 
             let framebuffer =
@@ -295,17 +291,6 @@ impl Context {
         Ok(())
     }
 
-    #[cfg(feature = "ui")]
-    pub fn draw_ui(&mut self, ui: imgui::Ui<'_>) -> Result<()> {
-        if let RenderStage::Before = self.render_stage {
-            self.begin_draw()?;
-        }
-
-        self.ui_renderer.draw(ui, &self.shader_layout)?;
-
-        Ok(())
-    }
-
     pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Result<Ref<Texture>> {
         let data = pixels
             .iter()
@@ -325,27 +310,6 @@ impl Context {
         Ok(self.resources.add_texture(texture))
     }
 
-    #[cfg(feature = "image")]
-    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
-        use image_file::GenericImageView;
-
-        let img = image_file::open(path)?;
-        let (width, height) = img.dimensions();
-        let data = img.to_rgba().into_raw();
-
-        let texture = Texture::new(
-            &self.device,
-            &mut self.image_uniform,
-            TextureOptions {
-                format: ImageFormat::Srgba,
-                data: &data,
-                width,
-                height,
-            },
-        )?;
-        Ok(self.resources.add_texture(texture))
-    }
-
     pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) -> Result<()> {
         let mut cubemap = Cubemap::new(
             &self.device,
@@ -357,38 +321,6 @@ impl Context {
                 back: pixels[3],
                 left: pixels[4],
                 right: pixels[5],
-                size,
-            },
-        )?;
-
-        self.image_uniform.set_skybox(cubemap.add_view()?);
-        self.skybox = cubemap;
-
-        Ok(())
-    }
-
-    #[cfg(feature = "image")]
-    pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
-        use image_file::GenericImageView;
-
-        let mut size = 0;
-        let mut data = vec![];
-        for path in &paths {
-            let img = image_file::open(path)?;
-            size = img.dimensions().0;
-            data.push(img.to_rgba().into_raw());
-        }
-
-        let mut cubemap = Cubemap::new(
-            &self.device,
-            CubemapOptions {
-                format: ImageFormat::Srgba,
-                top: &data[0],
-                bottom: &data[1],
-                front: &data[2],
-                back: &data[3],
-                left: &data[4],
-                right: &data[5],
                 size,
             },
         )?;
@@ -510,7 +442,7 @@ impl Context {
         );
 
         #[cfg(feature = "ui")]
-        self.ui_renderer.reset();
+        self.ui.as_mut().unwrap().reset();
 
         Ok(())
     }
@@ -551,6 +483,8 @@ impl Context {
         window.set_scroll_polling(true);
         window.set_size_polling(true);
         window.set_cursor_pos_polling(true);
+        window.set_mouse_button_polling(true);
+        window.set_char_polling(true);
 
         // create context
         #[cfg(target_os = "windows")]
@@ -580,12 +514,9 @@ impl Context {
         // attach glfw to context
         context.attach_glfw(glfw, event_receiver);
 
-        // #[cfg(feature = "ui")]
-        //     {
-        //         let ui_texture = window.build_ui_texture();
-        //         s.ui_renderer
-        //             .set_font_texture(&mut s.image_uniform, ui_texture)?;
-        //     }
+        // create ui renderer
+        #[cfg(feature = "ui")]
+        context.attach_ui(width, height)?;
 
         Ok((context, Window::new(window)))
     }
@@ -598,6 +529,21 @@ impl Context {
     ) {
         self.glfw = Some(glfw);
         self.event_receiver = Some(event_receiver);
+    }
+
+    #[cfg(feature = "ui")]
+    pub(crate) fn attach_ui(&mut self, width: u32, height: u32) -> Result<()> {
+        let ui = Ui::new(
+            &self.device,
+            &self.shader_layout,
+            &mut self.image_uniform,
+            &mut self.resources,
+            width,
+            height,
+        )?;
+        self.ui = Some(ui);
+
+        Ok(())
     }
 
     #[cfg(feature = "window")]
@@ -614,12 +560,19 @@ impl Context {
         while polling {
             self.glfw.as_mut().unwrap().poll_events();
             for (_, event) in glfw::flush_messages(self.event_receiver.as_ref().unwrap()) {
+                // update imgui
+                #[cfg(feature = "ui")]
+                self.ui.as_mut().unwrap().handle_event(&event);
+
                 // update window events
                 match event {
                     WindowEvent::Key(key, _, action, _) => window.handle_key(key, action),
                     WindowEvent::CursorPos(x, y) => window.handle_mouse(x, y),
                     WindowEvent::Scroll(x, y) => window.handle_scroll(x, y),
                     WindowEvent::Size(w, h) if w != 0 && h != 0 => window.record_resize(),
+                    WindowEvent::MouseButton(button, action, _) => {
+                        window.handle_mouse_button(button, action)
+                    }
                     _ => (),
                 }
             }
@@ -696,6 +649,73 @@ impl Context {
         });
 
         Ok(shader)
+    }
+
+    #[cfg(feature = "image")]
+    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
+        use image_file::GenericImageView;
+
+        let img = image_file::open(path)?;
+        let (width, height) = img.dimensions();
+        let data = img.to_rgba().into_raw();
+
+        let texture = Texture::new(
+            &self.device,
+            &mut self.image_uniform,
+            TextureOptions {
+                format: ImageFormat::Srgba,
+                data: &data,
+                width,
+                height,
+            },
+        )?;
+        Ok(self.resources.add_texture(texture))
+    }
+
+    #[cfg(feature = "image")]
+    pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
+        use image_file::GenericImageView;
+
+        let mut size = 0;
+        let mut data = vec![];
+        for path in &paths {
+            let img = image_file::open(path)?;
+            size = img.dimensions().0;
+            data.push(img.to_rgba().into_raw());
+        }
+
+        let mut cubemap = Cubemap::new(
+            &self.device,
+            CubemapOptions {
+                format: ImageFormat::Srgba,
+                top: &data[0],
+                bottom: &data[1],
+                front: &data[2],
+                back: &data[3],
+                left: &data[4],
+                right: &data[5],
+                size,
+            },
+        )?;
+
+        self.image_uniform.set_skybox(cubemap.add_view()?);
+        self.skybox = cubemap;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "ui")]
+    pub fn draw_ui(&mut self, draw_fn: impl FnMut(&imgui::Ui<'_>)) -> Result<()> {
+        if let RenderStage::Before = self.render_stage {
+            self.begin_draw()?;
+        }
+
+        self.ui
+            .as_mut()
+            .unwrap()
+            .draw(&self.shader_layout, draw_fn)?;
+
+        Ok(())
     }
 }
 
