@@ -6,44 +6,31 @@
 
 use draw_it::camera::CameraType;
 use draw_it::error::Result;
-use draw_it::window::Window;
-use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::WindowOptions;
 
 fn main() -> Result<()> {
-    let (mut width, mut height) = (500, 500);
-
-    let mut window = Window::new(WindowOptions {
-        title: "Draw-it example: UI",
-        resizable: true,
-        width,
-        height,
-    });
-    let mut context = Context::from_window(
-        &mut window,
+    let (mut context, mut window) = Context::with_window(
         ContextOptions {
             camera: CameraType::Orthographic,
+            ..Default::default()
+        },
+        WindowOptions {
+            title: "Draw-it example: UI",
             ..Default::default()
         },
     )?;
 
     let mut show_demo = true;
 
-    window.main_loop(|events, ui| {
-        if let Some((new_width, new_height)) = events.resized() {
-            context.resize(new_width, new_height)?;
-            width = new_width;
-            height = new_height;
-        }
-
-        ui.show_demo_window(&mut show_demo);
-
-        context.draw_ui(ui)?;
+    while window.is_open() {
+        context.poll_events(&mut window)?;
+        context.draw_ui(|ui| {
+            ui.show_demo_window(&mut show_demo);
+        })?;
         context.draw_on_window(|_| {})?;
-
-        Ok(())
-    });
+    }
 
     Ok(())
 }

@@ -4,6 +4,6 @@
 layout(location = 0) out vec4 out_color;
 
 void fragment() {
-    vec4 tex_color = texture(sampler2D(textures[object.albedo_index], sampler_m), in_uv);
-    out_color = tex_color * in_color;
+    float value = texture(sampler2D(textures[object.albedo_index], sampler_m), in_uv).r;
+    out_color = vec4(1.0, 1.0, 1.0, value) * in_color;
 }
