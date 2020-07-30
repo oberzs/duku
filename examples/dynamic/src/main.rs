@@ -3,27 +3,27 @@
 
 // example with dynamicly changing mesh vertices
 
-use draw_it::camera::Controller;
-use draw_it::color::colors;
-use draw_it::error::Result;
-use draw_it::math::Vector3;
-use draw_it::mesh::MeshOptions;
-use draw_it::window::Window;
+use draw_it::colors;
+use draw_it::controller::Controller;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
+use draw_it::MeshOptions;
+use draw_it::Result;
+use draw_it::Vector3;
 use std::time::Instant;
 
 fn main() -> Result<()> {
-    let (width, height) = (720, 640);
     let square_size = 10;
 
-    let mut window = Window::new(WindowOptions {
-        title: "Draw-it example: Dynamic",
-        width,
-        height,
-        ..Default::default()
-    });
-    let mut context = Context::from_window(&mut window, Default::default())?;
+    let (mut context, mut window) = Context::with_window(
+        Default::default(),
+        WindowOptions {
+            title: "Draw-it example: Dynamic",
+            width: 720,
+            height: 640,
+            ..Default::default()
+        },
+    )?;
 
     let mut controller = Controller::default();
 
@@ -45,8 +45,9 @@ fn main() -> Result<()> {
     };
     let time = Instant::now();
 
-    window.main_loop(|events, _| {
-        controller.update(&mut context.main_camera, events);
+    while window.is_open() {
+        context.poll_events(&mut window)?;
+        controller.update(&mut context.main_camera, &mut window);
 
         // update square mesh
         square.with(|mesh| {
@@ -63,9 +64,7 @@ fn main() -> Result<()> {
             let offset = -(square_size as f32 / 2.0);
             target.draw(&square, [offset, offset, 0.0]);
         })?;
-
-        Ok(())
-    });
+    }
 
     Ok(())
 }

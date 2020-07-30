@@ -12,8 +12,6 @@ use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
-use crate::camera::Camera;
-use crate::camera::CameraType;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::Attachment;
@@ -21,6 +19,8 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::WorldUniform;
+use crate::renderer::Camera;
+use crate::renderer::CameraType;
 use crate::surface::Swapchain;
 
 pub struct Framebuffer {

@@ -3,19 +3,18 @@
 
 // Mesh drawing example
 
-use draw_it::camera::Controller;
-use draw_it::error::Result;
-use draw_it::math::Transform;
-use draw_it::math::Vector3;
-use draw_it::reference::Texture;
-use draw_it::shader::SamplerFilter;
-use draw_it::shader::SamplerOptions;
+use draw_it::controller::Controller;
 use draw_it::ui;
 use draw_it::window::Key;
-use draw_it::window::Window;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::Result;
+use draw_it::SamplerFilter;
+use draw_it::SamplerOptions;
+use draw_it::Texture;
+use draw_it::Transform;
+use draw_it::Vector3;
 use rand::Rng;
 
 struct Cube {
@@ -24,19 +23,16 @@ struct Cube {
 }
 
 fn main() -> Result<()> {
-    let (mut width, mut height) = (720, 640);
-
-    let mut window = Window::new(WindowOptions {
-        title: "Draw-it example: Cubes",
-        resizable: true,
-        width,
-        height,
-    });
-    let mut context = Context::from_window(
-        &mut window,
+    let (mut context, mut window) = Context::with_window(
         ContextOptions {
             vsync: false,
             ..Default::default()
+        },
+        WindowOptions {
+            title: "Draw-it example: Cubes",
+            resizable: true,
+            width: 720,
+            height: 640,
         },
     )?;
 
@@ -86,10 +82,12 @@ fn main() -> Result<()> {
 
     let mut paused = false;
 
-    window.main_loop(|events, ui| {
-        if events.is_key_typed(Key::P) {
+    while window.is_open() {
+        context.poll_events(&mut window)?;
+
+        if window.is_key_typed(Key::P) {
             paused = !paused;
-            events.set_title(if paused {
+            window.set_title(if paused {
                 "Draw-it example: Cubes (paused)"
             } else {
                 "Draw-it example: Cubes"
@@ -97,19 +95,15 @@ fn main() -> Result<()> {
         }
 
         if !paused {
-            controller.update(&mut context.main_camera, events);
+            controller.update(&mut context.main_camera, &mut window);
 
-            let wireframes = events.is_key_pressed(Key::E);
+            let wireframes = window.is_key_pressed(Key::E);
 
-            if let Some((new_width, new_height)) = events.resized() {
-                context.resize(new_width, new_height)?;
-                width = new_width;
-                height = new_height;
-            }
+            let stats = context.render_stats();
+            context.draw_ui(|ui| {
+                ui::stats_window(&ui, stats, &window);
+            })?;
 
-            ui::stats_window(&ui, &context, events);
-
-            context.draw_ui(ui)?;
             context.draw_on_window(|target| {
                 target.set_wireframes(wireframes);
                 target.set_skybox(true);
@@ -130,9 +124,7 @@ fn main() -> Result<()> {
                 }
             })?;
         }
-
-        Ok(())
-    });
+    }
 
     Ok(())
 }

@@ -4,11 +4,11 @@
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use draw_it::camera::CameraType;
-use draw_it::error::Result;
+use draw_it::window::WindowOptions;
+use draw_it::CameraType;
 use draw_it::Context;
 use draw_it::ContextOptions;
-use draw_it::WindowOptions;
+use draw_it::Result;
 
 fn main() -> Result<()> {
     let (mut context, mut window) = Context::with_window(
