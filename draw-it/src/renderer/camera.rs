@@ -3,16 +3,10 @@
 
 // Camera - struct to hold matrix transforms for a camera
 
-#[cfg(feature = "controller")]
-mod controller;
-
 use crate::math::Matrix4;
 use crate::math::Sphere;
 use crate::math::Transform;
 use crate::math::Vector3;
-
-#[cfg(feature = "controller")]
-pub use controller::Controller;
 
 #[derive(Clone)]
 pub struct Camera {

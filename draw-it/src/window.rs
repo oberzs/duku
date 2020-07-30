@@ -40,6 +40,14 @@ pub struct Window {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub struct WindowOptions<'title> {
+    pub title: &'title str,
+    pub resizable: bool,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum Event {
     Resize(u32, u32),
 }
@@ -166,6 +174,10 @@ impl Window {
         self.events.drain(..)
     }
 
+    pub fn set_title(&mut self, title: &str) {
+        self.handle.set_title(title);
+    }
+
     pub(crate) fn handle_key(&mut self, key: Key, action: Action) {
         match action {
             Action::Press => {
@@ -236,5 +248,16 @@ impl Window {
     pub(crate) fn update_delta_time(&mut self) {
         self.delta_time = self.begin_time.elapsed().as_secs_f32();
         self.begin_time = Instant::now();
+    }
+}
+
+impl Default for WindowOptions<'_> {
+    fn default() -> Self {
+        Self {
+            title: "Draw-it window",
+            width: 500,
+            height: 500,
+            resizable: false,
+        }
     }
 }

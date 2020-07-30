@@ -3,16 +3,15 @@
 
 // Gaussian blur example
 
-use draw_it::camera::CameraType;
-use draw_it::camera::Controller;
-use draw_it::color::colors;
-use draw_it::error::Result;
-use draw_it::math::Vector3;
+use draw_it::colors;
+use draw_it::controller::Controller;
 use draw_it::ui;
 use draw_it::ui::label;
-use draw_it::window::Window;
 use draw_it::window::WindowOptions;
+use draw_it::CameraType;
 use draw_it::Context;
+use draw_it::Result;
+use draw_it::Vector3;
 
 fn main() -> Result<()> {
     let (width, height) = (720, 640);
@@ -20,13 +19,15 @@ fn main() -> Result<()> {
     let mut blur_strength: i32 = 0;
     let blur_strengths = [1, 3, 5, 7];
 
-    let mut window = Window::new(WindowOptions {
-        title: "Draw-it example: Blur",
-        width,
-        height,
-        ..Default::default()
-    });
-    let mut context = Context::from_window(&mut window, Default::default())?;
+    let (mut context, mut window) = Context::with_window(
+        Default::default(),
+        WindowOptions {
+            title: "Draw-it example: Blur",
+            width,
+            height,
+            ..Default::default()
+        },
+    )?;
 
     let mut controller = Controller::default();
 
@@ -56,25 +57,28 @@ fn main() -> Result<()> {
         cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
     });
 
-    window.main_loop(|events, ui| {
+    while window.is_open() {
+        context.poll_events(&mut window)?;
+
         blur_material.with(|m| {
             m.set_arg_1(blur_strengths[blur_strength as usize]);
         });
 
         main_framebuffer.with(|f| {
-            controller.update(&mut f.camera, events);
+            controller.update(&mut f.camera, &mut window);
         });
 
-        ui::stats_window(&ui, &context, events);
-        ui::Window::new(label!("Blur Settings"))
-            .size([1.0, 1.0], ui::Condition::FirstUseEver)
-            .always_auto_resize(true)
-            .build(&ui, || {
-                ui::Slider::new(label!("Strength"), 0..=3).build(&ui, &mut blur_strength);
-                ui.text("* This does nothing at this moment");
-            });
-
-        context.draw_ui(ui)?;
+        let stats = context.render_stats();
+        context.draw_ui(|ui| {
+            ui::stats_window(&ui, stats, &window);
+            ui::Window::new(label!("Blur Settings"))
+                .size([1.0, 1.0], ui::Condition::FirstUseEver)
+                .always_auto_resize(true)
+                .build(&ui, || {
+                    ui::Slider::new(label!("Strength"), 0..=3).build(&ui, &mut blur_strength);
+                    ui.text("* This does nothing at this moment");
+                });
+        })?;
 
         context.draw(&main_framebuffer, |target| {
             target.set_clear(colors::ORANGE);
@@ -101,9 +105,7 @@ fn main() -> Result<()> {
         context.draw_on_window(|target| {
             target.blit_framebuffer(&vblur_framebuffer);
         })?;
-
-        Ok(())
-    });
+    }
 
     Ok(())
 }

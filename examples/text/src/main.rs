@@ -3,30 +3,28 @@
 
 // example that draws text
 
-use draw_it::camera::CameraType;
-use draw_it::color::colors;
-use draw_it::error::Result;
-use draw_it::math::Transform;
-use draw_it::math::Vector3;
-use draw_it::window::Window;
+use draw_it::colors;
 use draw_it::window::WindowOptions;
+use draw_it::CameraType;
 use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Quality;
+use draw_it::Result;
+use draw_it::Transform;
+use draw_it::Vector3;
 use std::time::Instant;
 
 fn main() -> Result<()> {
-    let mut window = Window::new(WindowOptions {
-        title: "Draw-it example: Text",
-        width: 600,
-        height: 400,
-        ..Default::default()
-    });
-    let mut context = Context::from_window(
-        &mut window,
+    let (mut context, mut window) = Context::with_window(
         ContextOptions {
             quality: Quality::Low,
             camera: CameraType::Orthographic,
+            ..Default::default()
+        },
+        WindowOptions {
+            title: "Draw-it example: Text",
+            width: 600,
+            height: 400,
             ..Default::default()
         },
     )?;
@@ -48,7 +46,9 @@ fn main() -> Result<()> {
     let start_time = Instant::now();
     let left = -250.0;
 
-    window.main_loop(|_, _| {
+    while window.is_open() {
+        context.poll_events(&mut window)?;
+
         let size_mut = (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5) * 10.0;
         let sdf_size = 40 + size_mut.round() as u32;
         let dynamic_size = 1.0 + (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5);
@@ -77,9 +77,7 @@ fn main() -> Result<()> {
             target.set_font_material(&material_2);
             target.draw_text("Dynamic\n-text-", transform);
         })?;
-
-        Ok(())
-    });
+    }
 
     Ok(())
 }

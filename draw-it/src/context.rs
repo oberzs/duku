@@ -13,8 +13,6 @@ use notify::DebouncedEvent;
 #[cfg(feature = "hot-reload")]
 use std::sync::mpsc;
 
-use crate::camera::Camera;
-use crate::camera::CameraType;
 use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
@@ -36,6 +34,8 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::quality::Quality;
+use crate::renderer::Camera;
+use crate::renderer::CameraType;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStats;
 use crate::renderer::Target;
@@ -52,6 +52,8 @@ use crate::ui::Ui;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
+#[cfg(feature = "window")]
+use crate::window::WindowOptions;
 
 pub struct Context {
     // Renderers
@@ -98,14 +100,6 @@ pub struct ContextOptions {
     pub quality: Quality,
     pub vsync: bool,
     pub camera: CameraType,
-}
-
-#[cfg(feature = "window")]
-#[derive(Debug, Copy, Clone)]
-pub struct WindowOptions<'title> {
-    pub title: &'title str,
-    pub width: u32,
-    pub height: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -468,11 +462,13 @@ impl Context {
             title,
             width,
             height,
+            resizable,
         } = w_options;
 
         // create glfw window
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
+        glfw.window_hint(WindowHint::Resizable(resizable));
         glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
 
         let (mut window, event_receiver) = glfw
@@ -735,17 +731,6 @@ impl Default for ContextOptions {
             quality: Quality::Medium,
             vsync: true,
             camera: CameraType::Perspective,
-        }
-    }
-}
-
-#[cfg(feature = "window")]
-impl Default for WindowOptions<'_> {
-    fn default() -> Self {
-        Self {
-            title: "Default title",
-            width: 500,
-            height: 500,
         }
     }
 }

@@ -5,9 +5,9 @@
 
 #![cfg(feature = "controller")]
 
-use super::Camera;
 use crate::math::Quaternion;
 use crate::math::Vector3;
+use crate::renderer::Camera;
 use crate::window::Key;
 use crate::window::Window;
 

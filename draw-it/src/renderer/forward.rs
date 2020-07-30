@@ -8,11 +8,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use super::Albedo;
+use super::Camera;
+use super::CameraType;
 use super::Order;
 use super::RenderStats;
 use super::Target;
-use crate::camera::Camera;
-use crate::camera::CameraType;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;

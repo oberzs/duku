@@ -15,7 +15,6 @@ use imgui::Key as ImKey;
 use imgui::Ui as ImUi;
 use std::sync::Arc;
 
-use crate::camera::CameraType;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
@@ -38,10 +37,11 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::pipeline::WorldData;
+use crate::renderer::CameraType;
+use crate::renderer::RenderStats;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::window::Window as CoreWindow;
-use crate::Context;
 
 pub use imgui::im_str as label;
 pub use imgui::ColorPicker;
@@ -367,8 +367,7 @@ pub fn drag_vector4(ui: &ImUi<'_>, label: &ImStr, vector: &mut Vector4) {
     vector.w = floats[3];
 }
 
-pub fn stats_window(ui: &ImUi<'_>, context: &Context, window: &CoreWindow) {
-    let render_stats = context.render_stats();
+pub fn stats_window(ui: &ImUi<'_>, stats: RenderStats, window: &CoreWindow) {
     let pad = 14;
 
     let fps = format!("{1:0$} : {2}", pad, "Fps", 0); //events.fps());
@@ -378,23 +377,23 @@ pub fn stats_window(ui: &ImUi<'_>, context: &Context, window: &CoreWindow) {
         "Frame Time",
         window.delta_time() * 1000.0
     );
-    let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", render_stats.time);
+    let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", stats.time);
     let drawn_indices = format!(
         "{1:0$} : {2}({3})",
         pad,
         "Drawn Indices",
-        render_stats.drawn_indices,
-        render_stats.drawn_triangles()
+        stats.drawn_indices,
+        stats.drawn_triangles()
     );
     let shader_rebinds = format!(
         "{1:0$} : {2}({3})",
-        pad, "Shaders Used", render_stats.shaders_used, render_stats.shader_rebinds
+        pad, "Shaders Used", stats.shaders_used, stats.shader_rebinds
     );
     let material_rebinds = format!(
         "{1:0$} : {2}({3})",
-        pad, "Materials Used", render_stats.materials_used, render_stats.material_rebinds
+        pad, "Materials Used", stats.materials_used, stats.material_rebinds
     );
-    let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", render_stats.draw_calls);
+    let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", stats.draw_calls);
 
     Window::new(label!("Stats"))
         .position([10.0, 10.0], Condition::Always)
