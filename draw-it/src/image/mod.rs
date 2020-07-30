@@ -14,6 +14,7 @@ pub(crate) use cubemap::CubemapOptions;
 pub(crate) use framebuffer::FramebufferOptions;
 pub(crate) use memory::ImageMemory;
 pub(crate) use memory::ImageMemoryOptions;
+pub(crate) use properties::with_alpha;
 pub(crate) use properties::ImageFormat;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageMips;

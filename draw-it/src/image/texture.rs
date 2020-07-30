@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use super::with_alpha;
 use super::ImageFormat;
 use super::ImageLayout;
 use super::ImageMemory;
@@ -23,8 +24,8 @@ pub struct Texture {
     image_index: i32,
 }
 
-pub(crate) struct TextureOptions<'data> {
-    pub(crate) data: &'data [u8],
+pub(crate) struct TextureOptions {
+    pub(crate) data: Vec<u8>,
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) format: ImageFormat,
@@ -34,19 +35,31 @@ impl Texture {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &mut ImageUniform,
-        options: TextureOptions<'_>,
+        options: TextureOptions,
     ) -> Result<Self> {
+        // get byte count based on format
         let pixel_size = match options.format {
-            ImageFormat::Srgba | ImageFormat::Rgba => 4,
+            ImageFormat::Srgba | ImageFormat::Rgba | ImageFormat::Srgb | ImageFormat::Rgb => 4,
             ImageFormat::Gray => 1,
             _ => panic!("unsupported texture format {:?}", options.format),
+        };
+
+        // convert 3-byte data to 4-byte data
+        let data = match options.format {
+            ImageFormat::Srgb | ImageFormat::Rgb => with_alpha(options.data),
+            _ => options.data,
+        };
+        let format = match options.format {
+            ImageFormat::Srgb => ImageFormat::Srgba,
+            ImageFormat::Rgb => ImageFormat::Rgba,
+            f => f,
         };
 
         let size = (options.width * options.height) as usize * pixel_size;
 
         let staging_memory =
             BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        staging_memory.copy_from_data(options.data, size)?;
+        staging_memory.copy_from_data(&data, size)?;
 
         let mut memory = ImageMemory::new(
             device,
@@ -59,7 +72,7 @@ impl Texture {
                     ImageUsage::TransferSrc,
                     ImageUsage::TransferDst,
                 ],
-                format: options.format,
+                format,
                 ..Default::default()
             },
         )?;
@@ -82,10 +95,10 @@ impl Texture {
     }
 }
 
-impl Default for TextureOptions<'_> {
+impl Default for TextureOptions {
     fn default() -> Self {
         Self {
-            data: &[255, 255, 255, 255],
+            data: vec![255, 255, 255, 255],
             width: 1,
             height: 1,
             format: ImageFormat::Rgba,

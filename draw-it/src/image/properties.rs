@@ -54,6 +54,14 @@ pub enum Msaa {
     Disabled,
 }
 
+pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
+    let mut new_data = Vec::with_capacity(4 * data.len() / 3);
+    for pixel in data.chunks(3) {
+        new_data.extend(&[pixel[0], pixel[1], pixel[2], 255]);
+    }
+    new_data
+}
+
 impl ImageUsage {
     pub(crate) fn combine(usages: &[Self]) -> vk::ImageUsageFlags {
         usages

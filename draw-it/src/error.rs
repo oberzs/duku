@@ -25,7 +25,7 @@ pub enum ErrorType {
     VulkanLoad(ash::LoadingError),
     VulkanCode(i32),
     #[cfg(feature = "image")]
-    Image(image_file::ImageError),
+    Image(png::DecodingError),
     // Internal error
     Internal(ErrorKind),
 }
@@ -99,8 +99,8 @@ impl From<ash::vk::Result> for ErrorType {
 }
 
 #[cfg(feature = "image")]
-impl From<image_file::ImageError> for ErrorType {
-    fn from(e: image_file::ImageError) -> Self {
+impl From<png::DecodingError> for ErrorType {
+    fn from(e: png::DecodingError) -> Self {
         Self::Image(e)
     }
 }

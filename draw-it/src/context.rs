@@ -18,6 +18,7 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
 use crate::error::Result;
+use crate::image::with_alpha;
 use crate::image::Cubemap;
 use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
@@ -296,9 +297,9 @@ impl Context {
             &mut self.image_uniform,
             TextureOptions {
                 format: ImageFormat::Rgba,
-                data: &data,
                 height: pixels.len() as u32 / width,
                 width,
+                data,
             },
         )?;
         Ok(self.resources.add_texture(texture))
@@ -649,20 +650,31 @@ impl Context {
 
     #[cfg(feature = "image")]
     pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
-        use image_file::GenericImageView;
+        use png::ColorType;
+        use png::Decoder;
+        use std::fs::File;
 
-        let img = image_file::open(path)?;
-        let (width, height) = img.dimensions();
-        let data = img.to_rgba().into_raw();
+        let decoder = Decoder::new(File::open(path)?);
+        let (info, mut reader) = decoder.read_info()?;
+
+        let mut data = vec![0; info.buffer_size()];
+        reader.next_frame(&mut data)?;
+
+        let format = match info.color_type {
+            ColorType::RGBA => ImageFormat::Srgba,
+            ColorType::RGB => ImageFormat::Srgb,
+            ColorType::Grayscale => ImageFormat::Gray,
+            _ => error!("unsupported PNG format {:?}", info.color_type),
+        };
 
         let texture = Texture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
-                format: ImageFormat::Srgba,
-                data: &data,
-                width,
-                height,
+                width: info.width,
+                height: info.height,
+                format,
+                data,
             },
         )?;
         Ok(self.resources.add_texture(texture))
@@ -670,26 +682,53 @@ impl Context {
 
     #[cfg(feature = "image")]
     pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
-        use image_file::GenericImageView;
+        use png::ColorType;
+        use png::Decoder;
+        use std::fs::File;
 
         let mut size = 0;
+        let mut format = ImageFormat::Srgba;
         let mut data = vec![];
         for path in &paths {
-            let img = image_file::open(path)?;
-            size = img.dimensions().0;
-            data.push(img.to_rgba().into_raw());
+            let decoder = Decoder::new(File::open(path)?);
+            let (info, mut reader) = decoder.read_info()?;
+
+            let mut buf = vec![0; info.buffer_size()];
+            reader.next_frame(&mut buf)?;
+
+            let f = match info.color_type {
+                ColorType::RGBA | ColorType::RGB => ImageFormat::Srgba,
+                ColorType::Grayscale => ImageFormat::Gray,
+                _ => error!("unsupported PNG format {:?}", info.color_type),
+            };
+
+            if let ColorType::RGB = info.color_type {
+                buf = with_alpha(buf);
+            }
+
+            debug_assert!(
+                f == format,
+                "skybox formats {:?} ({:?}) and {:?} are not the same",
+                f,
+                path.as_ref(),
+                format
+            );
+            format = f;
+
+            size = info.width;
+            data.push(buf);
         }
 
         let mut cubemap = Cubemap::new(
             &self.device,
             CubemapOptions {
-                format: ImageFormat::Srgba,
                 top: &data[0],
                 bottom: &data[1],
                 front: &data[2],
                 back: &data[3],
                 left: &data[4],
                 right: &data[5],
+                format,
                 size,
             },
         )?;

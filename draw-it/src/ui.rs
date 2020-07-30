@@ -127,7 +127,7 @@ impl Ui {
                 image_uniform,
                 TextureOptions {
                     format: ImageFormat::Gray,
-                    data: &ui_texture.data,
+                    data: ui_texture.data.to_vec(),
                     width: ui_texture.width,
                     height: ui_texture.height,
                 },

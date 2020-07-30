@@ -51,13 +51,13 @@ impl Font {
         } = bincode::deserialize(source)?;
 
         let mut bitmap_data = HashMap::new();
-        for font in &bitmap_fonts {
+        for font in bitmap_fonts {
             bitmap_data.insert(
                 font.font_size,
                 create_font(
                     device,
                     uniform,
-                    &font.bitmap,
+                    font.bitmap,
                     font.bitmap_size,
                     font.font_size,
                     0,
@@ -69,7 +69,7 @@ impl Font {
         let sdf_data = create_font(
             device,
             uniform,
-            &sdf_font.bitmap,
+            sdf_font.bitmap,
             sdf_font.bitmap_size,
             sdf_font.font_size,
             sdf_font.margin,
@@ -130,7 +130,7 @@ impl Font {
 fn create_font(
     device: &Arc<Device>,
     uniform: &mut ImageUniform,
-    bitmap: &[u8],
+    bitmap: Vec<u8>,
     bitmap_size: u32,
     font_size: u32,
     margin: u32,

@@ -86,7 +86,7 @@ Assets
 
 Optional projects for extra functionality:
 
-- [Image](https://github.com/image-rs/image) - Image loading
+- [Png](https://github.com/image-rs/image-png) - PNG loading
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
 - [Notify](https://github.com/notify-rs/notify) - Hot-reload
