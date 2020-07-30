@@ -43,14 +43,14 @@
 ## Simple Example
 
 ```rust
-use draw_it::color::colors;
-use draw_it::math::Vector3;
+use draw_it::colors;
+use draw_it::Vector3;
 use draw_it::window::Window;
 use draw_it::Context;
+use draw_it::Result;
 
-fn main() {
-    let mut window = Window::new(Default::default());
-    let mut context = Context::from_window(&mut window, Default::default());
+fn main() -> Result<()> {
+    let (mut context, mut window) = Context::with_window(Default::default(), Default::default())?;
 
     {
         let camera = &mut context.main_camera.transform;
@@ -58,12 +58,15 @@ fn main() {
         camera.look_at([0.0, 0.0, 0.0], Vector3::up());
     }
 
-    window.main_loop(|_, _| {
+    while window.is_open() {
+        context.poll_events(&mut window);
         context.draw_on_window(|target| {
             target.set_clear(colors::SKY_BLUE);
             target.draw_cube([0.0, 0.0, 0.0]);
         });
-    });
+    }
+
+    Ok(())
 }
 ```
 
@@ -74,14 +77,17 @@ Want more? Check out these other [examples](https://github.com/OllieBerzs/draw-i
 This library uses these open source projects:
 
 - [Ash](https://github.com/MaikKlein/ash) - Vulkan API support
-- [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
 - [Serde](https://github.com/serde-rs/serde) - Deserialize assets
 - [Bincode](https://github.com/servo/bincode) - Serde helper for binary
+
+Assets
+
+- [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
 
 Optional projects for extra functionality:
 
 - [Image](https://github.com/image-rs/image) - Image loading
-- [Winit](https://github.com/rust-windowing/winit) - OS Windowing
+- [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
 - [Notify](https://github.com/notify-rs/notify) - Hot-reload
 - [Lazy Static](https://github.com/rust-lang-nursery/lazy-static.rs) - Profiling
