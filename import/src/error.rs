@@ -3,7 +3,6 @@
 
 // draw-it-import error types
 
-use image::error::ImageError;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Formatter;
@@ -15,7 +14,6 @@ pub type Result<T> = std::result::Result<T, ErrorType>;
 pub enum ErrorType {
     // External error
     Io(io::Error),
-    Image(ImageError),
     Binary(Box<bincode::ErrorKind>),
     Shader(shaderc::Error),
     // Internal error
@@ -44,12 +42,6 @@ impl fmt::Display for ErrorType {
 impl From<io::Error> for ErrorType {
     fn from(err: io::Error) -> Self {
         Self::Io(err)
-    }
-}
-
-impl From<ImageError> for ErrorType {
-    fn from(err: ImageError) -> Self {
-        Self::Image(err)
     }
 }
 

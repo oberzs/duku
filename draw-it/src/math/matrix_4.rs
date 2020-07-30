@@ -452,7 +452,7 @@ mod test {
     fn perspective() {
         let m = Matrix4::perspective(90.0, 1.0, 0.0, 100.0);
         assert_eq!(m.row_x(), Vector4::new(1.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, -1.0, 0.0, 0.0));
+        assert_eq!(m.row_y(), Vector4::new(0.0, 1.0, 0.0, 0.0));
         assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, -0.0));
         assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 1.0, 0.0));
     }
@@ -461,7 +461,7 @@ mod test {
     fn orthographic_center() {
         let m = Matrix4::orthographic_center(1.0, 1.0, 0.0, 1.0);
         assert_eq!(m.row_x(), Vector4::new(2.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, -2.0, 0.0, 0.0));
+        assert_eq!(m.row_y(), Vector4::new(0.0, 2.0, 0.0, 0.0));
         assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, -0.0));
         assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 0.0, 1.0));
     }

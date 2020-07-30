@@ -3,8 +3,6 @@
 
 // imports ttf font for use in draw-it
 
-use image::DynamicImage;
-use image::GenericImage;
 use rusttype::Font;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -14,7 +12,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-use crate::bitmap;
+use crate::bitmap::Bitmap;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
@@ -88,7 +86,7 @@ pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) ->
         bitmap: vec![],
     };
 
-    let mut sdf_bitmap = DynamicImage::new_luma8(sdf_bitmap_size, sdf_bitmap_size).to_luma();
+    let mut sdf_bitmap = Bitmap::new(sdf_bitmap_size, sdf_bitmap_size);
 
     for (i, c) in chars.chars().enumerate() {
         let (bitmap, advance) = sdf.generate(&font, c)?;
@@ -100,21 +98,21 @@ pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) ->
             .char_metrics
             .insert(c, CharMetrics { x, y, advance });
 
-        sdf_bitmap.copy_from(&bitmap, x, y)?;
+        sdf_bitmap.copy_from(&bitmap, x, y);
     }
 
-    sdf_font.bitmap = sdf_bitmap.into_raw();
+    sdf_font.bitmap = sdf_bitmap.into_buffer();
 
     // create bitmap fonts
     let mut bitmap_fonts = Vec::with_capacity(options.bitmap_sizes.len());
     for font_size in options.bitmap_sizes {
         let bitmap_size = tile_count * font_size;
-        let mut bitmap = DynamicImage::new_luma8(bitmap_size, bitmap_size).to_luma();
+        let mut bitmap = Bitmap::new(bitmap_size, bitmap_size);
         let mut char_metrics = HashMap::new();
 
         for (i, c) in chars.chars().enumerate() {
             // ttf to png
-            let (char_bitmap, advance) = bitmap::rasterize(&font, *font_size, 0, c)?;
+            let (char_bitmap, advance) = Bitmap::rasterize(&font, *font_size, 0, c)?;
 
             let x = (i as u32 % tile_count) * *font_size;
             let y = (i as u32 / tile_count) * *font_size;
@@ -128,14 +126,14 @@ pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) ->
                 },
             );
 
-            bitmap.copy_from(&char_bitmap, x, y)?;
+            bitmap.copy_from(&char_bitmap, x, y);
         }
 
         bitmap_fonts.push(BitmapFont {
             font_size: *font_size,
             bitmap_size,
             char_metrics,
-            bitmap: bitmap.into_raw(),
+            bitmap: bitmap.into_buffer(),
         });
     }
 
