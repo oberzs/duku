@@ -38,8 +38,8 @@ pub mod mesh;
 #[cfg(feature = "window")]
 pub mod window;
 
-#[cfg(feature = "ui")]
-pub mod ui;
+// #[cfg(feature = "ui")]
+// pub mod ui;
 
 #[cfg(feature = "profiler")]
 pub mod profiler;
@@ -62,3 +62,6 @@ pub use context::ContextOptions;
 pub use quality::Quality;
 pub use renderer::Target;
 pub use surface::WindowHandle;
+
+#[cfg(feature = "window")]
+pub use context::WindowOptions;
