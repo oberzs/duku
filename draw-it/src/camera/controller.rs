@@ -8,8 +8,8 @@
 use super::Camera;
 use crate::math::Quaternion;
 use crate::math::Vector3;
-use crate::window::Events;
 use crate::window::Key;
+use crate::window::Window;
 
 pub struct Controller {
     camera_angle: f32,
@@ -19,62 +19,61 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub fn update(&mut self, camera: &mut Camera, events: &mut Events) {
-        let rotate_speed = 70.0;
+    pub fn update(&mut self, camera: &mut Camera, window: &mut Window) {
+        let rotate_speed = 20.0;
 
-        if events.is_key_typed(Key::F11) {
-            events.set_fullscreen(!events.fullscreen());
+        if window.is_key_typed(Key::F11) {
+            // window.set_fullscreen(!window.fullscreen());
         }
 
-        if events.is_key_typed(Key::Escape) {
-            events.set_mouse_grab(!events.mouse_grab());
-            events.set_mouse_visible(!events.mouse_grab());
+        if window.is_key_typed(Key::Escape) {
+            window.set_mouse_grab(!window.mouse_grab());
         }
 
-        if events.is_key_typed(Key::LAlt) {
+        if window.is_key_typed(Key::LeftAlt) {
             self.lockon = !self.lockon;
         }
 
-        let (_, scroll_y) = events.scroll_delta();
-        self.move_speed += scroll_y * 0.01;
+        let scroll = window.scroll_delta();
+        self.move_speed += scroll.y * 0.01;
         self.move_speed = f32::max(f32::min(self.move_speed, 15.0), 1.0);
 
         let transform = &mut camera.transform;
 
         // camera movement
-        let final_move_speed = self.move_speed * events.delta_time();
+        let final_move_speed = self.move_speed * window.delta_time();
 
-        if events.is_key_pressed(Key::W) {
+        if window.is_key_pressed(Key::W) {
             transform.move_forward(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::S) {
+        if window.is_key_pressed(Key::S) {
             transform.move_backward(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::A) {
+        if window.is_key_pressed(Key::A) {
             transform.move_left(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::D) {
+        if window.is_key_pressed(Key::D) {
             transform.move_right(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::Space) {
+        if window.is_key_pressed(Key::Space) {
             transform.move_up(final_move_speed);
         }
 
-        if events.is_key_pressed(Key::LShift) {
+        if window.is_key_pressed(Key::LeftShift) {
             transform.move_down(final_move_speed);
         }
 
         // look direction
-        if events.mouse_grab() {
-            let (x, y) = events.mouse_delta();
+        if window.mouse_grab() {
+            let delta = window.mouse_delta();
 
-            let mouse_x = x * rotate_speed * events.delta_time();
+            let mouse_x = delta.x * rotate_speed * window.delta_time();
 
-            let change_y = y * rotate_speed * events.delta_time();
+            let change_y = delta.y * rotate_speed * window.delta_time();
             let upper_bound = change_y + self.camera_angle <= 90.0;
             let lower_bound = change_y + self.camera_angle >= -90.0;
             let mouse_y = if upper_bound && lower_bound {
