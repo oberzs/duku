@@ -51,8 +51,6 @@ impl Surface {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
-        profile_scope!("new");
-
         let info = vk::XlibSurfaceCreateInfoKHR::builder()
             .window(window.xlib_window)
             .dpy(window.xlib_display as *mut vk::Display);
@@ -69,8 +67,6 @@ impl Surface {
 
     #[cfg(target_os = "macos")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
-        profile_scope!("new");
-
         use cocoa::appkit::NSView;
         use cocoa::appkit::NSWindow;
         use cocoa::base::id as cocoa_id;
