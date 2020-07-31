@@ -46,6 +46,12 @@ jobs:
           toolchain: nightly
           override: true
 
+      - name: Build
+        run: cargo build
+
+      - name: Test
+        run: cargo test
+
   macos:
     name: "Mac OS"
     runs-on: macos-latest
