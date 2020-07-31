@@ -1,0 +1,29 @@
+name: Check
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Check
+        working-directory: ./draw-it
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --no-default-features
+      - name: Test
+        working-directory: ./draw-it
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features

@@ -13,7 +13,7 @@
   </span>
   <!-- Build status -->
   <span>
-    <img src="https://img.shields.io/github/workflow/status/OllieBerzs/draw-it/Build?style=flat-square" alt="Build Status" />
+    <img src="https://img.shields.io/github/workflow/status/OllieBerzs/draw-it/Check?style=flat-square" alt="Build Status" />
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
@@ -27,6 +27,7 @@
 
 <div align="center">
   <a href="#features">Features</a> •
+  <a href="#support">Support</a> •
   <a href="#simple-example">Simple Example</a> •
   <a href="#credits">Credits</a>
 </div>
@@ -37,8 +38,15 @@
 - **2D/3D:** can be used for both
 - **shaders:** write custom shaders in a modified GLSL
 - **SDF fonts:** signed distance field font support
-- **shadows**: uses PCF shadow maps
+- **shadows:** uses PCF shadow maps
 - **windowing agnostic:** can be used with any OS window
+
+## Support
+
+- **Windows:** ✅
+- **Linux X11:** ✅
+- **Linux Wayland:** ❓ planned, not supported
+- **MacOS:** ❓ not tested, help wanted
 
 ## Simple Example
 
