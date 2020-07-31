@@ -26,6 +26,7 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install -y libxrandr-dev
+          sudo apt install -y libxinerama-dev
       - name: Check
         uses: actions-rs/cargo@v1
         with:
