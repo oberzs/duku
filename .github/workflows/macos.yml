@@ -11,12 +11,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install Vulkan SDK
-        run: |
-          wget https://sdk.lunarg.com/sdk/download/${{env.vulkan-version}}/mac/vulkansdk-mac-${{env.vulkan-version}}.tar.gz
-          tar xf vulkansdk-mac-${{env.vulkan-version}}.tar.gz
-          sudo cp vulkansdk-macos-${{env.vulkan-version}}/macOS/bin/glslc /usr/local/bin
-
       - name: Install Rust nightly
         uses: actions-rs/toolchain@v1
         with:
