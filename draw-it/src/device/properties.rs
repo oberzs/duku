@@ -21,8 +21,6 @@ pub(crate) struct DeviceProperties {
 
 impl DeviceProperties {
     pub(crate) fn new(instance: &Instance, msaa: Msaa) -> Result<Vec<Self>> {
-        profile_scope!("new");
-
         let properties = instance.get_device_properties().into_iter();
         let features = instance.get_device_features().into_iter();
         let memory = instance.get_device_memory().into_iter();

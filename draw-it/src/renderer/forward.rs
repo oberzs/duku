@@ -63,8 +63,6 @@ impl ForwardRenderer {
         shadow_map_size: u32,
         pcf: Pcf,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         let shadow_frames = [
             ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
             ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,

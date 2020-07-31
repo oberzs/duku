@@ -29,8 +29,6 @@ pub(crate) struct ResourceManager {
 
 impl ResourceManager {
     pub(crate) fn new() -> Self {
-        profile_scope!("new");
-
         Self {
             textures: vec![],
             materials: vec![],

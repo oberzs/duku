@@ -110,8 +110,6 @@ enum RenderStage {
 
 impl Context {
     pub fn new(window: WindowHandle, options: ContextOptions) -> Result<Self> {
-        profile_scope!("new");
-
         let instance = Arc::new(Instance::new()?);
         let surface = Surface::new(&instance, window)?;
 

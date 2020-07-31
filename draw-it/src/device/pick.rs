@@ -18,7 +18,6 @@ pub(crate) fn pick_gpu(
     s_props: &[SurfaceProperties],
     d_props: &[DeviceProperties],
 ) -> Result<usize> {
-    profile_scope!("pick_gpu");
     info!("looking for suitable GPU");
 
     for (i, (s, d)) in s_props.iter().zip(d_props.iter()).enumerate() {

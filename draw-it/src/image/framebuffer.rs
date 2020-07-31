@@ -56,8 +56,6 @@ impl Framebuffer {
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
     ) -> Result<Vec<Self>> {
-        profile_scope!("for_swapchain");
-
         let vk::Extent2D { width, height } = swapchain.extent();
         let attachment_formats = &[ImageFormat::Sbgra];
 
@@ -121,8 +119,6 @@ impl Framebuffer {
         image_uniform: &mut ImageUniform,
         options: FramebufferOptions<'_>,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         let FramebufferOptions {
             width,
             height,

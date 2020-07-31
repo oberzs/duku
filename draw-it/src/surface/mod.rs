@@ -30,8 +30,6 @@ pub(crate) struct Surface {
 impl Surface {
     #[cfg(target_os = "windows")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
-        profile_scope!("new");
-
         use std::os::raw::c_void;
         use std::ptr;
         use winapi::um::libloaderapi::GetModuleHandleW;

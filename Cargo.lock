@@ -204,7 +204,6 @@ dependencies = [
  "cocoa",
  "glfw",
  "imgui",
- "lazy_static",
  "metal",
  "notify",
  "png",

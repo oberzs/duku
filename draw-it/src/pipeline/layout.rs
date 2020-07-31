@@ -25,8 +25,6 @@ pub(crate) struct ShaderLayout {
 
 impl ShaderLayout {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
-        profile_scope!("new");
-
         // world uniform layout
         let world_binding = [vk::DescriptorSetLayoutBinding::builder()
             .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)

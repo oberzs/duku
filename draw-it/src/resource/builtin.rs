@@ -58,8 +58,6 @@ impl Builtins {
         layout: &ShaderLayout,
         uniform: &mut ImageUniform,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         // textures
         let white_texture =
             resources.add_texture(Texture::new(device, uniform, Default::default())?);

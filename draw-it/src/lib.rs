@@ -65,8 +65,6 @@ pub use surface::WindowHandle;
 // optional feature exports
 #[cfg(feature = "controller")]
 pub mod controller;
-#[cfg(feature = "profiler")]
-pub mod profiler;
 #[cfg(feature = "ui")]
 pub mod ui;
 #[cfg(feature = "window")]

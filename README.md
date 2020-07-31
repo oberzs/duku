@@ -90,4 +90,3 @@ Optional projects for extra functionality:
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
 - [Notify](https://github.com/notify-rs/notify) - Hot-reload
-- [Lazy Static](https://github.com/rust-lang-nursery/lazy-static.rs) - Profiling

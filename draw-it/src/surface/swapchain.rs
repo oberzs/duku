@@ -28,8 +28,6 @@ impl Swapchain {
         surface: &Surface,
         surface_properties: SurfaceProperties,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         let info = swapchain_info(surface, &surface_properties);
         let handle = device.create_swapchain(&info)?;
 

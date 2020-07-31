@@ -28,8 +28,6 @@ impl RenderPass {
         depth: bool,
         present: bool,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         debug_assert!(!present || attachment_formats.len() == 1);
         debug_assert!(depth || !attachment_formats.is_empty());
 

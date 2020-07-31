@@ -41,7 +41,6 @@ pub(crate) struct Instance {
 
 impl Instance {
     pub(crate) fn new() -> Result<Self> {
-        profile_scope!("new");
         info!("initializing the Vulkan API");
 
         let entry = Entry::new()?;

@@ -70,8 +70,6 @@ impl Ui {
         width: u32,
         height: u32,
     ) -> Result<Self> {
-        profile_scope!("new");
-
         // create imgui context
         let mut imgui = ImContext::create();
         imgui.set_ini_filename(None);
