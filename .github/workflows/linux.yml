@@ -5,8 +5,6 @@ on: workflow_dispatch
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-      vulkan-version: 1.2.141.2
     steps:
       - name: Checkout
         uses: actions/checkout@v2
