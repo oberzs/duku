@@ -1,4 +1,4 @@
-name: Full Windows Build
+name: Full MacOS Build
 
 on: workflow_dispatch
 
