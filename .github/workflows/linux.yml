@@ -11,12 +11,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install Vulkan SDK
-        run: |
-          wget https://sdk.lunarg.com/sdk/download/${{env.vulkan-version}}/linux/vulkansdk-linux-${{env.vulkan-version}}.tar.gz
-          tar xf vulkansdk-linux-${{env.vulkan-version}}.tar.gz
-          sudo cp ${{env.vulkan-version}}/x86_64/bin/glslc /usr/local/bin
-
       - name: Install LibX
         run: |
           sudo apt update -y
