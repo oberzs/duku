@@ -72,7 +72,7 @@ impl Surface {
         use cocoa::base::id as cocoa_id;
         use metal::CoreAnimationLayer;
         use std::mem;
-        use std::ptr;
+        use std::os::raw::c_void;
 
         let wnd: cocoa_id = unsafe { mem::transmute(window.ns_window) };
         let layer = CoreAnimationLayer::new();
@@ -87,7 +87,7 @@ impl Surface {
         unsafe { view.setLayer(mem::transmute(layer.as_ref())) };
         unsafe { view.setWantsLayer(1) };
 
-        let info = vk::MacOSSurfaceCreateInfoMVK::builder().p_view(view as *const c_void);
+        let info = vk::MacOSSurfaceCreateInfoMVK::builder().view(view as *const c_void);
 
         let handle = instance.create_surface(&info)?;
 
