@@ -4,7 +4,7 @@
 // ResourceManager - resource manager
 
 mod builtin;
-mod reference;
+mod storage;
 
 use crate::error::Result;
 use crate::font::Font;
@@ -14,17 +14,18 @@ use crate::mesh::Mesh;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use storage::Storage;
 
 pub(crate) use builtin::Builtins;
-pub use reference::Ref;
+pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
-    textures: Vec<Ref<Texture>>,
-    materials: Vec<Ref<Material>>,
-    meshes: Vec<Ref<Mesh>>,
-    shaders: Vec<Ref<Shader>>,
-    fonts: Vec<Ref<Font>>,
-    framebuffers: Vec<Ref<Framebuffer>>,
+    textures: Vec<Storage<Texture>>,
+    materials: Vec<Storage<Material>>,
+    meshes: Vec<Storage<Mesh>>,
+    shaders: Vec<Storage<Shader>>,
+    fonts: Vec<Storage<Font>>,
+    framebuffers: Vec<Storage<Framebuffer>>,
 }
 
 impl ResourceManager {
@@ -40,49 +41,55 @@ impl ResourceManager {
     }
 
     pub(crate) fn add_texture(&mut self, texture: Texture) -> Ref<Texture> {
-        let reference = Ref::new(texture);
-        self.textures.push(reference.clone());
+        let storage = Storage::new(texture);
+        let reference = storage.as_ref();
+        self.textures.push(storage);
         reference
     }
 
     pub(crate) fn add_material(&mut self, material: Material) -> Ref<Material> {
-        let reference = Ref::new(material);
-        self.materials.push(reference.clone());
+        let storage = Storage::new(material);
+        let reference = storage.as_ref();
+        self.materials.push(storage);
         reference
     }
 
     pub(crate) fn add_mesh(&mut self, mesh: Mesh) -> Ref<Mesh> {
-        let reference = Ref::new(mesh);
-        self.meshes.push(reference.clone());
+        let storage = Storage::new(mesh);
+        let reference = storage.as_ref();
+        self.meshes.push(storage);
         reference
     }
 
     pub(crate) fn add_shader(&mut self, shader: Shader) -> Ref<Shader> {
-        let reference = Ref::new(shader);
-        self.shaders.push(reference.clone());
+        let storage = Storage::new(shader);
+        let reference = storage.as_ref();
+        self.shaders.push(storage);
         reference
     }
 
     pub(crate) fn add_font(&mut self, font: Font) -> Ref<Font> {
-        let reference = Ref::new(font);
-        self.fonts.push(reference.clone());
+        let storage = Storage::new(font);
+        let reference = storage.as_ref();
+        self.fonts.push(storage);
         reference
     }
 
     pub(crate) fn add_framebuffer(&mut self, framebuffer: Framebuffer) -> Ref<Framebuffer> {
-        let reference = Ref::new(framebuffer);
-        self.framebuffers.push(reference.clone());
+        let storage = Storage::new(framebuffer);
+        let reference = storage.as_ref();
+        self.framebuffers.push(storage);
         reference
     }
 
     pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
-        self.fonts.retain(|r| r.count() != 1);
-        self.meshes.retain(|r| r.count() != 1);
-        self.materials.retain(|r| r.count() != 1);
-        self.shaders.retain(|r| r.count() != 1);
-        self.framebuffers.retain(|r| r.count() != 1);
+        self.fonts.retain(|r| r.count() != 0);
+        self.meshes.retain(|r| r.count() != 0);
+        self.materials.retain(|r| r.count() != 0);
+        self.shaders.retain(|r| r.count() != 0);
+        self.framebuffers.retain(|r| r.count() != 0);
         self.textures
-            .drain_filter(|r| r.count() == 1)
+            .drain_filter(|r| r.count() == 0)
             .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
     }
 
