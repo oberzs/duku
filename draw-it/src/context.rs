@@ -490,12 +490,13 @@ impl Context {
 
         #[cfg(target_os = "linux")]
         let handle = WindowHandle {
-            xlib_window: window.xlib_window(),
-            xlib_display: window.xlib_display(),
+            xlib_window: window.get_x11_window() as u64,
+            xlib_display: glfw.get_x11_display(),
             width,
             height,
         };
 
+        // TODO: fix and test MacOS
         #[cfg(target_os = "macos")]
         let handle = WindowHandle {
             ns_window: window.ns_window(),
