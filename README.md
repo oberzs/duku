@@ -13,7 +13,7 @@
   </span>
   <!-- Build status -->
   <span>
-    <img src="https://img.shields.io/github/workflow/status/OllieBerzs/draw-it/Check?style=flat-square" alt="Build Status" />
+    <img src="https://img.shields.io/github/workflow/status/OllieBerzs/draw-it/Full%20Build?style=flat-square" alt="Build Status" />
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">

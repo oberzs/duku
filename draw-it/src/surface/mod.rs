@@ -87,7 +87,7 @@ impl Surface {
         unsafe { view.setLayer(mem::transmute(layer.as_ref())) };
         unsafe { view.setWantsLayer(1) };
 
-        let info = vk::MacOSSurfaceCreateInfoMVK::builder().view(view as &c_void);
+        let info = vk::MacOSSurfaceCreateInfoMVK::builder();
 
         let handle = instance.create_surface(&info)?;
 
