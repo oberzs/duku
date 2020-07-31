@@ -15,6 +15,9 @@ jobs:
           toolchain: nightly
           override: true
 
+      - name: Install Ninja
+        run: choco install ninja
+
       - name: Build
         run: cargo build
 

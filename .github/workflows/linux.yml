@@ -17,7 +17,7 @@ jobs:
           tar xf vulkansdk-linux-${{env.vulkan-version}}.tar.gz
           sudo cp ${{env.vulkan-version}}/x86_64/bin/glslc /usr/local/bin
 
-      - name: Install LibXrandr
+      - name: Install LibX
         run: |
           sudo apt update -y
           sudo apt install -y libxrandr-dev
