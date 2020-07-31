@@ -18,15 +18,9 @@ jobs:
           override: true
 
       - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --no-default-features
         working-directory: ./draw-it
+        run: cargo check --no-default-features
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-default-features
         working-directory: ./draw-it
+        run: cargo test --no-default-features
