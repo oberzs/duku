@@ -52,7 +52,7 @@ impl Surface {
     #[cfg(target_os = "linux")]
     pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
         let info = vk::XlibSurfaceCreateInfoKHR::builder()
-            .window(window.xlib_window)
+            .window(window.xlib_window as u64)
             .dpy(window.xlib_display as *mut vk::Display);
 
         let handle = instance.create_surface(&info)?;
@@ -87,7 +87,7 @@ impl Surface {
         unsafe { view.setLayer(mem::transmute(layer.as_ref())) };
         unsafe { view.setWantsLayer(1) };
 
-        let info = vk::MacOSSurfaceCreateInfoMVK::builder().p_view(window.ns_view as *const c_void);
+        let info = vk::MacOSSurfaceCreateInfoMVK::builder().p_view(view as *const c_void);
 
         let handle = instance.create_surface(&info)?;
 

@@ -16,7 +16,7 @@ pub struct WindowHandle {
 #[cfg(target_os = "linux")]
 #[derive(Copy, Clone)]
 pub struct WindowHandle {
-    pub xlib_window: std::os::raw::c_ulong,
+    pub xlib_window: *mut c_void,
     pub xlib_display: *mut c_void,
     pub width: u32,
     pub height: u32,
@@ -26,7 +26,6 @@ pub struct WindowHandle {
 #[derive(Copy, Clone)]
 pub struct WindowHandle {
     pub ns_window: *mut c_void,
-    pub ns_view: *mut c_void,
     pub width: u32,
     pub height: u32,
 }

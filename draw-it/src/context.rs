@@ -490,20 +490,19 @@ impl Context {
 
         #[cfg(target_os = "linux")]
         let handle = WindowHandle {
-            xlib_window: window.get_x11_window() as u64,
+            xlib_window: window.get_x11_window(),
             xlib_display: glfw.get_x11_display(),
             width,
             height,
         };
 
-        // TODO: fix and test MacOS
         #[cfg(target_os = "macos")]
         let handle = WindowHandle {
-            ns_window: window.ns_window(),
-            ns_view: window.ns_view(),
+            ns_window: window.get_cocoa_window(),
             width,
             height,
         };
+
         let mut context = Self::new(handle, c_options)?;
 
         // attach glfw to context
