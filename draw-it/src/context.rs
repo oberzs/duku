@@ -18,7 +18,6 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
 use crate::error::Result;
-use crate::image::with_alpha;
 use crate::image::Cubemap;
 use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
@@ -685,6 +684,8 @@ impl Context {
         use png::ColorType;
         use png::Decoder;
         use std::fs::File;
+
+        use crate::image::with_alpha;
 
         let mut size = 0;
         let mut format = ImageFormat::Srgba;
