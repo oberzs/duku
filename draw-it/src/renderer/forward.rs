@@ -294,9 +294,9 @@ impl ForwardRenderer {
             let bounds = view.bounding_sphere_for_split(prev_cs, *cs);
             let diameter = bounds.radius * 2.0;
             let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
-                Vector3::up()
+                Vector3::UP
             } else {
-                Vector3::forward()
+                Vector3::FORWARD
             };
             let light_position = bounds.center - light_dir * bounds.radius;
             let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)

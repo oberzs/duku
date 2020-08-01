@@ -207,7 +207,7 @@ impl Ui {
                 vertices.push(vertex);
                 uvs.push(uv);
                 colors.push(color);
-                normals.push(Vector3::backward());
+                normals.push(Vector3::BACKWARD);
             }
             to = vertices.len() as u32;
         }

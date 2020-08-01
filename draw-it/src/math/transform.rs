@@ -15,21 +15,23 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub fn positioned(x: f32, y: f32, z: f32) -> Self {
+    pub const fn positioned(x: f32, y: f32, z: f32) -> Self {
         Self {
             position: Vector3::new(x, y, z),
-            ..Default::default()
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::ZERO,
         }
     }
 
-    pub fn scaled(x: f32, y: f32, z: f32) -> Self {
+    pub const fn scaled(x: f32, y: f32, z: f32) -> Self {
         Self {
             scale: Vector3::new(x, y, z),
-            ..Default::default()
+            position: Vector3::ZERO,
+            rotation: Quaternion::ZERO,
         }
     }
 
-    pub fn scaled_uniformly(s: f32) -> Self {
+    pub const fn scaled_uniformly(s: f32) -> Self {
         Self::scaled(s, s, s)
     }
 
@@ -51,15 +53,15 @@ impl Transform {
     }
 
     pub fn up(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::up())
+        self.rotation.rotate_vector(Vector3::UP)
     }
 
     pub fn forward(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::forward())
+        self.rotation.rotate_vector(Vector3::FORWARD)
     }
 
     pub fn right(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::right())
+        self.rotation.rotate_vector(Vector3::RIGHT)
     }
 
     pub fn move_by(&mut self, amount: impl Into<Vector3>) {
@@ -100,12 +102,18 @@ impl Transform {
         self.position = rotation.rotate_vector(self.position);
     }
 
-    pub fn look_in_dir(&mut self, dir: impl Into<Vector3>, global_up: impl Into<Vector3>) {
-        self.rotation = Quaternion::look_rotation(dir.into().unit(), global_up);
+    pub fn look_dir(&mut self, dir: impl Into<Vector3>) {
+        let dir = dir.into().unit();
+        let up = if dir == Vector3::UP {
+            Vector3::FORWARD
+        } else {
+            Vector3::UP
+        };
+        self.rotation = Quaternion::look_rotation(dir, up);
     }
 
-    pub fn look_at(&mut self, pos: impl Into<Vector3>, up: impl Into<Vector3>) {
-        self.look_in_dir(pos.into() - self.position, up);
+    pub fn look_at(&mut self, pos: impl Into<Vector3>) {
+        self.look_dir(pos.into() - self.position);
     }
 }
 

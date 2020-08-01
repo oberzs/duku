@@ -3,7 +3,7 @@
 
 // Draw-it is a Vulkan rendering engine
 
-#![feature(proc_macro_hygiene, drain_filter, thread_id_value)]
+#![feature(proc_macro_hygiene, drain_filter, thread_id_value, const_fn)]
 #![warn(
     rust_2018_idioms,
     unused,
@@ -34,7 +34,6 @@ mod surface;
 mod sync;
 
 // normal exports
-pub use color::colors;
 pub use color::Color;
 pub use context::Context;
 pub use context::ContextOptions;

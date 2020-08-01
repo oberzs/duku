@@ -51,8 +51,7 @@
 ## Simple Example
 
 ```rust
-use draw_it::colors;
-use draw_it::Vector3;
+use draw_it::Color;
 use draw_it::window::Window;
 use draw_it::Context;
 use draw_it::Result;
@@ -63,13 +62,13 @@ fn main() -> Result<()> {
     {
         let camera = &mut context.main_camera.transform;
         camera.move_by([2.0, 1.5, 2.0]);
-        camera.look_at([0.0, 0.0, 0.0], Vector3::up());
+        camera.look_at([0.0, 0.0, 0.0]);
     }
 
     while window.is_open() {
         context.poll_events(&mut window);
         context.draw_on_window(|target| {
-            target.set_clear(colors::SKY_BLUE);
+            target.set_clear(Color::SKY_BLUE);
             target.draw_cube([0.0, 0.0, 0.0]);
         });
     }

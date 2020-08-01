@@ -3,9 +3,9 @@
 
 // example with dynamicly changing mesh vertices
 
-use draw_it::colors;
 use draw_it::controller::Controller;
 use draw_it::window::WindowOptions;
+use draw_it::Color;
 use draw_it::Context;
 use draw_it::MeshOptions;
 use draw_it::Result;
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     {
         let cam_t = &mut context.main_camera.transform;
         cam_t.move_backward(10.0);
-        cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
+        cam_t.look_at([0.0, 0.0, 0.0]);
     }
 
     let square = {
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
 
         context.draw_on_window(|target| {
             target.set_wireframes(true);
-            target.set_clear(colors::ORANGE);
+            target.set_clear(Color::ORANGE);
 
             // draw square
             let offset = -(square_size as f32 / 2.0);

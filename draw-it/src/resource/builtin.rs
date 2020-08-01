@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use super::Ref;
 use super::ResourceManager;
-use crate::color::colors;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
@@ -309,7 +308,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
 
     for x in -half..=half {
         let color = if x == 0 {
-            colors::GREEN
+            Color::GREEN
         } else {
             Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
         };
@@ -323,7 +322,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
     }
     for z in -half..=half {
         let color = if z == 0 {
-            colors::BLUE
+            Color::BLUE
         } else {
             Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
         };

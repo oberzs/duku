@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     {
         let cam_t = &mut context.main_camera.transform;
         cam_t.move_by([0.0, 1.0, -15.0]);
-        cam_t.look_in_dir(Vector3::forward(), Vector3::up());
+        cam_t.look_dir(Vector3::FORWARD);
     }
 
     let mut controller = Controller::default();

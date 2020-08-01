@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
-use crate::color::colors;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
@@ -59,7 +58,7 @@ impl Mesh {
         normals[..options.normals.len()].clone_from_slice(options.normals);
 
         // fill in missing default colors for all vertices
-        let mut colors = vec![colors::WHITE; vertex_count];
+        let mut colors = vec![Color::WHITE; vertex_count];
         colors[..options.colors.len()].clone_from_slice(options.colors);
 
         // calculate smooth normals

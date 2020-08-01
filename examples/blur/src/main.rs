@@ -3,15 +3,14 @@
 
 // Gaussian blur example
 
-use draw_it::colors;
 use draw_it::controller::Controller;
 use draw_it::ui;
 use draw_it::ui::label;
 use draw_it::window::WindowOptions;
 use draw_it::CameraType;
+use draw_it::Color;
 use draw_it::Context;
 use draw_it::Result;
-use draw_it::Vector3;
 
 fn main() -> Result<()> {
     let (width, height) = (720, 640);
@@ -54,7 +53,7 @@ fn main() -> Result<()> {
         let cam_t = &mut f.camera.transform;
         cam_t.move_backward(5.0);
         cam_t.move_up(2.0);
-        cam_t.look_at([0.0, 0.0, 0.0], Vector3::up());
+        cam_t.look_at([0.0, 0.0, 0.0]);
     });
 
     while window.is_open() {
@@ -81,7 +80,7 @@ fn main() -> Result<()> {
         })?;
 
         context.draw(&main_framebuffer, |target| {
-            target.set_clear(colors::ORANGE);
+            target.set_clear(Color::ORANGE);
             target.draw_cube([-3.0, 1.0, 0.0]);
             target.draw_sphere([-1.0, 1.0, 0.0]);
             target.draw_cube([1.0, 1.0, 0.0]);

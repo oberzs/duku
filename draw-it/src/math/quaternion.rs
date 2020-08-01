@@ -18,7 +18,7 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
@@ -86,7 +86,7 @@ impl Quaternion {
         result
     }
 
-    pub fn inverse_rotation(self) -> Quaternion {
+    pub const fn inverse_rotation(self) -> Quaternion {
         let mut result = self;
         result.w = -result.w;
         result
@@ -109,11 +109,13 @@ impl Quaternion {
 
         u * 2.0 * u.dot(v) + v * (s * s - u.dot(u)) + u.cross(v) * 2.0 * s
     }
+
+    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 1.0);
 }
 
 impl Default for Quaternion {
     fn default() -> Self {
-        Self::new(0.0, 0.0, 0.0, 1.0)
+        Self::ZERO
     }
 }
 
@@ -161,7 +163,7 @@ mod test {
 
     #[test]
     fn look_rotation() {
-        let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::up());
+        let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::UP);
         assert_eq!(q, Quaternion::new(0.0, 0.707_106_77, 0.0, 0.707_106_77));
     }
 

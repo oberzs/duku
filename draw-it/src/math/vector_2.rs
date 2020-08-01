@@ -23,31 +23,31 @@ pub struct Vector2 {
 }
 
 impl Vector2 {
-    pub fn new(x: f32, y: f32) -> Self {
+    pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
-    pub fn dot(self, other: impl Into<Self>) -> f32 {
+    pub fn dot(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         self.x * o.x + self.y * o.y
     }
 
-    pub fn length(self) -> f32 {
-        self.dot(self).sqrt()
+    pub fn length(&self) -> f32 {
+        self.dot(*self).sqrt()
     }
 
-    pub fn unit(self) -> Self {
+    pub fn unit(&self) -> Self {
         let scale = 1.0 / self.length();
-        self * if scale.is_infinite() { 0.0 } else { scale }
+        *self * if scale.is_infinite() { 0.0 } else { scale }
     }
 
-    pub fn angle_between(self, other: impl Into<Self>) -> f32 {
+    pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
         cos.acos().to_degrees()
     }
 
-    pub fn extend(self, z: f32) -> Vector3 {
+    pub const fn extend(&self, z: f32) -> Vector3 {
         Vector3::new(self.x, self.y, z)
     }
 }

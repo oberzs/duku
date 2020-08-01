@@ -3,11 +3,11 @@
 
 // gradient example with custom shader arguments
 
-use draw_it::colors;
 use draw_it::ui;
 use draw_it::ui::label;
 use draw_it::window::WindowOptions;
 use draw_it::CameraType;
+use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Result;
@@ -32,8 +32,8 @@ fn main() -> Result<()> {
     )?;
 
     let material = context.create_material()?;
-    let mut left_color = colors::GREEN;
-    let mut right_color = colors::BLUE;
+    let mut left_color = Color::GREEN;
+    let mut right_color = Color::BLUE;
 
     while window.is_open() {
         context.poll_events(&mut window)?;

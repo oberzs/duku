@@ -1,4 +1,7 @@
-pub mod colors;
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// Color struct
 
 use std::cmp;
 
@@ -14,11 +17,11 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn rgb(r: u8, g: u8, b: u8) -> Self {
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self::rgba(r, g, b, 255)
     }
 
-    pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
@@ -110,6 +113,14 @@ impl Color {
 
         (hue as u16, saturation, value)
     }
+
+    pub const WHITE: Self = Self::rgb(255, 255, 255);
+    pub const BLACK: Self = Self::rgb(0, 0, 0);
+    pub const RED: Self = Self::rgb(255, 0, 0);
+    pub const GREEN: Self = Self::rgb(0, 255, 0);
+    pub const BLUE: Self = Self::rgb(0, 0, 255);
+    pub const SKY_BLUE: Self = Self::rgb(135, 206, 235);
+    pub const ORANGE: Self = Self::rgb(255, 127, 0);
 }
 
 impl From<[u8; 3]> for Color {
@@ -136,7 +147,7 @@ impl From<[f32; 4]> for Color {
     }
 }
 
-fn to_norm(value: u8) -> f32 {
+const fn to_norm(value: u8) -> f32 {
     value as f32 / 255.0
 }
 

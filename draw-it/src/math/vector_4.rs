@@ -25,7 +25,7 @@ pub struct Vector4 {
 }
 
 impl Vector4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
@@ -34,7 +34,7 @@ impl Vector4 {
         self.x * o.x + self.y * o.y + self.z * o.z + self.w * o.w
     }
 
-    pub fn shrink(self) -> Vector3 {
+    pub const fn shrink(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 

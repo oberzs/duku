@@ -90,7 +90,7 @@ impl Controller {
         }
 
         if self.lockon {
-            transform.look_at(self.lockon_point, Vector3::up());
+            transform.look_at(self.lockon_point);
         }
     }
 }

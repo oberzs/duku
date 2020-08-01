@@ -3,9 +3,9 @@
 
 // example that draws text
 
-use draw_it::colors;
 use draw_it::window::WindowOptions;
 use draw_it::CameraType;
+use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Quality;
@@ -31,12 +31,12 @@ fn main() -> Result<()> {
 
     let material_1 = context.create_material()?;
     material_1.with(|m| {
-        m.set_font_color(colors::RED);
+        m.set_font_color(Color::RED);
     });
     let material_2 = context.create_material()?;
     material_2.with(|m| {
-        m.set_font_color(colors::BLUE);
-        m.set_font_border_color(colors::WHITE);
+        m.set_font_color(Color::BLUE);
+        m.set_font_border_color(Color::WHITE);
         m.set_font_width(0.5);
         m.set_font_edge(0.1);
         m.set_font_border_width(0.8);
@@ -54,7 +54,7 @@ fn main() -> Result<()> {
         let dynamic_size = 1.0 + (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5);
 
         context.draw_on_window(|target| {
-            target.set_clear(colors::ORANGE);
+            target.set_clear(Color::ORANGE);
             target.set_font_size(sdf_size);
             target.draw_text(
                 format!("SDF {}p text\n... in two lines!", sdf_size),

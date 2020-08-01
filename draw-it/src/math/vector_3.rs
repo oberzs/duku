@@ -26,44 +26,20 @@ pub struct Vector3 {
 }
 
 impl Vector3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
-    pub fn uniform(v: f32) -> Self {
+    pub const fn uniform(v: f32) -> Self {
         Self::new(v, v, v)
     }
 
-    pub fn backward() -> Self {
-        Self::new(0.0, 0.0, -1.0)
-    }
-
-    pub fn forward() -> Self {
-        Self::new(0.0, 0.0, 1.0)
-    }
-
-    pub fn up() -> Self {
-        Self::new(0.0, 1.0, 0.0)
-    }
-
-    pub fn down() -> Self {
-        Self::new(0.0, -1.0, 0.0)
-    }
-
-    pub fn left() -> Self {
-        Self::new(-1.0, 0.0, 0.0)
-    }
-
-    pub fn right() -> Self {
-        Self::new(1.0, 0.0, 0.0)
-    }
-
-    pub fn dot(self, other: impl Into<Self>) -> f32 {
+    pub fn dot(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         self.x * o.x + self.y * o.y + self.z * o.z
     }
 
-    pub fn cross(self, other: impl Into<Self>) -> Self {
+    pub fn cross(&self, other: impl Into<Self>) -> Self {
         let o = other.into();
         let x = self.y * o.z - self.z * o.y;
         let y = self.z * o.x - self.x * o.z;
@@ -71,32 +47,40 @@ impl Vector3 {
         Self::new(x, y, z)
     }
 
-    pub fn length(self) -> f32 {
-        self.dot(self).sqrt()
+    pub fn length(&self) -> f32 {
+        self.dot(*self).sqrt()
     }
 
-    pub fn unit(self) -> Self {
+    pub fn unit(&self) -> Self {
         let scale = 1.0 / self.length();
-        self * if scale.is_infinite() { 0.0 } else { scale }
+        *self * if scale.is_infinite() { 0.0 } else { scale }
     }
 
-    pub fn angle_between(self, other: impl Into<Self>) -> f32 {
+    pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
         cos.acos().to_degrees()
     }
 
-    pub fn extend(self, w: f32) -> Vector4 {
+    pub const fn extend(&self, w: f32) -> Vector4 {
         Vector4::new(self.x, self.y, self.z, w)
     }
 
-    pub fn shrink(self) -> Vector2 {
+    pub const fn shrink(&self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
-    pub fn floor(self) -> Self {
+    pub fn floor(&self) -> Self {
         Vector3::new(self.x.floor(), self.y.floor(), self.z.floor())
     }
+
+    pub const BACKWARD: Self = Self::new(0.0, 0.0, -1.0);
+    pub const FORWARD: Self = Self::new(0.0, 0.0, 1.0);
+    pub const UP: Self = Self::new(0.0, 1.0, 0.0);
+    pub const DOWN: Self = Self::new(0.0, -1.0, 0.0);
+    pub const LEFT: Self = Self::new(-1.0, 0.0, 0.0);
+    pub const RIGHT: Self = Self::new(1.0, 0.0, 0.0);
+    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
 }
 
 impl From<[f32; 3]> for Vector3 {
@@ -256,12 +240,12 @@ mod test {
 
     #[test]
     fn direction() {
-        assert_eq!(Vector3::forward(), Vector3::new(0.0, 0.0, 1.0));
-        assert_eq!(Vector3::backward(), Vector3::new(0.0, 0.0, -1.0));
-        assert_eq!(Vector3::down(), Vector3::new(0.0, -1.0, 0.0));
-        assert_eq!(Vector3::up(), Vector3::new(0.0, 1.0, 0.0));
-        assert_eq!(Vector3::right(), Vector3::new(1.0, 0.0, 0.0));
-        assert_eq!(Vector3::left(), Vector3::new(-1.0, 0.0, 0.0));
+        assert_eq!(Vector3::FORWARD, Vector3::new(0.0, 0.0, 1.0));
+        assert_eq!(Vector3::BACKWARD, Vector3::new(0.0, 0.0, -1.0));
+        assert_eq!(Vector3::DOWN, Vector3::new(0.0, -1.0, 0.0));
+        assert_eq!(Vector3::UP, Vector3::new(0.0, 1.0, 0.0));
+        assert_eq!(Vector3::RIGHT, Vector3::new(1.0, 0.0, 0.0));
+        assert_eq!(Vector3::LEFT, Vector3::new(-1.0, 0.0, 0.0));
     }
 
     #[test]

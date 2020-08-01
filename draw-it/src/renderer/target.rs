@@ -3,7 +3,6 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
-use crate::color::colors;
 use crate::color::Color;
 use crate::error::Result;
 use crate::font::Font;
@@ -96,7 +95,7 @@ impl Target {
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             main_light: Light {
                 coords: Vector3::new(-1.0, -1.0, 1.0).unit().extend(0.0),
-                color: colors::WHITE.to_rgba_norm_vec(),
+                color: Color::WHITE.to_rgba_norm_vec(),
             },
             lights: vec![],
             current_shader: builtins.phong_shader.clone(),
