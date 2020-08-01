@@ -102,8 +102,8 @@ fn main() {
     let directory = opts.value_of("directory").map(|p| Path::new(p));
     let watch = opts.is_present("watch");
     let relative = opts.is_present("relative");
-    let sdf = opts.value_of("sdf").unwrap();
-    let bitmap = opts.values_of("bitmap").unwrap();
+    let sdf = opts.value_of("sdf").expect("bad args");
+    let bitmap = opts.values_of("bitmap").expect("bad args");
 
     let sdf_options = sdf
         .split(',')
@@ -169,12 +169,14 @@ fn main() {
 
     // watch for changes
     if watch {
-        let path = input.or(directory).unwrap();
+        let path = input.or(directory).expect("bad args");
         let (sender, receiver) = mpsc::channel();
 
         let mut watcher: RecommendedWatcher =
-            Watcher::new(sender, Duration::from_millis(500)).unwrap();
-        watcher.watch(path, RecursiveMode::NonRecursive).unwrap();
+            Watcher::new(sender, Duration::from_millis(500)).expect("bad watcher");
+        watcher
+            .watch(path, RecursiveMode::NonRecursive)
+            .expect("bad watcher");
 
         while let Ok(event) = receiver.recv() {
             if let DebouncedEvent::Write(in_path) = event {

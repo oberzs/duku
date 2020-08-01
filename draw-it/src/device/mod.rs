@@ -181,7 +181,7 @@ impl Device {
 
         // reset command buffer
         let pool = self.command_pools[current];
-        let mut buffers = self.command_buffers.lock().unwrap();
+        let mut buffers = self.command_buffers.lock().expect("bad buffers");
         self.free_command_buffer(pool, buffers[current])?;
 
         // cleanup destroyed resources
@@ -219,7 +219,7 @@ impl Device {
         let current = self.current_frame();
 
         // end command buffer
-        let buffers = self.command_buffers.lock().unwrap();
+        let buffers = self.command_buffers.lock().expect("bad buffers");
         self.end_command_buffer(buffers[current])?;
 
         // submit
@@ -262,7 +262,7 @@ impl Device {
     }
 
     pub(crate) fn command_buffer(&self) -> vk::CommandBuffer {
-        let buffers = self.command_buffers.lock().unwrap();
+        let buffers = self.command_buffers.lock().expect("bad buffers");
         let current = self.current_frame();
         buffers[current]
     }
@@ -363,7 +363,8 @@ impl Device {
     }
 
     pub(crate) fn free_buffer(&self, handle: vk::Buffer, memory: vk::DeviceMemory) {
-        self.destroyed_buffers.lock().unwrap()[self.current_frame()].push((handle, memory));
+        self.destroyed_buffers.lock().expect("bad buffers")[self.current_frame()]
+            .push((handle, memory));
     }
 
     pub(crate) fn allocate_image(
@@ -543,7 +544,7 @@ impl Device {
     }
 
     pub(crate) fn destroy_pipeline(&self, handle: vk::Pipeline) {
-        self.destroyed_pipelines.lock().unwrap()[self.current_frame()].push(handle);
+        self.destroyed_pipelines.lock().expect("bad pipelines")[self.current_frame()].push(handle);
     }
 
     pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
@@ -895,7 +896,8 @@ impl Device {
 
     fn cleanup_resources(&self, frame: usize) {
         // cleanup pipelines
-        let destroyed_pipelines = &mut self.destroyed_pipelines.lock().unwrap()[frame];
+        let destroyed_pipelines =
+            &mut self.destroyed_pipelines.lock().expect("bad pipelines")[frame];
         for p in destroyed_pipelines.iter() {
             unsafe {
                 self.handle.destroy_pipeline(*p, None);
@@ -904,7 +906,7 @@ impl Device {
         destroyed_pipelines.clear();
 
         // cleanup buffers
-        let destroyed_buffers = &mut self.destroyed_buffers.lock().unwrap()[frame];
+        let destroyed_buffers = &mut self.destroyed_buffers.lock().expect("bad pipelines")[frame];
         for (b, m) in destroyed_buffers.iter() {
             unsafe {
                 self.handle.destroy_buffer(*b, None);
@@ -914,7 +916,7 @@ impl Device {
         destroyed_buffers.clear();
 
         // cleanup images
-        let destroyed_images = &mut self.destroyed_images.lock().unwrap()[frame];
+        let destroyed_images = &mut self.destroyed_images.lock().expect("bad pipelines")[frame];
         for (i, m) in destroyed_images.iter() {
             unsafe {
                 self.handle.destroy_image(*i, None);

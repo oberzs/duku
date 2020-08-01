@@ -17,6 +17,7 @@ use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::DeviceProperties;
+use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::Cubemap;
 use crate::image::CubemapOptions;
@@ -216,7 +217,10 @@ impl Context {
         self.swapchain
             .recreate(&self.instance, &self.surface, self.gpu_index)?;
 
-        let mut framebuffers = self.window_framebuffers.lock().unwrap();
+        let mut framebuffers = self
+            .window_framebuffers
+            .lock()
+            .expect("poisoned framebuffers");
         *framebuffers = Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
@@ -225,10 +229,9 @@ impl Context {
         )?;
 
         #[cfg(feature = "ui")]
-        self.ui
-            .as_mut()
-            .unwrap()
-            .resize(&mut self.image_uniform, width, height)?;
+        if let Some(ui) = &mut self.ui {
+            ui.resize(&mut self.image_uniform, width, height)?;
+        }
 
         Ok(())
     }
@@ -243,15 +246,16 @@ impl Context {
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
-            {
-                let ui = self.ui.as_ref().unwrap();
+            if let Some(ui) = &self.ui {
                 if ui.drawn() {
                     target.blit_framebuffer(ui.framebuffer());
                 }
             }
 
-            let framebuffer =
-                &mut self.window_framebuffers.lock().unwrap()[self.swapchain.current()];
+            let framebuffer = &mut self
+                .window_framebuffers
+                .lock()
+                .expect("poisoned framebuffer")[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
             self.render_stats +=
@@ -396,7 +400,10 @@ impl Context {
     }
 
     pub fn create_shader(&mut self, source: &[u8], options: ShaderOptions) -> Result<Ref<Shader>> {
-        let framebuffer = &self.window_framebuffers.lock().unwrap()[0];
+        let framebuffer = &self
+            .window_framebuffers
+            .lock()
+            .expect("poisoned framebuffers")[0];
         let shader = Shader::new(
             &self.device,
             framebuffer,
@@ -434,7 +441,9 @@ impl Context {
         );
 
         #[cfg(feature = "ui")]
-        self.ui.as_mut().unwrap().reset();
+        if let Some(ui) = &mut self.ui {
+            ui.reset();
+        }
 
         Ok(())
     }
@@ -464,14 +473,14 @@ impl Context {
         } = w_options;
 
         // create glfw window
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
 
         glfw.window_hint(WindowHint::Resizable(resizable));
         glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
 
         let (mut window, event_receiver) = glfw
             .create_window(width, height, title, WindowMode::Windowed)
-            .unwrap();
+            .expect("bad window");
 
         window.set_key_polling(true);
         window.set_scroll_polling(true);
@@ -552,11 +561,14 @@ impl Context {
         // poll events
         let mut polling = true;
         while polling {
-            self.glfw.as_mut().unwrap().poll_events();
-            for (_, event) in glfw::flush_messages(self.event_receiver.as_ref().unwrap()) {
+            self.glfw.as_mut().expect("bad glfw").poll_events();
+            let receiver = self.event_receiver.as_ref().expect("bad event receiver");
+            for (_, event) in glfw::flush_messages(receiver) {
                 // update imgui
                 #[cfg(feature = "ui")]
-                self.ui.as_mut().unwrap().handle_event(&event);
+                if let Some(ui) = &mut self.ui {
+                    ui.handle_event(&event);
+                }
 
                 // update window events
                 match event {
@@ -618,22 +630,22 @@ impl Context {
 
         thread::spawn(move || {
             let mut watcher: RecommendedWatcher =
-                Watcher::new(sender, Duration::from_millis(500)).unwrap();
+                Watcher::new(sender, Duration::from_millis(500)).expect("bad file watcher");
             watcher
                 .watch(&path_buf, RecursiveMode::NonRecursive)
-                .unwrap();
+                .expect("cannot watch file");
 
             while let Ok(event) = receiver.recv() {
                 match event {
                     DebouncedEvent::Rescan => break,
                     DebouncedEvent::Write(_) => {
                         // recreate shader
-                        let framebuffer = &framebuffers.lock().unwrap()[0];
+                        let framebuffer = &framebuffers.lock().expect("poisoned framebuffers")[0];
 
-                        let source = fs::read(&path_buf).unwrap();
+                        let source = fs::read(&path_buf).expect("bad read");
                         let new_shader =
                             Shader::new(&device, framebuffer, &shader_layout, &source, options)
-                                .unwrap();
+                                .expect("bad shader recreation");
                         shader_ref.with(|s| *s = new_shader);
                         info!("shader {:?} was reloaded", path_buf);
                     }
@@ -698,20 +710,26 @@ impl Context {
             let f = match info.color_type {
                 ColorType::RGBA | ColorType::RGB => ImageFormat::Srgba,
                 ColorType::Grayscale => ImageFormat::Gray,
-                _ => error!("unsupported PNG format {:?}", info.color_type),
+                _ => {
+                    return Err(
+                        ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into(),
+                    )
+                }
             };
 
             if let ColorType::RGB = info.color_type {
                 buf = with_alpha(buf);
             }
 
-            debug_assert!(
-                f == format,
-                "skybox formats {:?} ({:?}) and {:?} are not the same",
-                f,
-                path.as_ref(),
-                format
-            );
+            if f == format {
+                return Err(ErrorKind::NonMatchingCubemapFormat(format!(
+                    "{:?} ({:?})",
+                    f,
+                    path.as_ref()
+                ))
+                .into());
+            }
+
             format = f;
 
             size = info.width;
@@ -746,7 +764,7 @@ impl Context {
 
         self.ui
             .as_mut()
-            .unwrap()
+            .ok_or(ErrorKind::UnitializedUi)?
             .draw(&self.shader_layout, draw_fn)?;
 
         Ok(())
@@ -757,9 +775,9 @@ impl Drop for Context {
     fn drop(&mut self) {
         #[cfg(feature = "hot-reload")]
         for stop in &self.stop_senders {
-            stop.send(DebouncedEvent::Rescan).unwrap();
+            stop.send(DebouncedEvent::Rescan).expect("bad shutdown");
         }
-        self.device.wait_for_idle().unwrap();
+        self.device.wait_for_idle().expect("bad wait");
     }
 }
 

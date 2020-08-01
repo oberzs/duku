@@ -125,7 +125,10 @@ impl Camera {
         radius = (radius * 16.0).ceil() / 16.0;
 
         // transform frustum center into world space
-        let center = view.inverse().unwrap().transform_vector(frustum_center);
+        let center = view
+            .inverse()
+            .expect("no inverse")
+            .transform_vector(frustum_center);
 
         Sphere { center, radius }
     }

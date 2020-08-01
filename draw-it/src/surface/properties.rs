@@ -75,11 +75,11 @@ impl SurfaceProperties {
     }
 
     pub(crate) fn graphics_index(&self) -> u32 {
-        self.graphics_index.unwrap()
+        self.graphics_index.expect("no graphics index")
     }
 
     pub(crate) fn present_index(&self) -> u32 {
-        self.present_index.unwrap()
+        self.present_index.expect("no present index")
     }
 
     pub(crate) fn are_indices_unique(&self) -> bool {

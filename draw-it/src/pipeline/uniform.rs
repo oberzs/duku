@@ -163,7 +163,10 @@ impl ImageUniform {
     }
 
     pub(crate) fn remove(&mut self, index: i32) {
-        debug_assert!((index as usize) < self.images.len());
+        debug_assert!(
+            (index as usize) < self.images.len(),
+            "image index out of bounds"
+        );
 
         // mark image as removed
         self.images[index as usize] = None;

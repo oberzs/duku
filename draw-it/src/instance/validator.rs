@@ -27,8 +27,8 @@ extern "system" fn callback(
     _: *mut c_void,
 ) -> u32 {
     let msg = unsafe {
-        let message = debug_data.as_ref().unwrap().p_message;
-        CStr::from_ptr(message).to_str().unwrap()
+        let message = debug_data.as_ref().expect("bad message").p_message;
+        CStr::from_ptr(message).to_str().expect("bad message")
     };
 
     // remove beginning ramble

@@ -517,7 +517,10 @@ mod test {
     fn inverse() {
         let m = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0);
         let precision = 0.99999994;
-        assert_eq!(m * m.inverse().unwrap(), Matrix4::identity() * precision);
+        assert_eq!(
+            m * m.inverse().expect("no inverse"),
+            Matrix4::identity() * precision
+        );
     }
 
     #[test]

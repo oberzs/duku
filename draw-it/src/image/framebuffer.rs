@@ -208,8 +208,10 @@ impl Framebuffer {
         height: u32,
         image_uniform: &mut ImageUniform,
     ) -> Result<()> {
-        // cannot resize swapchain framebuffer manually
-        debug_assert!(self.render_pass.attachments().count() == self.images.len());
+        debug_assert!(
+            self.render_pass.attachments().count() == self.images.len(),
+            "trying to resize swapchain framebuffer"
+        );
 
         // recreate framebuffer images
         let mut stored_format = None;

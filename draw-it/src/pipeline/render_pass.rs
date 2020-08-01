@@ -28,8 +28,14 @@ impl RenderPass {
         depth: bool,
         present: bool,
     ) -> Result<Self> {
-        debug_assert!(!present || attachment_formats.len() == 1);
-        debug_assert!(depth || !attachment_formats.is_empty());
+        debug_assert!(
+            !present || attachment_formats.len() == 1,
+            "present render pass should only have 1 attachment"
+        );
+        debug_assert!(
+            depth || !attachment_formats.is_empty(),
+            "render pass should have at least 1 attachment or depth"
+        );
 
         let mut depth_attachment = None;
         let mut color_attachments = vec![];
@@ -66,7 +72,10 @@ impl RenderPass {
 
         // add color and resolve attachments
         for format in attachment_formats {
-            debug_assert!(format.is_color());
+            debug_assert!(
+                format.is_color(),
+                "attachment format must be a color format"
+            );
 
             // base color attachment
             let layout = if present {

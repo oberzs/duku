@@ -26,6 +26,8 @@ pub enum ErrorType {
     VulkanCode(i32),
     #[cfg(feature = "image")]
     Image(png::DecodingError),
+    #[cfg(feature = "window")]
+    Window(glfw::InitError),
     // Internal error
     Internal(ErrorKind),
 }
@@ -37,6 +39,12 @@ pub enum ErrorKind {
     UnsupportedMemoryType,
     NoSuitableGpu,
     NoSuitableMemoryType,
+    #[cfg(feature = "ui")]
+    UnitializedUi,
+    #[cfg(feature = "image")]
+    UnsupportedFormat(String),
+    #[cfg(feature = "image")]
+    NonMatchingCubemapFormat(String),
 }
 
 impl Error for ErrorType {}
@@ -102,6 +110,13 @@ impl From<ash::vk::Result> for ErrorType {
 impl From<png::DecodingError> for ErrorType {
     fn from(e: png::DecodingError) -> Self {
         Self::Image(e)
+    }
+}
+
+#[cfg(feature = "window")]
+impl From<glfw::InitError> for ErrorType {
+    fn from(e: glfw::InitError) -> Self {
+        Self::Window(e)
     }
 }
 

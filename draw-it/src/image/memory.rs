@@ -147,7 +147,7 @@ impl ImageMemory {
     }
 
     pub(crate) fn copy_from_memory(&self, memory: &BufferMemory, layer: u32) -> Result<()> {
-        debug_assert!(layer < self.layer_count);
+        debug_assert!(layer < self.layer_count, "layer out of bounds");
 
         let subresource = vk::ImageSubresourceLayers::builder()
             .aspect_mask(vk::ImageAspectFlags::COLOR)
