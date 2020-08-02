@@ -4,8 +4,6 @@
 // Gaussian blur example
 
 use draw_it::controller::Controller;
-use draw_it::ui;
-use draw_it::ui::label;
 use draw_it::window::WindowOptions;
 use draw_it::CameraType;
 use draw_it::Color;
@@ -69,14 +67,11 @@ fn main() -> Result<()> {
         });
 
         context.draw_ui(|ui| {
-            ui::stats_window(&ui, stats);
-            ui::Window::new(label!("Blur Settings"))
-                .size([1.0, 1.0], ui::Condition::FirstUseEver)
-                .always_auto_resize(true)
-                .build(&ui, || {
-                    ui::Slider::new(label!("Strength"), 0..=3).build(&ui, &mut blur_strength);
-                    ui.text("* This does nothing at this moment");
-                });
+            ui.stats_window(stats);
+            ui.auto_window("Blur Settings", || {
+                ui.slider("Strength", 0..=3, &mut blur_strength);
+                ui.text("* This does nothing at this moment");
+            });
         })?;
 
         context.draw(&main_framebuffer, |target| {

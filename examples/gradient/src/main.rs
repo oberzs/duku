@@ -3,8 +3,6 @@
 
 // gradient example with custom shader arguments
 
-use draw_it::ui;
-use draw_it::ui::label;
 use draw_it::window::WindowOptions;
 use draw_it::CameraType;
 use draw_it::Color;
@@ -46,13 +44,10 @@ fn main() -> Result<()> {
 
         // draw ui
         context.draw_ui(|ui| {
-            ui::Window::new(label!("Background Control"))
-                .size([1.0, 1.0], ui::Condition::FirstUseEver)
-                .always_auto_resize(true)
-                .build(&ui, || {
-                    ui::color_edit(&ui, label!("Left Color"), &mut left_color);
-                    ui::color_edit(&ui, label!("Right Color"), &mut right_color);
-                });
+            ui.auto_window("Background Control", || {
+                ui.color_edit("Left Color", &mut left_color);
+                ui.color_edit("Right Color", &mut right_color);
+            });
         })?;
 
         // draw surface

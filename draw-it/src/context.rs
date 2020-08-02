@@ -52,6 +52,8 @@ use crate::surface::WindowHandle;
 
 #[cfg(feature = "ui")]
 use crate::ui::Ui;
+#[cfg(feature = "ui")]
+use crate::ui::UiFrame;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
@@ -793,7 +795,7 @@ impl Context {
     }
 
     #[cfg(feature = "ui")]
-    pub fn draw_ui(&mut self, draw_fn: impl FnMut(&imgui::Ui<'_>)) -> Result<()> {
+    pub fn draw_ui(&mut self, draw_fn: impl FnMut(&UiFrame<'_>)) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw()?;
         }

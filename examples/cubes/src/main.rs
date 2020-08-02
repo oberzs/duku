@@ -4,7 +4,6 @@
 // Mesh drawing example
 
 use draw_it::controller::Controller;
-use draw_it::ui;
 use draw_it::window::Key;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
@@ -103,7 +102,7 @@ fn main() -> Result<()> {
             let wireframes = window.is_key_pressed(Key::E);
 
             context.draw_ui(|ui| {
-                ui::stats_window(&ui, stats);
+                ui.stats_window(stats);
             })?;
 
             context.draw_on_window(|target| {

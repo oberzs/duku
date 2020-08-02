@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     while window.is_open() {
         context.poll_events(&mut window)?;
         context.draw_ui(|ui| {
-            ui.show_demo_window(&mut show_demo);
+            ui.frame.show_demo_window(&mut show_demo);
         })?;
         context.draw_on_window(|_| {})?;
     }

@@ -3,7 +3,6 @@
 
 // example that draws a framebuffer with a custom ray-marching shader
 
-use draw_it::ui;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::Result;
@@ -31,7 +30,7 @@ fn main() -> Result<()> {
         // draw ui
         let stats = context.stats();
         context.draw_ui(|ui| {
-            ui::stats_window(&ui, stats);
+            ui.stats_window(stats);
         })?;
 
         // draw other stuff

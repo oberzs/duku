@@ -5,14 +5,19 @@ use glfw::Key;
 use glfw::Modifiers;
 use glfw::MouseButton;
 use glfw::WindowEvent;
+use imgui::im_str;
 use imgui::BackendFlags;
 use imgui::ColorEdit;
+use imgui::Condition;
 use imgui::Context as ImContext;
 use imgui::FontConfig;
 use imgui::FontSource;
 use imgui::ImStr;
 use imgui::Key as ImKey;
+use imgui::Slider;
 use imgui::Ui as ImUi;
+use imgui::Window;
+use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::color::Color;
@@ -43,11 +48,7 @@ use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 
-pub use imgui::im_str as label;
-pub use imgui::ColorPicker;
-pub use imgui::Condition;
-pub use imgui::Slider;
-pub use imgui::Window;
+pub use imgui;
 
 pub(crate) struct Ui {
     framebuffer: Ref<Framebuffer>,
@@ -59,6 +60,10 @@ pub(crate) struct Ui {
     imgui: ImContext,
 
     device: Arc<Device>,
+}
+
+pub struct UiFrame<'ui> {
+    pub frame: ImUi<'ui>,
 }
 
 impl Ui {
@@ -181,11 +186,15 @@ impl Ui {
     pub(crate) fn draw(
         &mut self,
         shader_layout: &ShaderLayout,
-        mut draw_fn: impl FnMut(&imgui::Ui<'_>),
+        mut draw_fn: impl FnMut(&UiFrame<'_>),
     ) -> Result<()> {
-        let ui = self.imgui.frame();
-        draw_fn(&ui);
-        let draw_data = ui.render();
+        let draw_data = {
+            let ui_frame = UiFrame {
+                frame: self.imgui.frame(),
+            };
+            draw_fn(&ui_frame);
+            ui_frame.frame.render()
+        };
 
         let half_width = draw_data.display_size[0] / 2.0;
         let half_height = draw_data.display_size[1] / 2.0;
@@ -335,80 +344,120 @@ impl Ui {
     }
 }
 
-pub fn color_edit(ui: &ImUi<'_>, label: &ImStr, color: &mut Color) {
-    let mut color_array = color.to_rgba_norm();
-    ColorEdit::new(label, &mut color_array).build(ui);
-    *color = color_array.into();
-}
+impl UiFrame<'_> {
+    pub fn text(&self, text: impl AsRef<str>) {
+        self.frame.text(text);
+    }
 
-pub fn drag_vector2(ui: &ImUi<'_>, label: &ImStr, vector: &mut Vector2) {
-    let mut floats = [vector.x, vector.y];
-    ui.drag_float2(label, &mut floats).build();
-    vector.x = floats[0];
-    vector.y = floats[1];
-}
+    pub fn color_edit(&self, label: impl AsRef<str>, color: &mut Color) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
 
-pub fn drag_vector3(ui: &ImUi<'_>, label: &ImStr, vector: &mut Vector3) {
-    let mut floats = [vector.x, vector.y, vector.z];
-    ui.drag_float3(label, &mut floats).build();
-    vector.x = floats[0];
-    vector.y = floats[1];
-    vector.z = floats[2];
-}
+        let mut color_array = color.to_rgba_norm();
+        ColorEdit::new(im_label, &mut color_array).build(&self.frame);
+        *color = color_array.into();
+    }
 
-pub fn drag_vector4(ui: &ImUi<'_>, label: &ImStr, vector: &mut Vector4) {
-    let mut floats = [vector.x, vector.y, vector.z, vector.w];
-    ui.drag_float4(label, &mut floats).build();
-    vector.x = floats[0];
-    vector.y = floats[1];
-    vector.z = floats[2];
-    vector.w = floats[3];
-}
+    pub fn drag_vector2(&self, label: impl AsRef<str>, vector: &mut Vector2) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
 
-pub fn stats_window(ui: &ImUi<'_>, stats: Stats) {
-    let pad = 14;
+        let mut floats = [vector.x, vector.y];
+        self.frame.drag_float2(im_label, &mut floats).build();
+        vector.x = floats[0];
+        vector.y = floats[1];
+    }
 
-    let fps = format!("{1:0$} : {2}", pad, "Fps", stats.fps);
-    let frame_time = format!(
-        "{1:0$} : {2:.2}ms",
-        pad,
-        "Frame Time",
-        stats.delta_time * 1000.0
-    );
-    let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", stats.time);
-    let drawn_indices = format!(
-        "{1:0$} : {2}({3})",
-        pad,
-        "Drawn Indices",
-        stats.drawn_indices,
-        stats.drawn_triangles()
-    );
-    let shader_rebinds = format!(
-        "{1:0$} : {2}({3})",
-        pad, "Shaders Used", stats.shaders_used, stats.shader_rebinds
-    );
-    let material_rebinds = format!(
-        "{1:0$} : {2}({3})",
-        pad, "Materials Used", stats.materials_used, stats.material_rebinds
-    );
-    let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", stats.draw_calls);
+    pub fn drag_vector3(&self, label: impl AsRef<str>, vector: &mut Vector3) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
 
-    Window::new(label!("Stats"))
-        .position([10.0, 10.0], Condition::Always)
-        .size([1.0, 1.0], Condition::FirstUseEver)
-        .always_auto_resize(true)
-        .resizable(false)
-        .movable(false)
-        .title_bar(false)
-        .build(&ui, || {
-            ui.text(fps);
-            ui.text(frame_time);
-            ui.text(total_time);
-            ui.separator();
-            ui.text(drawn_indices);
-            ui.text(draw_calls);
-            ui.separator();
-            ui.text(shader_rebinds);
-            ui.text(material_rebinds);
-        });
+        let mut floats = [vector.x, vector.y, vector.z];
+        self.frame.drag_float3(im_label, &mut floats).build();
+        vector.x = floats[0];
+        vector.y = floats[1];
+        vector.z = floats[2];
+    }
+
+    pub fn drag_vector4(&self, label: impl AsRef<str>, vector: &mut Vector4) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
+
+        let mut floats = [vector.x, vector.y, vector.z, vector.w];
+        self.frame.drag_float4(im_label, &mut floats).build();
+        vector.x = floats[0];
+        vector.y = floats[1];
+        vector.z = floats[2];
+        vector.w = floats[3];
+    }
+
+    pub fn slider(
+        &self,
+        label: impl AsRef<str>,
+        range: core::ops::RangeInclusive<i32>,
+        value: &mut i32,
+    ) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
+
+        Slider::new(im_label, range).build(&self.frame, value);
+    }
+
+    pub fn auto_window(&self, label: impl AsRef<str>, build_fn: impl FnMut()) {
+        let cstring = CString::new(label.as_ref()).expect("bad cstring");
+        let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
+
+        Window::new(im_label)
+            .size([1.0, 1.0], Condition::FirstUseEver)
+            .always_auto_resize(true)
+            .build(&self.frame, build_fn);
+    }
+
+    pub fn stats_window(&self, stats: Stats) {
+        let pad = 14;
+
+        let fps = format!("{1:0$} : {2}", pad, "Fps", stats.fps);
+        let frame_time = format!(
+            "{1:0$} : {2:.2}ms",
+            pad,
+            "Frame Time",
+            stats.delta_time * 1000.0
+        );
+        let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", stats.time);
+        let drawn_indices = format!(
+            "{1:0$} : {2}({3})",
+            pad,
+            "Drawn Indices",
+            stats.drawn_indices,
+            stats.drawn_triangles()
+        );
+        let shader_rebinds = format!(
+            "{1:0$} : {2}({3})",
+            pad, "Shaders Used", stats.shaders_used, stats.shader_rebinds
+        );
+        let material_rebinds = format!(
+            "{1:0$} : {2}({3})",
+            pad, "Materials Used", stats.materials_used, stats.material_rebinds
+        );
+        let draw_calls = format!("{1:0$} : {2}", pad, "Draw Calls", stats.draw_calls);
+
+        Window::new(im_str!("Stats"))
+            .position([10.0, 10.0], Condition::Always)
+            .size([1.0, 1.0], Condition::FirstUseEver)
+            .always_auto_resize(true)
+            .resizable(false)
+            .movable(false)
+            .title_bar(false)
+            .build(&self.frame, || {
+                self.frame.text(fps);
+                self.frame.text(frame_time);
+                self.frame.text(total_time);
+                self.frame.separator();
+                self.frame.text(drawn_indices);
+                self.frame.text(draw_calls);
+                self.frame.separator();
+                self.frame.text(shader_rebinds);
+                self.frame.text(material_rebinds);
+            });
+    }
 }
