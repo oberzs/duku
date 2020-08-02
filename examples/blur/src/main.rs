@@ -57,6 +57,7 @@ fn main() -> Result<()> {
     });
 
     while window.is_open() {
+        let stats = context.stats();
         context.poll_events(&mut window)?;
 
         blur_material.with(|m| {
@@ -64,12 +65,11 @@ fn main() -> Result<()> {
         });
 
         main_framebuffer.with(|f| {
-            controller.update(&mut f.camera, &mut window);
+            controller.update(&mut f.camera, &mut window, stats.delta_time);
         });
 
-        let stats = context.render_stats();
         context.draw_ui(|ui| {
-            ui::stats_window(&ui, stats, &window);
+            ui::stats_window(&ui, stats);
             ui::Window::new(label!("Blur Settings"))
                 .size([1.0, 1.0], ui::Condition::FirstUseEver)
                 .always_auto_resize(true)

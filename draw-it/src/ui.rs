@@ -38,10 +38,9 @@ use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::pipeline::WorldData;
 use crate::renderer::CameraType;
-use crate::renderer::RenderStats;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
-use crate::window::Window as CoreWindow;
+use crate::stats::Stats;
 
 pub use imgui::im_str as label;
 pub use imgui::ColorPicker;
@@ -365,15 +364,15 @@ pub fn drag_vector4(ui: &ImUi<'_>, label: &ImStr, vector: &mut Vector4) {
     vector.w = floats[3];
 }
 
-pub fn stats_window(ui: &ImUi<'_>, stats: RenderStats, window: &CoreWindow) {
+pub fn stats_window(ui: &ImUi<'_>, stats: Stats) {
     let pad = 14;
 
-    let fps = format!("{1:0$} : {2}", pad, "Fps", 0); //events.fps());
+    let fps = format!("{1:0$} : {2}", pad, "Fps", stats.fps);
     let frame_time = format!(
         "{1:0$} : {2:.2}ms",
         pad,
         "Frame Time",
-        window.delta_time() * 1000.0
+        stats.delta_time * 1000.0
     );
     let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", stats.time);
     let drawn_indices = format!(

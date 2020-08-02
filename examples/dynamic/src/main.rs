@@ -46,8 +46,9 @@ fn main() -> Result<()> {
     let time = Instant::now();
 
     while window.is_open() {
+        let stats = context.stats();
         context.poll_events(&mut window)?;
-        controller.update(&mut context.main_camera, &mut window);
+        controller.update(&mut context.main_camera, &mut window, stats.delta_time);
 
         // update square mesh
         square.with(|mesh| {

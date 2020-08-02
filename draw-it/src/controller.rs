@@ -19,12 +19,8 @@ pub struct Controller {
 }
 
 impl Controller {
-    pub fn update(&mut self, camera: &mut Camera, window: &mut Window) {
+    pub fn update(&mut self, camera: &mut Camera, window: &mut Window, delta_time: f32) {
         let rotate_speed = 20.0;
-
-        if window.is_key_typed(Key::F11) {
-            // window.set_fullscreen(!window.fullscreen());
-        }
 
         if window.is_key_typed(Key::Escape) {
             window.set_mouse_grab(!window.mouse_grab());
@@ -41,7 +37,7 @@ impl Controller {
         let transform = &mut camera.transform;
 
         // camera movement
-        let final_move_speed = self.move_speed * window.delta_time();
+        let final_move_speed = self.move_speed * delta_time;
 
         if window.is_key_pressed(Key::W) {
             transform.move_forward(final_move_speed);
@@ -71,9 +67,9 @@ impl Controller {
         if window.mouse_grab() {
             let delta = window.mouse_delta();
 
-            let mouse_x = delta.x * rotate_speed * window.delta_time();
+            let mouse_x = delta.x * rotate_speed * delta_time;
 
-            let change_y = delta.y * rotate_speed * window.delta_time();
+            let change_y = delta.y * rotate_speed * delta_time;
             let upper_bound = change_y + self.camera_angle <= 90.0;
             let lower_bound = change_y + self.camera_angle >= -90.0;
             let mouse_y = if upper_bound && lower_bound {

@@ -95,13 +95,14 @@ fn main() -> Result<()> {
         }
 
         if !paused {
-            controller.update(&mut context.main_camera, &mut window);
+            let stats = context.stats();
+
+            controller.update(&mut context.main_camera, &mut window, stats.delta_time);
 
             let wireframes = window.is_key_pressed(Key::E);
 
-            let stats = context.render_stats();
             context.draw_ui(|ui| {
-                ui::stats_window(&ui, stats, &window);
+                ui::stats_window(&ui, stats);
             })?;
 
             context.draw_on_window(|target| {

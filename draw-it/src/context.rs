@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Instant;
 
 #[cfg(feature = "hot-reload")]
 use notify::DebouncedEvent;
@@ -38,11 +39,11 @@ use crate::quality::Quality;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
 use crate::renderer::ForwardRenderer;
-use crate::renderer::RenderStats;
 use crate::renderer::Target;
 use crate::resource::Builtins;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
+use crate::stats::Stats;
 use crate::surface::Surface;
 use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
@@ -55,6 +56,8 @@ use crate::ui::Ui;
 use crate::window::Window;
 #[cfg(feature = "window")]
 use crate::window::WindowOptions;
+
+const FPS_SAMPLE_COUNT: usize = 128;
 
 pub struct Context {
     // Renderers
@@ -82,8 +85,12 @@ pub struct Context {
     // Misc
     pub main_camera: Camera,
     camera_type: CameraType,
-    render_stats: RenderStats,
+    stats: Stats,
     render_stage: RenderStage,
+    start_time: Instant,
+    frame_time: Instant,
+    frame_count: usize,
+    fps_samples: [u32; FPS_SAMPLE_COUNT],
 
     // Hot Reload
     #[cfg(feature = "hot-reload")]
@@ -185,8 +192,12 @@ impl Context {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
             render_stage: RenderStage::Before,
-            render_stats: Default::default(),
+            stats: Default::default(),
             camera_type: options.camera,
+            start_time: Instant::now(),
+            frame_time: Instant::now(),
+            frame_count: 0,
+            fps_samples: [0; FPS_SAMPLE_COUNT],
             skybox,
             forward_renderer,
             builtins,
@@ -258,9 +269,12 @@ impl Context {
                 .expect("poisoned framebuffer")[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
-            self.render_stats +=
-                self.forward_renderer
-                    .draw(framebuffer, &self.shader_layout, target)?;
+            self.forward_renderer.draw(
+                framebuffer,
+                &self.shader_layout,
+                target,
+                &mut self.stats,
+            )?;
         }
 
         self.end_draw()?;
@@ -280,9 +294,10 @@ impl Context {
         let mut target = Target::new(&self.builtins)?;
         draw_callback(&mut target);
 
-        let stats =
-            framebuffer.with(|f| self.forward_renderer.draw(f, &self.shader_layout, target))?;
-        self.render_stats += stats;
+        framebuffer.with(|f| {
+            self.forward_renderer
+                .draw(f, &self.shader_layout, target, &mut self.stats)
+        })?;
 
         Ok(())
     }
@@ -423,13 +438,12 @@ impl Context {
         self.create_shader(&source, options)
     }
 
-    pub fn render_stats(&self) -> RenderStats {
-        self.render_stats
+    pub fn stats(&self) -> Stats {
+        self.stats
     }
 
     fn begin_draw(&mut self) -> Result<()> {
         self.render_stage = RenderStage::During;
-        self.render_stats = Default::default();
         self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
         self.resources.update_if_needed()?;
@@ -439,6 +453,10 @@ impl Context {
             &self.shader_layout,
             &self.image_uniform,
         );
+        self.stats = Stats {
+            time: self.start_time.elapsed().as_secs_f32(),
+            ..Default::default()
+        };
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
@@ -452,6 +470,16 @@ impl Context {
         self.render_stage = RenderStage::Before;
         self.device.submit()?;
         self.device.present(&self.swapchain)?;
+
+        // update delta time
+        let delta_time = self.frame_time.elapsed();
+        self.stats.delta_time = delta_time.as_secs_f32();
+        self.frame_time = Instant::now();
+        self.fps_samples[self.frame_count % FPS_SAMPLE_COUNT] =
+            1_000_000 / delta_time.as_micros() as u32;
+        self.frame_count += 1;
+        self.stats.fps =
+            (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
 
         Ok(())
     }
@@ -553,7 +581,6 @@ impl Context {
     pub fn poll_events(&mut self, window: &mut Window) -> Result<()> {
         use glfw::WindowEvent;
         use std::time::Duration;
-        use std::time::Instant;
 
         // clear events
         window.clear();
@@ -598,9 +625,6 @@ impl Context {
             // pause if just resized
             polling = window.raw_size() == (0, 0) || window.last_resize().is_some();
         }
-
-        // update window
-        window.update_delta_time();
 
         Ok(())
     }
@@ -721,7 +745,7 @@ impl Context {
                 buf = with_alpha(buf);
             }
 
-            if f == format {
+            if f != format {
                 return Err(ErrorKind::NonMatchingCubemapFormat(format!(
                     "{:?} ({:?})",
                     f,

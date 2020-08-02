@@ -34,9 +34,7 @@ pub struct Window {
     mouse_delta: Vector2,
     scroll_delta: Vector2,
 
-    begin_time: Instant,
     last_resize: Option<Instant>,
-    delta_time: f32,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -74,9 +72,7 @@ impl Window {
             mouse_position: Vector2::new(0.0, 0.0),
             mouse_delta: Vector2::new(0.0, 0.0),
             scroll_delta: Vector2::new(0.0, 0.0),
-            begin_time: Instant::now(),
             last_resize: None,
-            delta_time: 0.0,
             events: vec![],
             handle,
         }
@@ -125,10 +121,6 @@ impl Window {
 
     pub fn scroll_delta(&self) -> Vector2 {
         self.scroll_delta
-    }
-
-    pub fn delta_time(&self) -> f32 {
-        self.delta_time
     }
 
     pub fn mouse_grab(&self) -> bool {
@@ -243,11 +235,6 @@ impl Window {
     pub(crate) fn clear(&mut self) {
         self.keys_typed.clear();
         self.mouse_delta = Vector2::new(0.0, 0.0);
-    }
-
-    pub(crate) fn update_delta_time(&mut self) {
-        self.delta_time = self.begin_time.elapsed().as_secs_f32();
-        self.begin_time = Instant::now();
     }
 }
 

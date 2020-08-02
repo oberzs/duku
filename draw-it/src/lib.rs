@@ -30,6 +30,7 @@ mod pipeline;
 mod quality;
 mod renderer;
 mod resource;
+mod stats;
 mod surface;
 mod sync;
 
@@ -56,9 +57,9 @@ pub use quality::QualityOptions;
 pub use renderer::Camera;
 pub use renderer::CameraType;
 pub use renderer::Pcf;
-pub use renderer::RenderStats;
 pub use renderer::SamplerOptions;
 pub use renderer::Target;
+pub use stats::Stats;
 pub use surface::WindowHandle;
 
 // optional feature exports

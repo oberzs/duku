@@ -5,13 +5,11 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Instant;
 
 use super::Albedo;
 use super::Camera;
 use super::CameraType;
 use super::Order;
-use super::RenderStats;
 use super::Target;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
@@ -31,11 +29,11 @@ use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
+use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
     shadow_shader: Shader,
-    start_time: Instant,
     pcf: Pcf,
     device: Arc<Device>,
 }
@@ -80,7 +78,6 @@ impl ForwardRenderer {
         )?;
 
         Ok(Self {
-            start_time: Instant::now(),
             device: Arc::clone(device),
             shadow_frames,
             shadow_shader,
@@ -93,7 +90,8 @@ impl ForwardRenderer {
         framebuffer: &mut Framebuffer,
         shader_layout: &ShaderLayout,
         target: Target,
-    ) -> Result<RenderStats> {
+        stats: &mut Stats,
+    ) -> Result<()> {
         let cmd = self.device.command_buffer();
         self.device.cmd_set_line_width(cmd, target.line_width);
 
@@ -125,7 +123,7 @@ impl ForwardRenderer {
             lights: target.lights(),
             world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
-            time: self.start_time.elapsed().as_secs_f32(),
+            time: stats.time,
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             pcf,
@@ -139,7 +137,6 @@ impl ForwardRenderer {
         self.device
             .cmd_bind_uniform(cmd, shader_layout, &framebuffer.world_uniform);
 
-        let mut render_stats = RenderStats::default();
         let mut unique_shaders = HashSet::new();
         let mut unique_materials = HashSet::new();
 
@@ -149,7 +146,7 @@ impl ForwardRenderer {
                 self.device.cmd_bind_shader(cmd, s);
                 unique_shaders.insert(s.handle());
             });
-            render_stats.shader_rebinds += 1;
+            stats.shader_rebinds += 1;
 
             target.builtins.cube_mesh.with(|m| {
                 self.device.cmd_bind_mesh(cmd, m);
@@ -171,8 +168,8 @@ impl ForwardRenderer {
                 );
                 self.device.cmd_draw(cmd, m.index_count(), 0);
 
-                render_stats.drawn_indices += m.index_count();
-                render_stats.draw_calls += 1;
+                stats.drawn_indices += m.index_count();
+                stats.draw_calls += 1;
             });
         }
 
@@ -182,18 +179,18 @@ impl ForwardRenderer {
                 self.device.cmd_bind_shader(cmd, s);
                 unique_shaders.insert(s.handle());
             });
-            render_stats.shader_rebinds += 1;
+            stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
                 m_order.material.with(|m| {
                     self.device.cmd_bind_material(cmd, shader_layout, m);
                     unique_materials.insert(m.uniform().descriptor());
                 });
-                render_stats.material_rebinds += 1;
+                stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    render_stats.drawn_indices += self.draw_order(order, shader_layout);
-                    render_stats.draw_calls += 1;
+                    stats.drawn_indices += self.draw_order(order, shader_layout);
+                    stats.draw_calls += 1;
                 }
             }
         }
@@ -205,13 +202,13 @@ impl ForwardRenderer {
                     self.device.cmd_bind_shader(cmd, s);
                     unique_shaders.insert(s.handle());
                 });
-                render_stats.shader_rebinds += 1;
+                stats.shader_rebinds += 1;
 
                 t_order.material.with(|m| {
                     self.device.cmd_bind_material(cmd, shader_layout, m);
                     unique_materials.insert(m.uniform().descriptor());
                 });
-                render_stats.material_rebinds += 1;
+                stats.material_rebinds += 1;
 
                 let font_size = t_order.size;
                 let sampler_index = t_order.sampler_index;
@@ -251,8 +248,8 @@ impl ForwardRenderer {
                     let data = f.char_data(font_size, c);
                     self.device.cmd_draw(cmd, 6, data.offset);
 
-                    render_stats.drawn_indices += 6;
-                    render_stats.draw_calls += 1;
+                    stats.drawn_indices += 6;
+                    stats.draw_calls += 1;
 
                     transform.position.x += data.advance * transform.scale.x;
                 }
@@ -263,11 +260,10 @@ impl ForwardRenderer {
         self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
 
-        render_stats.time = self.start_time.elapsed().as_secs_f32();
-        render_stats.shaders_used = unique_shaders.len() as u32;
-        render_stats.materials_used = unique_materials.len() as u32;
+        stats.shaders_used = unique_shaders.len() as u32;
+        stats.materials_used = unique_materials.len() as u32;
 
-        Ok(render_stats)
+        Ok(())
     }
 
     fn shadow_pass(
@@ -327,7 +323,7 @@ impl ForwardRenderer {
                 lights: [Default::default(); 4],
                 world_matrix: light_matrix,
                 camera_position: Vector3::default(),
-                time: self.start_time.elapsed().as_secs_f32(),
+                time: 0.0,
                 cascade_splits: [0.0; 4],
                 light_matrices: [Matrix4::identity(); 4],
                 pcf: 0.0,

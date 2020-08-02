@@ -29,9 +29,9 @@ fn main() -> Result<()> {
         context.poll_events(&mut window)?;
 
         // draw ui
-        let stats = context.render_stats();
+        let stats = context.stats();
         context.draw_ui(|ui| {
-            ui::stats_window(&ui, stats, &window);
+            ui::stats_window(&ui, stats);
         })?;
 
         // draw other stuff
