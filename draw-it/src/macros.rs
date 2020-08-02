@@ -5,6 +5,18 @@
 
 #![macro_use]
 
+macro_rules! cslice {
+    ($(
+        $(#[$attr:meta])*
+        $s:literal
+    ),* $(,)?) => (unsafe { &[$(
+       $(#[$attr])*
+       std::ffi::CStr::from_bytes_with_nul_unchecked(
+           concat!($s, "\0").as_bytes()
+       ),
+    )*]});
+}
+
 macro_rules! error {
     ($($arg:expr),*) => {{
         #[cfg(debug_assertions)]

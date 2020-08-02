@@ -5,7 +5,6 @@
 
 use std::error::Error;
 use std::ffi;
-use std::ffi::CString;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
@@ -34,8 +33,7 @@ pub enum ErrorType {
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ErrorKind {
-    UnsupportedExtension(CString),
-    UnsupportedValidation(CString),
+    UnsupportedExtension(String),
     UnsupportedMemoryType,
     NoSuitableGpu,
     NoSuitableMemoryType,

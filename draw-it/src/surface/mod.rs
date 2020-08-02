@@ -14,11 +14,10 @@ use crate::error::Result;
 use crate::instance::Instance;
 
 pub(crate) use properties::ColorSpace;
-pub(crate) use properties::PresentMode;
-pub(crate) use properties::SurfaceProperties;
 pub(crate) use swapchain::Swapchain;
 
 pub use handle::WindowHandle;
+pub use properties::VSync;
 
 pub(crate) struct Surface {
     handle: vk::SurfaceKHR,

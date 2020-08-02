@@ -16,6 +16,7 @@ use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
+use crate::image::Msaa;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
@@ -421,7 +422,7 @@ impl ShadowMapSet {
             FramebufferOptions {
                 attachment_formats: &[],
                 camera_type: CameraType::Orthographic,
-                multisampled: false,
+                msaa: Msaa::Disabled,
                 depth: true,
                 width: size,
                 height: size,

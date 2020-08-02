@@ -4,7 +4,7 @@
 // Instance - struct for Vulkan entrypoint
 
 mod extension;
-mod layer;
+mod properties;
 
 #[cfg(debug_assertions)]
 mod validator;
@@ -17,15 +17,19 @@ use ash::vk;
 use ash::Device as VkDevice;
 use ash::Entry;
 use ash::Instance as VkInstance;
+use std::cmp;
 use std::ffi::CStr;
-use std::ffi::CString;
 
 #[cfg(debug_assertions)]
 use ash::extensions::ext::DebugUtils as DebugExt;
 
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::surface::Surface;
+use extension::INSTANCE_EXTENSIONS;
+use extension::VALIDATION_LAYERS;
+
+pub(crate) use extension::DEVICE_EXTENSIONS;
+pub(crate) use properties::GPUProperties;
 
 pub(crate) struct Instance {
     handle: VkInstance,
@@ -57,7 +61,6 @@ impl Instance {
         }
 
         // check extension support
-        let extension_list = extension::list();
         let available_extensions = entry
             .enumerate_instance_extension_properties()?
             .iter()
@@ -66,14 +69,9 @@ impl Instance {
                 unsafe { CStr::from_ptr(ptr).to_owned() }
             })
             .collect::<Vec<_>>();
-        for extension in extension_list.iter() {
-            if !available_extensions.contains(&extension) {
-                return Err(ErrorKind::UnsupportedExtension(extension.clone()).into());
-            }
-        }
+        INSTANCE_EXTENSIONS.assert_missing(&available_extensions)?;
 
         // check validation layer support
-        let layer_list = layer::list();
         let available_layers = entry
             .enumerate_instance_layer_properties()?
             .iter()
@@ -82,15 +80,11 @@ impl Instance {
                 unsafe { CStr::from_ptr(ptr).to_owned() }
             })
             .collect::<Vec<_>>();
-        for layer in layer_list.iter() {
-            if !available_layers.contains(&layer) {
-                return Err(ErrorKind::UnsupportedValidation(layer.clone()).into());
-            }
-        }
+        VALIDATION_LAYERS.assert_missing(&available_layers)?;
 
         // create instance
-        let extensions = extension::to_i8(&extension_list);
-        let layers = layer::to_i8(&layer_list);
+        let extensions = INSTANCE_EXTENSIONS.as_ptr();
+        let layers = VALIDATION_LAYERS.as_ptr();
         let app_info = vk::ApplicationInfo::builder().api_version(vk::make_version(1, 2, 0));
 
         let info = vk::InstanceCreateInfo::builder()
@@ -116,16 +110,115 @@ impl Instance {
         let gpus = unsafe { handle.enumerate_physical_devices()? };
 
         Ok(Self {
+            surface_ext,
             handle,
             entry,
             gpus,
-            surface_ext,
 
             #[cfg(debug_assertions)]
             messenger,
             #[cfg(debug_assertions)]
             debug_ext,
         })
+    }
+
+    pub(crate) fn gpu_properties(&self, surface: &Surface) -> Result<Vec<GPUProperties>> {
+        let mut gpu_properties = vec![];
+        for gpu in &self.gpus {
+            unsafe {
+                // check extension support
+                let available_extensions = self
+                    .handle
+                    .enumerate_device_extension_properties(*gpu)?
+                    .iter()
+                    .map(|e| {
+                        let ptr = e.extension_name.as_ptr();
+                        CStr::from_ptr(ptr).to_owned()
+                    })
+                    .collect::<Vec<_>>();
+                let supports_extensions = DEVICE_EXTENSIONS
+                    .assert_missing(&available_extensions)
+                    .is_ok();
+
+                // get device things
+                let properties = self.handle.get_physical_device_properties(*gpu);
+                let features = self.handle.get_physical_device_features(*gpu);
+                let memory = self.handle.get_physical_device_memory_properties(*gpu);
+
+                // get surface things
+                let formats = self
+                    .surface_ext
+                    .get_physical_device_surface_formats(*gpu, surface.handle())?;
+                let present_modes = self
+                    .surface_ext
+                    .get_physical_device_surface_present_modes(*gpu, surface.handle())?;
+                let capabilities = self
+                    .surface_ext
+                    .get_physical_device_surface_capabilities(*gpu, surface.handle())?;
+
+                // get queue indices
+                let mut graphics_index = None;
+                let mut present_index = None;
+
+                let families = self
+                    .handle
+                    .get_physical_device_queue_family_properties(*gpu);
+
+                for (i, props) in families.iter().enumerate() {
+                    let present_support = self.surface_ext.get_physical_device_surface_support(
+                        *gpu,
+                        i as u32,
+                        surface.handle(),
+                    )?;
+                    let graphics_support = props.queue_flags.contains(vk::QueueFlags::GRAPHICS);
+
+                    if props.queue_count > 0 && present_support {
+                        present_index = Some(i as u32);
+                    }
+                    if props.queue_count > 0 && graphics_support {
+                        graphics_index = Some(i as u32);
+                    }
+                }
+
+                // pick extent
+                let mut extent = capabilities.current_extent;
+                let min_width = capabilities.min_image_extent.width;
+                let max_width = capabilities.max_image_extent.width;
+                let min_height = capabilities.min_image_extent.height;
+                let max_height = capabilities.max_image_extent.height;
+
+                if extent.width == u32::max_value() {
+                    let width = cmp::max(cmp::min(surface.width(), max_width), min_width);
+                    let height = cmp::max(cmp::min(surface.height(), max_height), min_height);
+                    extent = vk::Extent2D { width, height };
+                }
+
+                // pick image count
+                let min_image_count = capabilities.min_image_count;
+                let max_image_count = capabilities.max_image_count;
+                let image_count = if max_image_count > 0 && min_image_count + 1 > max_image_count {
+                    max_image_count
+                } else {
+                    min_image_count + 1
+                };
+
+                // add gpu properties
+                gpu_properties.push(GPUProperties {
+                    properties,
+                    features,
+                    memory,
+                    capabilities,
+                    formats,
+                    present_modes,
+                    graphics_index,
+                    present_index,
+                    extent,
+                    image_count,
+                    supports_extensions,
+                });
+            }
+        }
+        Ok(gpu_properties)
     }
 
     #[cfg(target_os = "windows")]
@@ -164,121 +257,6 @@ impl Instance {
         }
     }
 
-    pub(crate) fn get_surface_formats(
-        &self,
-        surface: &Surface,
-    ) -> Result<Vec<Vec<vk::SurfaceFormatKHR>>> {
-        let mut formats = vec![];
-        for gpu in self.gpus.iter() {
-            let fs = unsafe {
-                self.surface_ext
-                    .get_physical_device_surface_formats(*gpu, surface.handle())?
-            };
-            formats.push(fs);
-        }
-        Ok(formats)
-    }
-
-    pub(crate) fn get_surface_present_modes(
-        &self,
-        surface: &Surface,
-    ) -> Result<Vec<Vec<vk::PresentModeKHR>>> {
-        let mut modes = vec![];
-        for gpu in self.gpus.iter() {
-            let pms = unsafe {
-                self.surface_ext
-                    .get_physical_device_surface_present_modes(*gpu, surface.handle())?
-            };
-            modes.push(pms);
-        }
-        Ok(modes)
-    }
-
-    pub(crate) fn get_surface_capabilities(
-        &self,
-        surface: &Surface,
-    ) -> Result<Vec<vk::SurfaceCapabilitiesKHR>> {
-        let mut caps = vec![];
-        for gpu in self.gpus.iter() {
-            let cs = unsafe {
-                self.surface_ext
-                    .get_physical_device_surface_capabilities(*gpu, surface.handle())?
-            };
-            caps.push(cs);
-        }
-        Ok(caps)
-    }
-
-    pub(crate) fn get_surface_queue_indices(
-        &self,
-        surface: &Surface,
-    ) -> Result<Vec<(Option<u32>, Option<u32>)>> {
-        let mut indices = vec![];
-        for gpu in self.gpus.iter() {
-            let mut graphics = None;
-            let mut present = None;
-
-            let properties = unsafe {
-                self.handle
-                    .get_physical_device_queue_family_properties(*gpu)
-            };
-
-            for (i, props) in properties.iter().enumerate() {
-                let present_support = self.get_surface_support(surface, *gpu, i)?;
-                let graphics_support = props.queue_flags.contains(vk::QueueFlags::GRAPHICS);
-
-                if props.queue_count > 0 && present_support {
-                    present = Some(i as u32);
-                }
-                if props.queue_count > 0 && graphics_support {
-                    graphics = Some(i as u32);
-                }
-            }
-
-            indices.push((graphics, present));
-        }
-        Ok(indices)
-    }
-
-    pub(crate) fn get_device_properties(&self) -> Vec<vk::PhysicalDeviceProperties> {
-        self.gpus
-            .iter()
-            .map(|gpu| unsafe { self.handle.get_physical_device_properties(*gpu) })
-            .collect()
-    }
-
-    pub(crate) fn get_device_features(&self) -> Vec<vk::PhysicalDeviceFeatures> {
-        self.gpus
-            .iter()
-            .map(|gpu| unsafe { self.handle.get_physical_device_features(*gpu) })
-            .collect()
-    }
-
-    pub(crate) fn get_device_memory(&self) -> Vec<vk::PhysicalDeviceMemoryProperties> {
-        self.gpus
-            .iter()
-            .map(|gpu| unsafe { self.handle.get_physical_device_memory_properties(*gpu) })
-            .collect()
-    }
-
-    pub(crate) fn get_device_extensions(&self) -> Result<Vec<Vec<CString>>> {
-        let mut exts = vec![];
-        for gpu in self.gpus.iter() {
-            let es = unsafe {
-                self.handle
-                    .enumerate_device_extension_properties(*gpu)?
-                    .iter()
-                    .map(|e| {
-                        let ptr = e.extension_name.as_ptr();
-                        CStr::from_ptr(ptr).to_owned()
-                    })
-                    .collect::<Vec<_>>()
-            };
-            exts.push(es);
-        }
-        Ok(exts)
-    }
-
     pub(crate) fn create_device(
         &self,
         gpu_index: usize,
@@ -292,21 +270,6 @@ impl Instance {
 
     pub(crate) fn create_swapchain_extension(&self, device: &VkDevice) -> SwapchainExt {
         SwapchainExt::new(&self.handle, device)
-    }
-
-    fn get_surface_support(
-        &self,
-        surface: &Surface,
-        gpu: vk::PhysicalDevice,
-        queue_index: usize,
-    ) -> Result<bool> {
-        Ok(unsafe {
-            self.surface_ext.get_physical_device_surface_support(
-                gpu,
-                queue_index as u32,
-                surface.handle(),
-            )?
-        })
     }
 }
 

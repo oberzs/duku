@@ -14,6 +14,7 @@ use draw_it::SamplerFilter;
 use draw_it::SamplerOptions;
 use draw_it::Texture;
 use draw_it::Transform;
+use draw_it::VSync;
 use draw_it::Vector3;
 use rand::Rng;
 
@@ -25,7 +26,7 @@ struct Cube {
 fn main() -> Result<()> {
     let (mut context, mut window) = Context::with_window(
         ContextOptions {
-            vsync: false,
+            vsync: VSync::Off,
             ..Default::default()
         },
         WindowOptions {

@@ -3,7 +3,7 @@
 
 // Draw-it is a Vulkan rendering engine
 
-#![feature(proc_macro_hygiene, drain_filter, thread_id_value, const_fn)]
+#![feature(drain_filter, const_fn, const_cstr_unchecked)]
 #![warn(
     rust_2018_idioms,
     unused,
@@ -60,6 +60,7 @@ pub use renderer::Pcf;
 pub use renderer::SamplerOptions;
 pub use renderer::Target;
 pub use stats::Stats;
+pub use surface::VSync;
 pub use surface::WindowHandle;
 
 // optional feature exports

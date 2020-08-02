@@ -24,7 +24,7 @@ impl RenderPass {
     pub(crate) fn new(
         device: &Arc<Device>,
         attachment_formats: &[ImageFormat],
-        multisampled: bool,
+        msaa: Msaa,
         depth: bool,
         present: bool,
     ) -> Result<Self> {
@@ -37,6 +37,8 @@ impl RenderPass {
             "render pass should have at least 1 attachment or depth"
         );
 
+        let multisampled = msaa != Msaa::Disabled;
+
         let mut depth_attachment = None;
         let mut color_attachments = vec![];
         let mut resolve_attachments = vec![];
@@ -45,11 +47,6 @@ impl RenderPass {
 
         // add depth attachment if needed
         if depth {
-            let msaa = if multisampled {
-                device.msaa()
-            } else {
-                Msaa::Disabled
-            };
             let layout = if attachment_formats.is_empty() {
                 ImageLayout::ShaderDepth
             } else {
@@ -85,11 +82,11 @@ impl RenderPass {
             };
 
             let a = Attachment::new(AttachmentOptions {
-                format: *format,
+                index: attachments.len() as u32,
                 msaa: Msaa::Disabled,
                 clear: !multisampled,
+                format: *format,
                 store: true,
-                index: attachments.len() as u32,
                 layout,
             });
 
@@ -104,12 +101,12 @@ impl RenderPass {
             // color multisampled attachment
             if multisampled {
                 let a_msaa = Attachment::new(AttachmentOptions {
+                    index: attachments.len() as u32,
                     format: *format,
                     layout: ImageLayout::Color,
-                    msaa: device.msaa(),
                     clear: true,
                     store: false,
-                    index: attachments.len() as u32,
+                    msaa,
                 });
 
                 color_attachments.push(a_msaa.reference());

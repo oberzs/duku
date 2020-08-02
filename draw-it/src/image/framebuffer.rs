@@ -14,6 +14,7 @@ use super::ImageMemoryOptions;
 use super::ImageUsage;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::Msaa;
 use crate::pipeline::Attachment;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
@@ -33,7 +34,7 @@ pub struct Framebuffer {
     width: u32,
     height: u32,
     images: Vec<ImageMemory>,
-    multisampled: bool,
+    msaa: Msaa,
     stored_index: usize,
     texture_image: Option<ImageMemory>,
     texture_index: Option<i32>,
@@ -43,7 +44,7 @@ pub struct Framebuffer {
 pub(crate) struct FramebufferOptions<'formats> {
     pub(crate) attachment_formats: &'formats [ImageFormat],
     pub(crate) camera_type: CameraType,
-    pub(crate) multisampled: bool,
+    pub(crate) msaa: Msaa,
     pub(crate) depth: bool,
     pub(crate) width: u32,
     pub(crate) height: u32,
@@ -55,16 +56,17 @@ impl Framebuffer {
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
+        msaa: Msaa,
     ) -> Result<Vec<Self>> {
-        let vk::Extent2D { width, height } = swapchain.extent();
+        let width = swapchain.width();
+        let height = swapchain.height();
         let attachment_formats = &[ImageFormat::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()?
             .map(|img| {
-                let render_pass =
-                    RenderPass::new(device, attachment_formats, device.is_msaa(), true, true)?;
+                let render_pass = RenderPass::new(device, attachment_formats, msaa, true, true)?;
                 let mut images = render_pass
                     .attachments()
                     .map(|attachment| {
@@ -96,18 +98,18 @@ impl Framebuffer {
                 let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
                 Ok(Self {
-                    multisampled: device.is_msaa(),
-                    stored_index: 0,
+                    device: Arc::clone(device),
                     texture_image: None,
                     texture_index: None,
-                    handle,
+                    stored_index: 0,
+                    world_uniform,
                     render_pass,
+                    handle,
                     width,
                     height,
                     images,
-                    world_uniform,
                     camera,
-                    device: Arc::clone(device),
+                    msaa,
                 })
             })
             .collect()
@@ -123,12 +125,12 @@ impl Framebuffer {
             width,
             height,
             attachment_formats,
-            multisampled,
+            msaa,
             depth,
             camera_type,
         } = options;
 
-        let render_pass = RenderPass::new(device, attachment_formats, multisampled, depth, false)?;
+        let render_pass = RenderPass::new(device, attachment_formats, msaa, depth, false)?;
 
         let mut stored_format = None;
         let mut stored_index = 0;
@@ -189,16 +191,16 @@ impl Framebuffer {
         Ok(Self {
             texture_image: Some(texture_image),
             texture_index: Some(texture_index),
+            device: Arc::clone(device),
+            world_uniform,
             stored_index,
-            handle,
             render_pass,
+            handle,
             width,
             height,
             images,
-            world_uniform,
             camera,
-            multisampled,
-            device: Arc::clone(device),
+            msaa,
         })
     }
 
@@ -336,8 +338,8 @@ impl Framebuffer {
         self.render_pass.handle()
     }
 
-    pub(crate) fn multisampled(&self) -> bool {
-        self.multisampled
+    pub(crate) fn msaa(&self) -> Msaa {
+        self.msaa
     }
 
     pub(crate) fn width(&self) -> u32 {

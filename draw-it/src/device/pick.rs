@@ -6,51 +6,84 @@
 use ash::vk;
 use std::ffi::CStr;
 
-use super::DeviceProperties;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::ImageFormat;
+use crate::image::Msaa;
+use crate::instance::GPUProperties;
 use crate::surface::ColorSpace;
-use crate::surface::PresentMode;
-use crate::surface::SurfaceProperties;
+use crate::surface::VSync;
 
 pub(crate) fn pick_gpu(
-    s_props: &[SurfaceProperties],
-    d_props: &[DeviceProperties],
+    gpu_properties: &[GPUProperties],
+    vsync: VSync,
+    msaa: Msaa,
 ) -> Result<usize> {
     info!("looking for suitable GPU");
 
-    for (i, (s, d)) in s_props.iter().zip(d_props.iter()).enumerate() {
-        let supports_extensions = d.supports_extensions;
+    // score each GPU based on properties
+    let mut scores = gpu_properties
+        .iter()
+        .enumerate()
+        .map(|(i, props)| {
+            let mut score = 1;
 
-        let has_queue_indices = s.graphics_index.is_some() && s.present_index.is_some();
-        let has_sampler_anisotropy = d.features.sampler_anisotropy > 0;
-        let has_line_mode = d.features.fill_mode_non_solid > 0;
-        let has_wide_lines = d.features.wide_lines > 0;
-        let has_surface_present_mode = s.present_mode != PresentMode::Disabled;
-        let has_surface_format = s.formats.iter().any(|f| {
-            f.format == ImageFormat::Sbgra.flag() && f.color_space == ColorSpace::Srgb.flag()
-        });
+            // optional
+            if props.properties.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
+                score += 100;
+            }
 
-        if supports_extensions
-            && has_queue_indices
-            && has_surface_format
-            && has_surface_present_mode
-            && has_sampler_anisotropy
-            && has_line_mode
-            && has_wide_lines
-        {
+            // mandatory
+            if !props.supports_extensions {
+                score = 0;
+            }
+            if props.graphics_index.is_none() || props.present_index.is_none() {
+                score = 0;
+            }
+            if props.features.sampler_anisotropy == 0 {
+                score = 0;
+            }
+            if props.features.fill_mode_non_solid == 0 {
+                score = 0;
+            }
+            if props.features.wide_lines == 0 {
+                score = 0;
+            }
+            if !props.supports_present_mode(vsync) {
+                score = 0;
+            }
+            if !props.supports_msaa(msaa) {
+                score = 0;
+            }
+            if !props.formats.contains(&vk::SurfaceFormatKHR {
+                color_space: ColorSpace::Srgb.flag(),
+                format: ImageFormat::Sbgra.flag(),
+            }) {
+                score = 0;
+            }
+
+            (i, score)
+        })
+        .collect::<Vec<_>>();
+
+    scores.sort_by(|a, b| b.1.cmp(&a.1));
+    scores.retain(|s| s.1 > 0);
+
+    match scores.first() {
+        None => Err(ErrorKind::NoSuitableGpu.into()),
+        Some((picked, _)) => {
             // log picked GPU information
-            let device_name = unsafe { CStr::from_ptr(d.properties.device_name.as_ptr()) };
-            let device_type = match d.properties.device_type {
+            let info = gpu_properties[*picked].properties;
+            let device_name = unsafe { CStr::from_ptr(info.device_name.as_ptr()) };
+            let device_type = match info.device_type {
                 vk::PhysicalDeviceType::DISCRETE_GPU => "(discrete)",
                 vk::PhysicalDeviceType::INTEGRATED_GPU => "(integrated)",
                 vk::PhysicalDeviceType::VIRTUAL_GPU => "(virtual)",
                 _ => "",
             };
-            let driver_major = vk::version_major(d.properties.driver_version);
-            let driver_minor = vk::version_minor(d.properties.driver_version);
-            let driver_patch = vk::version_patch(d.properties.driver_version);
+            let driver_major = vk::version_major(info.driver_version);
+            let driver_minor = vk::version_minor(info.driver_version);
+            let driver_patch = vk::version_patch(info.driver_version);
 
             info!("using {:?} {}", device_name, device_type);
             info!(
@@ -58,9 +91,7 @@ pub(crate) fn pick_gpu(
                 driver_major, driver_minor, driver_patch
             );
 
-            return Ok(i);
+            Ok(*picked)
         }
     }
-
-    Err(ErrorKind::NoSuitableGpu.into())
 }

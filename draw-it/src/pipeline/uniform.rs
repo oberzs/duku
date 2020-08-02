@@ -104,8 +104,6 @@ impl ImageUniform {
         layout: &ShaderLayout,
         anisotropy: f32,
     ) -> Result<Self> {
-        info!("using anisotropy level {}", anisotropy);
-
         let descriptor_set = layout.image_set()?;
         let descriptor = Descriptor(2, descriptor_set);
 

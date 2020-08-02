@@ -3,9 +3,7 @@
 
 // Device - struct to access GPU API layer
 
-mod extension;
 mod pick;
-mod properties;
 
 use ash::extensions::khr::Swapchain as SwapchainExt;
 use ash::util;
@@ -21,7 +19,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
 pub(crate) use pick::pick_gpu;
-pub(crate) use properties::DeviceProperties;
 
 use crate::buffer::BufferAccess;
 use crate::error::ErrorKind;
@@ -30,8 +27,9 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
-use crate::image::Msaa;
+use crate::instance::GPUProperties;
 use crate::instance::Instance;
+use crate::instance::DEVICE_EXTENSIONS;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Material;
@@ -39,7 +37,6 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::Uniform;
-use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
 use crate::sync::fence;
 use crate::sync::semaphore;
@@ -48,16 +45,19 @@ pub(crate) const IN_FLIGHT_FRAME_COUNT: usize = 2;
 
 pub(crate) struct Device {
     handle: VkDevice,
-    device_properties: DeviceProperties,
     swapchain_ext: SwapchainExt,
-    command_pools: [vk::CommandPool; IN_FLIGHT_FRAME_COUNT],
-    command_buffers: Mutex<[vk::CommandBuffer; IN_FLIGHT_FRAME_COUNT]>,
+
     graphics_queue: (u32, vk::Queue),
     present_queue: (u32, vk::Queue),
+    memory_types: Vec<vk::MemoryType>,
+
+    command_pools: [vk::CommandPool; IN_FLIGHT_FRAME_COUNT],
+    command_buffers: Mutex<[vk::CommandBuffer; IN_FLIGHT_FRAME_COUNT]>,
     sync_acquire_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
     sync_release_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
     sync_queue_submit: [vk::Fence; IN_FLIGHT_FRAME_COUNT],
     current_frame: AtomicUsize,
+
     destroyed_pipelines: Mutex<[Vec<vk::Pipeline>; IN_FLIGHT_FRAME_COUNT]>,
     destroyed_buffers: Mutex<[Vec<(vk::Buffer, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
     destroyed_images: Mutex<[Vec<(vk::Image, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
@@ -66,8 +66,7 @@ pub(crate) struct Device {
 impl Device {
     pub(crate) fn new(
         instance: &Instance,
-        surface_properties: &SurfaceProperties,
-        device_properties: DeviceProperties,
+        gpu_properties: &GPUProperties,
         gpu_index: usize,
     ) -> Result<Self> {
         // configure device features
@@ -77,8 +76,8 @@ impl Device {
             .wide_lines(true);
 
         // configure queues
-        let g_index = surface_properties.graphics_index();
-        let p_index = surface_properties.present_index();
+        let g_index = gpu_properties.graphics_index.expect("bad graphics index");
+        let p_index = gpu_properties.present_index.expect("bad present index");
         let queue_priorities = [1.0];
 
         let g_queue_info = vk::DeviceQueueCreateInfo::builder()
@@ -95,10 +94,8 @@ impl Device {
             queue_infos.push(p_queue_info);
         }
 
-        let extension_list = extension::list();
-        let extensions = extension::to_i8(&extension_list);
-
         // open GPU
+        let extensions = DEVICE_EXTENSIONS.as_ptr();
         let info = vk::DeviceCreateInfo::builder()
             .queue_create_infos(&queue_infos)
             .enabled_features(&features)
@@ -112,6 +109,8 @@ impl Device {
         // get device queues
         let graphics_queue = unsafe { handle.get_device_queue(g_index, 0) };
         let present_queue = unsafe { handle.get_device_queue(p_index, 0) };
+
+        let memory_types = gpu_properties.memory.memory_types.to_vec();
 
         // create synchronization objects
         let sync_acquire_image = [semaphore::create(&handle)?, semaphore::create(&handle)?];
@@ -158,10 +157,10 @@ impl Device {
             graphics_queue: (g_index, graphics_queue),
             present_queue: (p_index, present_queue),
             current_frame: AtomicUsize::new(0),
+            memory_types,
             sync_release_image,
             sync_acquire_image,
             sync_queue_submit,
-            device_properties,
             command_pools,
             swapchain_ext,
             handle,
@@ -318,9 +317,7 @@ impl Device {
         type_filter: u32,
         props: vk::MemoryPropertyFlags,
     ) -> Option<u32> {
-        self.device_properties
-            .memory
-            .memory_types
+        self.memory_types
             .iter()
             .enumerate()
             .find(|(i, mem_type)| {
@@ -328,14 +325,6 @@ impl Device {
                 (type_filter & byte != 0) && (mem_type.property_flags & props) == props
             })
             .map(|t| t.0 as u32)
-    }
-
-    pub(crate) fn msaa(&self) -> Msaa {
-        self.device_properties.msaa
-    }
-
-    pub(crate) fn is_msaa(&self) -> bool {
-        self.msaa() != Msaa::Disabled
     }
 
     pub(crate) fn allocate_buffer(

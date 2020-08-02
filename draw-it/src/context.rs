@@ -17,7 +17,6 @@ use std::sync::mpsc;
 use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
-use crate::device::DeviceProperties;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::Cubemap;
@@ -25,6 +24,7 @@ use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
+use crate::image::Msaa;
 use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::instance::Instance;
@@ -36,6 +36,7 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderOptions;
 use crate::quality::Quality;
+use crate::quality::QualityOptions;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
 use crate::renderer::ForwardRenderer;
@@ -45,8 +46,8 @@ use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 use crate::surface::Surface;
-use crate::surface::SurfaceProperties;
 use crate::surface::Swapchain;
+use crate::surface::VSync;
 use crate::surface::WindowHandle;
 
 #[cfg(feature = "ui")]
@@ -91,6 +92,8 @@ pub struct Context {
     frame_time: Instant,
     frame_count: usize,
     fps_samples: [u32; FPS_SAMPLE_COUNT],
+    msaa: Msaa,
+    vsync: VSync,
 
     // Hot Reload
     #[cfg(feature = "hot-reload")]
@@ -106,7 +109,7 @@ pub struct Context {
 #[derive(Debug, Copy, Clone)]
 pub struct ContextOptions {
     pub quality: Quality,
-    pub vsync: bool,
+    pub vsync: VSync,
     pub camera: CameraType,
 }
 
@@ -121,34 +124,34 @@ impl Context {
         let instance = Arc::new(Instance::new()?);
         let surface = Surface::new(&instance, window)?;
 
-        let quality = options.quality.options();
+        let QualityOptions {
+            anisotropy,
+            msaa,
+            pcf,
+            shadow_map_size,
+        } = options.quality.options();
+        let vsync = options.vsync;
 
-        // query GPU properties
-        let mut surface_properties_list =
-            SurfaceProperties::new(&instance, &surface, options.vsync)?;
-        let mut device_properties_list = DeviceProperties::new(&instance, quality.msaa)?;
+        // setup device stuff
+        let mut gpu_properties_list = instance.gpu_properties(&surface)?;
+        let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
+        let gpu_properties = gpu_properties_list.remove(gpu_index);
+        let device = Arc::new(Device::new(&instance, &gpu_properties, gpu_index)?);
+        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync)?;
 
-        // pick GPU
-        let gpu_index = pick_gpu(&surface_properties_list, &device_properties_list)?;
-        let surface_properties = surface_properties_list.remove(gpu_index);
-        let device_properties = device_properties_list.remove(gpu_index);
+        info!("using anisotropy level {}", anisotropy);
+        info!("using msaa level {:?}", msaa);
+        info!("using vsync {:?}", vsync);
 
-        let device = Arc::new(Device::new(
-            &instance,
-            &surface_properties,
-            device_properties,
-            gpu_index,
-        )?);
-
-        let swapchain = Swapchain::new(&device, &surface, surface_properties)?;
-
+        // setup shader stuff
         let shader_layout = ShaderLayout::new(&device)?;
+        let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy)?;
 
-        let mut image_uniform = ImageUniform::new(&device, &shader_layout, quality.anisotropy)?;
-
+        // setup framebuffers
         let window_framebuffers =
-            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, options.camera)?;
+            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, options.camera, msaa)?;
 
+        // setup resources
         let mut resources = ResourceManager::new();
         let builtins = Builtins::new(
             &device,
@@ -157,7 +160,6 @@ impl Context {
             &shader_layout,
             &mut image_uniform,
         )?;
-
         let mut skybox = Cubemap::new(
             &device,
             CubemapOptions {
@@ -173,12 +175,13 @@ impl Context {
         )?;
         image_uniform.set_skybox(skybox.add_view()?);
 
+        // setup renderer
         let forward_renderer = ForwardRenderer::new(
             &device,
             &shader_layout,
             &mut image_uniform,
-            quality.shadow_map_size,
-            quality.pcf,
+            shadow_map_size,
+            pcf,
         )?;
 
         let main_camera = Camera::new(
@@ -191,24 +194,27 @@ impl Context {
         Ok(Self {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
+            fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
-            stats: Default::default(),
             camera_type: options.camera,
             start_time: Instant::now(),
             frame_time: Instant::now(),
+            stats: Default::default(),
             frame_count: 0,
-            fps_samples: [0; FPS_SAMPLE_COUNT],
-            skybox,
             forward_renderer,
-            builtins,
-            resources,
             image_uniform,
-            swapchain,
-            device,
-            surface,
-            gpu_index,
-            instance,
             main_camera,
+            resources,
+            swapchain,
+            gpu_index,
+            builtins,
+            instance,
+            surface,
+            skybox,
+            device,
+            msaa,
+            vsync,
+
             #[cfg(feature = "ui")]
             ui: None,
             #[cfg(feature = "hot-reload")]
@@ -225,8 +231,13 @@ impl Context {
         self.surface.resize(width, height);
         self.main_camera.width = width as f32;
         self.main_camera.height = height as f32;
+
+        let gpu_properties = self
+            .instance
+            .gpu_properties(&self.surface)?
+            .remove(self.gpu_index);
         self.swapchain
-            .recreate(&self.instance, &self.surface, self.gpu_index)?;
+            .recreate(&self.surface, &gpu_properties, self.vsync)?;
 
         let mut framebuffers = self
             .window_framebuffers
@@ -237,6 +248,7 @@ impl Context {
             &self.swapchain,
             &self.shader_layout,
             self.camera_type,
+            self.msaa,
         )?;
 
         #[cfg(feature = "ui")]
@@ -395,8 +407,8 @@ impl Context {
             &mut self.image_uniform,
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
+                msaa: self.msaa,
                 camera_type: t,
-                multisampled: self.device.is_msaa(),
                 depth: true,
                 width,
                 height,
@@ -809,7 +821,7 @@ impl Default for ContextOptions {
     fn default() -> Self {
         Self {
             quality: Quality::Medium,
-            vsync: true,
+            vsync: VSync::On,
             camera: CameraType::Perspective,
         }
     }

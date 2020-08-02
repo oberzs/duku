@@ -8,17 +8,18 @@ use std::sync::Arc;
 
 use super::ColorSpace;
 use super::Surface;
-use super::SurfaceProperties;
+use super::VSync;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
-use crate::instance::Instance;
+use crate::instance::GPUProperties;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
-    surface_properties: SurfaceProperties,
     current_image: usize,
+    width: u32,
+    height: u32,
     device: Arc<Device>,
 }
 
@@ -26,29 +27,31 @@ impl Swapchain {
     pub(crate) fn new(
         device: &Arc<Device>,
         surface: &Surface,
-        surface_properties: SurfaceProperties,
+        gpu_properties: &GPUProperties,
+        vsync: VSync,
     ) -> Result<Self> {
-        let info = swapchain_info(surface, &surface_properties);
+        let info = swapchain_info(surface, &gpu_properties, vsync);
         let handle = device.create_swapchain(&info)?;
+        let width = gpu_properties.extent.width;
+        let height = gpu_properties.extent.height;
 
         Ok(Self {
-            handle,
-            surface_properties,
+            device: Arc::clone(device),
             current_image: 0,
-            device: device.clone(),
+            handle,
+            width,
+            height,
         })
     }
 
     pub(crate) fn recreate(
         &mut self,
-        instance: &Instance,
         surface: &Surface,
-        gpu_index: usize,
+        gpu_properties: &GPUProperties,
+        vsync: VSync,
     ) -> Result<()> {
-        self.surface_properties
-            .refresh(instance, surface, gpu_index)?;
         self.device.destroy_swapchain(self.handle);
-        let info = swapchain_info(surface, &self.surface_properties);
+        let info = swapchain_info(surface, gpu_properties, vsync);
         self.handle = self.device.create_swapchain(&info)?;
         self.current_image = 0;
         Ok(())
@@ -67,8 +70,12 @@ impl Swapchain {
         self.current_image as usize
     }
 
-    pub(crate) fn extent(&self) -> vk::Extent2D {
-        self.surface_properties.extent
+    pub(crate) fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> u32 {
+        self.height
     }
 
     pub(crate) fn handle(&self) -> vk::SwapchainKHR {
@@ -84,12 +91,12 @@ impl Drop for Swapchain {
 
 fn swapchain_info(
     surface: &Surface,
-    surface_properties: &SurfaceProperties,
+    gpu_properties: &GPUProperties,
+    vsync: VSync,
 ) -> vk::SwapchainCreateInfoKHR {
-    let transform = surface_properties.capabilities.current_transform;
-    let image_count = surface_properties.image_count;
-    let present_mode = surface_properties.present_mode;
-    let extent = surface_properties.extent;
+    let transform = gpu_properties.capabilities.current_transform;
+    let image_count = gpu_properties.image_count;
+    let extent = gpu_properties.extent;
 
     let mut info = vk::SwapchainCreateInfoKHR::builder()
         .surface(surface.handle())
@@ -101,11 +108,14 @@ fn swapchain_info(
         .pre_transform(transform)
         .min_image_count(image_count)
         .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
-        .present_mode(present_mode.flag())
+        .present_mode(vsync.flag())
         .clipped(true);
 
-    let indices = surface_properties.indices();
-    if surface_properties.are_indices_unique() {
+    let indices = [
+        gpu_properties.graphics_index.expect("bad graphics index"),
+        gpu_properties.present_index.expect("bad present index"),
+    ];
+    if indices[0] != indices[1] {
         info = info
             .image_sharing_mode(vk::SharingMode::CONCURRENT)
             .queue_family_indices(&indices);

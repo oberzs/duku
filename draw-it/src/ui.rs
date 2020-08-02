@@ -21,6 +21,7 @@ use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
+use crate::image::Msaa;
 use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::math::Matrix4;
@@ -138,7 +139,7 @@ impl Ui {
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
                 camera_type: CameraType::Orthographic,
-                multisampled: false,
+                msaa: Msaa::Disabled,
                 depth: false,
                 width,
                 height,
