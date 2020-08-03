@@ -43,7 +43,7 @@ vec3 tex_coord(int index) {
 
 float shadow(Light light) {
     float depth = in_screenspace_position.z;
-    float blend_margin = world.cascade_splits[2] * 0.05;
+    float blend_margin = world.cascade_splits[3] * 0.05;
 
     // choose shadow map
     int cascade;
@@ -59,7 +59,7 @@ float shadow(Light light) {
 
     vec3 coord = tex_coord(cascade);
 
-    if (coord.z > 1.0) {
+    if (coord.z > 1.0 || coord.z < 0.0) {
         return 0.0;
     } else {
         // blend between side-by-side cascades

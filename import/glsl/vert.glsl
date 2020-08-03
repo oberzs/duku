@@ -28,6 +28,7 @@ void main() {
     out_lightspace_position[0] = world.light_matrices[0] * worldspace_position;
     out_lightspace_position[1] = world.light_matrices[1] * worldspace_position;
     out_lightspace_position[2] = world.light_matrices[2] * worldspace_position;
+    out_lightspace_position[3] = world.light_matrices[3] * worldspace_position;
 
     out_normal = mat3(transpose(inverse(object.model_matrix))) * in_normal;
     out_uv = in_uv;
