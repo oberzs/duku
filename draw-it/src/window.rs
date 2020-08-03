@@ -235,6 +235,7 @@ impl Window {
     pub(crate) fn clear(&mut self) {
         self.keys_typed.clear();
         self.mouse_delta = Vector2::new(0.0, 0.0);
+        self.scroll_delta = Vector2::new(0.0, 0.0);
     }
 }
 

@@ -78,7 +78,8 @@ fn main() -> Result<()> {
         cam_t.look_dir(Vector3::FORWARD);
     }
 
-    let mut controller = Controller::default();
+    // let mut controller = Controller::fly();
+    let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     let mut paused = false;
 

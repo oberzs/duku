@@ -50,6 +50,8 @@ impl Vector2 {
     pub const fn extend(&self, z: f32) -> Vector3 {
         Vector3::new(self.x, self.y, z)
     }
+
+    pub const ZERO: Self = Self::new(0.0, 0.0);
 }
 
 impl From<[f32; 2]> for Vector2 {

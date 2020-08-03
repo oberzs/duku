@@ -26,7 +26,7 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let mut controller = Controller::default();
+    let mut controller = Controller::fly();
 
     let hblur_shader = context
         .create_shader_from_file("examples/blur/shaders/hblur.shader", Default::default())?;

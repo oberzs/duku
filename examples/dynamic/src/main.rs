@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let mut controller = Controller::default();
+    let mut controller = Controller::fly();
 
     {
         let cam_t = &mut context.main_camera.transform;
