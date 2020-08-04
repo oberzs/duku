@@ -73,7 +73,7 @@ impl ForwardRenderer {
             shader_layout,
             include_bytes!("../../shaders/shadow.shader"),
             ShaderOptions {
-                cull_mode: CullMode::Front,
+                cull_mode: CullMode::Back,
                 ..Default::default()
             },
         )?;
@@ -127,6 +127,7 @@ impl ForwardRenderer {
             time: stats.time,
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
+            bias: target.bias,
             pcf,
         })?;
 
@@ -321,12 +322,13 @@ impl ForwardRenderer {
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
             framebuffer.world_uniform.update(WorldData {
+                light_matrices: [Matrix4::identity(); 4],
+                camera_position: Vector3::default(),
                 lights: [Default::default(); 4],
                 world_matrix: light_matrix,
-                camera_position: Vector3::default(),
-                time: 0.0,
                 cascade_splits: [0.0; 4],
-                light_matrices: [Matrix4::identity(); 4],
+                time: 0.0,
+                bias: 0.0,
                 pcf: 0.0,
             })?;
 

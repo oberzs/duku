@@ -17,22 +17,6 @@ macro_rules! cslice {
     )*]});
 }
 
-macro_rules! error {
-    ($($arg:expr),*) => {{
-        #[cfg(debug_assertions)]
-        {
-            print!("\x1b[91merror\x1b[0m: ");
-            println!($($arg),*);
-            std::process::exit(1);
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            $(let _ = &$arg;)*
-            std::process::exit(1);
-        }
-    }};
-}
-
 macro_rules! warn {
     ($($arg:expr),*) => {{
         #[cfg(debug_assertions)]

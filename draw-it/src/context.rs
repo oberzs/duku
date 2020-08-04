@@ -711,7 +711,7 @@ impl Context {
             ColorType::RGBA => ImageFormat::Srgba,
             ColorType::RGB => ImageFormat::Srgb,
             ColorType::Grayscale => ImageFormat::Gray,
-            _ => error!("unsupported PNG format {:?}", info.color_type),
+            _ => return Err(ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into()),
         };
 
         let texture = Texture::new(

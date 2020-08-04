@@ -16,6 +16,7 @@ layout(set = 0, binding = 0) uniform WorldObject {
     mat4 light_matrices[4];
     vec4 cascade_splits;
     float pcf;
+    float bias;
 } world;
 
 layout(set = 1, binding = 0) uniform MaterialObject {

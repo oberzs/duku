@@ -25,7 +25,6 @@ struct ShaderFile {
 
 #[derive(Debug)]
 struct Defines {
-    phong: bool,
     shadow: bool,
     srgb: bool,
     vertex_color_srgb: bool,
@@ -114,7 +113,6 @@ fn compile_vert(src: &str) -> Result<CompilationArtifact> {
 fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     let frag_glsl = include_str!("../glsl/frag.glsl");
     let objects_glsl = include_str!("../glsl/objects.glsl");
-    let phong_glsl = include_str!("../glsl/phong.glsl");
     let shadow_glsl = include_str!("../glsl/shadow.glsl");
     let srgb_glsl = include_str!("../glsl/srgb.glsl");
 
@@ -126,9 +124,6 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
     // add defines before source
     if defines.srgb {
         real_src.push_str("#define SRGB\n");
-    }
-    if defines.phong {
-        real_src.push_str("#define PHONG\n");
     }
     if defines.shadow {
         real_src.push_str("#define SHADOW\n");
@@ -142,7 +137,6 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
 
     // add modules
     real_src.push_str(srgb_glsl);
-    real_src.push_str(phong_glsl);
     real_src.push_str(shadow_glsl);
 
     let pre_line_count = real_src.lines().count() as u32;
@@ -177,7 +171,6 @@ fn compile_frag(src: &str) -> Result<CompilationArtifact> {
 impl Defines {
     pub fn new(src: &str) -> Self {
         Self {
-            phong: src.contains("#define PHONG"),
             shadow: src.contains("#define SHADOW"),
             srgb: src.contains("#define SRGB"),
             vertex_color_srgb: src.contains("#define VERTEX_COLOR_SRGB"),

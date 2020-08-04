@@ -4,23 +4,18 @@
 // Mesh drawing example
 
 use draw_it::controller::Controller;
-use draw_it::window::Key;
+use draw_it::ui::imgui::im_str;
 use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::Mesh;
+use draw_it::MeshOptions;
+use draw_it::Quaternion;
 use draw_it::Result;
-use draw_it::SamplerFilter;
-use draw_it::SamplerOptions;
-use draw_it::Texture;
 use draw_it::Transform;
 use draw_it::VSync;
+use draw_it::Vector2;
 use draw_it::Vector3;
-use rand::Rng;
-
-struct Cube {
-    texture: Texture,
-    position: Vector3,
-}
 
 fn main() -> Result<()> {
     let (mut context, mut window) = Context::with_window(
@@ -36,6 +31,14 @@ fn main() -> Result<()> {
         },
     )?;
 
+    {
+        let cam_t = &mut context.main_camera.transform;
+        cam_t.move_by([1.0, 3.0, -3.0]);
+        cam_t.look_dir(Vector3::FORWARD);
+    }
+
+    let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
+
     context.set_skybox_from_file([
         "examples/cubes/textures/Skybox/top.png",
         "examples/cubes/textures/Skybox/bottom.png",
@@ -45,13 +48,7 @@ fn main() -> Result<()> {
         "examples/cubes/textures/Skybox/side.png",
     ])?;
 
-    let cube_textures = [
-        context.create_texture_from_file("examples/cubes/textures/Purple/texture_01.png")?,
-        context.create_texture_from_file("examples/cubes/textures/Orange/texture_05.png")?,
-        context.create_texture_from_file("examples/cubes/textures/Green/texture_13.png")?,
-    ];
-    let floor_texture =
-        context.create_texture_from_file("examples/cubes/textures/Light/texture_06.png")?;
+    let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0])?;
 
     let floor_transform = Transform {
         scale: Vector3::new(80.0, 0.2, 80.0),
@@ -59,74 +56,109 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
-    let mut rng = rand::thread_rng();
-    let cubes = (0..20)
-        .map(|i| {
-            let t = rng.gen_range(0, cube_textures.len());
-            let y = rng.gen_range(0, 3);
-            let z = rng.gen_range(-10, 10);
-            Cube {
-                texture: cube_textures[t].clone(),
-                position: Vector3::new(10.0 - i as f32 + 0.5, y as f32 + 0.5, z as f32 + 0.5),
-            }
-        })
-        .collect::<Vec<_>>();
-
-    {
-        let cam_t = &mut context.main_camera.transform;
-        cam_t.move_by([0.0, 1.0, -15.0]);
-        cam_t.look_dir(Vector3::FORWARD);
-    }
-
-    // let mut controller = Controller::fly();
-    let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
-
-    let mut paused = false;
-
     while window.is_open() {
+        // update
         context.poll_events(&mut window)?;
+        let stats = context.stats();
+        controller.update(&mut context.main_camera, &mut window, stats.delta_time);
 
-        if window.is_key_typed(Key::P) {
-            paused = !paused;
-            window.set_title(if paused {
-                "Draw-it example: Cubes (paused)"
-            } else {
-                "Draw-it example: Cubes"
-            });
-        }
+        // render
+        context.draw_ui(|ui| {
+            ui.stats_window(stats);
+        })?;
 
-        if !paused {
-            let stats = context.stats();
-
-            controller.update(&mut context.main_camera, &mut window, stats.delta_time);
-
-            let wireframes = window.is_key_pressed(Key::E);
-
-            context.draw_ui(|ui| {
-                ui.stats_window(stats);
-            })?;
-
-            context.draw_on_window(|target| {
-                target.set_wireframes(wireframes);
-                target.set_skybox(true);
-
-                // draw floor
-                target.set_sampler(SamplerOptions {
-                    filter: SamplerFilter::Nearest,
-                    ..Default::default()
-                });
-                target.set_albedo(&floor_texture);
-                target.draw_cube(floor_transform);
-                target.set_sampler(Default::default());
-
-                // draw cubes
-                for cube in &cubes {
-                    target.set_albedo(&cube.texture);
-                    target.draw_cube(cube.position);
-                }
-            })?;
-        }
+        context.draw_on_window(|target| {
+            target.set_skybox(true);
+            // target.draw_grid();
+            target.draw_cube(floor_transform);
+            target.draw(&cube, [2.0, 1.0, 0.0]);
+            target.draw_cube([0.0, 0.0, 0.0]);
+            target.draw_cube([-2.0, 1.0, 0.0]);
+            target.draw_sphere([-4.0, 1.0, 0.0]);
+        })?;
     }
 
     Ok(())
+}
+
+fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Result<Mesh> {
+    let size = size.into();
+
+    let top = square_mesh(
+        context,
+        [size.x, size.z],
+        [0.0, size.y / 2.0, 0.0],
+        Quaternion::axis_rotation(Vector3::RIGHT, 0.0),
+    )?;
+    let bottom = square_mesh(
+        context,
+        [size.x, size.z],
+        [0.0, -size.y / 2.0, 0.0],
+        Quaternion::axis_rotation(Vector3::RIGHT, 180.0),
+    )?;
+
+    let left = square_mesh(
+        context,
+        [size.z, size.y],
+        [-size.x / 2.0, 0.0, 0.0],
+        Quaternion::axis_rotation(Vector3::FORWARD, 90.0),
+    )?;
+    let right = square_mesh(
+        context,
+        [size.z, size.y],
+        [size.x / 2.0, 0.0, 0.0],
+        Quaternion::axis_rotation(Vector3::FORWARD, -90.0),
+    )?;
+
+    let front = square_mesh(
+        context,
+        [size.x, size.y],
+        [0.0, 0.0, -size.z / 2.0],
+        Quaternion::axis_rotation(Vector3::RIGHT, -90.0),
+    )?;
+    let back = square_mesh(
+        context,
+        [size.x, size.y],
+        [0.0, 0.0, size.z / 2.0],
+        Quaternion::axis_rotation(Vector3::RIGHT, 90.0),
+    )?;
+
+    context.combine_meshes(&[top, bottom, left, right, front, back])
+}
+
+fn square_mesh(
+    context: &mut Context,
+    size: impl Into<Vector2>,
+    position: impl Into<Vector3>,
+    rotation: Quaternion,
+) -> Result<Mesh> {
+    let size = size.into();
+    let position = position.into();
+
+    let x_pos = size.x / 2.0;
+    let x_neg = -size.x / 2.0;
+    let z_pos = size.y / 2.0;
+    let z_neg = -size.y / 2.0;
+
+    // create data
+    let vertices = &mut [
+        Vector3::new(x_neg, 0.0, z_neg),
+        Vector3::new(x_neg, 0.0, z_pos),
+        Vector3::new(x_pos, 0.0, z_pos),
+        Vector3::new(x_pos, 0.0, z_neg),
+    ];
+    let indices = &[0, 1, 2, 0, 2, 3];
+
+    // position and rotate
+    for v in vertices.iter_mut() {
+        *v = rotation.rotate_vector(*v);
+        *v += position;
+    }
+
+    // generate mesh
+    context.create_mesh(MeshOptions {
+        vertices,
+        indices,
+        ..Default::default()
+    })
 }

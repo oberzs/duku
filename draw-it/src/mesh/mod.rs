@@ -50,37 +50,18 @@ impl Mesh {
         let index_buffer = DynamicBuffer::new::<u32>(device, BufferUsage::Index, index_count)?;
 
         // fill in missing default UVs for all vertices
-        let mut uvs = vec![Vector2::default(); vertex_count];
+        let mut uvs = vec![Vector2::ZERO; vertex_count];
         uvs[..options.uvs.len()].clone_from_slice(options.uvs);
 
         // fill in missing default normals for all vertices
-        let mut normals = vec![Vector3::default(); vertex_count];
+        let mut normals = vec![Vector3::ZERO; vertex_count];
         normals[..options.normals.len()].clone_from_slice(options.normals);
 
         // fill in missing default colors for all vertices
         let mut colors = vec![Color::WHITE; vertex_count];
         colors[..options.colors.len()].clone_from_slice(options.colors);
 
-        // calculate smooth normals
-        if options.normals.is_empty() && index_count % 3 == 0 {
-            for tri in options.indices.chunks(3) {
-                let a = tri[0] as usize;
-                let b = tri[1] as usize;
-                let c = tri[2] as usize;
-                let vtx_a = vertices[a];
-                let vtx_b = vertices[b];
-                let vtx_c = vertices[c];
-                let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
-                normals[a] += normal;
-                normals[b] += normal;
-                normals[c] += normal;
-            }
-            for norm in normals.iter_mut() {
-                *norm = norm.unit();
-            }
-        }
-
-        Ok(Self {
+        let mut mesh = Self {
             vertices,
             uvs,
             normals,
@@ -90,7 +71,14 @@ impl Mesh {
             index_buffer,
             should_update_vertices: true,
             should_update_indices: true,
-        })
+        };
+
+        // generate normals if user didn't specify
+        if options.normals.is_empty() {
+            mesh.calculate_normals();
+        }
+
+        Ok(mesh)
     }
 
     pub(crate) fn update_if_needed(&mut self) -> Result<()> {
@@ -116,6 +104,27 @@ impl Mesh {
             self.should_update_indices = false;
         }
         Ok(())
+    }
+
+    pub fn calculate_normals(&mut self) {
+        if self.indices.len() % 3 == 0 {
+            for tri in self.indices.chunks(3) {
+                let a = tri[0] as usize;
+                let b = tri[1] as usize;
+                let c = tri[2] as usize;
+                let vtx_a = self.vertices[a];
+                let vtx_b = self.vertices[b];
+                let vtx_c = self.vertices[c];
+                let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
+                self.normals[a] += normal;
+                self.normals[b] += normal;
+                self.normals[c] += normal;
+            }
+            for norm in self.normals.iter_mut() {
+                *norm = norm.unit();
+            }
+            self.should_update_vertices = true;
+        }
     }
 
     pub fn set_vertices(&mut self, vertices: &[Vector3]) {

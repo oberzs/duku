@@ -242,6 +242,7 @@ impl Ui {
                     lights: [Default::default(); 4],
                     cascade_splits: [0.0; 4],
                     time: 0.0,
+                    bias: 0.0,
                     pcf: 0.0,
                     camera_position,
                     world_matrix,

@@ -79,7 +79,7 @@ impl Builtins {
         let surface_mesh = resources.add_mesh(create_surface(device)?);
         let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
-        let sphere_mesh = resources.add_mesh(create_sphere(device, 3)?);
+        let sphere_mesh = resources.add_mesh(create_sphere(device, 2)?);
         let grid_mesh = resources.add_mesh(create_grid(device, 50)?);
 
         // shaders
@@ -310,7 +310,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
         let color = if x == 0 {
             Color::GREEN
         } else {
-            Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
+            Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
         };
         let vc = vertices.len() as u32;
         vertices.extend(&[
@@ -324,7 +324,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
         let color = if z == 0 {
             Color::BLUE
         } else {
-            Color::rgba_norm(1.0, 1.0, 1.0, 0.5)
+            Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
         };
         let vc = vertices.len() as u32;
         vertices.extend(&[

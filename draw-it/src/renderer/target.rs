@@ -43,6 +43,8 @@ pub struct Target {
     current_sampler: i32,
     wireframes: bool,
     cast_shadows: bool,
+
+    pub bias: f32,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -112,6 +114,8 @@ impl Target {
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
             line_width: 1.0,
             builtins: builtins.clone(),
+
+            bias: 0.0001,
         })
     }
 

@@ -3,7 +3,6 @@
 
 // basic phong-blinn shader for 1 light source
 
-#define PHONG
 #define SHADOW
 
 layout(location = 0) out vec4 out_color;
@@ -12,12 +11,28 @@ void fragment() {
     vec4 albedo_color = vec4(material.arg_1.rgb, 1.0);
 
     Light light = world.lights[0];
-    float shadow = shadow(light);
-    vec3 phong_light = phong(light);
-    vec3 ambient = 0.1 * light.color.rgb;
-    vec4 lighting = vec4(ambient + phong_light * shadow, 1.0);
+    vec3 normal = normalize(in_normal);
+    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
 
+    // received shadows
+    float shadow = shadow(light);
+
+    // diffuse shading
+    float diff = max(dot(normal, light_dir), 0.0);
+    vec3 diffuse = diff * light.color.xyz;
+
+    // specular shading
+    vec3 reflect_dir = reflect(-light_dir, normal);
+    float spec = pow(max(dot(cam_dir, reflect_dir), 0.0), 32);
+    vec3 specular = 0.5 * spec * light.color.xyz;
+
+    // ambient light
+    vec3 ambient = 0.1 * light.color.rgb;
+
+    // combine results
+    vec4 lighting = vec4(ambient + (diffuse) * shadow, 1.0);
     vec4 color_mix = tex(object.albedo_index, in_uv) * albedo_color * in_color;
 
-    out_color = color_mix * lighting;
+    out_color = lighting * color_mix;
 }

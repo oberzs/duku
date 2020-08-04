@@ -31,12 +31,12 @@ float tex_shadow(int index, vec3 uvc) {
     }
 }
 
-vec3 tex_coord(int index) {
+vec3 tex_coord(int index, float bias) {
     vec4 coord = in_lightspace_position[index];
     coord.y = -coord.y;
 
     vec2 uv = (coord.xy / coord.w) * 0.5 + 0.5;
-    float depth = (coord.z + 0.0003) / coord.w;
+    float depth = (coord.z - bias) / coord.w;
 
     return vec3(uv.x, uv.y, depth);
 }
@@ -57,7 +57,14 @@ float shadow(Light light) {
         cascade = 3;
     }
 
-    vec3 coord = tex_coord(cascade);
+    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 normal = normalize(in_normal);
+    // float bias = world.bias * dot(normal, light_dir);
+    // bias = 0.0;
+    // bias = world.bias;
+    float bias = max(0.05 * (1.0 - dot(normal, light_dir)), 0.005); 
+
+    vec3 coord = tex_coord(cascade, bias);
 
     if (coord.z > 1.0 || coord.z < 0.0) {
         return 0.0;
@@ -68,7 +75,7 @@ float shadow(Light light) {
             return tex_shadow(cascade, coord);
         } else {
             int next_cascade = min(3, cascade + 1);
-            vec3 next_coord = tex_coord(next_cascade);
+            vec3 next_coord = tex_coord(next_cascade, bias);
 
             float shadow = tex_shadow(cascade, coord);
             float next_shadow = tex_shadow(next_cascade, next_coord);
