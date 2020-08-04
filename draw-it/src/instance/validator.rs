@@ -67,7 +67,7 @@ extern "system" fn callback(
     if severity.contains(vk::DebugUtilsMessageSeverityFlagsEXT::ERROR) {
         panic!("{}", formatted_msg);
     } else {
-        warn!("{}", formatted_msg);
+        println!("\x1b[93mwarning\x1b[0m: {}", formatted_msg);
     }
 
     vk::FALSE

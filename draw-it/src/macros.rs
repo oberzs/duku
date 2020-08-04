@@ -17,20 +17,6 @@ macro_rules! cslice {
     )*]});
 }
 
-macro_rules! warn {
-    ($($arg:expr),*) => {{
-        #[cfg(debug_assertions)]
-        {
-            print!("\x1b[93mwarning\x1b[0m: ");
-            println!($($arg),*);
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            $(let _ = &$arg;)*
-        }
-    }};
-}
-
 macro_rules! info {
     ($($arg:expr),*) => {{
         #[cfg(debug_assertions)]

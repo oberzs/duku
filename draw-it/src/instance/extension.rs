@@ -25,11 +25,6 @@ pub(crate) const INSTANCE_EXTENSIONS: Extensions = Extensions(cslice![
 
 pub(crate) const DEVICE_EXTENSIONS: Extensions = Extensions(cslice!["VK_KHR_swapchain"]);
 
-pub(crate) const VALIDATION_LAYERS: Extensions = Extensions(cslice![
-    #[cfg(debug_assertions)]
-    "VK_LAYER_KHRONOS_validation"
-]);
-
 impl Extensions {
     pub(crate) fn assert_missing(&self, available: &[CString]) -> Result<()> {
         for ext in self.0 {

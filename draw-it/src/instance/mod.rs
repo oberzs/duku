@@ -26,7 +26,6 @@ use ash::extensions::ext::DebugUtils as DebugExt;
 use crate::error::Result;
 use crate::surface::Surface;
 use extension::INSTANCE_EXTENSIONS;
-use extension::VALIDATION_LAYERS;
 
 pub(crate) use extension::DEVICE_EXTENSIONS;
 pub(crate) use properties::GPUProperties;
@@ -71,26 +70,13 @@ impl Instance {
             .collect::<Vec<_>>();
         INSTANCE_EXTENSIONS.assert_missing(&available_extensions)?;
 
-        // check validation layer support
-        let available_layers = entry
-            .enumerate_instance_layer_properties()?
-            .iter()
-            .map(|l| {
-                let ptr = l.layer_name.as_ptr();
-                unsafe { CStr::from_ptr(ptr).to_owned() }
-            })
-            .collect::<Vec<_>>();
-        VALIDATION_LAYERS.assert_missing(&available_layers)?;
-
         // create instance
         let extensions = INSTANCE_EXTENSIONS.as_ptr();
-        let layers = VALIDATION_LAYERS.as_ptr();
         let app_info = vk::ApplicationInfo::builder().api_version(vk::make_version(1, 2, 0));
 
         let info = vk::InstanceCreateInfo::builder()
             .application_info(&app_info)
-            .enabled_extension_names(&extensions)
-            .enabled_layer_names(&layers);
+            .enabled_extension_names(&extensions);
 
         let handle = unsafe { entry.create_instance(&info, None)? };
 
