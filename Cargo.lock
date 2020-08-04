@@ -212,13 +212,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-blur"
-version = "0.1.0"
-dependencies = [
- "draw-it",
-]
-
-[[package]]
 name = "example-cubes"
 version = "0.1.0"
 dependencies = [
@@ -227,13 +220,6 @@ dependencies = [
 
 [[package]]
 name = "example-dynamic"
-version = "0.1.0"
-dependencies = [
- "draw-it",
-]
-
-[[package]]
-name = "example-gradient"
 version = "0.1.0"
 dependencies = [
  "draw-it",

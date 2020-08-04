@@ -3,6 +3,10 @@
 
 // basic phong-blinn shader for 1 light source
 
+#define DEPTH test_and_write
+#define SHAPE filled_triangles
+#define CULL back
+
 #define SHADOW
 
 layout(location = 0) out vec4 out_color;

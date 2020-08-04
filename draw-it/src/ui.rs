@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// Imgui abstraction for use in draw-it
+
 #![cfg(feature = "ui")]
 
 use glfw::Action;
@@ -35,13 +40,10 @@ use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::pipeline::CullMode;
-use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShaderOptions;
 use crate::pipeline::WorldData;
 use crate::renderer::CameraType;
 use crate::resource::Ref;
@@ -123,7 +125,6 @@ impl Ui {
                     ..Default::default()
                 }),
             }]);
-            // TODO: change to alpha8 texture
             let ui_texture = fonts.build_alpha8_texture();
             Texture::new(
                 device,
@@ -156,11 +157,6 @@ impl Ui {
             &framebuffer,
             shader_layout,
             include_bytes!("../shaders/ui.shader"),
-            ShaderOptions {
-                depth_mode: DepthMode::Disabled,
-                cull_mode: CullMode::Disabled,
-                ..Default::default()
-            },
         )?;
 
         let mesh = Mesh::new(

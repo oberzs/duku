@@ -1,3 +1,12 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// simple raymarching shader
+
+#define DEPTH test_and_write
+#define CULL back
+#define SHAPE filled_triangles
+
 #define VERTEX_POSITION_MODELSPACE
 
 layout(location = 0) out vec4 out_color;

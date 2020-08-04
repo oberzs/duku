@@ -21,12 +21,10 @@ use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::pipeline::CullMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShaderOptions;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
 use crate::pipeline::WorldData;
@@ -72,10 +70,6 @@ impl ForwardRenderer {
             &shadow_frames[0].framebuffers[0],
             shader_layout,
             include_bytes!("../../shaders/shadow.shader"),
-            ShaderOptions {
-                cull_mode: CullMode::Back,
-                ..Default::default()
-            },
         )?;
 
         Ok(Self {

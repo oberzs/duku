@@ -34,7 +34,6 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShaderOptions;
 use crate::quality::Quality;
 use crate::quality::QualityOptions;
 use crate::renderer::Camera;
@@ -428,28 +427,18 @@ impl Context {
         framebuffer.with(|f| f.resize(width, height, &mut self.image_uniform))
     }
 
-    pub fn create_shader(&mut self, source: &[u8], options: ShaderOptions) -> Result<Ref<Shader>> {
+    pub fn create_shader(&mut self, source: &[u8]) -> Result<Ref<Shader>> {
         let framebuffer = &self
             .window_framebuffers
             .lock()
             .expect("poisoned framebuffers")[0];
-        let shader = Shader::new(
-            &self.device,
-            framebuffer,
-            &self.shader_layout,
-            source,
-            options,
-        )?;
+        let shader = Shader::new(&self.device, framebuffer, &self.shader_layout, source)?;
         Ok(self.resources.add_shader(shader))
     }
 
-    pub fn create_shader_from_file(
-        &mut self,
-        path: impl AsRef<Path>,
-        options: ShaderOptions,
-    ) -> Result<Ref<Shader>> {
+    pub fn create_shader_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Shader>> {
         let source = fs::read(path.as_ref())?;
-        self.create_shader(&source, options)
+        self.create_shader(&source)
     }
 
     pub fn stats(&self) -> Stats {
@@ -644,11 +633,7 @@ impl Context {
     }
 
     #[cfg(feature = "hot-reload")]
-    pub fn create_shader_from_file_watch(
-        &mut self,
-        path: impl AsRef<Path>,
-        options: ShaderOptions,
-    ) -> Result<Ref<Shader>> {
+    pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Ref<Shader>> {
         use notify::RecommendedWatcher;
         use notify::RecursiveMode;
         use notify::Watcher;
@@ -656,7 +641,7 @@ impl Context {
         use std::time::Duration;
 
         let path_buf = path.as_ref().to_path_buf();
-        let shader = self.create_shader_from_file(&path_buf, options)?;
+        let shader = self.create_shader_from_file(&path_buf)?;
 
         // setup watcher
         let framebuffers = self.window_framebuffers.clone();
@@ -681,9 +666,8 @@ impl Context {
                         let framebuffer = &framebuffers.lock().expect("poisoned framebuffers")[0];
 
                         let source = fs::read(&path_buf).expect("bad read");
-                        let new_shader =
-                            Shader::new(&device, framebuffer, &shader_layout, &source, options)
-                                .expect("bad shader recreation");
+                        let new_shader = Shader::new(&device, framebuffer, &shader_layout, &source)
+                            .expect("bad shader recreation");
                         shader_ref.with(|s| *s = new_shader);
                         info!("shader {:?} was reloaded", path_buf);
                     }

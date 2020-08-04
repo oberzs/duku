@@ -1,3 +1,12 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// imgui rendering shader
+
+#define DEPTH disabled
+#define CULL disabled
+#define SHAPE filled_triangles 
+
 #define SRGB
 #define VERTEX_COLOR_SRGB
 

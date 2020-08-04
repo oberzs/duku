@@ -19,14 +19,10 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::mesh::MeshOptions;
-use crate::pipeline::CullMode;
-use crate::pipeline::DepthMode;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
-use crate::pipeline::PolygonMode;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShaderOptions;
 
 #[derive(Clone)]
 pub(crate) struct Builtins {
@@ -88,7 +84,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/phong.shader"),
-            Default::default(),
         )?);
 
         let sdf_font_shader = resources.add_shader(Shader::new(
@@ -96,10 +91,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/sdf-font.shader"),
-            ShaderOptions {
-                depth_mode: DepthMode::Write,
-                ..Default::default()
-            },
         )?);
 
         let bitmap_font_shader = resources.add_shader(Shader::new(
@@ -107,10 +98,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/bitmap-font.shader"),
-            ShaderOptions {
-                depth_mode: DepthMode::Write,
-                ..Default::default()
-            },
         )?);
 
         let blit_shader = resources.add_shader(Shader::new(
@@ -118,10 +105,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/blit.shader"),
-            ShaderOptions {
-                depth_mode: DepthMode::Disabled,
-                ..Default::default()
-            },
         )?);
 
         let wireframe_shader = resources.add_shader(Shader::new(
@@ -129,11 +112,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/wireframe.shader"),
-            ShaderOptions {
-                polygon_mode: PolygonMode::LinedTriangles,
-                depth_mode: DepthMode::Disabled,
-                ..Default::default()
-            },
         )?);
 
         let line_shader = resources.add_shader(Shader::new(
@@ -141,10 +119,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/lines.shader"),
-            ShaderOptions {
-                polygon_mode: PolygonMode::Lines,
-                ..Default::default()
-            },
         )?);
 
         let unshaded_shader = resources.add_shader(Shader::new(
@@ -152,7 +126,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/unshaded.shader"),
-            Default::default(),
         )?);
 
         let skybox_shader = resources.add_shader(Shader::new(
@@ -160,11 +133,6 @@ impl Builtins {
             framebuffer,
             layout,
             include_bytes!("../../shaders/skybox.shader"),
-            ShaderOptions {
-                cull_mode: CullMode::Disabled,
-                depth_mode: DepthMode::Test,
-                ..Default::default()
-            },
         )?);
 
         // fonts

@@ -3,8 +3,6 @@
 
 // shadow receiving calculation
 
-#if defined(SHADOW)
-
 float tex_sm(int index, vec3 uvc) {
     return texture(sampler2DShadow(shadow_maps[index], sampler_cm), uvc);
 }
@@ -85,5 +83,3 @@ float shadow(Light light) {
 
     }
 }
-
-#endif

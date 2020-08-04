@@ -56,3 +56,9 @@ impl From<shaderc::Error> for ErrorType {
         Self::Shader(err)
     }
 }
+
+impl From<ErrorKind> for ErrorType {
+    fn from(e: ErrorKind) -> Self {
+        Self::Internal(e)
+    }
+}

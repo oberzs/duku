@@ -6,21 +6,21 @@
 use ash::vk;
 
 #[derive(Debug, Copy, Clone)]
-pub enum CullMode {
+pub(crate) enum CullMode {
     Back,
     Front,
     Disabled,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum PolygonMode {
+pub(crate) enum ShapeMode {
     LinedTriangles,
     FilledTriangles,
     Lines,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum DepthMode {
+pub(crate) enum DepthMode {
     Test,
     Write,
     TestAndWrite,
@@ -81,7 +81,7 @@ impl CullMode {
     }
 }
 
-impl PolygonMode {
+impl ShapeMode {
     pub(crate) fn polygon(&self) -> vk::PolygonMode {
         match *self {
             Self::FilledTriangles => vk::PolygonMode::FILL,
@@ -133,6 +133,40 @@ impl SamplerMipmaps {
         match *self {
             Self::Enabled => vk::SamplerMipmapMode::LINEAR,
             Self::Disabled => vk::SamplerMipmapMode::NEAREST,
+        }
+    }
+}
+
+impl From<&String> for CullMode {
+    fn from(s: &String) -> Self {
+        match s.as_str() {
+            "back" => Self::Back,
+            "front" => Self::Front,
+            "disabled" => Self::Disabled,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<&String> for ShapeMode {
+    fn from(s: &String) -> Self {
+        match s.as_str() {
+            "lined_triangles" => Self::LinedTriangles,
+            "filled_triangles" => Self::FilledTriangles,
+            "lines" => Self::Lines,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<&String> for DepthMode {
+    fn from(s: &String) -> Self {
+        match s.as_str() {
+            "test" => Self::Test,
+            "write" => Self::Write,
+            "test_and_write" => Self::TestAndWrite,
+            "disabled" => Self::Disabled,
+            _ => unreachable!(),
         }
     }
 }

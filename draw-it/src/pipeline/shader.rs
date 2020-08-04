@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use super::CullMode;
 use super::DepthMode;
-use super::PolygonMode;
 use super::ShaderLayout;
+use super::ShapeMode;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
@@ -22,17 +22,13 @@ pub struct Shader {
     device: Arc<Device>,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct ShaderOptions {
-    pub depth_mode: DepthMode,
-    pub polygon_mode: PolygonMode,
-    pub cull_mode: CullMode,
-}
-
 #[derive(Deserialize)]
 struct ShaderFile {
     vert: Vec<u8>,
     frag: Vec<u8>,
+    depth_mode: String,
+    shape_mode: String,
+    cull_mode: String,
 }
 
 impl Shader {
@@ -41,9 +37,12 @@ impl Shader {
         framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         source: &[u8],
-        options: ShaderOptions,
     ) -> Result<Self> {
         let data: ShaderFile = bincode::deserialize(source)?;
+
+        let depth_mode = DepthMode::from(&data.depth_mode);
+        let shape_mode = ShapeMode::from(&data.shape_mode);
+        let cull_mode = CullMode::from(&data.cull_mode);
 
         let vert_module = device.create_shader_module(&data.vert)?;
         let frag_module = device.create_shader_module(&data.frag)?;
@@ -73,7 +72,7 @@ impl Shader {
 
         // configure assembly input state
         let assembly_input_info = vk::PipelineInputAssemblyStateCreateInfo::builder()
-            .topology(options.polygon_mode.topology())
+            .topology(shape_mode.topology())
             .primitive_restart_enable(false);
 
         // configure viewport state
@@ -105,8 +104,8 @@ impl Shader {
             .rasterizer_discard_enable(false)
             .depth_bias_enable(false)
             .front_face(vk::FrontFace::CLOCKWISE)
-            .cull_mode(options.cull_mode.flag())
-            .polygon_mode(options.polygon_mode.polygon())
+            .cull_mode(cull_mode.flag())
+            .polygon_mode(shape_mode.polygon())
             .line_width(1.0);
 
         // configure msaa state
@@ -116,8 +115,8 @@ impl Shader {
 
         // configure depth stencil state
         let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()
-            .depth_test_enable(options.depth_mode.test())
-            .depth_write_enable(options.depth_mode.write())
+            .depth_test_enable(depth_mode.test())
+            .depth_write_enable(depth_mode.write())
             .depth_compare_op(vk::CompareOp::LESS_OR_EQUAL)
             .depth_bounds_test_enable(false)
             .stencil_test_enable(false);
@@ -196,15 +195,5 @@ impl Drop for Shader {
 impl PartialEq for Shader {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
-    }
-}
-
-impl Default for ShaderOptions {
-    fn default() -> Self {
-        Self {
-            depth_mode: DepthMode::TestAndWrite,
-            polygon_mode: PolygonMode::FilledTriangles,
-            cull_mode: CullMode::Back,
-        }
     }
 }

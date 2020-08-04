@@ -18,10 +18,14 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let shader = context.create_shader_from_file_watch(
-        "examples/surface/shaders/raymarch.shader",
-        Default::default(),
-    )?;
+    // read custom shader
+    // in debug mode, read from file with hot-reload
+    // in release mode, embed in executable
+    #[cfg(debug_assertions)]
+    let shader =
+        context.create_shader_from_file_watch("examples/surface/shaders/raymarch.shader")?;
+    #[cfg(not(debug_assertions))]
+    let shader = context.create_shader(include_bytes!("../shaders/raymarch.shader"))?;
 
     while window.is_open() {
         // poll events

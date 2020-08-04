@@ -31,21 +31,8 @@ void main() {
     out_lightspace_position[3] = world.light_matrices[3] * worldspace_position;
 
     out_normal = mat3(transpose(inverse(object.model_matrix))) * in_normal;
+    out_color = {{out_color}};
     out_uv = in_uv;
 
-#if defined(VERTEX_POSITION_WORLDSPACE)
-    gl_Position = worldspace_position;
-#elif defined(VERTEX_POSITION_MODELSPACE)
-    gl_Position = modelspace_position;
-#elif defined(VERTEX_POSITION_SKYBOXSPACE)
-    gl_Position = screenspace_position.xyww;
-#else
-    gl_Position = screenspace_position;
-#endif
-
-#if defined(VERTEX_COLOR_SRGB)
-    out_color = srgb_to_linear_color(in_color);
-#else
-    out_color = in_color;
-#endif
+    gl_Position = {{out_position}};
 }

@@ -1,3 +1,12 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// wireframe rendering shader
+
+#define DEPTH disabled
+#define CULL back
+#define SHAPE lined_triangles
+
 layout(location = 0) out vec4 out_color;
 
 void fragment() {
