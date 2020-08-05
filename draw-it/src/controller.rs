@@ -158,7 +158,8 @@ impl Controller {
 
                 // zoom
                 let scroll = window.scroll_delta();
-                transform.move_forward(scroll.y);
+                transform
+                    .move_forward(scroll.y * (self.pivot - transform.position).length() * 0.05);
 
                 // look at pivot point
                 transform.look_at(self.pivot);

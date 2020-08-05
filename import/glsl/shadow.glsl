@@ -32,11 +32,11 @@ float tex_shadow(int index, vec3 uvc) {
 vec3 tex_coord(int index, float bias) {
     vec4 coord = in_lightspace_position[index];
     coord.y = -coord.y;
+    coord.z -= bias;
+    coord.xyz / coord.w;
 
-    vec2 uv = (coord.xy / coord.w) * 0.5 + 0.5;
-    float depth = (coord.z - bias) / coord.w;
-
-    return vec3(uv.x, uv.y, depth);
+    vec2 uv = coord.xy * 0.5 + 0.5;
+    return vec3(uv.x, uv.y, coord.z);
 }
 
 float shadow(Light light) {
@@ -57,10 +57,7 @@ float shadow(Light light) {
 
     vec3 light_dir = normalize(-light.coords.xyz);
     vec3 normal = normalize(in_normal);
-    // float bias = world.bias * dot(normal, light_dir);
-    // bias = 0.0;
-    // bias = world.bias;
-    float bias = max(0.05 * (1.0 - dot(normal, light_dir)), 0.005); 
+    float bias = world.bias * tan(acos(dot(normal, light_dir)));
 
     vec3 coord = tex_coord(cascade, bias);
 
