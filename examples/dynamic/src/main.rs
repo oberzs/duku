@@ -58,8 +58,8 @@ fn main() -> Result<()> {
         });
 
         context.draw_on_window(|target| {
-            target.set_wireframes(true);
-            target.set_clear(Color::ORANGE);
+            target.wireframes = true;
+            target.clear = Color::ORANGE;
 
             // draw square
             let offset = -(square_size as f32 / 2.0);

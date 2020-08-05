@@ -24,16 +24,18 @@ use crate::resource::Ref;
 
 pub struct Target {
     pub bias: f32,
+    pub clear: Color,
+    pub skybox: bool,
+    pub wireframes: bool,
+    pub font_size: u32,
+    pub line_width: f32,
+    pub cascade_splits: [f32; 4],
 
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
     pub(crate) text_orders: Vec<TextOrder>,
-    pub(crate) clear: Color,
     pub(crate) do_shadow_mapping: bool,
-    pub(crate) cascade_splits: [f32; 4],
-    pub(crate) line_width: f32,
     pub(crate) main_light: Light,
     pub(crate) builtins: Builtins,
-    pub(crate) skybox: bool,
 
     lights: Vec<Light>,
     current_shader: Ref<Shader>,
@@ -41,9 +43,7 @@ pub struct Target {
     current_font_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
-    current_font_size: u32,
     current_sampler: i32,
-    wireframes: bool,
     cast_shadows: bool,
 }
 
@@ -105,7 +105,7 @@ impl Target {
             current_font_material: builtins.font_material.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
-            current_font_size: 24,
+            font_size: 24,
             current_sampler: 0,
             cast_shadows: true,
             wireframes: false,
@@ -222,10 +222,7 @@ impl Target {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let (shader, sampler_index) = if self
-            .current_font
-            .with(|f| f.is_bitmap(self.current_font_size))
-        {
+        let (shader, sampler_index) = if self.current_font.with(|f| f.is_bitmap(self.font_size)) {
             (self.builtins.bitmap_font_shader.clone(), 7)
         } else {
             (self.builtins.sdf_font_shader.clone(), 1)
@@ -233,7 +230,7 @@ impl Target {
 
         self.text_orders.push(TextOrder {
             font: self.current_font.clone(),
-            size: self.current_font_size,
+            size: self.font_size,
             text: text.as_ref().to_string(),
             transform: transform.into(),
             material: self.current_font_material.clone(),
@@ -253,22 +250,11 @@ impl Target {
         });
     }
 
-    pub fn add_point_light(&mut self, direction: impl Into<Vector3>, color: impl Into<Color>) {
-        self.lights.push(Light {
-            coords: direction.into().unit().extend(1.0),
-            color: color.into().to_rgba_norm_vec(),
-        });
-    }
-
     pub fn set_main_light(&mut self, direction: impl Into<Vector3>, color: impl Into<Color>) {
         self.main_light = Light {
             coords: direction.into().unit().extend(0.0),
             color: color.into().to_rgba_norm_vec(),
         };
-    }
-
-    pub fn set_clear(&mut self, clear: impl Into<Color>) {
-        self.clear = clear.into();
     }
 
     pub fn set_material(&mut self, material: &Ref<Material>) {
@@ -287,28 +273,8 @@ impl Target {
         self.current_shader = shader.clone();
     }
 
-    pub fn set_wireframes(&mut self, enable: bool) {
-        self.wireframes = enable;
-    }
-
-    pub fn set_skybox(&mut self, enable: bool) {
-        self.skybox = enable;
-    }
-
     pub fn set_sampler(&mut self, options: SamplerOptions) {
         self.current_sampler = sampler_index(options.filter, options.address, options.mipmaps);
-    }
-
-    pub fn set_line_width(&mut self, width: f32) {
-        self.line_width = width;
-    }
-
-    pub fn set_font_size(&mut self, size: u32) {
-        self.current_font_size = size;
-    }
-
-    pub fn set_cascade_splits(&mut self, splits: [f32; 4]) {
-        self.cascade_splits = splits;
     }
 
     pub fn set_shader_phong(&mut self) {

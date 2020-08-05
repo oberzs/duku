@@ -54,21 +54,21 @@ fn main() -> Result<()> {
         let dynamic_size = 1.0 + (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5);
 
         context.draw_on_window(|target| {
-            target.set_clear(Color::ORANGE);
-            target.set_font_size(sdf_size);
+            target.clear = Color::ORANGE;
+            target.font_size = sdf_size;
             target.draw_text(
                 format!("SDF {}p text\n... in two lines!", sdf_size),
                 [left, 200.0, 1.0],
             );
-            target.set_font_size(32);
+            target.font_size = 32;
             target.set_font_material(&material_1);
             target.draw_text("Bitmap 32p text", [left, 100.0, 1.0]);
             target.set_font_material_black();
-            target.set_font_size(24);
+            target.font_size = 24;
             target.draw_text("Bitmap 24p text", [left, 68.0, 1.0]);
-            target.set_font_size(18);
+            target.font_size = 18;
             target.draw_text("Bitmap 18p text", [left, 44.0, 1.0]);
-            target.set_font_size(40);
+            target.font_size = 40;
             let transform = Transform {
                 position: Vector3::new(left, 0.0, 1.0),
                 scale: Vector3::new(dynamic_size, dynamic_size, dynamic_size),

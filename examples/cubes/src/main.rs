@@ -67,7 +67,7 @@ fn main() -> Result<()> {
         })?;
 
         context.draw_on_window(|target| {
-            target.set_skybox(true);
+            target.skybox = true;
             // target.draw_grid();
             target.draw_cube(floor_transform);
             target.draw(&cube, [2.0, 1.0, 0.0]);
