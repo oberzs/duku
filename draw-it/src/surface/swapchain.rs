@@ -53,6 +53,8 @@ impl Swapchain {
         self.device.destroy_swapchain(self.handle);
         let info = swapchain_info(surface, gpu_properties, vsync);
         self.handle = self.device.create_swapchain(&info)?;
+        self.width = gpu_properties.extent.width;
+        self.height = gpu_properties.extent.height;
         self.current_image = 0;
         Ok(())
     }
