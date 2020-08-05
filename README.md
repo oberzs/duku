@@ -90,6 +90,7 @@ This library uses these open source projects:
 Assets
 
 - [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
+- [Skybox](https://www.moddb.com/addons/cc0-skybox-pack-1) - Skybox for Cube example
 
 Optional projects for extra functionality:
 

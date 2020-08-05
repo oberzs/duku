@@ -5,6 +5,7 @@
 
 use draw_it::controller::Controller;
 use draw_it::window::WindowOptions;
+use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Mesh;
@@ -39,12 +40,12 @@ fn main() -> Result<()> {
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     context.set_skybox_from_file([
-        "examples/cubes/textures/Skybox/top.png",
-        "examples/cubes/textures/Skybox/bottom.png",
-        "examples/cubes/textures/Skybox/side.png",
-        "examples/cubes/textures/Skybox/side.png",
-        "examples/cubes/textures/Skybox/side.png",
-        "examples/cubes/textures/Skybox/side.png",
+        "examples/cubes/textures/Skybox/glacier_up.png",
+        "examples/cubes/textures/Skybox/glacier_down.png",
+        "examples/cubes/textures/Skybox/glacier_front.png",
+        "examples/cubes/textures/Skybox/glacier_back.png",
+        "examples/cubes/textures/Skybox/glacier_left.png",
+        "examples/cubes/textures/Skybox/glacier_right.png",
     ])?;
 
     let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0])?;
@@ -68,6 +69,7 @@ fn main() -> Result<()> {
 
         context.draw_on_window(|target| {
             target.skybox = true;
+            target.set_main_light([-0.4, -1.0, -1.0], Color::WHITE);
             // target.draw_grid();
             target.draw_cube(floor_transform);
             target.draw(&cube, [2.0, 1.0, 0.0]);
