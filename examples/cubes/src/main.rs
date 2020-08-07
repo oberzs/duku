@@ -8,6 +8,7 @@ use draw_it::window::WindowOptions;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::MeshOptions;
 use draw_it::Quaternion;
@@ -56,6 +57,8 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
+    let main_light = Light::directional([-0.4, -1.0, -1.0], Color::WHITE, true);
+
     while window.is_open() {
         // update
         context.poll_events(&mut window)?;
@@ -69,7 +72,7 @@ fn main() -> Result<()> {
 
         context.draw_on_window(|target| {
             target.skybox = true;
-            target.set_main_light([-0.4, -1.0, -1.0], Color::WHITE);
+            target.lights[0] = main_light;
             // target.draw_grid();
             target.draw_cube(floor_transform);
             target.draw(&cube, [2.0, 1.0, 0.0]);

@@ -12,7 +12,7 @@ use crate::math::Vector4;
 #[repr(C)]
 pub(crate) struct WorldData {
     pub(crate) world_matrix: Matrix4,
-    pub(crate) lights: [Light; 4],
+    pub(crate) lights: [LightData; 4],
     pub(crate) camera_position: Vector3,
     pub(crate) time: f32,
     pub(crate) light_matrices: [Matrix4; 4],
@@ -44,7 +44,8 @@ pub(crate) struct PushConstants {
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
-pub(crate) struct Light {
-    pub(crate) coords: Vector4,
-    pub(crate) color: Vector4,
+pub(crate) struct LightData {
+    pub(crate) coords: Vector3,
+    pub(crate) light_type: i32,
+    pub(crate) color: Vector3,
 }

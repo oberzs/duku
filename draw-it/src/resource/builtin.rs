@@ -75,7 +75,7 @@ impl Builtins {
         let surface_mesh = resources.add_mesh(create_surface(device)?);
         let quad_mesh = resources.add_mesh(create_quad(device)?);
         let cube_mesh = resources.add_mesh(create_cube(device)?);
-        let sphere_mesh = resources.add_mesh(create_sphere(device, 2)?);
+        let sphere_mesh = resources.add_mesh(create_sphere(device, 3)?);
         let grid_mesh = resources.add_mesh(create_grid(device, 50)?);
 
         // shaders

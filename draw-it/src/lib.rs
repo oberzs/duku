@@ -52,6 +52,8 @@ pub use quality::Quality;
 pub use quality::QualityOptions;
 pub use renderer::Camera;
 pub use renderer::CameraType;
+pub use renderer::Light;
+pub use renderer::LightType;
 pub use renderer::Pcf;
 pub use renderer::SamplerOptions;
 pub use renderer::Target;

@@ -10,15 +10,14 @@ use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Transform;
-use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::pipeline::sampler_index;
-use crate::pipeline::Light;
 use crate::pipeline::Material;
 use crate::pipeline::SamplerAddress;
 use crate::pipeline::SamplerFilter;
 use crate::pipeline::SamplerMipmaps;
 use crate::pipeline::Shader;
+use crate::renderer::Light;
 use crate::resource::Builtins;
 use crate::resource::Ref;
 
@@ -30,21 +29,20 @@ pub struct Target {
     pub font_size: u32,
     pub line_width: f32,
     pub cascade_splits: [f32; 4],
+    pub cast_shadows: bool,
+    pub lights: [Light; 4],
 
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
     pub(crate) text_orders: Vec<TextOrder>,
-    pub(crate) do_shadow_mapping: bool,
-    pub(crate) main_light: Light,
+    pub(crate) has_shadow_casters: bool,
     pub(crate) builtins: Builtins,
 
-    lights: Vec<Light>,
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
     current_font_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
     current_sampler: i32,
-    cast_shadows: bool,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -89,17 +87,28 @@ pub enum Albedo {
     Framebuffer(Ref<Framebuffer>),
 }
 
+struct Cache {
+    current_shader: Ref<Shader>,
+    current_material: Ref<Material>,
+    current_font_material: Ref<Material>,
+    current_albedo: Albedo,
+    current_font: Ref<Font>,
+    current_sampler: i32,
+    cast_shadows: bool,
+}
+
 impl Target {
     pub(crate) fn new(builtins: &Builtins) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
             text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
-            main_light: Light {
-                coords: Vector3::new(-1.0, -1.0, 1.0).unit().extend(0.0),
-                color: Color::WHITE.to_rgba_norm_vec(),
-            },
-            lights: vec![],
+            lights: [
+                Light::directional([-1.0, -1.0, 1.0], Color::WHITE, true),
+                Light::NONE,
+                Light::NONE,
+                Light::NONE,
+            ],
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.clone(),
             current_font_material: builtins.font_material.clone(),
@@ -110,7 +119,7 @@ impl Target {
             cast_shadows: true,
             wireframes: false,
             skybox: false,
-            do_shadow_mapping: false,
+            has_shadow_casters: false,
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
             line_width: 1.0,
             builtins: builtins.clone(),
@@ -129,9 +138,7 @@ impl Target {
     }
 
     pub fn draw_debug_cube(&mut self, transform: impl Into<Transform>) {
-        let temp_albedo = self.current_albedo.clone();
-        let temp_shader = self.current_shader.clone();
-        let temp_shadows = self.cast_shadows;
+        let cache = self.store();
         self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
@@ -139,15 +146,11 @@ impl Target {
         let mesh = self.builtins.cube_mesh.clone();
         self.draw(&mesh, transform);
 
-        self.current_albedo = temp_albedo;
-        self.current_shader = temp_shader;
-        self.cast_shadows = temp_shadows;
+        self.restore(cache);
     }
 
     pub fn draw_debug_sphere(&mut self, transform: impl Into<Transform>) {
-        let temp_albedo = self.current_albedo.clone();
-        let temp_shader = self.current_shader.clone();
-        let temp_shadows = self.cast_shadows;
+        let cache = self.store();
         self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
@@ -155,9 +158,7 @@ impl Target {
         let mesh = self.builtins.sphere_mesh.clone();
         self.draw(&mesh, transform);
 
-        self.current_albedo = temp_albedo;
-        self.current_shader = temp_shader;
-        self.cast_shadows = temp_shadows;
+        self.restore(cache);
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
@@ -171,9 +172,7 @@ impl Target {
     }
 
     pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
-        let temp_albedo = self.current_albedo.clone();
-        let temp_shader = self.current_shader.clone();
-        let temp_shadows = self.cast_shadows;
+        let cache = self.store();
         self.current_albedo = Albedo::Texture(texture.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
@@ -181,44 +180,38 @@ impl Target {
         let mesh = self.builtins.quad_mesh.clone();
         self.draw(&mesh, transform);
 
-        self.current_albedo = temp_albedo;
-        self.current_shader = temp_shader;
-        self.cast_shadows = temp_shadows;
+        self.restore(cache);
     }
 
     pub fn draw_surface(&mut self) {
-        let temp_shadows = self.cast_shadows;
+        let cache = self.store();
         self.cast_shadows = false;
 
         let mesh = self.builtins.surface_mesh.clone();
         self.draw(&mesh, [0.0, 0.0, 0.0]);
 
-        self.cast_shadows = temp_shadows;
+        self.restore(cache);
     }
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
-        let temp_shader = self.current_shader.clone();
-        let temp_albedo = self.current_albedo.clone();
+        let cache = self.store();
         self.current_shader = self.builtins.blit_shader.clone();
         self.current_albedo = Albedo::Framebuffer(framebuffer.clone());
 
         self.draw_surface();
 
-        self.current_shader = temp_shader;
-        self.current_albedo = temp_albedo;
+        self.restore(cache);
     }
 
     pub fn draw_grid(&mut self) {
-        let temp_shader = self.current_shader.clone();
-        let temp_shadows = self.cast_shadows;
+        let cache = self.store();
         self.current_shader = self.builtins.line_shader.clone();
         self.cast_shadows = false;
 
         let mesh = self.builtins.grid_mesh.clone();
         self.draw(&mesh, [0.0, 0.0, 0.0]);
 
-        self.current_shader = temp_shader;
-        self.cast_shadows = temp_shadows;
+        self.restore(cache);
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
@@ -237,24 +230,6 @@ impl Target {
             sampler_index,
             shader,
         });
-    }
-
-    pub fn add_directional_light(
-        &mut self,
-        direction: impl Into<Vector3>,
-        color: impl Into<Color>,
-    ) {
-        self.lights.push(Light {
-            coords: direction.into().unit().extend(0.0),
-            color: color.into().to_rgba_norm_vec(),
-        });
-    }
-
-    pub fn set_main_light(&mut self, direction: impl Into<Vector3>, color: impl Into<Color>) {
-        self.main_light = Light {
-            coords: direction.into().unit().extend(0.0),
-            color: color.into().to_rgba_norm_vec(),
-        };
     }
 
     pub fn set_material(&mut self, material: &Ref<Material>) {
@@ -297,19 +272,12 @@ impl Target {
         self.current_font_material = self.builtins.font_material.clone();
     }
 
-    pub(crate) fn lights(&self) -> [Light; 4] {
-        let mut lights: [Light; 4] = Default::default();
-        lights[0] = self.main_light;
-        lights[1..self.lights.len() + 1].clone_from_slice(&self.lights[..]);
-        lights
-    }
-
     fn add_order(&mut self, order: Order) {
         let material = self.current_material.clone();
         let shader = self.current_shader.clone();
 
         if self.cast_shadows {
-            self.do_shadow_mapping = true;
+            self.has_shadow_casters = true;
         }
 
         match self
@@ -354,6 +322,28 @@ impl Target {
                 }),
             }
         }
+    }
+
+    fn store(&self) -> Cache {
+        Cache {
+            current_shader: self.current_shader.clone(),
+            current_material: self.current_material.clone(),
+            current_font_material: self.current_font_material.clone(),
+            current_albedo: self.current_albedo.clone(),
+            current_font: self.current_font.clone(),
+            current_sampler: self.current_sampler,
+            cast_shadows: self.cast_shadows,
+        }
+    }
+
+    fn restore(&mut self, cache: Cache) {
+        self.current_shader = cache.current_shader;
+        self.current_material = cache.current_material;
+        self.current_font_material = cache.current_font_material;
+        self.current_albedo = cache.current_albedo;
+        self.current_font = cache.current_font;
+        self.current_sampler = cache.current_sampler;
+        self.cast_shadows = cache.cast_shadows;
     }
 }
 

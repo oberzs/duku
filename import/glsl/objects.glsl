@@ -4,8 +4,9 @@
 // glsl shader objects
 
 struct Light {
-    vec4 coords;
-    vec4 color;
+    vec3 coords;
+    int type;
+    vec3 color;
 };
 
 layout(set = 0, binding = 0) uniform WorldObject {

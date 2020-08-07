@@ -97,7 +97,7 @@ impl ForwardRenderer {
         self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
-        if target.do_shadow_mapping {
+        if target.has_shadow_casters {
             let mut view = framebuffer.camera.clone();
             view.depth = 50.0;
             self.shadow_pass(shader_layout, &target, &view)?;
@@ -113,15 +113,22 @@ impl ForwardRenderer {
             Pcf::X16 => 1.0,
         };
 
+        let lights = [
+            target.lights[0].data(),
+            target.lights[1].data(),
+            target.lights[2].data(),
+            target.lights[3].data(),
+        ];
+
         // update world uniform
         framebuffer.world_uniform.update(WorldData {
-            lights: target.lights(),
-            world_matrix: framebuffer.camera.matrix(),
             camera_position: framebuffer.camera.transform.position,
-            time: stats.time,
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
+            world_matrix: framebuffer.camera.matrix(),
             bias: target.bias,
+            time: stats.time,
+            lights,
             pcf,
         })?;
 
@@ -268,6 +275,13 @@ impl ForwardRenderer {
         target: &Target,
         view: &Camera,
     ) -> Result<()> {
+        let light_dir = match target.lights.iter().find(|l| l.shadows) {
+            Some(light) => light.coords,
+            // if there is no light with shadows,
+            // don't do shadow pass
+            None => return Ok(()),
+        };
+
         let cmd = self.device.command_buffer();
         let current = self.device.current_frame();
 
@@ -276,8 +290,6 @@ impl ForwardRenderer {
             .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
 
         // render shadow map for each cascade
-        let light_dir = target.main_light.coords.shrink();
-
         let mut prev_cs = 0.0;
         for (i, cs) in target.cascade_splits.iter().enumerate() {
             let map_size = self.shadow_frames[current].map_size;
