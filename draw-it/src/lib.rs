@@ -63,8 +63,6 @@ pub use surface::VSync;
 pub use surface::WindowHandle;
 
 // optional feature exports
-#[cfg(feature = "controller")]
-pub mod controller;
 #[cfg(feature = "ui")]
 pub mod ui;
 #[cfg(feature = "window")]

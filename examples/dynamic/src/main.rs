@@ -3,7 +3,7 @@
 
 // example with dynamicly changing mesh vertices
 
-use draw_it::controller::Controller;
+use draw_it::window::Controller;
 use draw_it::window::WindowOptions;
 use draw_it::Color;
 use draw_it::Context;

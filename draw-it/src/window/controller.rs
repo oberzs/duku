@@ -3,14 +3,12 @@
 
 // editor-like camera controller
 
-#![cfg(feature = "controller")]
-
+use super::Key;
+use super::MouseButton;
+use super::Window;
 use crate::math::Quaternion;
 use crate::math::Vector3;
 use crate::renderer::Camera;
-use crate::window::Key;
-use crate::window::MouseButton;
-use crate::window::Window;
 
 pub struct Controller {
     // fly

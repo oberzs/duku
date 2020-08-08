@@ -5,6 +5,8 @@
 
 #![cfg(feature = "window")]
 
+mod controller;
+
 use glfw::Action;
 use glfw::Cursor as GlfwCursor;
 use glfw::CursorMode;
@@ -18,6 +20,8 @@ use crate::math::Vector2;
 
 pub use glfw::Key;
 pub use glfw::MouseButton;
+
+pub use controller::Controller;
 
 pub struct Window {
     handle: GlfwWindow,

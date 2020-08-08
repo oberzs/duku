@@ -5,10 +5,9 @@ authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["controller", "image", "ui"]
+default = ["image", "ui"]
 image = ["png"]
 window = ["glfw"]
-controller = ["window"]
 ui = ["window", "imgui"]
 
 [dependencies]
