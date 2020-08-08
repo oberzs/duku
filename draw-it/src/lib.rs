@@ -33,6 +33,7 @@ mod resource;
 mod stats;
 mod surface;
 mod sync;
+mod watch;
 
 // normal exports
 pub use color::Color;

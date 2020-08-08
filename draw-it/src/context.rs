@@ -5,14 +5,13 @@
 
 use std::fs;
 use std::path::Path;
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
+use std::thread::JoinHandle;
 use std::time::Instant;
-
-#[cfg(feature = "hot-reload")]
-use notify::DebouncedEvent;
-#[cfg(feature = "hot-reload")]
-use std::sync::mpsc;
 
 use crate::color::Color;
 use crate::device::pick_gpu;
@@ -48,6 +47,8 @@ use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
+use crate::watch::watch_file;
+use crate::watch::WatchEvent;
 
 #[cfg(feature = "ui")]
 use crate::ui::Ui;
@@ -97,8 +98,8 @@ pub struct Context {
     vsync: VSync,
 
     // Hot Reload
-    #[cfg(feature = "hot-reload")]
-    stop_senders: Vec<mpsc::Sender<DebouncedEvent>>,
+    watch_stop_senders: Vec<Sender<WatchEvent>>,
+    watch_join_handles: Vec<JoinHandle<()>>,
 
     // Window
     #[cfg(feature = "window")]
@@ -200,6 +201,8 @@ impl Context {
             camera_type: options.camera,
             start_time: Instant::now(),
             frame_time: Instant::now(),
+            watch_stop_senders: vec![],
+            watch_join_handles: vec![],
             stats: Default::default(),
             frame_count: 0,
             forward_renderer,
@@ -218,8 +221,6 @@ impl Context {
 
             #[cfg(feature = "ui")]
             ui: None,
-            #[cfg(feature = "hot-reload")]
-            stop_senders: vec![],
             #[cfg(feature = "window")]
             glfw: None,
             #[cfg(feature = "window")]
@@ -632,49 +633,38 @@ impl Context {
         Ok(())
     }
 
-    #[cfg(feature = "hot-reload")]
     pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Ref<Shader>> {
-        use notify::RecommendedWatcher;
-        use notify::RecursiveMode;
-        use notify::Watcher;
-        use std::thread;
-        use std::time::Duration;
-
-        let path_buf = path.as_ref().to_path_buf();
-        let shader = self.create_shader_from_file(&path_buf)?;
+        let shader = self.create_shader_from_file(&path)?;
 
         // setup watcher
         let framebuffers = self.window_framebuffers.clone();
         let shader_layout = self.shader_layout.clone();
         let device = self.device.clone();
         let shader_ref = shader.clone();
+
         let (sender, receiver) = mpsc::channel();
-        self.stop_senders.push(sender.clone());
 
-        thread::spawn(move || {
-            let mut watcher: RecommendedWatcher =
-                Watcher::new(sender, Duration::from_millis(500)).expect("bad file watcher");
-            watcher
-                .watch(&path_buf, RecursiveMode::NonRecursive)
-                .expect("cannot watch file");
+        watch_file(path, sender.clone());
 
-            while let Ok(event) = receiver.recv() {
-                match event {
-                    DebouncedEvent::Rescan => break,
-                    DebouncedEvent::Write(_) => {
-                        // recreate shader
-                        let framebuffer = &framebuffers.lock().expect("poisoned framebuffers")[0];
+        let handle = thread::spawn(move || loop {
+            match receiver.recv() {
+                Ok(WatchEvent::Stop) => break,
+                Ok(WatchEvent::Modified(watched_path)) => {
+                    // recreate shader
+                    let framebuffer = &framebuffers.lock().expect("poisoned framebuffers")[0];
 
-                        let source = fs::read(&path_buf).expect("bad read");
-                        let new_shader = Shader::new(&device, framebuffer, &shader_layout, &source)
-                            .expect("bad shader recreation");
-                        shader_ref.with(|s| *s = new_shader);
-                        info!("shader {:?} was reloaded", path_buf);
-                    }
-                    _ => (),
+                    let source = fs::read(&watched_path).expect("bad read");
+                    let new_shader = Shader::new(&device, framebuffer, &shader_layout, &source)
+                        .expect("bad shader recreation");
+                    shader_ref.with(|s| *s = new_shader);
+                    info!("shader {:?} was reloaded", watched_path);
                 }
+                _ => (),
             }
         });
+
+        self.watch_join_handles.push(handle);
+        self.watch_stop_senders.push(sender);
 
         Ok(shader)
     }
@@ -795,9 +785,11 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        #[cfg(feature = "hot-reload")]
-        for stop in &self.stop_senders {
-            stop.send(DebouncedEvent::Rescan).expect("bad shutdown");
+        for stop in &self.watch_stop_senders {
+            stop.send(WatchEvent::Stop).expect("bad shutdown");
+        }
+        for handle in self.watch_join_handles.drain(..) {
+            handle.join().expect("bad join");
         }
         self.device.wait_for_idle().expect("bad wait");
     }

@@ -25,22 +25,19 @@ mod error;
 mod font;
 mod sdf;
 mod shader;
+mod watch;
 
 use clap::App;
 use clap::Arg;
-use notify::DebouncedEvent;
-use notify::RecommendedWatcher;
-use notify::RecursiveMode;
-use notify::Watcher;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::time::Duration;
 
 use error::Result;
 use font::import_font;
 use font::FontOptions;
 use shader::import_shader;
+use watch::watch_file;
 
 fn main() {
     let opts = App::new("Draw-it importer")
@@ -70,6 +67,7 @@ fn main() {
             Arg::with_name("watch")
                 .long("watch")
                 .short("w")
+                .conflicts_with("directory")
                 .help("Watch for file changes"),
         )
         .arg(
@@ -169,21 +167,15 @@ fn main() {
 
     // watch for changes
     if watch {
-        let path = input.or(directory).expect("bad args");
+        let path = input.expect("bad args");
         let (sender, receiver) = mpsc::channel();
 
-        let mut watcher: RecommendedWatcher =
-            Watcher::new(sender, Duration::from_millis(500)).expect("bad watcher");
-        watcher
-            .watch(path, RecursiveMode::NonRecursive)
-            .expect("bad watcher");
+        watch_file(path, sender);
 
-        while let Ok(event) = receiver.recv() {
-            if let DebouncedEvent::Write(in_path) = event {
-                let out_path = create_out_path(&in_path, out_dir);
-                if let Err(err) = import_file(&in_path, &out_path, &sdf_options, &bitmap_options) {
-                    warn!("{}", err);
-                }
+        while let Ok(in_path) = receiver.recv() {
+            let out_path = create_out_path(&in_path, out_dir);
+            if let Err(err) = import_file(&in_path, &out_path, &sdf_options, &bitmap_options) {
+                warn!("{}", err);
             }
         }
     }

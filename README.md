@@ -40,6 +40,7 @@
 - **SDF fonts:** signed distance field font support
 - **shadows:** uses PCF shadow maps
 - **windowing agnostic:** can be used with any OS window
+- **hot-reload:** shaders can be reloaded while the app is running
 
 ## Support
 
@@ -97,4 +98,3 @@ Optional projects for extra functionality:
 - [Png](https://github.com/image-rs/image-png) - PNG loading
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
-- [Notify](https://github.com/notify-rs/notify) - Hot-reload
