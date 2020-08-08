@@ -98,6 +98,29 @@ impl ImageFormat {
         }
     }
 
+    pub(crate) fn aspect(&self) -> vk::ImageAspectFlags {
+        match *self {
+            Self::Sbgra
+            | Self::Rgb
+            | Self::Rgba
+            | Self::Srgba
+            | Self::Srgb
+            | Self::Float2
+            | Self::Gray => vk::ImageAspectFlags::COLOR,
+            Self::Depth => vk::ImageAspectFlags::DEPTH,
+            Self::DepthStencil => vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL,
+        }
+    }
+
+    pub(crate) fn all_aspects(&self) -> vk::ImageAspectFlags {
+        let aspect = self.aspect();
+        if aspect == vk::ImageAspectFlags::DEPTH {
+            aspect | vk::ImageAspectFlags::STENCIL
+        } else {
+            aspect
+        }
+    }
+
     pub(crate) fn is_color(&self) -> bool {
         matches!(
             *self,

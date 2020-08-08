@@ -47,5 +47,5 @@ pub(crate) struct PushConstants {
 pub(crate) struct LightData {
     pub(crate) coords: Vector3,
     pub(crate) light_type: i32,
-    pub(crate) color: Vector3,
+    pub(crate) color: Vector4,
 }

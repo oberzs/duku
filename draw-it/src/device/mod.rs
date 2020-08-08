@@ -10,9 +10,11 @@ use ash::util;
 use ash::version::DeviceV1_0;
 use ash::vk;
 use ash::Device as VkDevice;
+use std::cmp;
 use std::ffi::c_void;
 use std::io::Cursor;
 use std::mem;
+use std::ops::Range;
 use std::slice;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -811,24 +813,115 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_blit_image(
+    pub(crate) fn cmd_blit_image_mip(
         &self,
         buffer: vk::CommandBuffer,
-        src: vk::Image,
-        dst: vk::Image,
-        blit: vk::ImageBlit,
-        filter: vk::Filter,
+        image: &ImageMemory,
+        src: u32,
+        dst: u32,
     ) {
-        let regions = [blit];
+        fn mip_offsets(image: &ImageMemory, mip: u32) -> [vk::Offset3D; 2] {
+            let orig_width = image.width();
+            let orig_height = image.height();
+            let scale = 2u32.pow(mip);
+            let width = cmp::max(orig_width / scale, 1);
+            let height = cmp::max(orig_height / scale, 1);
+            [
+                vk::Offset3D::default(),
+                vk::Offset3D {
+                    x: width as i32,
+                    y: height as i32,
+                    z: 1,
+                },
+            ]
+        }
+
+        let src_offsets = mip_offsets(image, src);
+        let dst_offsets = mip_offsets(image, dst);
+
+        let src_subresource = vk::ImageSubresourceLayers::builder()
+            .aspect_mask(image.all_aspects())
+            .mip_level(src)
+            .base_array_layer(0)
+            .layer_count(image.layer_count())
+            .build();
+        let dst_subresource = vk::ImageSubresourceLayers::builder()
+            .aspect_mask(image.all_aspects())
+            .mip_level(dst)
+            .base_array_layer(0)
+            .layer_count(image.layer_count())
+            .build();
+
+        let blit = [vk::ImageBlit::builder()
+            .src_subresource(src_subresource)
+            .dst_subresource(dst_subresource)
+            .src_offsets(src_offsets)
+            .dst_offsets(dst_offsets)
+            .build()];
+
         unsafe {
             self.handle.cmd_blit_image(
                 buffer,
-                src,
+                image.handle(),
                 ImageLayout::TransferSrc.flag(),
-                dst,
+                image.handle(),
                 ImageLayout::TransferDst.flag(),
-                &regions,
-                filter,
+                &blit,
+                vk::Filter::LINEAR,
+            );
+        }
+    }
+
+    pub(crate) fn cmd_blit_image(
+        &self,
+        buffer: vk::CommandBuffer,
+        src: &ImageMemory,
+        dst: &ImageMemory,
+    ) {
+        debug_assert!(
+            src.width() == dst.width() && src.height() == dst.height(),
+            "cannot blit image, sizes are different"
+        );
+        debug_assert!(
+            src.all_aspects() == dst.all_aspects(),
+            "cannot blit image, aspects are different"
+        );
+        debug_assert!(
+            src.layer_count() == dst.layer_count(),
+            "cannot blit image, layer counts are different"
+        );
+
+        let offsets = [
+            vk::Offset3D::default(),
+            vk::Offset3D {
+                x: src.width() as i32,
+                y: src.height() as i32,
+                z: 1,
+            },
+        ];
+        let subresource = vk::ImageSubresourceLayers::builder()
+            .aspect_mask(src.all_aspects())
+            .mip_level(0)
+            .base_array_layer(0)
+            .layer_count(src.layer_count())
+            .build();
+
+        let blit = [vk::ImageBlit::builder()
+            .src_subresource(subresource)
+            .dst_subresource(subresource)
+            .src_offsets(offsets)
+            .dst_offsets(offsets)
+            .build()];
+
+        unsafe {
+            self.handle.cmd_blit_image(
+                buffer,
+                src.handle(),
+                ImageLayout::TransferSrc.flag(),
+                dst.handle(),
+                ImageLayout::TransferDst.flag(),
+                &blit,
+                vk::Filter::LINEAR,
             );
         }
     }
@@ -839,25 +932,15 @@ impl Device {
         image: &ImageMemory,
         old_layout: ImageLayout,
         new_layout: ImageLayout,
-        base_mip: u32,
-        mip_count: u32,
+        mips: Range<u32>,
+        layers: Range<u32>,
     ) {
-        let src_access = old_layout.access_flag();
-        let dst_access = new_layout.access_flag();
-        let src_stage = old_layout.stage_flag();
-        let dst_stage = new_layout.stage_flag();
-        let aspect_mask = if image.has_depth_format() {
-            vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
-        } else {
-            vk::ImageAspectFlags::COLOR
-        };
-
         let subresource = vk::ImageSubresourceRange::builder()
-            .aspect_mask(aspect_mask)
-            .base_array_layer(0)
-            .base_mip_level(base_mip)
-            .layer_count(image.layer_count())
-            .level_count(mip_count)
+            .aspect_mask(image.all_aspects())
+            .base_array_layer(layers.start)
+            .base_mip_level(mips.start)
+            .layer_count(layers.end - layers.start)
+            .level_count(mips.end - mips.start)
             .build();
         let barrier = [vk::ImageMemoryBarrier::builder()
             .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
@@ -866,15 +949,15 @@ impl Device {
             .image(image.handle())
             .old_layout(old_layout.flag())
             .new_layout(new_layout.flag())
-            .src_access_mask(src_access)
-            .dst_access_mask(dst_access)
+            .src_access_mask(old_layout.access_flag())
+            .dst_access_mask(new_layout.access_flag())
             .build()];
 
         unsafe {
             self.handle.cmd_pipeline_barrier(
                 buffer,
-                src_stage,
-                dst_stage,
+                old_layout.stage_flag(),
+                new_layout.stage_flag(),
                 vk::DependencyFlags::default(),
                 &[],
                 &[],

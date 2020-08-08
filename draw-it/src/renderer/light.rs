@@ -55,7 +55,7 @@ impl Light {
 
         LightData {
             coords: self.coords,
-            color: self.color.to_rgb_norm_vec(),
+            color: self.color.to_rgba_norm_vec(),
             light_type,
         }
     }

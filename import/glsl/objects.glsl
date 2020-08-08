@@ -6,7 +6,7 @@
 struct Light {
     vec3 coords;
     int type;
-    vec3 color;
+    vec4 color;
 };
 
 layout(set = 0, binding = 0) uniform WorldObject {

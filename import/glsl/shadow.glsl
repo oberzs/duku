@@ -55,13 +55,13 @@ float shadow(Light light) {
         cascade = 3;
     }
 
-    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 light_dir = normalize(-light.coords);
     vec3 normal = normalize(in_normal);
     float bias = world.bias * tan(acos(dot(normal, light_dir)));
 
     vec3 coord = tex_coord(cascade, bias);
 
-    if (coord.z > 1.0 || coord.z < 0.0) {
+    if (coord.z > 1.0) {
         return 0.0;
     } else {
         // blend between side-by-side cascades

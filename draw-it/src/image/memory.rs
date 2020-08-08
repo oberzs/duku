@@ -108,20 +108,6 @@ impl ImageMemory {
     }
 
     pub(crate) fn add_view(&mut self) -> Result<vk::ImageView> {
-        let aspect_flags = match self.format {
-            ImageFormat::Sbgra
-            | ImageFormat::Rgb
-            | ImageFormat::Rgba
-            | ImageFormat::Srgba
-            | ImageFormat::Srgb
-            | ImageFormat::Float2
-            | ImageFormat::Gray => vk::ImageAspectFlags::COLOR,
-            ImageFormat::Depth => vk::ImageAspectFlags::DEPTH,
-            ImageFormat::DepthStencil => {
-                vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
-            }
-        };
-
         let view_type = if self.layer_count == 6 {
             vk::ImageViewType::CUBE
         } else {
@@ -129,7 +115,7 @@ impl ImageMemory {
         };
 
         let subresource = vk::ImageSubresourceRange::builder()
-            .aspect_mask(aspect_flags)
+            .aspect_mask(self.format.aspect())
             .base_mip_level(0)
             .base_array_layer(0)
             .layer_count(self.layer_count)
@@ -150,7 +136,7 @@ impl ImageMemory {
         debug_assert!(layer < self.layer_count, "layer out of bounds");
 
         let subresource = vk::ImageSubresourceLayers::builder()
-            .aspect_mask(vk::ImageAspectFlags::COLOR)
+            .aspect_mask(self.format.aspect())
             .base_array_layer(layer)
             .layer_count(1)
             .mip_level(0)
@@ -183,8 +169,8 @@ impl ImageMemory {
                 self,
                 self.layout,
                 new_layout,
-                0,
-                self.mip_count,
+                0..self.mip_count,
+                0..self.layer_count,
             );
             Ok(())
         })?;
@@ -193,15 +179,18 @@ impl ImageMemory {
     }
 
     pub(crate) fn change_layout_sync(&mut self, cmd: vk::CommandBuffer, new_layout: ImageLayout) {
-        self.device
-            .cmd_change_image_layout(cmd, self, self.layout, new_layout, 0, self.mip_count);
+        self.device.cmd_change_image_layout(
+            cmd,
+            self,
+            self.layout,
+            new_layout,
+            0..self.mip_count,
+            0..self.layer_count,
+        );
         self.layout = new_layout;
     }
 
     pub(crate) fn generate_mipmaps(&self) -> Result<()> {
-        let mut mip_width = self.width as i32;
-        let mut mip_height = self.height as i32;
-
         self.device.do_commands(|cmd| {
             for i in 1..self.mip_count {
                 self.device.cmd_change_image_layout(
@@ -209,59 +198,19 @@ impl ImageMemory {
                     self,
                     ImageLayout::TransferDst,
                     ImageLayout::TransferSrc,
-                    i - 1,
-                    1,
+                    (i - 1)..i,
+                    0..self.layer_count,
                 );
 
-                let src_offsets = [
-                    vk::Offset3D { x: 0, y: 0, z: 0 },
-                    vk::Offset3D {
-                        x: mip_width,
-                        y: mip_height,
-                        z: 1,
-                    },
-                ];
-                let src_subresource = vk::ImageSubresourceLayers::builder()
-                    .aspect_mask(vk::ImageAspectFlags::COLOR)
-                    .mip_level(i - 1)
-                    .base_array_layer(0)
-                    .layer_count(1)
-                    .build();
-
-                mip_width = cmp::max(mip_width / 2, 1);
-                mip_height = cmp::max(mip_height / 2, 1);
-                let dst_offsets = [
-                    vk::Offset3D { x: 0, y: 0, z: 0 },
-                    vk::Offset3D {
-                        x: mip_width,
-                        y: mip_height,
-                        z: 1,
-                    },
-                ];
-                let dst_subresource = vk::ImageSubresourceLayers::builder()
-                    .aspect_mask(vk::ImageAspectFlags::COLOR)
-                    .mip_level(i)
-                    .base_array_layer(0)
-                    .layer_count(1)
-                    .build();
-
-                let blit = vk::ImageBlit::builder()
-                    .src_offsets(src_offsets)
-                    .src_subresource(src_subresource)
-                    .dst_offsets(dst_offsets)
-                    .dst_subresource(dst_subresource)
-                    .build();
-
-                self.device
-                    .cmd_blit_image(cmd, self.handle, self.handle, blit, vk::Filter::LINEAR);
+                self.device.cmd_blit_image_mip(cmd, self, i - 1, i);
 
                 self.device.cmd_change_image_layout(
                     cmd,
                     self,
                     ImageLayout::TransferSrc,
                     ImageLayout::ShaderColor,
-                    i - 1,
-                    1,
+                    (i - 1)..i,
+                    0..self.layer_count,
                 );
             }
             self.device.cmd_change_image_layout(
@@ -269,8 +218,8 @@ impl ImageMemory {
                 self,
                 ImageLayout::TransferDst,
                 ImageLayout::ShaderColor,
-                self.mip_count - 1,
-                1,
+                (self.mip_count - 1)..self.mip_count,
+                0..self.layer_count,
             );
             Ok(())
         })
@@ -288,8 +237,20 @@ impl ImageMemory {
         self.format == ImageFormat::Depth || self.format == ImageFormat::DepthStencil
     }
 
+    pub(crate) fn all_aspects(&self) -> vk::ImageAspectFlags {
+        self.format.all_aspects()
+    }
+
     pub(crate) fn layer_count(&self) -> u32 {
         self.layer_count
+    }
+
+    pub(crate) fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> u32 {
+        self.height
     }
 }
 

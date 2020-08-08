@@ -16,7 +16,7 @@ void fragment() {
 
     Light light = world.lights[0];
     vec3 normal = normalize(in_normal);
-    vec3 light_dir = normalize(-light.coords.xyz);
+    vec3 light_dir = normalize(-light.coords);
     vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
 
     // received shadows
@@ -24,12 +24,12 @@ void fragment() {
 
     // diffuse shading
     float diff = max(dot(normal, light_dir), 0.0);
-    vec3 diffuse = diff * light.color.xyz;
+    vec3 diffuse = diff * light.color.rgb;
 
     // specular shading
     vec3 reflect_dir = reflect(-light_dir, normal);
     float spec = pow(max(dot(cam_dir, reflect_dir), 0.0), 32);
-    vec3 specular = 0.5 * spec * light.color.xyz;
+    vec3 specular = 0.5 * spec * light.color.rgb;
 
     // ambient light
     vec3 ambient = 0.1 * light.color.rgb;

@@ -294,35 +294,7 @@ impl Framebuffer {
             texture_image.change_layout_sync(cmd, ImageLayout::TransferDst);
 
             // blit to shader image
-            let offsets = [
-                vk::Offset3D::default(),
-                vk::Offset3D {
-                    x: self.width as i32,
-                    y: self.height as i32,
-                    z: 1,
-                },
-            ];
-            let subresource = vk::ImageSubresourceLayers::builder()
-                .aspect_mask(vk::ImageAspectFlags::COLOR)
-                .mip_level(0)
-                .base_array_layer(0)
-                .layer_count(1)
-                .build();
-
-            let blit = vk::ImageBlit::builder()
-                .src_offsets(offsets)
-                .src_subresource(subresource)
-                .dst_offsets(offsets)
-                .dst_subresource(subresource)
-                .build();
-
-            self.device.cmd_blit_image(
-                cmd,
-                stored_image.handle(),
-                texture_image.handle(),
-                blit,
-                vk::Filter::LINEAR,
-            );
+            self.device.cmd_blit_image(cmd, stored_image, texture_image);
 
             // set images back to initial state
             stored_image.change_layout_sync(cmd, ImageLayout::ShaderColor);
