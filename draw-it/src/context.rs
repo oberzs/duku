@@ -63,6 +63,9 @@ use crate::window::WindowOptions;
 const FPS_SAMPLE_COUNT: usize = 128;
 
 pub struct Context {
+    pub main_camera: Camera,
+    pub builtins: Builtins,
+
     // Renderers
     forward_renderer: ForwardRenderer,
 
@@ -71,7 +74,6 @@ pub struct Context {
     ui: Option<Ui>,
 
     // Resources
-    builtins: Builtins,
     resources: ResourceManager,
     skybox: Cubemap,
 
@@ -86,7 +88,6 @@ pub struct Context {
     instance: Arc<Instance>,
 
     // Misc
-    pub main_camera: Camera,
     camera_type: CameraType,
     stats: Stats,
     render_stage: RenderStage,
@@ -359,6 +360,22 @@ impl Context {
     pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Result<Ref<Mesh>> {
         let mesh = Mesh::new(&self.device, options)?;
         Ok(self.resources.add_mesh(mesh))
+    }
+
+    pub fn duplicate_mesh(&mut self, mesh: &Ref<Mesh>) -> Result<Ref<Mesh>> {
+        let new_mesh = mesh.with(|m| {
+            Mesh::new(
+                &self.device,
+                MeshOptions {
+                    vertices: m.vertices(),
+                    indices: m.indices(),
+                    uvs: m.uvs(),
+                    normals: m.normals(),
+                    colors: m.colors(),
+                },
+            )
+        })?;
+        Ok(self.resources.add_mesh(new_mesh))
     }
 
     pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Result<Ref<Mesh>> {

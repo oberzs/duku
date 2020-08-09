@@ -252,26 +252,6 @@ impl Target {
         self.current_sampler = sampler_index(options.filter, options.address, options.mipmaps);
     }
 
-    pub fn set_shader_phong(&mut self) {
-        self.current_shader = self.builtins.phong_shader.clone();
-    }
-
-    pub fn set_shader_lines(&mut self) {
-        self.current_shader = self.builtins.line_shader.clone();
-    }
-
-    pub fn set_albedo_white(&mut self) {
-        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
-    }
-
-    pub fn set_material_white(&mut self) {
-        self.current_material = self.builtins.white_material.clone();
-    }
-
-    pub fn set_font_material_black(&mut self) {
-        self.current_font_material = self.builtins.font_material.clone();
-    }
-
     fn add_order(&mut self, order: Order) {
         let material = self.current_material.clone();
         let shader = self.current_shader.clone();

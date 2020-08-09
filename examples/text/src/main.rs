@@ -29,6 +29,7 @@ fn main() -> Result<()> {
         },
     )?;
 
+    let base_material = context.builtins.font_material.clone();
     let material_1 = context.create_material()?;
     material_1.with(|m| {
         m.set_font_color(Color::RED);
@@ -63,7 +64,7 @@ fn main() -> Result<()> {
             target.font_size = 32;
             target.set_font_material(&material_1);
             target.draw_text("Bitmap 32p text", [left, 100.0, 1.0]);
-            target.set_font_material_black();
+            target.set_font_material(&base_material);
             target.font_size = 24;
             target.draw_text("Bitmap 24p text", [left, 68.0, 1.0]);
             target.font_size = 18;

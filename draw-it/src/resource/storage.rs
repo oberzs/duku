@@ -3,6 +3,8 @@
 
 // Ref - resource reference
 
+use std::any;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::Weak;
@@ -42,6 +44,13 @@ impl<T> Ref<T> {
         let arc = self.value.upgrade().expect("did device die?");
         let mut inner = arc.lock().expect("ref poisoned");
         func(&mut inner)
+    }
+}
+
+impl<T> fmt::Debug for Ref<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let type_name = any::type_name::<T>().split("::").last().expect("bad type");
+        write!(f, "Ref<{}> {:p}", type_name, self.value.as_ptr())
     }
 }
 

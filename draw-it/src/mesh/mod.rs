@@ -152,24 +152,24 @@ impl Mesh {
         self.should_update_indices = true;
     }
 
-    pub fn vertices(&self) -> Vec<Vector3> {
-        self.vertices.clone()
+    pub fn vertices(&self) -> &[Vector3] {
+        &self.vertices
     }
 
-    pub fn uvs(&self) -> Vec<Vector2> {
-        self.uvs.clone()
+    pub fn uvs(&self) -> &[Vector2] {
+        &self.uvs
     }
 
-    pub fn normals(&self) -> Vec<Vector3> {
-        self.normals.clone()
+    pub fn normals(&self) -> &[Vector3] {
+        &self.normals
     }
 
-    pub fn colors(&self) -> Vec<Color> {
-        self.colors.clone()
+    pub fn colors(&self) -> &[Color] {
+        &self.colors
     }
 
-    pub fn indices(&self) -> Vec<u32> {
-        self.indices.clone()
+    pub fn indices(&self) -> &[u32] {
+        &self.indices
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {

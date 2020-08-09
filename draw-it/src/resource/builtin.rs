@@ -24,25 +24,25 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 
-#[derive(Clone)]
-pub(crate) struct Builtins {
-    pub(crate) white_texture: Ref<Texture>,
-    pub(crate) white_material: Ref<Material>,
-    pub(crate) font_material: Ref<Material>,
-    pub(crate) surface_mesh: Ref<Mesh>,
-    pub(crate) quad_mesh: Ref<Mesh>,
-    pub(crate) cube_mesh: Ref<Mesh>,
-    pub(crate) sphere_mesh: Ref<Mesh>,
-    pub(crate) grid_mesh: Ref<Mesh>,
-    pub(crate) phong_shader: Ref<Shader>,
-    pub(crate) sdf_font_shader: Ref<Shader>,
-    pub(crate) bitmap_font_shader: Ref<Shader>,
-    pub(crate) blit_shader: Ref<Shader>,
-    pub(crate) wireframe_shader: Ref<Shader>,
-    pub(crate) line_shader: Ref<Shader>,
-    pub(crate) unshaded_shader: Ref<Shader>,
-    pub(crate) skybox_shader: Ref<Shader>,
-    pub(crate) kenney_font: Ref<Font>,
+#[derive(Debug, Clone)]
+pub struct Builtins {
+    pub white_texture: Ref<Texture>,
+    pub white_material: Ref<Material>,
+    pub font_material: Ref<Material>,
+    pub surface_mesh: Ref<Mesh>,
+    pub quad_mesh: Ref<Mesh>,
+    pub cube_mesh: Ref<Mesh>,
+    pub sphere_mesh: Ref<Mesh>,
+    pub grid_mesh: Ref<Mesh>,
+    pub phong_shader: Ref<Shader>,
+    pub sdf_font_shader: Ref<Shader>,
+    pub bitmap_font_shader: Ref<Shader>,
+    pub blit_shader: Ref<Shader>,
+    pub wireframe_shader: Ref<Shader>,
+    pub line_shader: Ref<Shader>,
+    pub unshaded_shader: Ref<Shader>,
+    pub skybox_shader: Ref<Shader>,
+    pub kenney_font: Ref<Font>,
 }
 
 impl Builtins {
