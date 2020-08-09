@@ -40,7 +40,7 @@ impl<T> Storage<T> {
 }
 
 impl<T> Ref<T> {
-    pub fn with<R>(&self, func: impl FnOnce(&mut T) -> R) -> R {
+    pub(crate) fn with<R>(&self, func: impl FnOnce(&mut T) -> R) -> R {
         let arc = self.value.upgrade().expect("did device die?");
         let mut inner = arc.lock().expect("ref poisoned");
         func(&mut inner)

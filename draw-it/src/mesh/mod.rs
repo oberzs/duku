@@ -15,6 +15,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::resource::Ref;
 pub(crate) use vertex::Vertex;
 
 pub struct Mesh {
@@ -29,19 +30,25 @@ pub struct Mesh {
     should_update_indices: bool,
 }
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct MeshOptions<'slice> {
-    pub vertices: &'slice [Vector3],
-    pub uvs: &'slice [Vector2],
-    pub normals: &'slice [Vector3],
-    pub colors: &'slice [Color],
-    pub indices: &'slice [u32],
+#[derive(Default, Debug, Clone)]
+pub struct MeshOptions {
+    pub vertices: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
+    pub normals: Vec<Vector3>,
+    pub colors: Vec<Color>,
+    pub indices: Vec<u32>,
 }
 
 impl Mesh {
-    pub(crate) fn new(device: &Arc<Device>, options: MeshOptions<'_>) -> Result<Self> {
-        let vertices = options.vertices.to_vec();
-        let indices = options.indices.to_vec();
+    pub(crate) fn new(device: &Arc<Device>, options: MeshOptions) -> Result<Self> {
+        let MeshOptions {
+            mut uvs,
+            mut normals,
+            mut colors,
+            vertices,
+            indices,
+        } = options;
+
         let vertex_count = vertices.len();
         let index_count = indices.len();
 
@@ -49,17 +56,13 @@ impl Mesh {
             DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, vertex_count)?;
         let index_buffer = DynamicBuffer::new::<u32>(device, BufferUsage::Index, index_count)?;
 
-        // fill in missing default UVs for all vertices
-        let mut uvs = vec![Vector2::ZERO; vertex_count];
-        uvs[..options.uvs.len()].clone_from_slice(options.uvs);
+        // check if has normals
+        let no_normals = normals.is_empty();
 
-        // fill in missing default normals for all vertices
-        let mut normals = vec![Vector3::ZERO; vertex_count];
-        normals[..options.normals.len()].clone_from_slice(options.normals);
-
-        // fill in missing default colors for all vertices
-        let mut colors = vec![Color::WHITE; vertex_count];
-        colors[..options.colors.len()].clone_from_slice(options.colors);
+        // fill in missing defaults for all vertices
+        uvs.resize_with(vertex_count, || Vector2::ZERO);
+        normals.resize_with(vertex_count, || Vector3::ZERO);
+        colors.resize_with(vertex_count, || Color::WHITE);
 
         let mut mesh = Self {
             vertices,
@@ -74,11 +77,51 @@ impl Mesh {
         };
 
         // generate normals if user didn't specify
-        if options.normals.is_empty() {
+        if no_normals {
             mesh.calculate_normals();
         }
 
         Ok(mesh)
+    }
+
+    pub(crate) fn combine(device: &Arc<Device>, meshes: &[Self]) -> Result<Self> {
+        let mut offset = 0;
+        let mut indices = vec![];
+        let mut vertices = vec![];
+        let mut normals = vec![];
+        let mut uvs = vec![];
+        let mut colors = vec![];
+        for mesh in meshes {
+            indices.extend(mesh.indices.iter().map(|t| t + offset));
+            vertices.extend(&mesh.vertices);
+            normals.extend(&mesh.normals);
+            uvs.extend(&mesh.uvs);
+            colors.extend(&mesh.colors);
+            offset = vertices.len() as u32;
+        }
+        Self::new(
+            device,
+            MeshOptions {
+                vertices,
+                normals,
+                uvs,
+                colors,
+                indices,
+            },
+        )
+    }
+
+    pub(crate) fn duplicate(&self, device: &Arc<Device>) -> Result<Self> {
+        Mesh::new(
+            device,
+            MeshOptions {
+                vertices: self.vertices.clone(),
+                indices: self.indices.clone(),
+                uvs: self.uvs.clone(),
+                normals: self.normals.clone(),
+                colors: self.colors.clone(),
+            },
+        )
     }
 
     pub(crate) fn update_if_needed(&mut self) -> Result<()> {
@@ -106,7 +149,44 @@ impl Mesh {
         Ok(())
     }
 
-    pub fn calculate_normals(&mut self) {
+    pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
+        self.vertex_buffer.handle()
+    }
+
+    pub(crate) fn index_buffer(&self) -> vk::Buffer {
+        self.index_buffer.handle()
+    }
+
+    pub(crate) fn index_count(&self) -> u32 {
+        self.indices.len() as u32
+    }
+
+    pub(crate) fn set_vertices(&mut self, vertices: Vec<Vector3>) {
+        self.vertices = vertices;
+        self.should_update_vertices = true;
+    }
+
+    pub(crate) fn set_uvs(&mut self, uvs: Vec<Vector2>) {
+        self.uvs = uvs;
+        self.should_update_vertices = true;
+    }
+
+    pub(crate) fn set_normals(&mut self, normals: Vec<Vector3>) {
+        self.normals = normals;
+        self.should_update_vertices = true;
+    }
+
+    pub(crate) fn set_colors(&mut self, colors: Vec<Color>) {
+        self.colors = colors;
+        self.should_update_vertices = true;
+    }
+
+    pub(crate) fn set_indices(&mut self, indices: Vec<u32>) {
+        self.indices = indices;
+        self.should_update_indices = true;
+    }
+
+    fn calculate_normals(&mut self) {
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
                 let a = tri[0] as usize;
@@ -126,61 +206,50 @@ impl Mesh {
             self.should_update_vertices = true;
         }
     }
+}
 
-    pub fn set_vertices(&mut self, vertices: &[Vector3]) {
-        self.vertices = vertices.to_owned();
-        self.should_update_vertices = true;
+impl Ref<Mesh> {
+    pub fn calculate_normals(&self) {
+        self.with(|m| m.calculate_normals());
     }
 
-    pub fn set_uvs(&mut self, uvs: &[Vector2]) {
-        self.uvs = uvs.to_owned();
-        self.should_update_vertices = true;
+    pub fn set_vertices(&self, vertices: Vec<Vector3>) {
+        self.with(|m| m.set_vertices(vertices));
     }
 
-    pub fn set_normals(&mut self, normals: &[Vector3]) {
-        self.normals = normals.to_owned();
-        self.should_update_vertices = true;
+    pub fn set_uvs(&self, uvs: Vec<Vector2>) {
+        self.with(|m| m.set_uvs(uvs));
     }
 
-    pub fn set_colors(&mut self, colors: &[Color]) {
-        self.colors = colors.to_owned();
-        self.should_update_vertices = true;
+    pub fn set_normals(&self, normals: Vec<Vector3>) {
+        self.with(|m| m.set_normals(normals));
     }
 
-    pub fn set_indices(&mut self, indices: &[u32]) {
-        self.indices = indices.to_owned();
-        self.should_update_indices = true;
+    pub fn set_colors(&self, colors: Vec<Color>) {
+        self.with(|m| m.set_colors(colors));
     }
 
-    pub fn vertices(&self) -> &[Vector3] {
-        &self.vertices
+    pub fn set_indices(&self, indices: Vec<u32>) {
+        self.with(|m| m.set_indices(indices));
     }
 
-    pub fn uvs(&self) -> &[Vector2] {
-        &self.uvs
+    pub fn vertices(&self) -> Vec<Vector3> {
+        self.with(|m| m.vertices.clone())
     }
 
-    pub fn normals(&self) -> &[Vector3] {
-        &self.normals
+    pub fn uvs(&self) -> Vec<Vector2> {
+        self.with(|m| m.uvs.clone())
     }
 
-    pub fn colors(&self) -> &[Color] {
-        &self.colors
+    pub fn normals(&self) -> Vec<Vector3> {
+        self.with(|m| m.normals.clone())
     }
 
-    pub fn indices(&self) -> &[u32] {
-        &self.indices
+    pub fn colors(&self) -> Vec<Color> {
+        self.with(|m| m.colors.clone())
     }
 
-    pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
-        self.vertex_buffer.handle()
-    }
-
-    pub(crate) fn index_buffer(&self) -> vk::Buffer {
-        self.index_buffer.handle()
-    }
-
-    pub(crate) fn index_count(&self) -> u32 {
-        self.indices.len() as u32
+    pub fn indices(&self) -> Vec<u32> {
+        self.with(|m| m.indices.clone())
     }
 }

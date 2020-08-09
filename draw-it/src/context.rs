@@ -357,24 +357,13 @@ impl Context {
         Ok(())
     }
 
-    pub fn create_mesh(&mut self, options: MeshOptions<'_>) -> Result<Ref<Mesh>> {
+    pub fn create_mesh(&mut self, options: MeshOptions) -> Result<Ref<Mesh>> {
         let mesh = Mesh::new(&self.device, options)?;
         Ok(self.resources.add_mesh(mesh))
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Ref<Mesh>) -> Result<Ref<Mesh>> {
-        let new_mesh = mesh.with(|m| {
-            Mesh::new(
-                &self.device,
-                MeshOptions {
-                    vertices: m.vertices(),
-                    indices: m.indices(),
-                    uvs: m.uvs(),
-                    normals: m.normals(),
-                    colors: m.colors(),
-                },
-            )
-        })?;
+        let new_mesh = mesh.with(|m| m.duplicate(&self.device))?;
         Ok(self.resources.add_mesh(new_mesh))
     }
 
@@ -386,24 +375,22 @@ impl Context {
         let mut uvs = vec![];
         let mut colors = vec![];
         for mesh in meshes {
-            mesh.with(|m| {
-                indices.extend(m.indices().iter().map(|i| i + offset));
-                vertices.extend(m.vertices());
-                normals.extend(m.normals());
-                uvs.extend(m.uvs());
-                colors.extend(m.colors());
-                offset = vertices.len() as u32;
-            });
+            indices.extend(mesh.indices().iter().map(|i| i + offset));
+            vertices.extend(mesh.vertices());
+            normals.extend(mesh.normals());
+            uvs.extend(mesh.uvs());
+            colors.extend(mesh.colors());
+            offset = vertices.len() as u32;
         }
 
         let mesh = Mesh::new(
             &self.device,
             MeshOptions {
-                vertices: &vertices,
-                normals: &normals,
-                uvs: &uvs,
-                colors: &colors,
-                indices: &indices,
+                vertices,
+                normals,
+                uvs,
+                colors,
+                indices,
             },
         )?;
         Ok(self.resources.add_mesh(mesh))

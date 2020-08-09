@@ -162,8 +162,8 @@ impl Ui {
         let mesh = Mesh::new(
             device,
             MeshOptions {
-                vertices: &[Vector3::new(0.0, 0.0, 0.0)],
-                indices: &[0, 0, 0],
+                vertices: vec![Vector3::new(0.0, 0.0, 0.0)],
+                indices: vec![0, 0, 0],
                 ..Default::default()
             },
         )?;
@@ -218,11 +218,11 @@ impl Ui {
         }
 
         // update mesh
-        self.mesh.set_vertices(&vertices);
-        self.mesh.set_normals(&normals);
-        self.mesh.set_colors(&colors);
-        self.mesh.set_uvs(&uvs);
-        self.mesh.set_indices(&indices);
+        self.mesh.set_vertices(vertices);
+        self.mesh.set_normals(normals);
+        self.mesh.set_colors(colors);
+        self.mesh.set_uvs(uvs);
+        self.mesh.set_indices(indices);
         self.mesh.update_if_needed()?;
 
         // render ui

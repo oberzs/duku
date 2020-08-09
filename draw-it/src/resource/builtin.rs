@@ -58,18 +58,13 @@ impl Builtins {
             resources.add_texture(Texture::new(device, uniform, Default::default())?);
 
         // materials
-        let white_material = {
-            let mut mat = Material::new(device, layout)?;
-            mat.set_phong_color([255, 255, 255]);
-            resources.add_material(mat)
-        };
-        let font_material = {
-            let mut mat = Material::new(device, layout)?;
-            mat.set_font_color([0, 0, 0]);
-            mat.set_font_width(0.5);
-            mat.set_font_edge(0.1);
-            resources.add_material(mat)
-        };
+        let white_material = resources.add_material(Material::new(device, layout)?);
+        white_material.set_phong_color([255, 255, 255]);
+
+        let font_material = resources.add_material(Material::new(device, layout)?);
+        font_material.set_font_color([0, 0, 0]);
+        font_material.set_font_width(0.5);
+        font_material.set_font_edge(0.1);
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);
@@ -165,19 +160,19 @@ impl Builtins {
 }
 
 fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
-    let vertices = &[
+    let vertices = vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, -1.0, 0.0),
         Vector3::new(-1.0, -1.0, 0.0),
     ];
-    let uvs = &[
+    let uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let indices = &[0, 1, 2, 0, 2, 3];
+    let indices = vec![0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
@@ -191,19 +186,19 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
 }
 
 fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
-    let vertices = &[
+    let vertices = vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
     ];
-    let uvs = &[
+    let uvs = vec![
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
     ];
-    let indices = &[0, 1, 2, 0, 2, 3];
+    let indices = vec![0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
@@ -265,7 +260,7 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
         [0.5, -0.5, -0.5],
     )?;
 
-    combine_meshes(device, &[top, bottom, front, back, left, right])
+    Mesh::combine(device, &[top, bottom, front, back, left, right])
 }
 
 fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
@@ -306,9 +301,9 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
     Mesh::new(
         device,
         MeshOptions {
-            vertices: &vertices,
-            indices: &indices,
-            colors: &colors,
+            vertices,
+            indices,
+            colors,
             ..Default::default()
         },
     )
@@ -321,14 +316,14 @@ fn create_rectangle<V: Into<Vector3>>(
     p3: V,
     p4: V,
 ) -> Result<Mesh> {
-    let vertices = &[p1.into(), p2.into(), p3.into(), p4.into()];
-    let uvs = &[
+    let vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
+    let uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
     ];
-    let indices = &[0, 1, 2, 0, 2, 3];
+    let indices = vec![0, 1, 2, 0, 2, 3];
 
     Mesh::new(
         device,
@@ -416,9 +411,9 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
     Mesh::new(
         device,
         MeshOptions {
-            vertices: &vertices,
-            indices: &indices,
-            uvs: &uvs,
+            vertices,
+            indices,
+            uvs,
             ..Default::default()
         },
     )
@@ -444,32 +439,4 @@ fn get_middle_point(
             i
         }
     }
-}
-
-fn combine_meshes(device: &Arc<Device>, meshes: &[Mesh]) -> Result<Mesh> {
-    let mut offset = 0;
-    let mut indices = vec![];
-    let mut vertices = vec![];
-    let mut normals = vec![];
-    let mut uvs = vec![];
-    let mut colors = vec![];
-    for mesh in meshes {
-        indices.extend(mesh.indices().iter().map(|t| t + offset));
-        vertices.extend(mesh.vertices());
-        normals.extend(mesh.normals());
-        uvs.extend(mesh.uvs());
-        colors.extend(mesh.colors());
-        offset = vertices.len() as u32;
-    }
-
-    Mesh::new(
-        device,
-        MeshOptions {
-            vertices: &vertices,
-            normals: &normals,
-            uvs: &uvs,
-            colors: &colors,
-            indices: &indices,
-        },
-    )
 }

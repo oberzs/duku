@@ -33,16 +33,11 @@ fn main() -> Result<()> {
         cam_t.look_at([0.0, 0.0, 0.0]);
     }
 
-    let square = {
-        let vertices = square_vertices(square_size, 0.0);
-        let indices = square_indices(square_size);
-
-        context.create_mesh(MeshOptions {
-            vertices: &vertices,
-            indices: &indices,
-            ..Default::default()
-        })?
-    };
+    let square = context.create_mesh(MeshOptions {
+        vertices: square_vertices(square_size, 0.0),
+        indices: square_indices(square_size),
+        ..Default::default()
+    })?;
     let time = Instant::now();
 
     while window.is_open() {
@@ -51,11 +46,9 @@ fn main() -> Result<()> {
         controller.update(&mut context.main_camera, &mut window, stats.delta_time);
 
         // update square mesh
-        square.with(|mesh| {
-            let elapsed = time.elapsed().as_secs_f32();
-            let vertices = square_vertices(square_size, elapsed);
-            mesh.set_vertices(&vertices);
-        });
+        let elapsed = time.elapsed().as_secs_f32();
+        let vertices = square_vertices(square_size, elapsed);
+        square.set_vertices(vertices);
 
         context.draw_on_window(|target| {
             target.wireframes = true;

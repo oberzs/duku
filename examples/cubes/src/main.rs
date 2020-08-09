@@ -145,13 +145,13 @@ fn square_mesh(
     let z_neg = -size.y / 2.0;
 
     // create data
-    let vertices = &mut [
+    let mut vertices = vec![
         Vector3::new(x_neg, 0.0, z_neg),
         Vector3::new(x_neg, 0.0, z_pos),
         Vector3::new(x_pos, 0.0, z_pos),
         Vector3::new(x_pos, 0.0, z_neg),
     ];
-    let indices = &[0, 1, 2, 0, 2, 3];
+    let indices = vec![0, 1, 2, 0, 2, 3];
 
     // position and rotate
     for v in vertices.iter_mut() {

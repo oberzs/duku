@@ -31,18 +31,14 @@ fn main() -> Result<()> {
 
     let base_material = context.builtins.font_material.clone();
     let material_1 = context.create_material()?;
-    material_1.with(|m| {
-        m.set_font_color(Color::RED);
-    });
+    material_1.set_font_color(Color::RED);
     let material_2 = context.create_material()?;
-    material_2.with(|m| {
-        m.set_font_color(Color::BLUE);
-        m.set_font_border_color(Color::WHITE);
-        m.set_font_width(0.5);
-        m.set_font_edge(0.1);
-        m.set_font_border_width(0.8);
-        m.set_font_border_edge(0.1);
-    });
+    material_2.set_font_color(Color::BLUE);
+    material_2.set_font_border_color(Color::WHITE);
+    material_2.set_font_width(0.5);
+    material_2.set_font_edge(0.1);
+    material_2.set_font_border_width(0.8);
+    material_2.set_font_border_edge(0.1);
 
     let start_time = Instant::now();
     let left = -250.0;

@@ -189,9 +189,9 @@ fn create_font(
     let mut mesh = Mesh::new(
         device,
         MeshOptions {
-            vertices: &vertices,
-            indices: &indices,
-            uvs: &uvs,
+            vertices,
+            indices,
+            uvs,
             ..Default::default()
         },
     )?;
