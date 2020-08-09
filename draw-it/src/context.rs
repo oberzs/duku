@@ -380,7 +380,7 @@ impl Context {
             normals.extend(mesh.normals());
             uvs.extend(mesh.uvs());
             colors.extend(mesh.colors());
-            offset = vertices.len() as u32;
+            offset = vertices.len() as u16;
         }
 
         let mesh = Mesh::new(

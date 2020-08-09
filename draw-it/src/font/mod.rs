@@ -29,7 +29,7 @@ pub struct Font {
 #[derive(Copy, Clone)]
 pub(crate) struct CharData {
     pub(crate) advance: f32,
-    pub(crate) offset: u32,
+    pub(crate) offset: u16,
 }
 
 struct FontData {
@@ -166,7 +166,7 @@ fn create_font(
         // vertex relative metrics
         let advance = metrics.advance as f32 / font_size as f32;
 
-        let o = vertices.len() as u32;
+        let o = vertices.len() as u16;
 
         vertices.extend(&[
             Vector3::new(0.0, 0.0, 0.0),

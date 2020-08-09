@@ -275,7 +275,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
         } else {
             Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
         };
-        let vc = vertices.len() as u32;
+        let vc = vertices.len() as u16;
         vertices.extend(&[
             Vector3::new(x as f32, 0.0, half as f32),
             Vector3::new(x as f32, 0.0, -half as f32),
@@ -289,7 +289,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
         } else {
             Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
         };
-        let vc = vertices.len() as u32;
+        let vc = vertices.len() as u16;
         vertices.extend(&[
             Vector3::new(half as f32, 0.0, z as f32),
             Vector3::new(-half as f32, 0.0, z as f32),
@@ -421,10 +421,10 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
 
 fn get_middle_point(
     vertices: &mut Vec<Vector3>,
-    p1: u32,
-    p2: u32,
-    midpoints: &mut HashMap<(u32, u32), u32>,
-) -> u32 {
+    p1: u16,
+    p2: u16,
+    midpoints: &mut HashMap<(u16, u16), u16>,
+) -> u16 {
     match (midpoints.get(&(p1, p2)), midpoints.get(&(p2, p1))) {
         (Some(i), _) => *i,
         (_, Some(i)) => *i,
@@ -434,7 +434,7 @@ fn get_middle_point(
             let middle = (point_1 + point_2) / 2.0;
 
             vertices.push(middle.unit() * 0.5);
-            let i = vertices.len() as u32 - 1;
+            let i = vertices.len() as u16 - 1;
             midpoints.insert((p1, p2), i);
             i
         }

@@ -23,7 +23,7 @@ pub struct Mesh {
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
     colors: Vec<Color>,
-    indices: Vec<u32>,
+    indices: Vec<u16>,
     vertex_buffer: DynamicBuffer,
     index_buffer: DynamicBuffer,
     should_update_vertices: bool,
@@ -36,7 +36,7 @@ pub struct MeshOptions {
     pub uvs: Vec<Vector2>,
     pub normals: Vec<Vector3>,
     pub colors: Vec<Color>,
-    pub indices: Vec<u32>,
+    pub indices: Vec<u16>,
 }
 
 impl Mesh {
@@ -54,7 +54,7 @@ impl Mesh {
 
         let vertex_buffer =
             DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, vertex_count)?;
-        let index_buffer = DynamicBuffer::new::<u32>(device, BufferUsage::Index, index_count)?;
+        let index_buffer = DynamicBuffer::new::<u16>(device, BufferUsage::Index, index_count)?;
 
         // check if has normals
         let no_normals = normals.is_empty();
@@ -97,7 +97,7 @@ impl Mesh {
             normals.extend(&mesh.normals);
             uvs.extend(&mesh.uvs);
             colors.extend(&mesh.colors);
-            offset = vertices.len() as u32;
+            offset = vertices.len() as u16;
         }
         Self::new(
             device,
@@ -157,8 +157,8 @@ impl Mesh {
         self.index_buffer.handle()
     }
 
-    pub(crate) fn index_count(&self) -> u32 {
-        self.indices.len() as u32
+    pub(crate) fn index_count(&self) -> u16 {
+        self.indices.len() as u16
     }
 
     pub(crate) fn set_vertices(&mut self, vertices: Vec<Vector3>) {
@@ -181,7 +181,7 @@ impl Mesh {
         self.should_update_vertices = true;
     }
 
-    pub(crate) fn set_indices(&mut self, indices: Vec<u32>) {
+    pub(crate) fn set_indices(&mut self, indices: Vec<u16>) {
         self.indices = indices;
         self.should_update_indices = true;
     }
@@ -229,7 +229,7 @@ impl Ref<Mesh> {
         self.with(|m| m.set_colors(colors));
     }
 
-    pub fn set_indices(&self, indices: Vec<u32>) {
+    pub fn set_indices(&self, indices: Vec<u16>) {
         self.with(|m| m.set_indices(indices));
     }
 
@@ -249,7 +249,7 @@ impl Ref<Mesh> {
         self.with(|m| m.colors.clone())
     }
 
-    pub fn indices(&self) -> Vec<u32> {
+    pub fn indices(&self) -> Vec<u16> {
         self.with(|m| m.indices.clone())
     }
 }

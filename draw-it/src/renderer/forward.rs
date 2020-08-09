@@ -171,7 +171,7 @@ impl ForwardRenderer {
                 );
                 self.device.cmd_draw(cmd, m.index_count(), 0);
 
-                stats.drawn_indices += m.index_count();
+                stats.drawn_indices += m.index_count() as u32;
                 stats.draw_calls += 1;
             });
         }
@@ -380,7 +380,7 @@ impl ForwardRenderer {
             );
             self.device.cmd_bind_mesh(cmd, m);
             self.device.cmd_draw(cmd, m.index_count(), 0);
-            m.index_count()
+            m.index_count() as u32
         })
     }
 }

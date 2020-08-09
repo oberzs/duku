@@ -719,7 +719,7 @@ impl Device {
     fn cmd_bind_index_buffer(&self, buffer: vk::CommandBuffer, i_buffer: vk::Buffer) {
         unsafe {
             self.handle
-                .cmd_bind_index_buffer(buffer, i_buffer, 0, vk::IndexType::UINT32);
+                .cmd_bind_index_buffer(buffer, i_buffer, 0, vk::IndexType::UINT16);
         }
     }
 
@@ -745,9 +745,10 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u32, offset: u32) {
+    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u16, offset: u16) {
         unsafe {
-            self.handle.cmd_draw_indexed(buffer, count, 1, offset, 0, 0);
+            self.handle
+                .cmd_draw_indexed(buffer, count as u32, 1, offset as u32, 0, 0);
         }
     }
 

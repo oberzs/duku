@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn square_indices(size: u32) -> Vec<u32> {
+fn square_indices(size: u16) -> Vec<u16> {
     let mut indices = Vec::with_capacity(size as usize * size as usize * 2);
     let mut vi = 0;
     for _ in 0..size {
@@ -83,7 +83,7 @@ fn square_indices(size: u32) -> Vec<u32> {
     indices
 }
 
-fn square_vertices(size: u32, time: f32) -> Vec<Vector3> {
+fn square_vertices(size: u16, time: f32) -> Vec<Vector3> {
     let mut vertices = Vec::with_capacity((size as usize + 1) * (size as usize + 1));
     for y in 0..=size {
         for x in 0..=size {
