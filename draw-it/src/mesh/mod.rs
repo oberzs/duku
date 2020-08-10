@@ -209,47 +209,15 @@ impl Mesh {
 }
 
 impl Ref<Mesh> {
-    pub fn calculate_normals(&self) {
-        self.with(|m| m.calculate_normals());
-    }
-
-    pub fn set_vertices(&self, vertices: Vec<Vector3>) {
-        self.with(|m| m.set_vertices(vertices));
-    }
-
-    pub fn set_uvs(&self, uvs: Vec<Vector2>) {
-        self.with(|m| m.set_uvs(uvs));
-    }
-
-    pub fn set_normals(&self, normals: Vec<Vector3>) {
-        self.with(|m| m.set_normals(normals));
-    }
-
-    pub fn set_colors(&self, colors: Vec<Color>) {
-        self.with(|m| m.set_colors(colors));
-    }
-
-    pub fn set_indices(&self, indices: Vec<u16>) {
-        self.with(|m| m.set_indices(indices));
-    }
-
-    pub fn vertices(&self) -> Vec<Vector3> {
-        self.with(|m| m.vertices.clone())
-    }
-
-    pub fn uvs(&self) -> Vec<Vector2> {
-        self.with(|m| m.uvs.clone())
-    }
-
-    pub fn normals(&self) -> Vec<Vector3> {
-        self.with(|m| m.normals.clone())
-    }
-
-    pub fn colors(&self) -> Vec<Color> {
-        self.with(|m| m.colors.clone())
-    }
-
-    pub fn indices(&self) -> Vec<u16> {
-        self.with(|m| m.indices.clone())
-    }
+    ref_action!(calculate_normals);
+    ref_setter!(set_vertices, Vec<Vector3>);
+    ref_getter!(vertices, Vec<Vector3>);
+    ref_setter!(set_normals, Vec<Vector3>);
+    ref_getter!(normals, Vec<Vector3>);
+    ref_setter!(set_indices, Vec<u16>);
+    ref_getter!(indices, Vec<u16>);
+    ref_setter!(set_colors, Vec<Color>);
+    ref_getter!(colors, Vec<Color>);
+    ref_setter!(set_uvs, Vec<Vector2>);
+    ref_getter!(uvs, Vec<Vector2>);
 }

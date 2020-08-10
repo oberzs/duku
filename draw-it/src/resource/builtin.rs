@@ -14,7 +14,9 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
 use crate::image::Framebuffer;
+use crate::image::ImageFormat;
 use crate::image::Texture;
+use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
@@ -54,17 +56,31 @@ impl Builtins {
         uniform: &mut ImageUniform,
     ) -> Result<Self> {
         // textures
-        let white_texture =
-            resources.add_texture(Texture::new(device, uniform, Default::default())?);
+        let white_texture = resources.add_texture(Texture::new(
+            device,
+            uniform,
+            TextureOptions {
+                data: vec![255, 255, 255, 255],
+                format: ImageFormat::Rgba,
+                width: 1,
+                height: 1,
+            },
+        )?);
 
         // materials
-        let white_material = resources.add_material(Material::new(device, layout)?);
-        white_material.set_phong_color([255, 255, 255]);
+        let white_material = {
+            let mut mat = Material::new(device, layout)?;
+            mat.set_phong_color([255, 255, 255]);
+            resources.add_material(mat)
+        };
 
-        let font_material = resources.add_material(Material::new(device, layout)?);
-        font_material.set_font_color([0, 0, 0]);
-        font_material.set_font_width(0.5);
-        font_material.set_font_edge(0.1);
+        let font_material = {
+            let mut mat = Material::new(device, layout)?;
+            mat.set_font_color([0, 0, 0]);
+            mat.set_font_width(0.5);
+            mat.set_font_edge(0.1);
+            resources.add_material(mat)
+        };
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device)?);

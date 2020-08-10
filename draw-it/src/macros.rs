@@ -5,6 +5,7 @@
 
 #![macro_use]
 
+// creates a slice of CStr, used for extensions
 macro_rules! cslice {
     ($(
         $(#[$attr:meta])*
@@ -17,6 +18,7 @@ macro_rules! cslice {
     )*]});
 }
 
+// prints debug info in debug mode
 macro_rules! info {
     ($($arg:expr),*) => {{
         #[cfg(debug_assertions)]
@@ -29,4 +31,40 @@ macro_rules! info {
             $(let _ = &$arg;)*
         }
     }};
+}
+
+// Ref helper macro to generate struct action
+macro_rules! ref_action {
+    ($name:ident) => {
+        pub fn $name(&self) {
+            self.with(|a| a.$name());
+        }
+    };
+}
+
+// Ref helper macro to generate struct setter
+macro_rules! ref_setter {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self, value: $type) {
+            self.with(|a| a.$name(value));
+        }
+    };
+}
+
+// Ref helper macro to generate struct setter from Into implementer
+macro_rules! ref_into_setter {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self, value: impl Into<$type>) {
+            self.with(|a| a.$name(value));
+        }
+    };
+}
+
+// Ref helper macro to generate struct getter
+macro_rules! ref_getter {
+    ($name:ident, $type:ty) => {
+        pub fn $name(&self) -> $type {
+            self.with(|a| a.$name.clone())
+        }
+    };
 }

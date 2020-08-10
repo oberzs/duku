@@ -94,14 +94,3 @@ impl Texture {
         self.image_index
     }
 }
-
-impl Default for TextureOptions {
-    fn default() -> Self {
-        Self {
-            data: vec![255, 255, 255, 255],
-            width: 1,
-            height: 1,
-            format: ImageFormat::Rgba,
-        }
-    }
-}
