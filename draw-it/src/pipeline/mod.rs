@@ -22,7 +22,6 @@ use sampler::SamplerOptions;
 pub(crate) use attachment::Attachment;
 pub(crate) use attachment::AttachmentOptions;
 pub(crate) use layout::ShaderLayout;
-pub(crate) use properties::sampler_index;
 pub(crate) use render_pass::RenderPass;
 pub(crate) use uniform::Descriptor;
 pub(crate) use uniform::ImageUniform;
@@ -36,7 +35,4 @@ pub(crate) use uniform_data::PushConstants;
 pub(crate) use uniform_data::WorldData;
 
 pub use material::Material;
-pub use properties::SamplerAddress;
-pub use properties::SamplerFilter;
-pub use properties::SamplerMipmaps;
 pub use shader::Shader;

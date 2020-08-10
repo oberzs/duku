@@ -8,9 +8,6 @@ use std::sync::Arc;
 
 use super::MaterialData;
 use super::Sampler;
-use super::SamplerAddress;
-use super::SamplerFilter;
-use super::SamplerMipmaps;
 use super::SamplerOptions;
 use super::ShaderLayout;
 use super::WorldData;
@@ -19,6 +16,8 @@ use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
+use crate::image::TextureFilter;
+use crate::image::TextureWrap;
 
 pub(crate) struct WorldUniform {
     descriptor: Descriptor,
@@ -109,19 +108,19 @@ impl ImageUniform {
 
         // create sampler combinations
         let mut sampler_combinations = vec![];
-        for filter in &[SamplerFilter::Linear, SamplerFilter::Nearest] {
-            for address in &[
-                SamplerAddress::Repeat,
-                SamplerAddress::Clamp,
-                SamplerAddress::ClampEdge,
+        for filter in &[TextureFilter::Linear, TextureFilter::Nearest] {
+            for wrap in &[
+                TextureWrap::Repeat,
+                TextureWrap::ClampBorder,
+                TextureWrap::ClampEdge,
             ] {
-                for mipmaps in &[SamplerMipmaps::Enabled, SamplerMipmaps::Disabled] {
+                for mipmaps in &[true, false] {
                     sampler_combinations.push(Sampler::new(
                         device,
                         SamplerOptions {
                             anisotropy,
                             filter: *filter,
-                            address: *address,
+                            wrap: *wrap,
                             mipmaps: *mipmaps,
                         },
                     )?);

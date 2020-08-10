@@ -27,50 +27,6 @@ pub(crate) enum DepthMode {
     Disabled,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SamplerFilter {
-    Linear,
-    Nearest,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SamplerAddress {
-    Repeat,
-    Clamp,
-    ClampEdge,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SamplerMipmaps {
-    Enabled,
-    Disabled,
-}
-
-pub(crate) fn sampler_index(
-    filter: SamplerFilter,
-    address: SamplerAddress,
-    mipmaps: SamplerMipmaps,
-) -> i32 {
-    use SamplerAddress as A;
-    use SamplerFilter as F;
-    use SamplerMipmaps as M;
-
-    match (filter, address, mipmaps) {
-        (F::Linear, A::Repeat, M::Enabled) => 0,
-        (F::Linear, A::Repeat, M::Disabled) => 1,
-        (F::Linear, A::Clamp, M::Enabled) => 2,
-        (F::Linear, A::Clamp, M::Disabled) => 3,
-        (F::Linear, A::ClampEdge, M::Enabled) => 4,
-        (F::Linear, A::ClampEdge, M::Disabled) => 5,
-        (F::Nearest, A::Repeat, M::Enabled) => 6,
-        (F::Nearest, A::Repeat, M::Disabled) => 7,
-        (F::Nearest, A::Clamp, M::Enabled) => 8,
-        (F::Nearest, A::Clamp, M::Disabled) => 9,
-        (F::Nearest, A::ClampEdge, M::Enabled) => 10,
-        (F::Nearest, A::ClampEdge, M::Disabled) => 11,
-    }
-}
-
 impl CullMode {
     pub(crate) fn flag(&self) -> vk::CullModeFlags {
         match *self {
@@ -106,34 +62,6 @@ impl DepthMode {
 
     pub(crate) fn write(&self) -> bool {
         matches!(*self, Self::Write | Self::TestAndWrite)
-    }
-}
-
-impl SamplerAddress {
-    pub(crate) fn flag(&self) -> vk::SamplerAddressMode {
-        match *self {
-            Self::Clamp => vk::SamplerAddressMode::CLAMP_TO_BORDER,
-            Self::ClampEdge => vk::SamplerAddressMode::CLAMP_TO_EDGE,
-            Self::Repeat => vk::SamplerAddressMode::REPEAT,
-        }
-    }
-}
-
-impl SamplerFilter {
-    pub(crate) fn flag(&self) -> vk::Filter {
-        match *self {
-            Self::Linear => vk::Filter::LINEAR,
-            Self::Nearest => vk::Filter::NEAREST,
-        }
-    }
-}
-
-impl SamplerMipmaps {
-    pub(crate) fn flag(&self) -> vk::SamplerMipmapMode {
-        match *self {
-            Self::Enabled => vk::SamplerMipmapMode::LINEAR,
-            Self::Disabled => vk::SamplerMipmapMode::NEAREST,
-        }
     }
 }
 

@@ -8,14 +8,12 @@ use crate::error::Result;
 use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
+use crate::image::TextureFilter;
+use crate::image::TextureWrap;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::mesh::Mesh;
-use crate::pipeline::sampler_index;
 use crate::pipeline::Material;
-use crate::pipeline::SamplerAddress;
-use crate::pipeline::SamplerFilter;
-use crate::pipeline::SamplerMipmaps;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
@@ -31,6 +29,9 @@ pub struct Target {
     pub cascade_splits: [f32; 4],
     pub cast_shadows: bool,
     pub lights: [Light; 4],
+    pub texture_filter: TextureFilter,
+    pub texture_wrap: TextureWrap,
+    pub texture_mipmaps: bool,
 
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
     pub(crate) text_orders: Vec<TextOrder>,
@@ -42,14 +43,6 @@ pub struct Target {
     current_font_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
-    current_sampler: i32,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct SamplerOptions {
-    pub filter: SamplerFilter,
-    pub address: SamplerAddress,
-    pub mipmaps: SamplerMipmaps,
 }
 
 pub(crate) struct OrdersByShader {
@@ -93,7 +86,9 @@ struct Cache {
     current_font_material: Ref<Material>,
     current_albedo: Albedo,
     current_font: Ref<Font>,
-    current_sampler: i32,
+    texture_filter: TextureFilter,
+    texture_wrap: TextureWrap,
+    texture_mipmaps: bool,
     cast_shadows: bool,
 }
 
@@ -114,8 +109,10 @@ impl Target {
             current_font_material: builtins.font_material.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
+            texture_filter: TextureFilter::Linear,
+            texture_wrap: TextureWrap::Repeat,
+            texture_mipmaps: true,
             font_size: 24,
-            current_sampler: 0,
             cast_shadows: true,
             wireframes: false,
             skybox: false,
@@ -133,7 +130,7 @@ impl Target {
             albedo: self.current_albedo.clone(),
             model: transform.into().as_matrix(),
             cast_shadows: self.cast_shadows,
-            sampler_index: self.current_sampler,
+            sampler_index: self.sampler_index(),
         });
     }
 
@@ -248,10 +245,6 @@ impl Target {
         self.current_shader = shader.clone();
     }
 
-    pub fn set_sampler(&mut self, options: SamplerOptions) {
-        self.current_sampler = sampler_index(options.filter, options.address, options.mipmaps);
-    }
-
     fn add_order(&mut self, order: Order) {
         let material = self.current_material.clone();
         let shader = self.current_shader.clone();
@@ -304,6 +297,26 @@ impl Target {
         }
     }
 
+    fn sampler_index(&self) -> i32 {
+        use TextureFilter as F;
+        use TextureWrap as W;
+
+        match (self.texture_filter, self.texture_wrap, self.texture_mipmaps) {
+            (F::Linear, W::Repeat, true) => 0,
+            (F::Linear, W::Repeat, false) => 1,
+            (F::Linear, W::ClampBorder, true) => 2,
+            (F::Linear, W::ClampBorder, false) => 3,
+            (F::Linear, W::ClampEdge, true) => 4,
+            (F::Linear, W::ClampEdge, false) => 5,
+            (F::Nearest, W::Repeat, true) => 6,
+            (F::Nearest, W::Repeat, false) => 7,
+            (F::Nearest, W::ClampBorder, true) => 8,
+            (F::Nearest, W::ClampBorder, false) => 9,
+            (F::Nearest, W::ClampEdge, true) => 10,
+            (F::Nearest, W::ClampEdge, false) => 11,
+        }
+    }
+
     fn store(&self) -> Cache {
         Cache {
             current_shader: self.current_shader.clone(),
@@ -311,7 +324,9 @@ impl Target {
             current_font_material: self.current_font_material.clone(),
             current_albedo: self.current_albedo.clone(),
             current_font: self.current_font.clone(),
-            current_sampler: self.current_sampler,
+            texture_filter: self.texture_filter,
+            texture_wrap: self.texture_wrap,
+            texture_mipmaps: self.texture_mipmaps,
             cast_shadows: self.cast_shadows,
         }
     }
@@ -322,18 +337,10 @@ impl Target {
         self.current_font_material = cache.current_font_material;
         self.current_albedo = cache.current_albedo;
         self.current_font = cache.current_font;
-        self.current_sampler = cache.current_sampler;
+        self.texture_filter = cache.texture_filter;
+        self.texture_wrap = cache.texture_wrap;
+        self.texture_mipmaps = cache.texture_mipmaps;
         self.cast_shadows = cache.cast_shadows;
-    }
-}
-
-impl Default for SamplerOptions {
-    fn default() -> Self {
-        Self {
-            filter: SamplerFilter::Linear,
-            address: SamplerAddress::Repeat,
-            mipmaps: SamplerMipmaps::Enabled,
-        }
     }
 }
 

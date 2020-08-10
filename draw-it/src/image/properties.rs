@@ -54,6 +54,19 @@ pub enum Msaa {
     Disabled,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TextureFilter {
+    Linear,
+    Nearest,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TextureWrap {
+    ClampBorder,
+    ClampEdge,
+    Repeat,
+}
+
 pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
     let mut new_data = Vec::with_capacity(4 * data.len() / 3);
     for pixel in data.chunks(3) {
@@ -189,6 +202,25 @@ impl Msaa {
             Self::X4 => vk::SampleCountFlags::TYPE_4,
             Self::X8 => vk::SampleCountFlags::TYPE_8,
             Self::X16 => vk::SampleCountFlags::TYPE_16,
+        }
+    }
+}
+
+impl TextureWrap {
+    pub(crate) fn flag(&self) -> vk::SamplerAddressMode {
+        match *self {
+            Self::ClampBorder => vk::SamplerAddressMode::CLAMP_TO_BORDER,
+            Self::ClampEdge => vk::SamplerAddressMode::CLAMP_TO_EDGE,
+            Self::Repeat => vk::SamplerAddressMode::REPEAT,
+        }
+    }
+}
+
+impl TextureFilter {
+    pub(crate) fn flag(&self) -> vk::Filter {
+        match *self {
+            Self::Linear => vk::Filter::LINEAR,
+            Self::Nearest => vk::Filter::NEAREST,
         }
     }
 }

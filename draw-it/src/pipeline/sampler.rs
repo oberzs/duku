@@ -6,11 +6,10 @@
 use ash::vk;
 use std::sync::Arc;
 
-use super::SamplerAddress;
-use super::SamplerFilter;
-use super::SamplerMipmaps;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::TextureFilter;
+use crate::image::TextureWrap;
 
 pub(crate) struct Sampler {
     handle: vk::Sampler,
@@ -20,35 +19,38 @@ pub(crate) struct Sampler {
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct SamplerOptions {
     pub(crate) anisotropy: f32,
-    pub(crate) address: SamplerAddress,
-    pub(crate) filter: SamplerFilter,
-    pub(crate) mipmaps: SamplerMipmaps,
+    pub(crate) wrap: TextureWrap,
+    pub(crate) filter: TextureFilter,
+    pub(crate) mipmaps: bool,
 }
 
 impl Sampler {
     pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Result<Self> {
-        let max_lod = match options.mipmaps {
-            SamplerMipmaps::Enabled => 16.0,
-            SamplerMipmaps::Disabled => 0.0,
+        let max_lod = if options.mipmaps { 16.0 } else { 0.0 };
+        let anisotropy = if options.mipmaps {
+            options.anisotropy
+        } else {
+            0.0
         };
-        let anisotropy = match options.mipmaps {
-            SamplerMipmaps::Enabled => options.anisotropy,
-            SamplerMipmaps::Disabled => 0.0,
+        let mipmap_mode = if options.mipmaps {
+            vk::SamplerMipmapMode::LINEAR
+        } else {
+            vk::SamplerMipmapMode::NEAREST
         };
 
         let info = vk::SamplerCreateInfo::builder()
             .mag_filter(options.filter.flag())
             .min_filter(options.filter.flag())
-            .address_mode_u(options.address.flag())
-            .address_mode_v(options.address.flag())
-            .address_mode_w(options.address.flag())
+            .address_mode_u(options.wrap.flag())
+            .address_mode_v(options.wrap.flag())
+            .address_mode_w(options.wrap.flag())
             .anisotropy_enable(anisotropy != 0.0)
             .max_anisotropy(anisotropy)
             .border_color(vk::BorderColor::FLOAT_OPAQUE_WHITE)
             .unnormalized_coordinates(false)
             .compare_enable(true)
             .compare_op(vk::CompareOp::LESS_OR_EQUAL)
-            .mipmap_mode(options.mipmaps.flag())
+            .mipmap_mode(mipmap_mode)
             .mip_lod_bias(0.0)
             .min_lod(0.0)
             .max_lod(max_lod);
@@ -76,9 +78,9 @@ impl Default for SamplerOptions {
     fn default() -> Self {
         Self {
             anisotropy: 0.0,
-            address: SamplerAddress::Repeat,
-            filter: SamplerFilter::Linear,
-            mipmaps: SamplerMipmaps::Enabled,
+            wrap: TextureWrap::Repeat,
+            filter: TextureFilter::Linear,
+            mipmaps: true,
         }
     }
 }
