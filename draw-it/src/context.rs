@@ -29,7 +29,6 @@ use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
-use crate::mesh::MeshData;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -357,57 +356,28 @@ impl Context {
         Ok(())
     }
 
-    pub fn create_mesh(&mut self, data: MeshData) -> Result<Mesh> {
-        let core_mesh = CoreMesh::new(&self.device, data.vertices.len(), data.indices.len())?;
+    pub fn create_mesh(&mut self) -> Result<Mesh> {
+        let core_mesh = CoreMesh::new(&self.device)?;
         let index = self.resources.add_mesh(core_mesh);
-        Mesh::new(index, data)
+        Ok(Mesh::new(index))
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
-        let core_mesh = CoreMesh::new(&self.device, mesh.vertices.len(), mesh.indices.len())?;
+        let core_mesh = CoreMesh::new(&self.device)?;
         let index = self.resources.add_mesh(core_mesh);
-
-        Mesh::new(
-            index,
-            MeshData {
-                vertices: mesh.vertices.clone(),
-                normals: mesh.normals.clone(),
-                colors: mesh.colors.clone(),
-                uvs: mesh.uvs.clone(),
-                indices: mesh.indices.clone(),
-            },
-        )
+        let mut result = Mesh::new(index);
+        result.set_vertices(mesh.vertices().to_vec());
+        result.set_normals(mesh.normals().to_vec());
+        result.set_colors(mesh.colors().to_vec());
+        result.set_uvs(mesh.uvs().to_vec());
+        result.set_indices(mesh.indices().to_vec());
+        Ok(result)
     }
 
     pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
-        let mut offset = 0;
-        let mut indices = vec![];
-        let mut vertices = vec![];
-        let mut normals = vec![];
-        let mut uvs = vec![];
-        let mut colors = vec![];
-        for mesh in meshes {
-            indices.extend(mesh.indices.iter().map(|i| i + offset));
-            vertices.extend(&mesh.vertices);
-            normals.extend(&mesh.normals);
-            uvs.extend(&mesh.uvs);
-            colors.extend(&mesh.colors);
-            offset = vertices.len() as u16;
-        }
-
-        let core_mesh = CoreMesh::new(&self.device, vertices.len(), indices.len())?;
+        let core_mesh = CoreMesh::new(&self.device)?;
         let index = self.resources.add_mesh(core_mesh);
-
-        Mesh::new(
-            index,
-            MeshData {
-                vertices,
-                normals,
-                uvs,
-                colors,
-                indices,
-            },
-        )
+        Ok(Mesh::combine(index, meshes))
     }
 
     pub fn create_material(&mut self) -> Result<Ref<Material>> {

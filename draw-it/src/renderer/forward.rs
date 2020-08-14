@@ -144,37 +144,36 @@ impl ForwardRenderer {
         let mut unique_materials = HashSet::new();
 
         // skybox rendering
-        // if target.skybox {
-        //     target.builtins.skybox_shader.with(|s| {
-        //         self.device.cmd_bind_shader(cmd, s);
-        //         unique_shaders.insert(s.handle());
-        //     });
-        //     stats.shader_rebinds += 1;
+        if target.skybox {
+            target.builtins.skybox_shader.with(|s| {
+                self.device.cmd_bind_shader(cmd, s);
+                unique_shaders.insert(s.handle());
+            });
+            stats.shader_rebinds += 1;
 
-        //     target.builtins.cube_mesh.with(|m| {
-        //         self.device.cmd_bind_mesh(cmd, m);
+            let mesh = target.resources.mesh(&target.builtins.cube_mesh.index);
+            self.device.cmd_bind_mesh(cmd, mesh);
 
-        //         let model_matrix = (Transform {
-        //             position: framebuffer.camera.transform.position,
-        //             scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
-        //             ..Default::default()
-        //         })
-        //         .as_matrix();
-        //         self.device.cmd_push_constants(
-        //             cmd,
-        //             shader_layout,
-        //             PushConstants {
-        //                 sampler_index: 0,
-        //                 albedo_index: 0,
-        //                 model_matrix,
-        //             },
-        //         );
-        //         self.device.cmd_draw(cmd, m.index_count(), 0);
+            let model_matrix = (Transform {
+                position: framebuffer.camera.transform.position,
+                scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
+                ..Default::default()
+            })
+            .as_matrix();
+            self.device.cmd_push_constants(
+                cmd,
+                shader_layout,
+                PushConstants {
+                    sampler_index: 0,
+                    albedo_index: 0,
+                    model_matrix,
+                },
+            );
+            self.device.cmd_draw(cmd, mesh.index_count(), 0);
 
-        //         stats.drawn_indices += m.index_count() as u32;
-        //         stats.draw_calls += 1;
-        //     });
-        // }
+            stats.drawn_indices += mesh.index_count() as u32;
+            stats.draw_calls += 1;
+        }
 
         // normal mesh rendering
         for s_order in &target.orders_by_shader {

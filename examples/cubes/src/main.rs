@@ -10,7 +10,6 @@ use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Light;
 use draw_it::Mesh;
-use draw_it::MeshData;
 use draw_it::Quaternion;
 use draw_it::Result;
 use draw_it::Transform;
@@ -144,7 +143,6 @@ fn square_mesh(
     let z_pos = size.y / 2.0;
     let z_neg = -size.y / 2.0;
 
-    // create data
     let mut vertices = vec![
         Vector3::new(x_neg, 0.0, z_neg),
         Vector3::new(x_neg, 0.0, z_pos),
@@ -159,10 +157,10 @@ fn square_mesh(
         *v += position;
     }
 
-    // generate mesh
-    context.create_mesh(MeshData {
-        vertices,
-        indices,
-        ..Default::default()
-    })
+    let mut mesh = context.create_mesh()?;
+    mesh.set_vertices(vertices);
+    mesh.set_indices(indices);
+    mesh.calculate_normals();
+
+    Ok(mesh)
 }

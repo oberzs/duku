@@ -51,7 +51,6 @@ pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::Mesh;
-pub use mesh::MeshData;
 pub use quality::Quality;
 pub use quality::QualityOptions;
 pub use renderer::Camera;

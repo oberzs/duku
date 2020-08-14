@@ -21,7 +21,6 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
-use crate::mesh::MeshData;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -177,61 +176,49 @@ impl Builtins {
 }
 
 fn create_surface(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let vertices = vec![
+    let core_mesh = CoreMesh::new(device)?;
+    let index = resources.add_mesh(core_mesh);
+    let mut mesh = Mesh::new(index);
+
+    mesh.set_vertices(vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, -1.0, 0.0),
         Vector3::new(-1.0, -1.0, 0.0),
-    ];
-    let uvs = vec![
+    ]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    mesh.calculate_normals();
 
-    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
-    let index = resources.add_mesh(core_mesh);
-
-    Mesh::new(
-        index,
-        MeshData {
-            vertices,
-            indices,
-            uvs,
-            ..Default::default()
-        },
-    )
+    Ok(mesh)
 }
 
 fn create_quad(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let vertices = vec![
+    let core_mesh = CoreMesh::new(device)?;
+    let index = resources.add_mesh(core_mesh);
+    let mut mesh = Mesh::new(index);
+
+    mesh.set_vertices(vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
-    ];
-    let uvs = vec![
+    ]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    mesh.calculate_normals();
 
-    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
-    let index = resources.add_mesh(core_mesh);
-
-    Mesh::new(
-        index,
-        MeshData {
-            vertices,
-            indices,
-            uvs,
-            ..Default::default()
-        },
-    )
+    Ok(mesh)
 }
 
 fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
@@ -289,29 +276,22 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
         [0.5, -0.5, -0.5],
     )?;
 
-    let vertex_count = top.vertices.len()
-        + bottom.vertices.len()
-        + front.vertices.len()
-        + back.vertices.len()
-        + left.vertices.len()
-        + right.vertices.len();
-    let index_count = top.indices.len()
-        + bottom.indices.len()
-        + front.indices.len()
-        + back.indices.len()
-        + left.indices.len()
-        + right.indices.len();
-    let core_mesh = CoreMesh::new(device, vertex_count, index_count)?;
+    let core_mesh = CoreMesh::new(device)?;
     let index = resources.add_mesh(core_mesh);
 
-    Mesh::combine(index, &[top, bottom, front, back, left, right])
+    Ok(Mesh::combine(
+        index,
+        &[top, bottom, front, back, left, right],
+    ))
 }
 
 fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32) -> Result<Mesh> {
+    let core_mesh = CoreMesh::new(device)?;
+    let index = resources.add_mesh(core_mesh);
+    let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
     let mut indices = vec![];
-    let half = size as i32 / 2;
 
     for x in -half..=half {
         let color = if x == 0 {
@@ -342,18 +322,11 @@ fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32)
         indices.extend(&[vc, vc + 1]);
     }
 
-    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
-    let index = resources.add_mesh(core_mesh);
-
-    Mesh::new(
-        index,
-        MeshData {
-            vertices,
-            indices,
-            colors,
-            ..Default::default()
-        },
-    )
+    let mut mesh = Mesh::new(index);
+    mesh.set_vertices(vertices);
+    mesh.set_colors(colors);
+    mesh.set_indices(indices);
+    Ok(mesh)
 }
 
 fn create_rectangle<V: Into<Vector3>>(
@@ -364,27 +337,21 @@ fn create_rectangle<V: Into<Vector3>>(
     p3: V,
     p4: V,
 ) -> Result<Mesh> {
-    let vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
-    let uvs = vec![
+    let core_mesh = CoreMesh::new(device)?;
+    let index = resources.add_mesh(core_mesh);
+    let mut mesh = Mesh::new(index);
+
+    mesh.set_vertices(vec![p1.into(), p2.into(), p3.into(), p4.into()]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ];
-    let indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    mesh.calculate_normals();
 
-    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
-    let index = resources.add_mesh(core_mesh);
-
-    Mesh::new(
-        index,
-        MeshData {
-            vertices,
-            indices,
-            uvs,
-            ..Default::default()
-        },
-    )
+    Ok(mesh)
 }
 
 fn create_sphere(
@@ -392,6 +359,9 @@ fn create_sphere(
     resources: &mut ResourceManager,
     detail_level: u32,
 ) -> Result<Mesh> {
+    let core_mesh = CoreMesh::new(device)?;
+    let index = resources.add_mesh(core_mesh);
+
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -463,18 +433,12 @@ fn create_sphere(
         uvs.push(Vector2::new(u, v));
     }
 
-    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
-    let index = resources.add_mesh(core_mesh);
-
-    Mesh::new(
-        index,
-        MeshData {
-            vertices,
-            indices,
-            uvs,
-            ..Default::default()
-        },
-    )
+    let mut mesh = Mesh::new(index);
+    mesh.set_vertices(vertices);
+    mesh.set_indices(indices);
+    mesh.set_uvs(uvs);
+    mesh.calculate_normals();
+    Ok(mesh)
 }
 
 fn get_middle_point(
