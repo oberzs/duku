@@ -38,8 +38,8 @@ use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::mesh::Mesh;
-use crate::mesh::MeshOptions;
+use crate::mesh::CoreMesh;
+use crate::mesh::MeshUpdateData;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
@@ -55,7 +55,7 @@ pub use imgui;
 pub(crate) struct Ui {
     framebuffer: Ref<Framebuffer>,
     shader: Shader,
-    mesh: Mesh,
+    mesh: CoreMesh,
     texture: Texture,
     drawn: bool,
 
@@ -159,14 +159,7 @@ impl Ui {
             include_bytes!("../shaders/ui.shader"),
         )?;
 
-        let mesh = Mesh::new(
-            device,
-            MeshOptions {
-                vertices: vec![Vector3::new(0.0, 0.0, 0.0)],
-                indices: vec![0, 0, 0],
-                ..Default::default()
-            },
-        )?;
+        let mesh = CoreMesh::new(device, 1, 3)?;
 
         Ok(Self {
             device: Arc::clone(device),
@@ -218,12 +211,13 @@ impl Ui {
         }
 
         // update mesh
-        self.mesh.set_vertices(vertices);
-        self.mesh.set_normals(normals);
-        self.mesh.set_colors(colors);
-        self.mesh.set_uvs(uvs);
-        self.mesh.set_indices(indices);
-        self.mesh.update_if_needed()?;
+        self.mesh.update_if_needed(MeshUpdateData {
+            vertices: &vertices,
+            normals: &normals,
+            colors: &colors,
+            uvs: &uvs,
+            indices: &indices,
+        })?;
 
         // render ui
         let cmd = self.device.command_buffer();

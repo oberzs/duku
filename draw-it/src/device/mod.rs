@@ -32,7 +32,7 @@ use crate::image::ImageMemory;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
-use crate::mesh::Mesh;
+use crate::mesh::CoreMesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
@@ -702,7 +702,7 @@ impl Device {
         self.cmd_bind_uniform(buffer, layout, material.uniform());
     }
 
-    pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &Mesh) {
+    pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &CoreMesh) {
         self.cmd_bind_index_buffer(buffer, mesh.index_buffer());
         self.cmd_bind_vertex_buffer(buffer, mesh.vertex_buffer());
     }
@@ -745,7 +745,7 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: u16, offset: u16) {
+    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: usize, offset: usize) {
         unsafe {
             self.handle
                 .cmd_draw_indexed(buffer, count as u32, 1, offset as u32, 0, 0);

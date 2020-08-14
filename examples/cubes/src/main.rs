@@ -10,7 +10,7 @@ use draw_it::Context;
 use draw_it::ContextOptions;
 use draw_it::Light;
 use draw_it::Mesh;
-use draw_it::MeshOptions;
+use draw_it::MeshData;
 use draw_it::Quaternion;
 use draw_it::Result;
 use draw_it::Transform;
@@ -160,7 +160,7 @@ fn square_mesh(
     }
 
     // generate mesh
-    context.create_mesh(MeshOptions {
+    context.create_mesh(MeshData {
         vertices,
         indices,
         ..Default::default()

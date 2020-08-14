@@ -84,7 +84,7 @@ impl ForwardRenderer {
         &mut self,
         framebuffer: &mut Framebuffer,
         shader_layout: &ShaderLayout,
-        target: Target,
+        target: Target<'_>,
         stats: &mut Stats,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
@@ -144,37 +144,37 @@ impl ForwardRenderer {
         let mut unique_materials = HashSet::new();
 
         // skybox rendering
-        if target.skybox {
-            target.builtins.skybox_shader.with(|s| {
-                self.device.cmd_bind_shader(cmd, s);
-                unique_shaders.insert(s.handle());
-            });
-            stats.shader_rebinds += 1;
+        // if target.skybox {
+        //     target.builtins.skybox_shader.with(|s| {
+        //         self.device.cmd_bind_shader(cmd, s);
+        //         unique_shaders.insert(s.handle());
+        //     });
+        //     stats.shader_rebinds += 1;
 
-            target.builtins.cube_mesh.with(|m| {
-                self.device.cmd_bind_mesh(cmd, m);
+        //     target.builtins.cube_mesh.with(|m| {
+        //         self.device.cmd_bind_mesh(cmd, m);
 
-                let model_matrix = (Transform {
-                    position: framebuffer.camera.transform.position,
-                    scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
-                    ..Default::default()
-                })
-                .as_matrix();
-                self.device.cmd_push_constants(
-                    cmd,
-                    shader_layout,
-                    PushConstants {
-                        sampler_index: 0,
-                        albedo_index: 0,
-                        model_matrix,
-                    },
-                );
-                self.device.cmd_draw(cmd, m.index_count(), 0);
+        //         let model_matrix = (Transform {
+        //             position: framebuffer.camera.transform.position,
+        //             scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
+        //             ..Default::default()
+        //         })
+        //         .as_matrix();
+        //         self.device.cmd_push_constants(
+        //             cmd,
+        //             shader_layout,
+        //             PushConstants {
+        //                 sampler_index: 0,
+        //                 albedo_index: 0,
+        //                 model_matrix,
+        //             },
+        //         );
+        //         self.device.cmd_draw(cmd, m.index_count(), 0);
 
-                stats.drawn_indices += m.index_count() as u32;
-                stats.draw_calls += 1;
-            });
-        }
+        //         stats.drawn_indices += m.index_count() as u32;
+        //         stats.draw_calls += 1;
+        //     });
+        // }
 
         // normal mesh rendering
         for s_order in &target.orders_by_shader {
@@ -192,7 +192,7 @@ impl ForwardRenderer {
                 stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    stats.drawn_indices += self.draw_order(order, shader_layout);
+                    stats.drawn_indices += self.draw_order(&target, shader_layout, order);
                     stats.draw_calls += 1;
                 }
             }
@@ -272,7 +272,7 @@ impl ForwardRenderer {
     fn shadow_pass(
         &mut self,
         shader_layout: &ShaderLayout,
-        target: &Target,
+        target: &Target<'_>,
         view: &Camera,
     ) -> Result<()> {
         let light_dir = match target.lights.iter().find(|l| l.shadows) {
@@ -351,7 +351,7 @@ impl ForwardRenderer {
                 for m_order in &s_order.orders_by_material {
                     for order in &m_order.orders {
                         if order.cast_shadows {
-                            self.draw_order(order, shader_layout);
+                            self.draw_order(target, shader_layout, order);
                         }
                     }
                 }
@@ -362,26 +362,26 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn draw_order(&self, order: &Order, shader_layout: &ShaderLayout) -> u32 {
+    fn draw_order(&self, target: &Target<'_>, shader_layout: &ShaderLayout, order: &Order) -> u32 {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
             Albedo::Framebuffer(fra) => fra.with(|f| f.texture_index()),
         };
-        order.mesh.with(|m| {
-            self.device.cmd_push_constants(
-                cmd,
-                shader_layout,
-                PushConstants {
-                    model_matrix: order.model,
-                    sampler_index: order.sampler_index,
-                    albedo_index,
-                },
-            );
-            self.device.cmd_bind_mesh(cmd, m);
-            self.device.cmd_draw(cmd, m.index_count(), 0);
-            m.index_count() as u32
-        })
+        let mesh = target.resources.mesh(&order.mesh);
+
+        self.device.cmd_push_constants(
+            cmd,
+            shader_layout,
+            PushConstants {
+                model_matrix: order.model,
+                sampler_index: order.sampler_index,
+                albedo_index,
+            },
+        );
+        self.device.cmd_bind_mesh(cmd, mesh);
+        self.device.cmd_draw(cmd, mesh.index_count(), 0);
+        mesh.index_count() as u32
     }
 }
 
