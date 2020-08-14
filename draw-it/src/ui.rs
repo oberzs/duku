@@ -44,7 +44,7 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::WorldData;
+use crate::pipeline::WorldUniformData;
 use crate::renderer::CameraType;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
@@ -230,7 +230,7 @@ impl Ui {
             let world_matrix = f.camera.matrix();
             let camera_position = f.camera.transform.position;
             f.world_uniform
-                .update(WorldData {
+                .update(WorldUniformData {
                     light_matrices: [Matrix4::identity(); 4],
                     lights: [Default::default(); 4],
                     cascade_splits: [0.0; 4],

@@ -29,10 +29,9 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let base_material = context.builtins.font_material.clone();
-    let material_1 = context.create_material()?;
+    let mut material_1 = context.create_material()?;
     material_1.set_font_color(Color::RED);
-    let material_2 = context.create_material()?;
+    let mut material_2 = context.create_material()?;
     material_2.set_font_color(Color::BLUE);
     material_2.set_font_border_color(Color::WHITE);
     material_2.set_font_width(0.5);
@@ -57,21 +56,22 @@ fn main() -> Result<()> {
                 format!("SDF {}p text\n... in two lines!", sdf_size),
                 [left, 200.0, 1.0],
             );
-            target.font_size = 32;
-            target.set_font_material(&material_1);
-            target.draw_text("Bitmap 32p text", [left, 100.0, 1.0]);
-            target.set_font_material(&base_material);
             target.font_size = 24;
             target.draw_text("Bitmap 24p text", [left, 68.0, 1.0]);
             target.font_size = 18;
             target.draw_text("Bitmap 18p text", [left, 44.0, 1.0]);
+
+            // render with custom material
+            target.set_font_material(&material_1);
+            target.font_size = 32;
+            target.draw_text("Bitmap 32p text", [left, 100.0, 1.0]);
+            target.set_font_material(&material_2);
             target.font_size = 40;
             let transform = Transform {
                 position: Vector3::new(left, 0.0, 1.0),
                 scale: Vector3::new(dynamic_size, dynamic_size, dynamic_size),
                 ..Default::default()
             };
-            target.set_font_material(&material_2);
             target.draw_text("Dynamic\n-text-", transform);
         })?;
     }

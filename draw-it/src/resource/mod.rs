@@ -16,8 +16,8 @@ use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::mesh::CoreMesh;
+use crate::pipeline::CoreMaterial;
 use crate::pipeline::ImageUniform;
-use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use storage::Storage;
 
@@ -27,11 +27,11 @@ pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
     textures: Vec<Storage<Texture>>,
-    materials: Vec<Storage<Material>>,
     shaders: Vec<Storage<Shader>>,
     fonts: Vec<Storage<Font>>,
     framebuffers: Vec<Storage<Framebuffer>>,
 
+    materials: HashMap<Index, CoreMaterial>,
     meshes: HashMap<Index, CoreMesh>,
     next_index: u32,
 }
@@ -40,10 +40,10 @@ impl ResourceManager {
     pub(crate) fn new() -> Self {
         Self {
             textures: vec![],
-            materials: vec![],
             shaders: vec![],
             fonts: vec![],
             framebuffers: vec![],
+            materials: HashMap::new(),
             meshes: HashMap::new(),
             next_index: 0,
         }
@@ -56,11 +56,11 @@ impl ResourceManager {
         reference
     }
 
-    pub(crate) fn add_material(&mut self, material: Material) -> Ref<Material> {
-        let storage = Storage::new(material);
-        let reference = storage.as_ref();
-        self.materials.push(storage);
-        reference
+    pub(crate) fn add_material(&mut self, material: CoreMaterial) -> Index {
+        let index = Index::new(self.next_index);
+        self.next_index += 1;
+        self.materials.insert(index.clone(), material);
+        index
     }
 
     pub(crate) fn add_mesh(&mut self, mesh: CoreMesh) -> Index {
@@ -91,6 +91,14 @@ impl ResourceManager {
         reference
     }
 
+    pub(crate) fn material(&self, index: &Index) -> &CoreMaterial {
+        self.materials.get(index).expect("bad index")
+    }
+
+    pub(crate) fn material_mut(&mut self, index: &Index) -> &mut CoreMaterial {
+        self.materials.get_mut(index).expect("bad index")
+    }
+
     pub(crate) fn mesh(&self, index: &Index) -> &CoreMesh {
         self.meshes.get(index).expect("bad index")
     }
@@ -102,21 +110,11 @@ impl ResourceManager {
     pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
         self.fonts.retain(|r| r.count() != 0);
         // self.meshes.retain(|r| r.count() != 0);
-        self.materials.retain(|r| r.count() != 0);
+        // self.materials.retain(|r| r.count() != 0);
         self.shaders.retain(|r| r.count() != 0);
         self.framebuffers.retain(|r| r.count() != 0);
         self.textures
             .drain_filter(|r| r.count() == 0)
             .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
-    }
-
-    pub(crate) fn update_if_needed(&self) -> Result<()> {
-        // for mesh in &self.meshes {
-        // mesh.with(|m| m.update_if_needed())?;
-        // }
-        for material in &self.materials {
-            material.with(|m| m.update_if_needed())?;
-        }
-        Ok(())
     }
 }

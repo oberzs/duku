@@ -6,11 +6,10 @@
 use ash::vk;
 use std::sync::Arc;
 
-use super::MaterialData;
 use super::Sampler;
 use super::SamplerOptions;
 use super::ShaderLayout;
-use super::WorldData;
+use super::WorldUniformData;
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
@@ -20,11 +19,6 @@ use crate::image::TextureFilter;
 use crate::image::TextureWrap;
 
 pub(crate) struct WorldUniform {
-    descriptor: Descriptor,
-    buffer: DynamicBuffer,
-}
-
-pub(crate) struct MaterialUniform {
     descriptor: Descriptor,
     buffer: DynamicBuffer,
 }
@@ -51,7 +45,7 @@ pub(crate) trait Uniform {
 
 impl WorldUniform {
     pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<WorldData>(device, BufferUsage::Uniform, 1)?;
+        let buffer = DynamicBuffer::new::<WorldUniformData>(device, BufferUsage::Uniform, 1)?;
 
         let descriptor_set = layout.world_set(&buffer)?;
         let descriptor = Descriptor(0, descriptor_set);
@@ -59,7 +53,7 @@ impl WorldUniform {
         Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update(&mut self, data: WorldData) -> Result<()> {
+    pub(crate) fn update(&mut self, data: WorldUniformData) -> Result<()> {
         self.buffer.update_data(&[data])
     }
 }
@@ -67,33 +61,6 @@ impl WorldUniform {
 impl Uniform for WorldUniform {
     fn descriptor(&self) -> Descriptor {
         self.descriptor
-    }
-}
-
-impl MaterialUniform {
-    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<MaterialData>(device, BufferUsage::Uniform, 1)?;
-
-        let descriptor_set = layout.material_set(&buffer)?;
-        let descriptor = Descriptor(1, descriptor_set);
-
-        Ok(Self { buffer, descriptor })
-    }
-
-    pub(crate) fn update(&mut self, data: MaterialData) -> Result<()> {
-        self.buffer.update_data(&[data])
-    }
-}
-
-impl Uniform for MaterialUniform {
-    fn descriptor(&self) -> Descriptor {
-        self.descriptor
-    }
-}
-
-impl PartialEq for MaterialUniform {
-    fn eq(&self, other: &Self) -> bool {
-        self.buffer == other.buffer
     }
 }
 

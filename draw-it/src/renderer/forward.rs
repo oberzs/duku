@@ -27,7 +27,7 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
 use crate::pipeline::Uniform;
-use crate::pipeline::WorldData;
+use crate::pipeline::WorldUniformData;
 use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
@@ -121,7 +121,7 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        framebuffer.world_uniform.update(WorldData {
+        framebuffer.world_uniform.update(WorldUniformData {
             camera_position: framebuffer.camera.transform.position,
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
@@ -177,6 +177,7 @@ impl ForwardRenderer {
 
         // normal mesh rendering
         for s_order in &target.orders_by_shader {
+            // bind shader
             s_order.shader.with(|s| {
                 self.device.cmd_bind_shader(cmd, s);
                 unique_shaders.insert(s.handle());
@@ -184,10 +185,10 @@ impl ForwardRenderer {
             stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
-                m_order.material.with(|m| {
-                    self.device.cmd_bind_material(cmd, shader_layout, m);
-                    unique_materials.insert(m.uniform().descriptor());
-                });
+                // bind material
+                let material = target.resources.material(&m_order.material);
+                self.device.cmd_bind_material(cmd, shader_layout, material);
+                unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
@@ -200,16 +201,17 @@ impl ForwardRenderer {
         // text rendering
         for t_order in &target.text_orders {
             t_order.font.with(|f| {
+                // bind shader
                 t_order.shader.with(|s| {
                     self.device.cmd_bind_shader(cmd, s);
                     unique_shaders.insert(s.handle());
                 });
                 stats.shader_rebinds += 1;
 
-                t_order.material.with(|m| {
-                    self.device.cmd_bind_material(cmd, shader_layout, m);
-                    unique_materials.insert(m.uniform().descriptor());
-                });
+                // bind material
+                let material = target.resources.material(&t_order.material);
+                self.device.cmd_bind_material(cmd, shader_layout, material);
+                unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
 
                 let font_size = t_order.size;
@@ -326,7 +328,7 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.world_uniform.update(WorldData {
+            framebuffer.world_uniform.update(WorldUniformData {
                 light_matrices: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 lights: [Default::default(); 4],

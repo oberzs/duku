@@ -46,6 +46,8 @@ impl Vector4 {
             self.w.round(),
         )
     }
+
+    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 0.0);
 }
 
 impl From<[f32; 4]> for Vector4 {
