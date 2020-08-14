@@ -19,7 +19,7 @@ use crate::resource::Index;
 pub(crate) use vertex::Vertex;
 
 // user facing Mesh data
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Mesh {
     pub(crate) index: Index,
 
@@ -149,6 +149,16 @@ impl Mesh {
 
     pub fn indices(&self) -> &[u16] {
         &self.indices
+    }
+
+    pub(crate) fn data(&self) -> MeshUpdateData<'_> {
+        MeshUpdateData {
+            vertices: &self.vertices,
+            normals: &self.normals,
+            colors: &self.colors,
+            uvs: &self.uvs,
+            indices: &self.indices,
+        }
     }
 }
 

@@ -29,6 +29,7 @@ use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
+use crate::pipeline::CoreMaterial;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -357,14 +358,12 @@ impl Context {
     }
 
     pub fn create_mesh(&mut self) -> Result<Mesh> {
-        let core_mesh = CoreMesh::new(&self.device)?;
-        let index = self.resources.add_mesh(core_mesh);
+        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
         Ok(Mesh::new(index))
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
-        let core_mesh = CoreMesh::new(&self.device)?;
-        let index = self.resources.add_mesh(core_mesh);
+        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
         let mut result = Mesh::new(index);
         result.set_vertices(mesh.vertices().to_vec());
         result.set_normals(mesh.normals().to_vec());
@@ -375,14 +374,15 @@ impl Context {
     }
 
     pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
-        let core_mesh = CoreMesh::new(&self.device)?;
-        let index = self.resources.add_mesh(core_mesh);
+        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
         Ok(Mesh::combine(index, meshes))
     }
 
-    pub fn create_material(&mut self) -> Result<Ref<Material>> {
-        let material = Material::new(&self.device, &self.shader_layout)?;
-        Ok(self.resources.add_material(material))
+    pub fn create_material(&mut self) -> Result<Material> {
+        let index = self
+            .resources
+            .add_material(CoreMaterial::new(&self.device, &self.shader_layout)?);
+        Ok(Material::new(index))
     }
 
     pub fn create_framebuffer(
@@ -438,7 +438,6 @@ impl Context {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
-        self.resources.update_if_needed()?;
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_uniform(
             self.device.command_buffer(),

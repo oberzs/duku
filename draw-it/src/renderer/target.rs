@@ -15,6 +15,7 @@ use crate::math::Transform;
 use crate::mesh::Mesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::Material;
+use crate::pipeline::MaterialUpdateData;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
@@ -43,8 +44,8 @@ pub struct Target<'storage> {
     pub(crate) resources: &'storage mut ResourceManager,
 
     current_shader: Ref<Shader>,
-    current_material: Ref<Material>,
-    current_font_material: Ref<Material>,
+    current_material: Index,
+    current_font_material: Index,
     current_albedo: Albedo,
     current_font: Ref<Font>,
 }
@@ -55,7 +56,7 @@ pub(crate) struct OrdersByShader {
 }
 
 pub(crate) struct OrdersByMaterial {
-    pub(crate) material: Ref<Material>,
+    pub(crate) material: Index,
     pub(crate) orders: Vec<Order>,
 }
 
@@ -72,7 +73,7 @@ pub(crate) struct TextOrder {
     pub(crate) font: Ref<Font>,
     pub(crate) size: u32,
     pub(crate) shader: Ref<Shader>,
-    pub(crate) material: Ref<Material>,
+    pub(crate) material: Index,
     pub(crate) text: String,
     pub(crate) transform: Transform,
     pub(crate) sampler_index: i32,
@@ -86,8 +87,8 @@ pub enum Albedo {
 
 struct Cache {
     current_shader: Ref<Shader>,
-    current_material: Ref<Material>,
-    current_font_material: Ref<Material>,
+    current_material: Index,
+    current_font_material: Index,
     current_albedo: Albedo,
     current_font: Ref<Font>,
     texture_filter: TextureFilter,
@@ -101,6 +102,19 @@ impl<'storage> Target<'storage> {
         builtins: &'storage Builtins,
         resources: &'storage mut ResourceManager,
     ) -> Result<Self> {
+        // update builtins
+        let current_material = &builtins.white_material;
+        resources
+            .material_mut(&current_material.index)
+            .update_if_needed(current_material.data(), current_material.index.version())?;
+        let current_font_material = &builtins.font_material;
+        resources
+            .material_mut(&current_font_material.index)
+            .update_if_needed(
+                current_font_material.data(),
+                current_font_material.index.version(),
+            )?;
+
         Ok(Self {
             orders_by_shader: vec![],
             text_orders: vec![],
@@ -112,8 +126,8 @@ impl<'storage> Target<'storage> {
                 Light::NONE,
             ],
             current_shader: builtins.phong_shader.clone(),
-            current_material: builtins.white_material.clone(),
-            current_font_material: builtins.font_material.clone(),
+            current_material: current_material.index.clone(),
+            current_font_material: current_font_material.index.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
             texture_filter: TextureFilter::Linear,
@@ -134,16 +148,11 @@ impl<'storage> Target<'storage> {
 
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
         // update mesh if needed
-        self.resources.mesh_mut(&mesh.index).update_if_needed(
-            MeshUpdateData {
-                vertices: mesh.vertices(),
-                normals: mesh.normals(),
-                colors: mesh.colors(),
-                uvs: mesh.uvs(),
-                indices: mesh.indices(),
-            },
-            mesh.index.version(),
-        );
+        self.resources
+            .mesh_mut(&mesh.index)
+            .update_if_needed(mesh.data(), mesh.index.version());
+        // TODO: error on out of memory
+        // most Vulkan errors are unrecoverable
 
         // add order for mesh
         self.add_order(Order {
@@ -243,12 +252,22 @@ impl<'storage> Target<'storage> {
         });
     }
 
-    pub fn set_material(&mut self, material: &Ref<Material>) {
-        self.current_material = material.clone();
+    pub fn set_material(&mut self, material: &Material) {
+        // update material if needed
+        self.resources
+            .material_mut(&material.index)
+            .update_if_needed(material.data(), material.index.version());
+
+        self.current_material = material.index.clone();
     }
 
-    pub fn set_font_material(&mut self, material: &Ref<Material>) {
-        self.current_font_material = material.clone();
+    pub fn set_font_material(&mut self, material: &Material) {
+        // update material if needed
+        self.resources
+            .material_mut(&material.index)
+            .update_if_needed(material.data(), material.index.version());
+
+        self.current_font_material = material.index.clone();
     }
 
     pub fn set_albedo(&mut self, albedo: impl Into<Albedo>) {
@@ -303,7 +322,7 @@ impl<'storage> Target<'storage> {
                 None => self.orders_by_shader.push(OrdersByShader {
                     shader: wireframe_shader,
                     orders_by_material: vec![OrdersByMaterial {
-                        material: self.builtins.white_material.clone(),
+                        material: self.builtins.white_material.index.clone(),
                         orders: vec![order],
                     }],
                 }),

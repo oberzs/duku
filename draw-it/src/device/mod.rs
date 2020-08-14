@@ -33,8 +33,8 @@ use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
 use crate::mesh::CoreMesh;
+use crate::pipeline::CoreMaterial;
 use crate::pipeline::Descriptor;
-use crate::pipeline::Material;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
@@ -697,9 +697,9 @@ impl Device {
         &self,
         buffer: vk::CommandBuffer,
         layout: &ShaderLayout,
-        material: &Material,
+        material: &CoreMaterial,
     ) {
-        self.cmd_bind_uniform(buffer, layout, material.uniform());
+        self.cmd_bind_descriptor(buffer, layout, material.descriptor());
     }
 
     pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &CoreMesh) {
