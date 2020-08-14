@@ -134,15 +134,16 @@ impl<'storage> Target<'storage> {
 
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
         // update mesh if needed
-        self.resources
-            .mesh_mut(&mesh.index)
-            .update_if_needed(MeshUpdateData {
-                vertices: &mesh.vertices,
-                normals: &mesh.normals,
-                colors: &mesh.colors,
-                uvs: &mesh.uvs,
-                indices: &mesh.indices,
-            });
+        self.resources.mesh_mut(&mesh.index).update_if_needed(
+            MeshUpdateData {
+                vertices: mesh.vertices(),
+                normals: mesh.normals(),
+                colors: mesh.colors(),
+                uvs: mesh.uvs(),
+                indices: mesh.indices(),
+            },
+            mesh.index.version(),
+        );
 
         // add order for mesh
         self.add_order(Order {

@@ -159,7 +159,7 @@ impl Ui {
             include_bytes!("../shaders/ui.shader"),
         )?;
 
-        let mesh = CoreMesh::new(device, 1, 3)?;
+        let mesh = CoreMesh::new(device)?;
 
         Ok(Self {
             device: Arc::clone(device),
@@ -211,13 +211,16 @@ impl Ui {
         }
 
         // update mesh
-        self.mesh.update_if_needed(MeshUpdateData {
-            vertices: &vertices,
-            normals: &normals,
-            colors: &colors,
-            uvs: &uvs,
-            indices: &indices,
-        })?;
+        self.mesh.update_if_needed(
+            MeshUpdateData {
+                vertices: &vertices,
+                normals: &normals,
+                colors: &colors,
+                uvs: &uvs,
+                indices: &indices,
+            },
+            self.mesh.version() + 1,
+        )?;
 
         // render ui
         let cmd = self.device.command_buffer();
