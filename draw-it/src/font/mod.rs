@@ -8,6 +8,7 @@ mod format;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageFormat;
@@ -15,8 +16,8 @@ use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::mesh::Mesh;
-use crate::mesh::MeshOptions;
+use crate::mesh::CoreMesh;
+use crate::mesh::MeshUpdateData;
 use crate::pipeline::ImageUniform;
 use format::CharMetrics;
 use format::FontFile;
@@ -29,12 +30,12 @@ pub struct Font {
 #[derive(Copy, Clone)]
 pub(crate) struct CharData {
     pub(crate) advance: f32,
-    pub(crate) offset: u16,
+    pub(crate) offset: usize,
 }
 
 struct FontData {
     texture: Texture,
-    mesh: Mesh,
+    mesh: CoreMesh,
     margin: f32,
     char_data: HashMap<char, CharData>,
 }
@@ -108,7 +109,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn mesh(&self, font_size: u32) -> &Mesh {
+    pub(crate) fn mesh(&self, font_size: u32) -> &CoreMesh {
         // if has bitmap font of that size, choose bitmap
         // otherwise choose sdf font
         match self.bitmap_data.get(&font_size) {
@@ -186,16 +187,20 @@ fn create_font(
         offset += 6;
     }
 
-    let mut mesh = Mesh::new(
-        device,
-        MeshOptions {
-            vertices,
-            indices,
-            uvs,
-            ..Default::default()
-        },
-    )?;
-    mesh.update_if_needed()?;
+    let vertex_count = vertices.len();
+    let index_count = indices.len();
+
+    let normals = vec![Vector3::ZERO; vertex_count];
+    let colors = vec![Color::WHITE; vertex_count];
+
+    let mut mesh = CoreMesh::new(device, vertex_count, index_count)?;
+    mesh.update_if_needed(MeshUpdateData {
+        vertices: &vertices,
+        normals: &normals,
+        colors: &colors,
+        uvs: &uvs,
+        indices: &indices,
+    });
 
     Ok(FontData {
         margin: norm_margin,

@@ -11,6 +11,9 @@
     // missing_docs,
     single_use_lifetimes,
     unused_qualifications,
+    clippy::missing_const_for_fn,
+    clippy::redundant_pub_crate,
+    clippy::unwrap_used
 )]
 
 // should be imported first
@@ -47,7 +50,8 @@ pub use math::Transform;
 pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
-pub use mesh::MeshOptions;
+pub use mesh::Mesh;
+pub use mesh::MeshData;
 pub use quality::Quality;
 pub use quality::QualityOptions;
 pub use renderer::Camera;
@@ -67,7 +71,6 @@ pub mod ui;
 pub mod window;
 
 // special types
-pub type Mesh = resource::Ref<mesh::Mesh>;
 pub type Material = resource::Ref<pipeline::Material>;
 pub type Texture = resource::Ref<image::Texture>;
 pub type Shader = resource::Ref<pipeline::Shader>;

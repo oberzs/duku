@@ -19,23 +19,24 @@ use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
-use crate::mesh::MeshOptions;
+use crate::mesh::MeshData;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Builtins {
     pub white_texture: Ref<Texture>,
     pub white_material: Ref<Material>,
     pub font_material: Ref<Material>,
-    pub surface_mesh: Ref<Mesh>,
-    pub quad_mesh: Ref<Mesh>,
-    pub cube_mesh: Ref<Mesh>,
-    pub sphere_mesh: Ref<Mesh>,
-    pub grid_mesh: Ref<Mesh>,
+    pub surface_mesh: Mesh,
+    pub quad_mesh: Mesh,
+    pub cube_mesh: Mesh,
+    pub sphere_mesh: Mesh,
+    pub grid_mesh: Mesh,
     pub phong_shader: Ref<Shader>,
     pub sdf_font_shader: Ref<Shader>,
     pub bitmap_font_shader: Ref<Shader>,
@@ -83,11 +84,11 @@ impl Builtins {
         };
 
         // meshes
-        let surface_mesh = resources.add_mesh(create_surface(device)?);
-        let quad_mesh = resources.add_mesh(create_quad(device)?);
-        let cube_mesh = resources.add_mesh(create_cube(device)?);
-        let sphere_mesh = resources.add_mesh(create_sphere(device, 3)?);
-        let grid_mesh = resources.add_mesh(create_grid(device, 50)?);
+        let surface_mesh = create_surface(device, resources)?;
+        let quad_mesh = create_quad(device, resources)?;
+        let cube_mesh = create_cube(device, resources)?;
+        let sphere_mesh = create_sphere(device, resources, 3)?;
+        let grid_mesh = create_grid(device, resources, 50)?;
 
         // shaders
         let phong_shader = resources.add_shader(Shader::new(
@@ -175,7 +176,7 @@ impl Builtins {
     }
 }
 
-fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
+fn create_surface(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
     let vertices = vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
@@ -190,9 +191,12 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
 
+    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
+    let index = resources.add_mesh(core_mesh);
+
     Mesh::new(
-        device,
-        MeshOptions {
+        index,
+        MeshData {
             vertices,
             indices,
             uvs,
@@ -201,7 +205,7 @@ fn create_surface(device: &Arc<Device>) -> Result<Mesh> {
     )
 }
 
-fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
+fn create_quad(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
     let vertices = vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
@@ -216,9 +220,12 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
 
+    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
+    let index = resources.add_mesh(core_mesh);
+
     Mesh::new(
-        device,
-        MeshOptions {
+        index,
+        MeshData {
             vertices,
             indices,
             uvs,
@@ -227,9 +234,10 @@ fn create_quad(device: &Arc<Device>) -> Result<Mesh> {
     )
 }
 
-fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
+fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
     let top = create_rectangle(
         device,
+        resources,
         [-0.5, 0.5, 0.5],
         [0.5, 0.5, 0.5],
         [0.5, 0.5, -0.5],
@@ -238,6 +246,7 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
 
     let bottom = create_rectangle(
         device,
+        resources,
         [0.5, -0.5, 0.5],
         [-0.5, -0.5, 0.5],
         [-0.5, -0.5, -0.5],
@@ -246,6 +255,7 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
 
     let back = create_rectangle(
         device,
+        resources,
         [0.5, 0.5, 0.5],
         [-0.5, 0.5, 0.5],
         [-0.5, -0.5, 0.5],
@@ -254,6 +264,7 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
 
     let front = create_rectangle(
         device,
+        resources,
         [-0.5, 0.5, -0.5],
         [0.5, 0.5, -0.5],
         [0.5, -0.5, -0.5],
@@ -262,6 +273,7 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
 
     let left = create_rectangle(
         device,
+        resources,
         [-0.5, 0.5, 0.5],
         [-0.5, 0.5, -0.5],
         [-0.5, -0.5, -0.5],
@@ -270,16 +282,32 @@ fn create_cube(device: &Arc<Device>) -> Result<Mesh> {
 
     let right = create_rectangle(
         device,
+        resources,
         [0.5, 0.5, -0.5],
         [0.5, 0.5, 0.5],
         [0.5, -0.5, 0.5],
         [0.5, -0.5, -0.5],
     )?;
 
-    Mesh::combine(device, &[top, bottom, front, back, left, right])
+    let vertex_count = top.vertices.len()
+        + bottom.vertices.len()
+        + front.vertices.len()
+        + back.vertices.len()
+        + left.vertices.len()
+        + right.vertices.len();
+    let index_count = top.indices.len()
+        + bottom.indices.len()
+        + front.indices.len()
+        + back.indices.len()
+        + left.indices.len()
+        + right.indices.len();
+    let core_mesh = CoreMesh::new(device, vertex_count, index_count)?;
+    let index = resources.add_mesh(core_mesh);
+
+    Mesh::combine(index, &[top, bottom, front, back, left, right])
 }
 
-fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
+fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32) -> Result<Mesh> {
     let mut vertices = vec![];
     let mut colors = vec![];
     let mut indices = vec![];
@@ -314,9 +342,12 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
         indices.extend(&[vc, vc + 1]);
     }
 
+    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
+    let index = resources.add_mesh(core_mesh);
+
     Mesh::new(
-        device,
-        MeshOptions {
+        index,
+        MeshData {
             vertices,
             indices,
             colors,
@@ -327,6 +358,7 @@ fn create_grid(device: &Arc<Device>, size: u32) -> Result<Mesh> {
 
 fn create_rectangle<V: Into<Vector3>>(
     device: &Arc<Device>,
+    resources: &mut ResourceManager,
     p1: V,
     p2: V,
     p3: V,
@@ -341,9 +373,12 @@ fn create_rectangle<V: Into<Vector3>>(
     ];
     let indices = vec![0, 1, 2, 0, 2, 3];
 
+    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
+    let index = resources.add_mesh(core_mesh);
+
     Mesh::new(
-        device,
-        MeshOptions {
+        index,
+        MeshData {
             vertices,
             indices,
             uvs,
@@ -352,7 +387,11 @@ fn create_rectangle<V: Into<Vector3>>(
     )
 }
 
-fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
+fn create_sphere(
+    device: &Arc<Device>,
+    resources: &mut ResourceManager,
+    detail_level: u32,
+) -> Result<Mesh> {
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -424,9 +463,12 @@ fn create_sphere(device: &Arc<Device>, detail_level: u32) -> Result<Mesh> {
         uvs.push(Vector2::new(u, v));
     }
 
+    let core_mesh = CoreMesh::new(device, vertices.len(), indices.len())?;
+    let index = resources.add_mesh(core_mesh);
+
     Mesh::new(
-        device,
-        MeshOptions {
+        index,
+        MeshData {
             vertices,
             indices,
             uvs,

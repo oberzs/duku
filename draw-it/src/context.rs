@@ -27,8 +27,9 @@ use crate::image::Msaa;
 use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::instance::Instance;
+use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
-use crate::mesh::MeshOptions;
+use crate::mesh::MeshData;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -262,13 +263,13 @@ impl Context {
         Ok(())
     }
 
-    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target)) -> Result<()> {
+    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw()?;
         }
 
         {
-            let mut target = Target::new(&self.builtins)?;
+            let mut target = Target::new(&self.builtins, &mut self.resources)?;
             draw_callback(&mut target);
 
             #[cfg(feature = "ui")]
@@ -300,16 +301,15 @@ impl Context {
     pub fn draw(
         &mut self,
         framebuffer: &Ref<Framebuffer>,
-        draw_callback: impl Fn(&mut Target),
+        draw_callback: impl Fn(&mut Target<'_>),
     ) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw()?;
         }
 
-        let mut target = Target::new(&self.builtins)?;
-        draw_callback(&mut target);
-
         framebuffer.with(|f| {
+            let mut target = Target::new(&self.builtins, &mut self.resources)?;
+            draw_callback(&mut target);
             self.forward_renderer
                 .draw(f, &self.shader_layout, target, &mut self.stats)
         })?;
@@ -357,17 +357,29 @@ impl Context {
         Ok(())
     }
 
-    pub fn create_mesh(&mut self, options: MeshOptions) -> Result<Ref<Mesh>> {
-        let mesh = Mesh::new(&self.device, options)?;
-        Ok(self.resources.add_mesh(mesh))
+    pub fn create_mesh(&mut self, data: MeshData) -> Result<Mesh> {
+        let core_mesh = CoreMesh::new(&self.device, data.vertices.len(), data.indices.len())?;
+        let index = self.resources.add_mesh(core_mesh);
+        Mesh::new(index, data)
     }
 
-    pub fn duplicate_mesh(&mut self, mesh: &Ref<Mesh>) -> Result<Ref<Mesh>> {
-        let new_mesh = mesh.with(|m| m.duplicate(&self.device))?;
-        Ok(self.resources.add_mesh(new_mesh))
+    pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
+        let core_mesh = CoreMesh::new(&self.device, mesh.vertices.len(), mesh.indices.len())?;
+        let index = self.resources.add_mesh(core_mesh);
+
+        Mesh::new(
+            index,
+            MeshData {
+                vertices: mesh.vertices.clone(),
+                normals: mesh.normals.clone(),
+                colors: mesh.colors.clone(),
+                uvs: mesh.uvs.clone(),
+                indices: mesh.indices.clone(),
+            },
+        )
     }
 
-    pub fn combine_meshes(&mut self, meshes: &[Ref<Mesh>]) -> Result<Ref<Mesh>> {
+    pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
         let mut offset = 0;
         let mut indices = vec![];
         let mut vertices = vec![];
@@ -375,25 +387,27 @@ impl Context {
         let mut uvs = vec![];
         let mut colors = vec![];
         for mesh in meshes {
-            indices.extend(mesh.indices().iter().map(|i| i + offset));
-            vertices.extend(mesh.vertices());
-            normals.extend(mesh.normals());
-            uvs.extend(mesh.uvs());
-            colors.extend(mesh.colors());
+            indices.extend(mesh.indices.iter().map(|i| i + offset));
+            vertices.extend(&mesh.vertices);
+            normals.extend(&mesh.normals);
+            uvs.extend(&mesh.uvs);
+            colors.extend(&mesh.colors);
             offset = vertices.len() as u16;
         }
 
-        let mesh = Mesh::new(
-            &self.device,
-            MeshOptions {
+        let core_mesh = CoreMesh::new(&self.device, vertices.len(), indices.len())?;
+        let index = self.resources.add_mesh(core_mesh);
+
+        Mesh::new(
+            index,
+            MeshData {
                 vertices,
                 normals,
                 uvs,
                 colors,
                 indices,
             },
-        )?;
-        Ok(self.resources.add_mesh(mesh))
+        )
     }
 
     pub fn create_material(&mut self) -> Result<Ref<Material>> {

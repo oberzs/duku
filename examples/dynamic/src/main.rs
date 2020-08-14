@@ -7,7 +7,7 @@ use draw_it::window::Controller;
 use draw_it::window::WindowOptions;
 use draw_it::Color;
 use draw_it::Context;
-use draw_it::MeshOptions;
+use draw_it::MeshData;
 use draw_it::Result;
 use draw_it::Vector3;
 use std::time::Instant;
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
         cam_t.look_at([0.0, 0.0, 0.0]);
     }
 
-    let square = context.create_mesh(MeshOptions {
+    let mut square = context.create_mesh(MeshData {
         vertices: square_vertices(square_size, 0.0),
         indices: square_indices(square_size),
         ..Default::default()
@@ -48,7 +48,7 @@ fn main() -> Result<()> {
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
         let vertices = square_vertices(square_size, elapsed);
-        square.set_vertices(vertices);
+        square.vertices = vertices;
 
         context.draw_on_window(|target| {
             target.wireframes = true;

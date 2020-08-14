@@ -13,13 +13,16 @@ use crate::image::TextureWrap;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::mesh::Mesh;
+use crate::mesh::MeshUpdateData;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
+use crate::resource::Index;
 use crate::resource::Ref;
+use crate::resource::ResourceManager;
 
-pub struct Target {
+pub struct Target<'storage> {
     pub bias: f32,
     pub clear: Color,
     pub skybox: bool,
@@ -36,7 +39,8 @@ pub struct Target {
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
     pub(crate) text_orders: Vec<TextOrder>,
     pub(crate) has_shadow_casters: bool,
-    pub(crate) builtins: Builtins,
+    pub(crate) builtins: &'storage Builtins,
+    pub(crate) resources: &'storage mut ResourceManager,
 
     current_shader: Ref<Shader>,
     current_material: Ref<Material>,
@@ -57,7 +61,7 @@ pub(crate) struct OrdersByMaterial {
 
 #[derive(Clone)]
 pub(crate) struct Order {
-    pub(crate) mesh: Ref<Mesh>,
+    pub(crate) mesh: Index,
     pub(crate) albedo: Albedo,
     pub(crate) model: Matrix4,
     pub(crate) cast_shadows: bool,
@@ -92,8 +96,11 @@ struct Cache {
     cast_shadows: bool,
 }
 
-impl Target {
-    pub(crate) fn new(builtins: &Builtins) -> Result<Self> {
+impl<'storage> Target<'storage> {
+    pub(crate) fn new(
+        builtins: &'storage Builtins,
+        resources: &'storage mut ResourceManager,
+    ) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
             text_orders: vec![],
@@ -119,14 +126,27 @@ impl Target {
             has_shadow_casters: false,
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
             line_width: 1.0,
-            builtins: builtins.clone(),
             bias: 0.002,
+            resources,
+            builtins,
         })
     }
 
-    pub fn draw(&mut self, mesh: &Ref<Mesh>, transform: impl Into<Transform>) {
+    pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
+        // update mesh if needed
+        self.resources
+            .mesh_mut(&mesh.index)
+            .update_if_needed(MeshUpdateData {
+                vertices: &mesh.vertices,
+                normals: &mesh.normals,
+                colors: &mesh.colors,
+                uvs: &mesh.uvs,
+                indices: &mesh.indices,
+            });
+
+        // add order for mesh
         self.add_order(Order {
-            mesh: mesh.clone(),
+            mesh: mesh.index.clone(),
             albedo: self.current_albedo.clone(),
             model: transform.into().as_matrix(),
             cast_shadows: self.cast_shadows,
@@ -140,8 +160,7 @@ impl Target {
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
-        let mesh = self.builtins.cube_mesh.clone();
-        self.draw(&mesh, transform);
+        self.draw(&self.builtins.cube_mesh, transform);
 
         self.restore(cache);
     }
@@ -152,20 +171,17 @@ impl Target {
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
-        let mesh = self.builtins.sphere_mesh.clone();
-        self.draw(&mesh, transform);
+        self.draw(&self.builtins.sphere_mesh, transform);
 
         self.restore(cache);
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
-        let mesh = self.builtins.cube_mesh.clone();
-        self.draw(&mesh, transform);
+        self.draw(&self.builtins.cube_mesh, transform);
     }
 
     pub fn draw_sphere(&mut self, transform: impl Into<Transform>) {
-        let mesh = self.builtins.sphere_mesh.clone();
-        self.draw(&mesh, transform);
+        self.draw(&self.builtins.sphere_mesh, transform);
     }
 
     pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
@@ -174,8 +190,7 @@ impl Target {
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
-        let mesh = self.builtins.quad_mesh.clone();
-        self.draw(&mesh, transform);
+        self.draw(&self.builtins.quad_mesh, transform);
 
         self.restore(cache);
     }
@@ -184,8 +199,7 @@ impl Target {
         let cache = self.store();
         self.cast_shadows = false;
 
-        let mesh = self.builtins.surface_mesh.clone();
-        self.draw(&mesh, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.surface_mesh, [0.0, 0.0, 0.0]);
 
         self.restore(cache);
     }
@@ -205,8 +219,7 @@ impl Target {
         self.current_shader = self.builtins.line_shader.clone();
         self.cast_shadows = false;
 
-        let mesh = self.builtins.grid_mesh.clone();
-        self.draw(&mesh, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.grid_mesh, [0.0, 0.0, 0.0]);
 
         self.restore(cache);
     }
