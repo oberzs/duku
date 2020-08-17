@@ -17,7 +17,6 @@ use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
 use crate::resource::Index;
-use crate::resource::Ref;
 
 pub struct Target<'b> {
     pub bias: f32,
@@ -38,7 +37,7 @@ pub struct Target<'b> {
     pub(crate) has_shadow_casters: bool,
     pub(crate) builtins: &'b Builtins,
 
-    current_shader: Ref<Shader>,
+    current_shader: Index,
     current_material: Index,
     current_font_material: Index,
     current_albedo: Albedo,
@@ -60,7 +59,7 @@ pub(crate) struct RenderData {
 }
 
 pub(crate) struct OrdersByShader {
-    pub(crate) shader: Ref<Shader>,
+    pub(crate) shader: Index,
     pub(crate) orders_by_material: Vec<OrdersByMaterial>,
 }
 
@@ -93,7 +92,7 @@ pub enum Albedo {
 }
 
 struct Cache {
-    current_shader: Ref<Shader>,
+    current_shader: Index,
     current_material: Index,
     current_font_material: Index,
     current_albedo: Albedo,
@@ -116,7 +115,7 @@ impl<'b> Target<'b> {
                 Light::NONE,
                 Light::NONE,
             ],
-            current_shader: builtins.phong_shader.clone(),
+            current_shader: builtins.phong_shader.index.clone(),
             current_material: builtins.white_material.index.clone(),
             current_font_material: builtins.font_material.index.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.index.clone()),
@@ -149,7 +148,7 @@ impl<'b> Target<'b> {
     pub fn draw_debug_cube(&mut self, transform: impl Into<Transform>) {
         let cache = self.store();
         self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.clone();
+        self.current_shader = self.builtins.unshaded_shader.index.clone();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.cube_mesh, transform);
@@ -160,7 +159,7 @@ impl<'b> Target<'b> {
     pub fn draw_debug_sphere(&mut self, transform: impl Into<Transform>) {
         let cache = self.store();
         self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.clone();
+        self.current_shader = self.builtins.unshaded_shader.index.clone();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.sphere_mesh, transform);
@@ -179,7 +178,7 @@ impl<'b> Target<'b> {
     pub fn draw_texture(&mut self, texture: &Texture, transform: impl Into<Transform>) {
         let cache = self.store();
         self.current_albedo = Albedo::Texture(texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.clone();
+        self.current_shader = self.builtins.unshaded_shader.index.clone();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.quad_mesh, transform);
@@ -198,7 +197,7 @@ impl<'b> Target<'b> {
 
     pub fn blit_framebuffer(&mut self, framebuffer: &Framebuffer) {
         let cache = self.store();
-        self.current_shader = self.builtins.blit_shader.clone();
+        self.current_shader = self.builtins.blit_shader.index.clone();
         self.current_albedo = Albedo::Framebuffer(framebuffer.index.clone());
 
         self.draw_surface();
@@ -208,7 +207,7 @@ impl<'b> Target<'b> {
 
     pub fn draw_grid(&mut self) {
         let cache = self.store();
-        self.current_shader = self.builtins.line_shader.clone();
+        self.current_shader = self.builtins.line_shader.index.clone();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.grid_mesh, [0.0, 0.0, 0.0]);
@@ -238,8 +237,8 @@ impl<'b> Target<'b> {
         self.current_albedo = albedo.into();
     }
 
-    pub fn set_shader(&mut self, shader: &Ref<Shader>) {
-        self.current_shader = shader.clone();
+    pub fn set_shader(&mut self, shader: &Shader) {
+        self.current_shader = shader.index.clone();
     }
 
     pub(crate) fn render_data(self) -> RenderData {
@@ -290,7 +289,7 @@ impl<'b> Target<'b> {
         }
 
         if self.wireframes {
-            let wireframe_shader = self.builtins.wireframe_shader.clone();
+            let wireframe_shader = self.builtins.wireframe_shader.index.clone();
             match self
                 .orders_by_shader
                 .iter_mut()

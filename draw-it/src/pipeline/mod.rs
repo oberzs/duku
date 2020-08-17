@@ -26,6 +26,7 @@ pub(crate) use layout::ShaderLayout;
 pub(crate) use material::CoreMaterial;
 pub(crate) use material::MaterialUpdateData;
 pub(crate) use render_pass::RenderPass;
+pub(crate) use shader::CoreShader;
 pub(crate) use uniform::ImageUniform;
 pub(crate) use uniform::ShadowMapUniform;
 pub(crate) use uniform::Uniform;

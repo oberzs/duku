@@ -22,9 +22,9 @@ use crate::image::FramebufferUpdateData;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::CoreMaterial;
+use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::MaterialUpdateData;
-use crate::pipeline::Shader;
 use storage::Storage;
 
 pub(crate) use builtin::Builtins;
@@ -32,16 +32,15 @@ pub(crate) use index::Index;
 pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
-    shaders: Vec<Storage<Shader>>,
-
-    pub(crate) fonts: Resource<CoreFont, ()>,
-    pub(crate) textures: Resource<CoreTexture, ()>,
+    pub(crate) shaders: Resource<CoreShader>,
+    pub(crate) fonts: Resource<CoreFont>,
+    pub(crate) textures: Resource<CoreTexture>,
     pub(crate) framebuffers: Resource<CoreFramebuffer, FramebufferUpdateData>,
     pub(crate) materials: Resource<CoreMaterial, MaterialUpdateData>,
     pub(crate) meshes: Resource<CoreMesh, MeshUpdateData>,
 }
 
-pub(crate) struct Resource<T, U> {
+pub(crate) struct Resource<T, U = ()> {
     stored: HashMap<Index, T>,
     sender: Sender<(Index, U)>,
     receiver: Receiver<(Index, U)>,
@@ -51,7 +50,7 @@ pub(crate) struct Resource<T, U> {
 impl ResourceManager {
     pub(crate) fn new() -> Self {
         Self {
-            shaders: vec![],
+            shaders: Resource::new(),
             fonts: Resource::new(),
             textures: Resource::new(),
             framebuffers: Resource::new(),
@@ -60,18 +59,11 @@ impl ResourceManager {
         }
     }
 
-    pub(crate) fn add_shader(&mut self, shader: Shader) -> Ref<Shader> {
-        let storage = Storage::new(shader);
-        let reference = storage.as_ref();
-        self.shaders.push(storage);
-        reference
-    }
-
     pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
         // self.fonts.retain(|r| r.count() != 0);
         // self.meshes.retain(|r| r.count() != 0);
         // self.materials.retain(|r| r.count() != 0);
-        self.shaders.retain(|r| r.count() != 0);
+        // self.shaders.retain(|r| r.count() != 0);
         // self.framebuffers.retain(|r| r.count() != 0);
         // self.textures
         // .drain_filter(|r| r.count() == 0)

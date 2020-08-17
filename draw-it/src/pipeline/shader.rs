@@ -16,8 +16,16 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::mesh::Vertex;
+use crate::resource::Index;
 
+// user facing texture data
+#[derive(Debug)]
 pub struct Shader {
+    pub(crate) index: Index,
+}
+
+// GPU data storage for a shader
+pub(crate) struct CoreShader {
     handle: vk::Pipeline,
     device: Arc<Device>,
 }
@@ -32,6 +40,12 @@ struct ShaderFile {
 }
 
 impl Shader {
+    pub(crate) fn new(index: Index) -> Self {
+        Self { index }
+    }
+}
+
+impl CoreShader {
     pub(crate) fn new(
         device: &Arc<Device>,
         framebuffer: &CoreFramebuffer,
@@ -186,13 +200,13 @@ impl Shader {
     }
 }
 
-impl Drop for Shader {
+impl Drop for CoreShader {
     fn drop(&mut self) {
         self.device.destroy_pipeline(self.handle);
     }
 }
 
-impl PartialEq for Shader {
+impl PartialEq for CoreShader {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
     }

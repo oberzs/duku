@@ -5,12 +5,13 @@
 
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
-use std::thread::JoinHandle;
 use std::time::Instant;
 
 use crate::color::Color;
@@ -32,6 +33,7 @@ use crate::instance::Instance;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
 use crate::pipeline::CoreMaterial;
+use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -43,7 +45,7 @@ use crate::renderer::CameraType;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::resource::Builtins;
-use crate::resource::Ref;
+use crate::resource::Index;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 use crate::surface::Surface;
@@ -51,7 +53,6 @@ use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
 use crate::watch::watch_file;
-use crate::watch::WatchEvent;
 
 #[cfg(feature = "ui")]
 use crate::ui::Ui;
@@ -102,14 +103,14 @@ pub struct Context {
     vsync: VSync,
 
     // Hot Reload
-    watch_stop_senders: Vec<Sender<WatchEvent>>,
-    watch_join_handles: Vec<JoinHandle<()>>,
+    hot_reload_sender: Sender<(Index, PathBuf)>,
+    hot_reload_receiver: Receiver<(Index, PathBuf)>,
 
     // Window
     #[cfg(feature = "window")]
     glfw: Option<glfw::Glfw>,
     #[cfg(feature = "window")]
-    event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
+    event_receiver: Option<Receiver<(f64, glfw::WindowEvent)>>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -202,6 +203,8 @@ impl Context {
             100.0,
         );
 
+        let (hot_reload_sender, hot_reload_receiver) = mpsc::channel();
+
         Ok(Self {
             window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
             shader_layout: Arc::new(shader_layout),
@@ -210,10 +213,10 @@ impl Context {
             camera_type: options.camera,
             start_time: Instant::now(),
             frame_time: Instant::now(),
-            watch_stop_senders: vec![],
-            watch_join_handles: vec![],
             stats: Default::default(),
             frame_count: 0,
+            hot_reload_receiver,
+            hot_reload_sender,
             forward_renderer,
             image_uniform,
             main_camera,
@@ -430,16 +433,21 @@ impl Context {
         Ok(framebuffer)
     }
 
-    pub fn create_shader(&mut self, source: &[u8]) -> Result<Ref<Shader>> {
+    pub fn create_shader(&mut self, source: &[u8]) -> Result<Shader> {
         let framebuffer = &self
             .window_framebuffers
             .lock()
             .expect("poisoned framebuffers")[0];
-        let shader = Shader::new(&self.device, framebuffer, &self.shader_layout, source)?;
-        Ok(self.resources.add_shader(shader))
+        let (index, _) = self.resources.shaders.add(CoreShader::new(
+            &self.device,
+            framebuffer,
+            &self.shader_layout,
+            source,
+        )?);
+        Ok(Shader::new(index))
     }
 
-    pub fn create_shader_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Shader>> {
+    pub fn create_shader_from_file(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
         let source = fs::read(path.as_ref())?;
         self.create_shader(&source)
     }
@@ -453,6 +461,20 @@ impl Context {
         self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
         self.resources.update_if_needed(&mut self.image_uniform);
+
+        // hot-reload shaders
+        for (index, path) in self.hot_reload_receiver.try_iter() {
+            let source = fs::read(&path).expect("bad read");
+            *self.resources.shaders.get_mut(&index) = CoreShader::new(
+                &self.device,
+                &self.window_framebuffers.lock().expect("bad lock")[0],
+                &self.shader_layout,
+                &source,
+            )
+            .expect("bad shader recreation");
+            info!("shader {:?} was reloaded", path);
+        }
+
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_uniform(
             self.device.command_buffer(),
@@ -562,7 +584,7 @@ impl Context {
     pub(crate) fn attach_glfw(
         &mut self,
         glfw: glfw::Glfw,
-        event_receiver: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
+        event_receiver: Receiver<(f64, glfw::WindowEvent)>,
     ) {
         self.glfw = Some(glfw);
         self.event_receiver = Some(event_receiver);
@@ -635,39 +657,9 @@ impl Context {
         Ok(())
     }
 
-    pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Ref<Shader>> {
+    pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
         let shader = self.create_shader_from_file(&path)?;
-
-        // setup watcher
-        let framebuffers = self.window_framebuffers.clone();
-        let shader_layout = self.shader_layout.clone();
-        let device = self.device.clone();
-        let shader_ref = shader.clone();
-
-        let (sender, receiver) = mpsc::channel();
-
-        watch_file(path, sender.clone());
-
-        let handle = thread::spawn(move || loop {
-            match receiver.recv() {
-                Ok(WatchEvent::Stop) => break,
-                Ok(WatchEvent::Modified(watched_path)) => {
-                    // recreate shader
-                    let framebuffer = &framebuffers.lock().expect("poisoned framebuffers")[0];
-
-                    let source = fs::read(&watched_path).expect("bad read");
-                    let new_shader = Shader::new(&device, framebuffer, &shader_layout, &source)
-                        .expect("bad shader recreation");
-                    shader_ref.with(|s| *s = new_shader);
-                    info!("shader {:?} was reloaded", watched_path);
-                }
-                _ => (),
-            }
-        });
-
-        self.watch_join_handles.push(handle);
-        self.watch_stop_senders.push(sender);
-
+        watch_file(path, shader.index.clone(), self.hot_reload_sender.clone());
         Ok(shader)
     }
 
@@ -789,12 +781,6 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        for stop in &self.watch_stop_senders {
-            stop.send(WatchEvent::Stop).expect("bad shutdown");
-        }
-        for handle in self.watch_join_handles.drain(..) {
-            handle.join().expect("bad join");
-        }
         self.device.wait_for_idle().expect("bad wait");
     }
 }

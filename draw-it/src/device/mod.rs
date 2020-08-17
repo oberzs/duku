@@ -34,9 +34,9 @@ use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
 use crate::mesh::CoreMesh;
 use crate::pipeline::CoreMaterial;
+use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
 use crate::pipeline::PushConstants;
-use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::Uniform;
 use crate::surface::Swapchain;
@@ -658,7 +658,7 @@ impl Device {
         }
     }
 
-    pub(crate) fn cmd_bind_shader(&self, buffer: vk::CommandBuffer, shader: &Shader) {
+    pub(crate) fn cmd_bind_shader(&self, buffer: vk::CommandBuffer, shader: &CoreShader) {
         unsafe {
             self.handle
                 .cmd_bind_pipeline(buffer, vk::PipelineBindPoint::GRAPHICS, shader.handle());
