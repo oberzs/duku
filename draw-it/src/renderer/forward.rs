@@ -23,9 +23,9 @@ use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
-use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
 use crate::resource::Builtins;
@@ -35,7 +35,7 @@ use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
-    shadow_shader: Shader,
+    shadow_shader: CoreShader,
     pcf: Pcf,
     device: Arc<Device>,
 }
@@ -68,7 +68,7 @@ impl ForwardRenderer {
             ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
         ];
 
-        let shadow_shader = Shader::new(
+        let shadow_shader = CoreShader::new(
             device,
             &shadow_frames[0].framebuffers[0],
             shader_layout,
@@ -301,10 +301,9 @@ impl ForwardRenderer {
 
         for s_order in orders_by_shader {
             // bind shader
-            s_order.shader.with(|s| {
-                self.device.cmd_bind_shader(cmd, s);
-                // unique_shaders.insert(s.handle());
-            });
+            let shader = resources.shaders.get(&s_order.shader);
+            self.device.cmd_bind_shader(cmd, shader);
+            // unique_shaders.insert(s.handle());
             stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
@@ -333,10 +332,9 @@ impl ForwardRenderer {
     ) {
         let cmd = self.device.command_buffer();
 
-        builtins.skybox_shader.with(|s| {
-            self.device.cmd_bind_shader(cmd, s);
-            // unique_shaders.insert(s.handle());
-        });
+        let shader = resources.shaders.get(&builtins.skybox_shader.index);
+        self.device.cmd_bind_shader(cmd, shader);
+        // unique_shaders.insert(s.handle());
         stats.shader_rebinds += 1;
 
         let mesh = resources.meshes.get(&builtins.cube_mesh.index);
@@ -373,29 +371,22 @@ impl ForwardRenderer {
     ) {
         let cmd = self.device.command_buffer();
 
-        // let (shader, sampler_index) = if self.current_font.with(|f| f.is_bitmap(self.font_size)) {
-        //     (self.builtins.bitmap_font_shader.clone(), 7)
-        // } else {
-        //     (self.builtins.sdf_font_shader.clone(), 1)
-        // };
-
         for order in orders {
             let font = resources.fonts.get(&order.font);
 
             let font_size = order.size;
 
-            let shader = if font.is_bitmap(font_size) {
-                builtins.bitmap_font_shader.clone()
+            let shader_index = if font.is_bitmap(font_size) {
+                builtins.bitmap_font_shader.index.clone()
             } else {
-                builtins.sdf_font_shader.clone()
+                builtins.sdf_font_shader.index.clone()
             };
             let sampler_index = if font.is_bitmap(font_size) { 7 } else { 1 };
 
             // bind shader
-            shader.with(|s| {
-                self.device.cmd_bind_shader(cmd, s);
-                // unique_shaders.insert(s.handle());
-            });
+            let shader = resources.shaders.get(&shader_index);
+            self.device.cmd_bind_shader(cmd, shader);
+            // unique_shaders.insert(s.handle());
             stats.shader_rebinds += 1;
 
             // bind material

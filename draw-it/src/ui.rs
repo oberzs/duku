@@ -43,9 +43,9 @@ use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
+use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
-use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::CameraType;
 use crate::resource::ResourceManager;
@@ -55,7 +55,7 @@ pub use imgui;
 
 pub(crate) struct Ui {
     framebuffer: Framebuffer,
-    shader: Shader,
+    shader: CoreShader,
     mesh: CoreMesh,
     texture: CoreTexture,
     drawn: bool,
@@ -153,7 +153,7 @@ impl Ui {
             },
         )?;
 
-        let shader = Shader::new(
+        let shader = CoreShader::new(
             device,
             &core_framebuffer,
             shader_layout,

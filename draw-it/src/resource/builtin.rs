@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
-use super::Ref;
 use super::ResourceManager;
 use crate::color::Color;
 use crate::device::Device;
@@ -24,6 +23,7 @@ use crate::math::Vector3;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
 use crate::pipeline::CoreMaterial;
+use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -39,14 +39,14 @@ pub struct Builtins {
     pub cube_mesh: Mesh,
     pub sphere_mesh: Mesh,
     pub grid_mesh: Mesh,
-    pub phong_shader: Ref<Shader>,
-    pub sdf_font_shader: Ref<Shader>,
-    pub bitmap_font_shader: Ref<Shader>,
-    pub blit_shader: Ref<Shader>,
-    pub wireframe_shader: Ref<Shader>,
-    pub line_shader: Ref<Shader>,
-    pub unshaded_shader: Ref<Shader>,
-    pub skybox_shader: Ref<Shader>,
+    pub phong_shader: Shader,
+    pub sdf_font_shader: Shader,
+    pub bitmap_font_shader: Shader,
+    pub blit_shader: Shader,
+    pub wireframe_shader: Shader,
+    pub line_shader: Shader,
+    pub unshaded_shader: Shader,
+    pub skybox_shader: Shader,
     pub kenney_font: Font,
 }
 
@@ -100,61 +100,85 @@ impl Builtins {
         let grid_mesh = create_grid(device, resources, 50)?;
 
         // shaders
-        let phong_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/phong.shader"),
-        )?);
+        let phong_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/phong.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let sdf_font_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/sdf-font.shader"),
-        )?);
+        let sdf_font_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/sdf-font.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let bitmap_font_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/bitmap-font.shader"),
-        )?);
+        let bitmap_font_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/bitmap-font.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let blit_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/blit.shader"),
-        )?);
+        let blit_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/blit.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let wireframe_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/wireframe.shader"),
-        )?);
+        let wireframe_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/wireframe.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let line_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/lines.shader"),
-        )?);
+        let line_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/lines.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let unshaded_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/unshaded.shader"),
-        )?);
+        let unshaded_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/unshaded.shader"),
+            )?);
+            Shader::new(index)
+        };
 
-        let skybox_shader = resources.add_shader(Shader::new(
-            device,
-            framebuffer,
-            layout,
-            include_bytes!("../../shaders/skybox.shader"),
-        )?);
+        let skybox_shader = {
+            let (index, _) = resources.shaders.add(CoreShader::new(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/skybox.shader"),
+            )?);
+            Shader::new(index)
+        };
 
         // fonts
         let kenney_font = {
