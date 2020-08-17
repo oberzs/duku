@@ -11,7 +11,6 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::thread;
 use std::time::Instant;
 
 use crate::color::Color;
@@ -267,7 +266,7 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.resources, &mut self.image_uniform, width, height);
+            ui.resize(&mut self.resources, &mut self.image_uniform, width, height)?;
         }
 
         Ok(())
@@ -460,7 +459,7 @@ impl Context {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
-        self.resources.update_if_needed(&mut self.image_uniform);
+        self.resources.update_if_needed(&mut self.image_uniform)?;
 
         // hot-reload shaders
         for (index, path) in self.hot_reload_receiver.try_iter() {
@@ -771,7 +770,6 @@ impl Context {
         self.ui.as_mut().ok_or(ErrorKind::UnitializedUi)?.draw(
             &self.shader_layout,
             &mut self.resources,
-            &mut self.image_uniform,
             draw_fn,
         )?;
 

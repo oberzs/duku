@@ -182,7 +182,6 @@ impl Ui {
         &mut self,
         shader_layout: &ShaderLayout,
         resources: &mut ResourceManager,
-        image_uniform: &mut ImageUniform,
         mut draw_fn: impl FnMut(&UiFrame<'_>),
     ) -> Result<()> {
         let draw_data = {
@@ -243,7 +242,7 @@ impl Ui {
             pcf: 0.0,
             camera_position,
             world_matrix,
-        }]);
+        }])?;
 
         // begin render pass
         self.device
@@ -324,14 +323,14 @@ impl Ui {
         image_uniform: &mut ImageUniform,
         width: u32,
         height: u32,
-    ) {
+    ) -> Result<()> {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
         self.framebuffer.width = width;
         self.framebuffer.height = height;
         resources
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(image_uniform, FramebufferUpdateData { width, height });
+            .update(image_uniform, FramebufferUpdateData { width, height })
     }
 
     pub(crate) fn drawn(&self) -> bool {
