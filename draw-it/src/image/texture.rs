@@ -82,7 +82,6 @@ impl Texture {
         memory.copy_from_memory(&staging_memory, 0)?;
         memory.generate_mipmaps()?;
 
-        println!("create texture");
         let image_index = uniform.add(memory.add_view()?);
 
         Ok(Self {

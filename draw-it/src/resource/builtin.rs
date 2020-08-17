@@ -70,18 +70,20 @@ impl Builtins {
 
         // materials
         let white_material = {
-            let index = resources.add_material(CoreMaterial::new(device, layout)?);
-            let mut mat = Material::new(index);
+            let (index, updater) = resources.materials.add(CoreMaterial::new(device, layout)?);
+            let mut mat = Material::new(index, updater);
             mat.set_phong_color([255, 255, 255]);
+            mat.update();
             mat
         };
 
         let font_material = {
-            let index = resources.add_material(CoreMaterial::new(device, layout)?);
-            let mut mat = Material::new(index);
+            let (index, updater) = resources.materials.add(CoreMaterial::new(device, layout)?);
+            let mut mat = Material::new(index, updater);
             mat.set_font_color([0, 0, 0]);
             mat.set_font_width(0.5);
             mat.set_font_edge(0.1);
+            mat.update();
             mat
         };
 
@@ -179,45 +181,47 @@ impl Builtins {
 }
 
 fn create_surface(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let index = resources.add_mesh(CoreMesh::new(device)?);
-    let mut mesh = Mesh::new(index);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let mut mesh = Mesh::new(index, updater);
 
-    mesh.set_vertices(vec![
+    mesh.vertices = vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, -1.0, 0.0),
         Vector3::new(-1.0, -1.0, 0.0),
-    ]);
-    mesh.set_uvs(vec![
+    ];
+    mesh.uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
+    mesh.update();
 
     Ok(mesh)
 }
 
 fn create_quad(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let index = resources.add_mesh(CoreMesh::new(device)?);
-    let mut mesh = Mesh::new(index);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let mut mesh = Mesh::new(index, updater);
 
-    mesh.set_vertices(vec![
+    mesh.vertices = vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
-    ]);
-    mesh.set_uvs(vec![
+    ];
+    mesh.uvs = vec![
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
+    mesh.update();
 
     Ok(mesh)
 }
@@ -277,16 +281,16 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
         [0.5, -0.5, -0.5],
     )?;
 
-    let index = resources.add_mesh(CoreMesh::new(device)?);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
 
     Ok(Mesh::combine(
         index,
+        updater,
         &[top, bottom, front, back, left, right],
     ))
 }
 
 fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32) -> Result<Mesh> {
-    let index = resources.add_mesh(CoreMesh::new(device)?);
     let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
@@ -321,10 +325,12 @@ fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32)
         indices.extend(&[vc, vc + 1]);
     }
 
-    let mut mesh = Mesh::new(index);
-    mesh.set_vertices(vertices);
-    mesh.set_colors(colors);
-    mesh.set_indices(indices);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let mut mesh = Mesh::new(index, updater);
+    mesh.vertices = vertices;
+    mesh.colors = colors;
+    mesh.indices = indices;
+    mesh.update();
     Ok(mesh)
 }
 
@@ -336,17 +342,17 @@ fn create_rectangle<V: Into<Vector3>>(
     p3: V,
     p4: V,
 ) -> Result<Mesh> {
-    let index = resources.add_mesh(CoreMesh::new(device)?);
-    let mut mesh = Mesh::new(index);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let mut mesh = Mesh::new(index, updater);
 
-    mesh.set_vertices(vec![p1.into(), p2.into(), p3.into(), p4.into()]);
-    mesh.set_uvs(vec![
+    mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
+    mesh.uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
 
     Ok(mesh)
@@ -357,8 +363,6 @@ fn create_sphere(
     resources: &mut ResourceManager,
     detail_level: u32,
 ) -> Result<Mesh> {
-    let index = resources.add_mesh(CoreMesh::new(device)?);
-
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -430,11 +434,13 @@ fn create_sphere(
         uvs.push(Vector2::new(u, v));
     }
 
-    let mut mesh = Mesh::new(index);
-    mesh.set_vertices(vertices);
-    mesh.set_indices(indices);
-    mesh.set_uvs(uvs);
+    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let mut mesh = Mesh::new(index, updater);
+    mesh.vertices = vertices;
+    mesh.indices = indices;
+    mesh.uvs = uvs;
     mesh.calculate_normals();
+    mesh.update();
     Ok(mesh)
 }
 

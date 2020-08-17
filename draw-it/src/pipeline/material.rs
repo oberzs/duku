@@ -3,6 +3,7 @@
 
 // Material - struct to pass additional data to shader
 
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use super::Descriptor;
@@ -22,16 +23,18 @@ use crate::resource::Ref;
 // user facing Material data
 #[derive(Debug)]
 pub struct Material {
+    pub arg_1: Vector4,
+    pub arg_2: Vector4,
+    pub arg_3: Vector4,
+    pub arg_4: Vector4,
+    pub arg_5: Vector4,
+    pub arg_6: Vector4,
+    pub arg_7: Vector4,
+    pub arg_8: Vector4,
+
     pub(crate) index: Index,
 
-    arg_1: Vector4,
-    arg_2: Vector4,
-    arg_3: Vector4,
-    arg_4: Vector4,
-    arg_5: Vector4,
-    arg_6: Vector4,
-    arg_7: Vector4,
-    arg_8: Vector4,
+    updater: Sender<(Index, MaterialUpdateData)>,
 }
 
 pub struct Arg(Vector4);
@@ -40,7 +43,6 @@ pub struct Arg(Vector4);
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
     buffer: DynamicBuffer,
-    version: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -57,7 +59,7 @@ pub(crate) struct MaterialUpdateData {
 }
 
 impl Material {
-    pub(crate) fn new(index: Index) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, MaterialUpdateData)>) -> Self {
         Self {
             arg_1: Vector4::ZERO,
             arg_2: Vector4::ZERO,
@@ -67,6 +69,7 @@ impl Material {
             arg_6: Vector4::ZERO,
             arg_7: Vector4::ZERO,
             arg_8: Vector4::ZERO,
+            updater,
             index,
         }
     }
@@ -76,7 +79,6 @@ impl Material {
         self.arg_1.x = c.x;
         self.arg_1.y = c.y;
         self.arg_1.z = c.z;
-        self.index.bump();
     }
 
     pub fn set_font_color(&mut self, color: impl Into<Color>) {
@@ -84,12 +86,10 @@ impl Material {
         self.arg_1.x = c.x;
         self.arg_1.y = c.y;
         self.arg_1.z = c.z;
-        self.index.bump();
     }
 
     pub fn set_font_width(&mut self, width: f32) {
         self.arg_1.w = width;
-        self.index.bump();
     }
 
     pub fn set_font_border_color(&mut self, color: impl Into<Color>) {
@@ -97,73 +97,60 @@ impl Material {
         self.arg_2.x = c.x;
         self.arg_2.y = c.y;
         self.arg_2.z = c.z;
-        self.index.bump();
     }
 
     pub fn set_font_edge(&mut self, edge: f32) {
         self.arg_2.w = edge;
-        self.index.bump();
     }
 
     pub fn set_font_border_offset(&mut self, offset: impl Into<Vector2>) {
         let v = offset.into();
         self.arg_3.x = v.x;
         self.arg_3.y = v.y;
-        self.index.bump();
     }
 
     pub fn set_font_border_width(&mut self, width: f32) {
         self.arg_3.z = width;
-        self.index.bump();
     }
 
     pub fn set_font_border_edge(&mut self, edge: f32) {
         self.arg_3.w = edge;
-        self.index.bump();
     }
 
     pub fn set_arg_1(&mut self, arg: impl Into<Arg>) {
         self.arg_1 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_2(&mut self, arg: impl Into<Arg>) {
         self.arg_2 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_3(&mut self, arg: impl Into<Arg>) {
         self.arg_3 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_4(&mut self, arg: impl Into<Arg>) {
         self.arg_4 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_5(&mut self, arg: impl Into<Arg>) {
         self.arg_5 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_6(&mut self, arg: impl Into<Arg>) {
         self.arg_6 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_7(&mut self, arg: impl Into<Arg>) {
         self.arg_7 = arg.into().0;
-        self.index.bump();
     }
 
     pub fn set_arg_8(&mut self, arg: impl Into<Arg>) {
         self.arg_8 = arg.into().0;
-        self.index.bump();
     }
 
-    pub(crate) fn data(&self) -> MaterialUpdateData {
-        MaterialUpdateData {
+    pub fn update(&self) {
+        let data = MaterialUpdateData {
             arg_1: self.arg_1,
             arg_2: self.arg_2,
             arg_3: self.arg_3,
@@ -172,7 +159,10 @@ impl Material {
             arg_6: self.arg_6,
             arg_7: self.arg_7,
             arg_8: self.arg_8,
-        }
+        };
+        self.updater
+            .send((self.index.clone(), data))
+            .expect("bad receiver");
     }
 }
 
@@ -181,23 +171,11 @@ impl CoreMaterial {
         let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1)?;
         let descriptor = shader_layout.material_set(&buffer)?;
 
-        Ok(Self {
-            version: 0,
-            buffer,
-            descriptor,
-        })
+        Ok(Self { buffer, descriptor })
     }
 
-    pub(crate) fn update_if_needed(
-        &mut self,
-        data: MaterialUpdateData,
-        version: u32,
-    ) -> Result<()> {
-        // check if data has been updated
-        if self.version != version {
-            self.buffer.update_data(&[data])?;
-            self.version = version;
-        }
+    pub(crate) fn update(&mut self, data: MaterialUpdateData) -> Result<()> {
+        self.buffer.update_data(&[data])?;
         Ok(())
     }
 

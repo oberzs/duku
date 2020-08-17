@@ -375,31 +375,33 @@ impl Context {
     }
 
     pub fn create_mesh(&mut self) -> Result<Mesh> {
-        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
-        Ok(Mesh::new(index))
+        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        Ok(Mesh::new(index, updater))
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
-        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
-        let mut result = Mesh::new(index);
-        result.set_vertices(mesh.vertices().to_vec());
-        result.set_normals(mesh.normals().to_vec());
-        result.set_colors(mesh.colors().to_vec());
-        result.set_uvs(mesh.uvs().to_vec());
-        result.set_indices(mesh.indices().to_vec());
+        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        let mut result = Mesh::new(index, updater);
+        result.vertices = mesh.vertices.clone();
+        result.normals = mesh.normals.clone();
+        result.colors = mesh.colors.clone();
+        result.uvs = mesh.uvs.clone();
+        result.indices = mesh.indices.clone();
+        result.update();
         Ok(result)
     }
 
     pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
-        let index = self.resources.add_mesh(CoreMesh::new(&self.device)?);
-        Ok(Mesh::combine(index, meshes))
+        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        Ok(Mesh::combine(index, updater, meshes))
     }
 
     pub fn create_material(&mut self) -> Result<Material> {
-        let index = self
+        let (index, updater) = self
             .resources
-            .add_material(CoreMaterial::new(&self.device, &self.shader_layout)?);
-        Ok(Material::new(index))
+            .materials
+            .add(CoreMaterial::new(&self.device, &self.shader_layout)?);
+        Ok(Material::new(index, updater))
     }
 
     pub fn create_framebuffer(

@@ -3,7 +3,6 @@
 
 // ForwardRenderer - renderer that renders shadowmap and then normal render pass
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::Albedo;
@@ -31,7 +30,6 @@ use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
 use crate::resource::Builtins;
 use crate::resource::Index;
-use crate::resource::NewIndex;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 
@@ -87,7 +85,7 @@ impl ForwardRenderer {
 
     pub(crate) fn draw(
         &mut self,
-        framebuffer: &NewIndex,
+        framebuffer: &Index,
         resources: &mut ResourceManager,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
@@ -311,7 +309,7 @@ impl ForwardRenderer {
 
             for m_order in &s_order.orders_by_material {
                 // bind material
-                let material = resources.material(&m_order.material);
+                let material = resources.materials.get(&m_order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
                 // unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
@@ -341,7 +339,7 @@ impl ForwardRenderer {
         });
         stats.shader_rebinds += 1;
 
-        let mesh = resources.mesh(&builtins.cube_mesh.index);
+        let mesh = resources.meshes.get(&builtins.cube_mesh.index);
         self.device.cmd_bind_mesh(cmd, mesh);
 
         let model_matrix = (Transform {
@@ -384,7 +382,7 @@ impl ForwardRenderer {
                 stats.shader_rebinds += 1;
 
                 // bind material
-                let material = resources.material(&order.material);
+                let material = resources.materials.get(&order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
                 // unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
@@ -541,7 +539,7 @@ impl ForwardRenderer {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
             Albedo::Framebuffer(fra) => resources.framebuffers.get(fra).texture_index(),
         };
-        let mesh = resources.mesh(&order.mesh);
+        let mesh = resources.meshes.get(&order.mesh);
 
         self.device.cmd_push_constants(
             cmd,
