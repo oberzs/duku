@@ -12,6 +12,7 @@ use super::ResourceManager;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
+use crate::font::CoreFont;
 use crate::font::Font;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -46,7 +47,7 @@ pub struct Builtins {
     pub line_shader: Ref<Shader>,
     pub unshaded_shader: Ref<Shader>,
     pub skybox_shader: Ref<Shader>,
-    pub kenney_font: Ref<Font>,
+    pub kenney_font: Font,
 }
 
 impl Builtins {
@@ -156,11 +157,14 @@ impl Builtins {
         )?);
 
         // fonts
-        let kenney_font = resources.add_font(Font::new(
-            device,
-            uniform,
-            include_bytes!("../../fonts/kenney-future.font"),
-        )?);
+        let kenney_font = {
+            let (index, _) = resources.fonts.add(CoreFont::new(
+                device,
+                uniform,
+                include_bytes!("../../fonts/kenney-future.font"),
+            )?);
+            Font::new(index)
+        };
 
         Ok(Self {
             white_texture,
