@@ -5,6 +5,7 @@
 // also manages world uniform and camera
 
 use ash::vk;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use super::ImageFormat;
@@ -27,16 +28,18 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
-use crate::resource::Index;
+use crate::resource::NewIndex;
 use crate::surface::Swapchain;
 
 // user facing Framebuffer data
 #[derive(Debug)]
 pub struct Framebuffer {
-    pub(crate) index: Index,
+    pub width: u32,
+    pub height: u32,
 
-    width: u32,
-    height: u32,
+    pub(crate) index: NewIndex,
+
+    updater: Sender<(NewIndex, FramebufferUpdateData)>,
 }
 
 // GPU data storage for a framebuffer
@@ -47,7 +50,6 @@ pub(crate) struct CoreFramebuffer {
     stored_index: usize,
     texture_image: Option<ImageMemory>,
     texture_index: Option<i32>,
-    version: u32,
 
     pub(crate) camera: Camera,
     world_descriptor: Descriptor,
@@ -96,25 +98,23 @@ pub(crate) struct FramebufferOptions<'formats> {
 }
 
 impl Framebuffer {
-    pub(crate) fn new(index: Index) -> Self {
+    pub(crate) fn new(index: NewIndex, updater: Sender<(NewIndex, FramebufferUpdateData)>) -> Self {
         Self {
             width: 1,
             height: 1,
+            updater,
             index,
         }
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
-        self.index.bump();
-    }
-
-    pub(crate) fn data(&self) -> FramebufferUpdateData {
-        FramebufferUpdateData {
+    pub fn update(&self) {
+        let data = FramebufferUpdateData {
             width: self.width,
             height: self.height,
-        }
+        };
+        self.updater
+            .send((self.index.clone(), data))
+            .expect("bad receiver");
     }
 }
 
@@ -172,7 +172,6 @@ impl CoreFramebuffer {
                     texture_image: None,
                     texture_index: None,
                     stored_index: 0,
-                    version: 0,
                     world_buffer,
                     world_descriptor,
                     render_pass,
@@ -266,7 +265,6 @@ impl CoreFramebuffer {
             texture_image: Some(texture_image),
             texture_index: Some(texture_index),
             device: Arc::clone(device),
-            version: 0,
             world_buffer,
             world_descriptor,
             stored_index,
@@ -361,18 +359,6 @@ impl CoreFramebuffer {
         self.height = height;
 
         Ok(())
-    }
-
-    pub(crate) fn update_if_needed(
-        &mut self,
-        image_uniform: &mut ImageUniform,
-        data: FramebufferUpdateData,
-        version: u32,
-    ) {
-        if self.version != version {
-            self.update(image_uniform, data);
-            self.version = version;
-        }
     }
 
     pub(crate) fn blit_to_texture(&mut self, cmd: vk::CommandBuffer) {
