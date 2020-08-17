@@ -536,7 +536,7 @@ impl ForwardRenderer {
     ) -> u32 {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
-            Albedo::Texture(tex) => tex.with(|t| t.image_index()),
+            Albedo::Texture(tex) => resources.textures.get(tex).image_index(),
             Albedo::Framebuffer(fra) => resources.framebuffers.get(fra).texture_index(),
         };
         let mesh = resources.meshes.get(&order.mesh);

@@ -13,12 +13,10 @@ use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
-use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::resource::Index;
-use crate::resource::Ref;
 
 // user facing Material data
 #[derive(Debug)]
@@ -211,12 +209,5 @@ impl From<Vector2> for Arg {
 impl From<Vector3> for Arg {
     fn from(v: Vector3) -> Self {
         Self(v.extend(0.0))
-    }
-}
-
-impl From<&Ref<Texture>> for Arg {
-    fn from(t: &Ref<Texture>) -> Self {
-        let index = t.with(|tex| tex.image_index()) as f32;
-        Self(Vector4::new(index, 0.0, 0.0, 0.0))
     }
 }

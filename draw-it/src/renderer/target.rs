@@ -19,9 +19,8 @@ use crate::renderer::Light;
 use crate::resource::Builtins;
 use crate::resource::Index;
 use crate::resource::Ref;
-use crate::resource::ResourceManager;
 
-pub struct Target<'storage> {
+pub struct Target<'b> {
     pub bias: f32,
     pub clear: Color,
     pub skybox: bool,
@@ -38,8 +37,7 @@ pub struct Target<'storage> {
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
     pub(crate) text_orders: Vec<TextOrder>,
     pub(crate) has_shadow_casters: bool,
-    pub(crate) builtins: &'storage Builtins,
-    pub(crate) resources: &'storage mut ResourceManager,
+    pub(crate) builtins: &'b Builtins,
 
     current_shader: Ref<Shader>,
     current_material: Index,
@@ -93,7 +91,7 @@ pub(crate) struct TextOrder {
 
 #[derive(Clone)]
 pub enum Albedo {
-    Texture(Ref<Texture>),
+    Texture(Index),
     Framebuffer(Index),
 }
 
@@ -109,11 +107,8 @@ struct Cache {
     cast_shadows: bool,
 }
 
-impl<'storage> Target<'storage> {
-    pub(crate) fn new(
-        builtins: &'storage Builtins,
-        resources: &'storage mut ResourceManager,
-    ) -> Result<Self> {
+impl<'b> Target<'b> {
+    pub(crate) fn new(builtins: &'b Builtins) -> Result<Self> {
         Ok(Self {
             orders_by_shader: vec![],
             text_orders: vec![],
@@ -127,7 +122,7 @@ impl<'storage> Target<'storage> {
             current_shader: builtins.phong_shader.clone(),
             current_material: builtins.white_material.index.clone(),
             current_font_material: builtins.font_material.index.clone(),
-            current_albedo: Albedo::Texture(builtins.white_texture.clone()),
+            current_albedo: Albedo::Texture(builtins.white_texture.index.clone()),
             current_font: builtins.kenney_font.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
@@ -140,7 +135,6 @@ impl<'storage> Target<'storage> {
             cascade_splits: [0.1, 0.25, 0.7, 1.0],
             line_width: 1.0,
             bias: 0.002,
-            resources,
             builtins,
         })
     }
@@ -157,7 +151,7 @@ impl<'storage> Target<'storage> {
 
     pub fn draw_debug_cube(&mut self, transform: impl Into<Transform>) {
         let cache = self.store();
-        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
+        self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -168,7 +162,7 @@ impl<'storage> Target<'storage> {
 
     pub fn draw_debug_sphere(&mut self, transform: impl Into<Transform>) {
         let cache = self.store();
-        self.current_albedo = Albedo::Texture(self.builtins.white_texture.clone());
+        self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -185,9 +179,9 @@ impl<'storage> Target<'storage> {
         self.draw(&self.builtins.sphere_mesh, transform);
     }
 
-    pub fn draw_texture(&mut self, texture: &Ref<Texture>, transform: impl Into<Transform>) {
+    pub fn draw_texture(&mut self, texture: &Texture, transform: impl Into<Transform>) {
         let cache = self.store();
-        self.current_albedo = Albedo::Texture(texture.clone());
+        self.current_albedo = Albedo::Texture(texture.index.clone());
         self.current_shader = self.builtins.unshaded_shader.clone();
         self.cast_shadows = false;
 
@@ -372,9 +366,9 @@ impl<'storage> Target<'storage> {
     }
 }
 
-impl From<&Ref<Texture>> for Albedo {
-    fn from(r: &Ref<Texture>) -> Self {
-        Self::Texture(r.clone())
+impl From<&Texture> for Albedo {
+    fn from(r: &Texture) -> Self {
+        Self::Texture(r.index.clone())
     }
 }
 

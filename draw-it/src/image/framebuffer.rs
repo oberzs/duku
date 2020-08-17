@@ -31,7 +31,7 @@ use crate::renderer::CameraType;
 use crate::resource::Index;
 use crate::surface::Swapchain;
 
-// user facing Framebuffer data
+// user facing framebuffer data
 #[derive(Debug)]
 pub struct Framebuffer {
     pub width: u32,

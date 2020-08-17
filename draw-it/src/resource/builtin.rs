@@ -14,6 +14,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
 use crate::image::CoreFramebuffer;
+use crate::image::CoreTexture;
 use crate::image::ImageFormat;
 use crate::image::Texture;
 use crate::image::TextureOptions;
@@ -29,7 +30,7 @@ use crate::pipeline::ShaderLayout;
 
 #[derive(Debug)]
 pub struct Builtins {
-    pub white_texture: Ref<Texture>,
+    pub white_texture: Texture,
     pub white_material: Material,
     pub font_material: Material,
     pub surface_mesh: Mesh,
@@ -57,16 +58,19 @@ impl Builtins {
         uniform: &mut ImageUniform,
     ) -> Result<Self> {
         // textures
-        let white_texture = resources.add_texture(Texture::new(
-            device,
-            uniform,
-            TextureOptions {
-                data: vec![255, 255, 255, 255],
-                format: ImageFormat::Rgba,
-                width: 1,
-                height: 1,
-            },
-        )?);
+        let white_texture = {
+            let (index, _) = resources.textures.add(CoreTexture::new(
+                device,
+                uniform,
+                TextureOptions {
+                    data: vec![255, 255, 255, 255],
+                    format: ImageFormat::Rgba,
+                    width: 1,
+                    height: 1,
+                },
+            )?);
+            Texture::new(index)
+        };
 
         // materials
         let white_material = {
