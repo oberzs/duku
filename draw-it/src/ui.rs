@@ -28,12 +28,14 @@ use std::sync::Arc;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::CoreFramebuffer;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Texture;
 use crate::image::TextureOptions;
+use crate::image::WorldUpdateData;
 use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -44,8 +46,8 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::WorldUniformData;
 use crate::renderer::CameraType;
+use crate::resource::Index;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
@@ -53,7 +55,7 @@ use crate::stats::Stats;
 pub use imgui;
 
 pub(crate) struct Ui {
-    framebuffer: Ref<Framebuffer>,
+    framebuffer: Framebuffer,
     shader: Shader,
     mesh: CoreMesh,
     texture: Texture,
@@ -138,7 +140,7 @@ impl Ui {
             )?
         };
 
-        let framebuffer = Framebuffer::new(
+        let core_framebuffer = CoreFramebuffer::new(
             device,
             shader_layout,
             image_uniform,
@@ -154,17 +156,21 @@ impl Ui {
 
         let shader = Shader::new(
             device,
-            &framebuffer,
+            &core_framebuffer,
             shader_layout,
             include_bytes!("../shaders/ui.shader"),
         )?;
+
+        let index = resources.add_framebuffer(core_framebuffer);
+        let mut framebuffer = Framebuffer::new(index);
+        framebuffer.resize(width, height);
 
         let mesh = CoreMesh::new(device)?;
 
         Ok(Self {
             device: Arc::clone(device),
-            framebuffer: resources.add_framebuffer(framebuffer),
             drawn: false,
+            framebuffer,
             texture,
             shader,
             mesh,
@@ -175,6 +181,8 @@ impl Ui {
     pub(crate) fn draw(
         &mut self,
         shader_layout: &ShaderLayout,
+        resources: &mut ResourceManager,
+        image_uniform: &mut ImageUniform,
         mut draw_fn: impl FnMut(&UiFrame<'_>),
     ) -> Result<()> {
         let draw_data = {
@@ -225,51 +233,51 @@ impl Ui {
         // render ui
         let cmd = self.device.command_buffer();
 
-        self.framebuffer.with(|f| {
-            // update world uniform
-            let world_matrix = f.camera.matrix();
-            let camera_position = f.camera.transform.position;
-            f.world_uniform
-                .update(WorldUniformData {
-                    light_matrices: [Matrix4::identity(); 4],
-                    lights: [Default::default(); 4],
-                    cascade_splits: [0.0; 4],
-                    bias: 0.0,
-                    time: 0.0,
-                    pcf: 0.0,
-                    camera_position,
-                    world_matrix,
-                })
-                .expect("bad update");
+        let framebuffer = resources.framebuffer_mut(&self.framebuffer.index);
+        framebuffer.update(image_uniform, self.framebuffer.data());
 
-            // begin render pass
-            self.device
-                .cmd_begin_render_pass(cmd, &f, [0.0, 0.0, 0.0, 0.0]);
-            self.device.cmd_set_view(cmd, f.width(), f.height());
-            self.device.cmd_set_line_width(cmd, 1.0);
+        // update world uniform
+        let world_matrix = framebuffer.camera.matrix();
+        let camera_position = framebuffer.camera.transform.position;
+        framebuffer.world_buffer().update_data(&[WorldUpdateData {
+            light_matrices: [Matrix4::identity(); 4],
+            lights: [Default::default(); 4],
+            cascade_splits: [0.0; 4],
+            bias: 0.0,
+            time: 0.0,
+            pcf: 0.0,
+            camera_position,
+            world_matrix,
+        }]);
 
-            // bind resources
-            self.device
-                .cmd_bind_uniform(cmd, shader_layout, &f.world_uniform);
-            self.device.cmd_bind_shader(cmd, &self.shader);
+        // begin render pass
+        self.device
+            .cmd_begin_render_pass(cmd, framebuffer, [0.0, 0.0, 0.0, 0.0]);
+        self.device
+            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+        self.device.cmd_set_line_width(cmd, 1.0);
 
-            // render mesh
-            self.device.cmd_push_constants(
-                cmd,
-                shader_layout,
-                PushConstants {
-                    albedo_index: self.texture.image_index(),
-                    model_matrix: Matrix4::identity(),
-                    sampler_index: 0,
-                },
-            );
+        // bind resources
+        self.device
+            .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
+        self.device.cmd_bind_shader(cmd, &self.shader);
 
-            self.device.cmd_bind_mesh(cmd, &self.mesh);
-            self.device.cmd_draw(cmd, self.mesh.index_count(), 0);
+        // render mesh
+        self.device.cmd_push_constants(
+            cmd,
+            shader_layout,
+            PushConstants {
+                albedo_index: self.texture.image_index(),
+                model_matrix: Matrix4::identity(),
+                sampler_index: 0,
+            },
+        );
 
-            self.device.cmd_end_render_pass(cmd);
-            f.blit_to_texture(cmd);
-        });
+        self.device.cmd_bind_mesh(cmd, &self.mesh);
+        self.device.cmd_draw(cmd, self.mesh.index_count(), 0);
+
+        self.device.cmd_end_render_pass(cmd);
+        framebuffer.blit_to_texture(cmd);
 
         self.drawn = true;
 
@@ -315,14 +323,9 @@ impl Ui {
         }
     }
 
-    pub(crate) fn resize(
-        &mut self,
-        uniform: &mut ImageUniform,
-        width: u32,
-        height: u32,
-    ) -> Result<()> {
+    pub(crate) fn resize(&mut self, uniform: &mut ImageUniform, width: u32, height: u32) {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
-        self.framebuffer.with(|f| f.resize(width, height, uniform))
+        self.framebuffer.resize(width, height);
     }
 
     pub(crate) fn drawn(&self) -> bool {
@@ -333,7 +336,7 @@ impl Ui {
         self.drawn = false;
     }
 
-    pub(crate) fn framebuffer(&self) -> &Ref<Framebuffer> {
+    pub(crate) fn framebuffer(&self) -> &Framebuffer {
         &self.framebuffer
     }
 }

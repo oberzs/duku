@@ -7,11 +7,11 @@ use ash::vk;
 use std::mem;
 use std::sync::Arc;
 
-use super::PushConstants;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
+use crate::math::Matrix4;
 
 pub(crate) struct ShaderLayout {
     handle: vk::PipelineLayout,
@@ -22,6 +22,17 @@ pub(crate) struct ShaderLayout {
     descriptor_pool: vk::DescriptorPool,
     device: Arc<Device>,
 }
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub(crate) struct PushConstants {
+    pub(crate) model_matrix: Matrix4,
+    pub(crate) albedo_index: i32,
+    pub(crate) sampler_index: i32,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl ShaderLayout {
     pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
@@ -138,7 +149,7 @@ impl ShaderLayout {
         })
     }
 
-    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<vk::DescriptorSet> {
+    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<Descriptor> {
         let set = self
             .device
             .allocate_descriptor_set(self.world_layout, self.descriptor_pool)?;
@@ -160,10 +171,10 @@ impl ShaderLayout {
 
         self.device.update_descriptor_sets(&write);
 
-        Ok(set)
+        Ok(Descriptor(0, set))
     }
 
-    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<vk::DescriptorSet> {
+    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<Descriptor> {
         let set = self
             .device
             .allocate_descriptor_set(self.material_layout, self.descriptor_pool)?;
@@ -185,15 +196,17 @@ impl ShaderLayout {
 
         self.device.update_descriptor_sets(&write);
 
-        Ok(set)
+        Ok(Descriptor(1, set))
     }
 
-    pub(crate) fn image_set(&self) -> Result<vk::DescriptorSet> {
-        self.device
-            .allocate_descriptor_set(self.image_layout, self.descriptor_pool)
+    pub(crate) fn image_set(&self) -> Result<Descriptor> {
+        let set = self
+            .device
+            .allocate_descriptor_set(self.image_layout, self.descriptor_pool)?;
+        Ok(Descriptor(2, set))
     }
 
-    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Result<vk::DescriptorSet> {
+    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Result<Descriptor> {
         let set = self
             .device
             .allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool)?;
@@ -217,7 +230,7 @@ impl ShaderLayout {
 
         self.device.update_descriptor_sets(&image_write);
 
-        Ok(set)
+        Ok(Descriptor(3, set))
     }
 
     pub(crate) fn handle(&self) -> vk::PipelineLayout {

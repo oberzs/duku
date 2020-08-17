@@ -50,6 +50,20 @@ pub struct Target<'storage> {
     current_font: Ref<Font>,
 }
 
+pub(crate) struct RenderData {
+    pub(crate) line_width: f32,
+    pub(crate) bias: f32,
+    pub(crate) clear: Color,
+    pub(crate) skybox: bool,
+
+    pub(crate) has_shadow_casters: bool,
+    pub(crate) lights: [Light; 4],
+    pub(crate) cascade_splits: [f32; 4],
+
+    pub(crate) orders_by_shader: Vec<OrdersByShader>,
+    pub(crate) text_orders: Vec<TextOrder>,
+}
+
 pub(crate) struct OrdersByShader {
     pub(crate) shader: Ref<Shader>,
     pub(crate) orders_by_material: Vec<OrdersByMaterial>,
@@ -82,7 +96,7 @@ pub(crate) struct TextOrder {
 #[derive(Clone)]
 pub enum Albedo {
     Texture(Ref<Texture>),
-    Framebuffer(Ref<Framebuffer>),
+    Framebuffer(Index),
 }
 
 struct Cache {
@@ -214,10 +228,10 @@ impl<'storage> Target<'storage> {
         self.restore(cache);
     }
 
-    pub fn blit_framebuffer(&mut self, framebuffer: &Ref<Framebuffer>) {
+    pub fn blit_framebuffer(&mut self, framebuffer: &Framebuffer) {
         let cache = self.store();
         self.current_shader = self.builtins.blit_shader.clone();
-        self.current_albedo = Albedo::Framebuffer(framebuffer.clone());
+        self.current_albedo = Albedo::Framebuffer(framebuffer.index.clone());
 
         self.draw_surface();
 
@@ -276,6 +290,20 @@ impl<'storage> Target<'storage> {
 
     pub fn set_shader(&mut self, shader: &Ref<Shader>) {
         self.current_shader = shader.clone();
+    }
+
+    pub(crate) fn render_data(self) -> RenderData {
+        RenderData {
+            line_width: self.line_width,
+            bias: self.bias,
+            clear: self.clear,
+            skybox: self.skybox,
+            has_shadow_casters: self.has_shadow_casters,
+            lights: self.lights,
+            cascade_splits: self.cascade_splits,
+            orders_by_shader: self.orders_by_shader,
+            text_orders: self.text_orders,
+        }
     }
 
     fn add_order(&mut self, order: Order) {
@@ -383,8 +411,8 @@ impl From<&Ref<Texture>> for Albedo {
     }
 }
 
-impl From<&Ref<Framebuffer>> for Albedo {
-    fn from(r: &Ref<Framebuffer>) -> Self {
-        Self::Framebuffer(r.clone())
+impl From<&Framebuffer> for Albedo {
+    fn from(r: &Framebuffer) -> Self {
+        Self::Framebuffer(r.index.clone())
     }
 }

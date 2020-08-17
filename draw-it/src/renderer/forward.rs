@@ -10,13 +10,16 @@ use super::Albedo;
 use super::Camera;
 use super::CameraType;
 use super::Order;
-use super::Target;
+use super::OrdersByShader;
+use super::RenderData;
+use super::TextOrder;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::CoreFramebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::Msaa;
+use crate::image::WorldUpdateData;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
@@ -26,8 +29,9 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
-use crate::pipeline::Uniform;
-use crate::pipeline::WorldUniformData;
+use crate::resource::Builtins;
+use crate::resource::Index;
+use crate::resource::ResourceManager;
 use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
@@ -45,7 +49,7 @@ pub enum Pcf {
 }
 
 struct ShadowMapSet {
-    framebuffers: [Framebuffer; 4],
+    framebuffers: [CoreFramebuffer; 4],
     uniform: ShadowMapUniform,
     matrices: [Matrix4; 4],
     cascades: [f32; 4],
@@ -82,13 +86,15 @@ impl ForwardRenderer {
 
     pub(crate) fn draw(
         &mut self,
-        framebuffer: &mut Framebuffer,
+        framebuffer: &Index,
+        resources: &mut ResourceManager,
+        builtins: &Builtins,
         shader_layout: &ShaderLayout,
-        target: Target<'_>,
+        data: RenderData,
         stats: &mut Stats,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, target.line_width);
+        self.device.cmd_set_line_width(cmd, data.line_width);
 
         let current = self.device.current_frame();
 
@@ -97,10 +103,10 @@ impl ForwardRenderer {
         self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
-        if target.has_shadow_casters {
-            let mut view = framebuffer.camera.clone();
+        if data.has_shadow_casters {
+            let mut view = resources.framebuffer(framebuffer).camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, &target, &view)?;
+            self.shadow_pass(shader_layout, resources, &data, &view)?;
         }
 
         // bind current shadow map set
@@ -114,120 +120,279 @@ impl ForwardRenderer {
         };
 
         let lights = [
-            target.lights[0].data(),
-            target.lights[1].data(),
-            target.lights[2].data(),
-            target.lights[3].data(),
+            data.lights[0].data(),
+            data.lights[1].data(),
+            data.lights[2].data(),
+            data.lights[3].data(),
         ];
 
         // update world uniform
-        framebuffer.world_uniform.update(WorldUniformData {
-            camera_position: framebuffer.camera.transform.position,
-            cascade_splits: self.shadow_frames[current].cascades,
-            light_matrices: self.shadow_frames[current].matrices,
-            world_matrix: framebuffer.camera.matrix(),
-            bias: target.bias,
-            time: stats.time,
-            lights,
-            pcf,
-        })?;
+        let camera_position = resources.framebuffer(framebuffer).camera.transform.position;
+        let camera_depth = resources.framebuffer(framebuffer).camera.depth;
+        let world_matrix = resources.framebuffer(framebuffer).camera.matrix();
+        resources
+            .framebuffer_mut(framebuffer)
+            .world_buffer()
+            .update_data(&[WorldUpdateData {
+                cascade_splits: self.shadow_frames[current].cascades,
+                light_matrices: self.shadow_frames[current].matrices,
+                bias: data.bias,
+                time: stats.time,
+                camera_position,
+                world_matrix,
+                lights,
+                pcf,
+            }])?;
 
         // do render pass
-        self.device
-            .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
-        self.device
-            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-        self.device
-            .cmd_bind_uniform(cmd, shader_layout, &framebuffer.world_uniform);
+        {
+            let framebuffer = resources.framebuffer(framebuffer);
+            self.device
+                .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
+            self.device
+                .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+            self.device
+                .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
+        }
 
-        let mut unique_shaders = HashSet::new();
-        let mut unique_materials = HashSet::new();
+        // let mut unique_shaders = HashSet::new();
+        // let mut unique_materials = HashSet::new();
 
         // skybox rendering
-        if target.skybox {
-            target.builtins.skybox_shader.with(|s| {
-                self.device.cmd_bind_shader(cmd, s);
-                unique_shaders.insert(s.handle());
-            });
-            stats.shader_rebinds += 1;
-
-            let mesh = target.resources.mesh(&target.builtins.cube_mesh.index);
-            self.device.cmd_bind_mesh(cmd, mesh);
-
-            let model_matrix = (Transform {
-                position: framebuffer.camera.transform.position,
-                scale: Vector3::uniform(framebuffer.camera.depth * 2.0 - 0.1),
-                ..Default::default()
-            })
-            .as_matrix();
-            self.device.cmd_push_constants(
-                cmd,
+        if data.skybox {
+            self.skybox_pass(
+                builtins,
+                resources,
                 shader_layout,
-                PushConstants {
-                    sampler_index: 0,
-                    albedo_index: 0,
-                    model_matrix,
-                },
+                camera_position,
+                camera_depth,
+                stats,
             );
-            self.device.cmd_draw(cmd, mesh.index_count(), 0);
-
-            stats.drawn_indices += mesh.index_count() as u32;
-            stats.draw_calls += 1;
         }
 
         // normal mesh rendering
-        for s_order in &target.orders_by_shader {
+        self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
+
+        // text rendering
+        self.text_pass(&data.text_orders, resources, shader_layout, stats);
+
+        // end rendering
+        self.device.cmd_end_render_pass(cmd);
+        resources.framebuffer_mut(framebuffer).blit_to_texture(cmd);
+
+        // stats.shaders_used = unique_shaders.len() as u32;
+        // stats.materials_used = unique_materials.len() as u32;
+
+        Ok(())
+    }
+
+    pub(crate) fn draw_core(
+        &mut self,
+        framebuffer: &mut CoreFramebuffer,
+        resources: &mut ResourceManager,
+        builtins: &Builtins,
+        shader_layout: &ShaderLayout,
+        data: RenderData,
+        stats: &mut Stats,
+    ) -> Result<()> {
+        let cmd = self.device.command_buffer();
+        self.device.cmd_set_line_width(cmd, data.line_width);
+
+        let current = self.device.current_frame();
+
+        // reset current matrices and cascades
+        self.shadow_frames[current].matrices = [Matrix4::identity(); 4];
+        self.shadow_frames[current].cascades = [0.0; 4];
+
+        // shadow mapping
+        if data.has_shadow_casters {
+            let mut view = framebuffer.camera.clone();
+            view.depth = 50.0;
+            self.shadow_pass(shader_layout, resources, &data, &view)?;
+        }
+
+        // bind current shadow map set
+        self.device
+            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
+
+        let pcf = match self.pcf {
+            Pcf::Disabled => 2.0,
+            Pcf::X4 => 0.0,
+            Pcf::X16 => 1.0,
+        };
+
+        let lights = [
+            data.lights[0].data(),
+            data.lights[1].data(),
+            data.lights[2].data(),
+            data.lights[3].data(),
+        ];
+
+        // update world uniform
+        let camera_position = framebuffer.camera.transform.position;
+        let camera_depth = framebuffer.camera.depth;
+        let world_matrix = framebuffer.camera.matrix();
+        framebuffer.world_buffer().update_data(&[WorldUpdateData {
+            cascade_splits: self.shadow_frames[current].cascades,
+            light_matrices: self.shadow_frames[current].matrices,
+            bias: data.bias,
+            time: stats.time,
+            camera_position,
+            world_matrix,
+            lights,
+            pcf,
+        }])?;
+
+        // do render pass
+        self.device
+            .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
+        self.device
+            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
+        self.device
+            .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
+
+        // let mut unique_shaders = HashSet::new();
+        // let mut unique_materials = HashSet::new();
+
+        // skybox rendering
+        if data.skybox {
+            self.skybox_pass(
+                builtins,
+                resources,
+                shader_layout,
+                camera_position,
+                camera_depth,
+                stats,
+            );
+        }
+
+        // normal mesh rendering
+        self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
+
+        // text rendering
+        self.text_pass(&data.text_orders, resources, shader_layout, stats);
+
+        // end rendering
+        self.device.cmd_end_render_pass(cmd);
+        framebuffer.blit_to_texture(cmd);
+
+        // stats.shaders_used = unique_shaders.len() as u32;
+        // stats.materials_used = unique_materials.len() as u32;
+
+        Ok(())
+    }
+
+    fn normal_pass(
+        &self,
+        orders_by_shader: &[OrdersByShader],
+        resources: &ResourceManager,
+        shader_layout: &ShaderLayout,
+        stats: &mut Stats,
+    ) {
+        let cmd = self.device.command_buffer();
+
+        for s_order in orders_by_shader {
             // bind shader
             s_order.shader.with(|s| {
                 self.device.cmd_bind_shader(cmd, s);
-                unique_shaders.insert(s.handle());
+                // unique_shaders.insert(s.handle());
             });
             stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
                 // bind material
-                let material = target.resources.material(&m_order.material);
+                let material = resources.material(&m_order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
-                unique_materials.insert(material.descriptor());
+                // unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    stats.drawn_indices += self.draw_order(&target, shader_layout, order);
+                    stats.drawn_indices += self.draw_order(resources, shader_layout, order);
                     stats.draw_calls += 1;
                 }
             }
         }
+    }
 
-        // text rendering
-        for t_order in &target.text_orders {
-            t_order.font.with(|f| {
+    fn skybox_pass(
+        &self,
+        builtins: &Builtins,
+        resources: &ResourceManager,
+        shader_layout: &ShaderLayout,
+        camera_position: Vector3,
+        camera_depth: f32,
+        stats: &mut Stats,
+    ) {
+        let cmd = self.device.command_buffer();
+
+        builtins.skybox_shader.with(|s| {
+            self.device.cmd_bind_shader(cmd, s);
+            // unique_shaders.insert(s.handle());
+        });
+        stats.shader_rebinds += 1;
+
+        let mesh = resources.mesh(&builtins.cube_mesh.index);
+        self.device.cmd_bind_mesh(cmd, mesh);
+
+        let model_matrix = (Transform {
+            position: camera_position,
+            scale: Vector3::uniform(camera_depth * 2.0 - 0.1),
+            ..Default::default()
+        })
+        .as_matrix();
+        self.device.cmd_push_constants(
+            cmd,
+            shader_layout,
+            PushConstants {
+                sampler_index: 0,
+                albedo_index: 0,
+                model_matrix,
+            },
+        );
+        self.device.cmd_draw(cmd, mesh.index_count(), 0);
+
+        stats.drawn_indices += mesh.index_count() as u32;
+        stats.draw_calls += 1;
+    }
+
+    fn text_pass(
+        &self,
+        orders: &[TextOrder],
+        resources: &ResourceManager,
+        shader_layout: &ShaderLayout,
+        stats: &mut Stats,
+    ) {
+        let cmd = self.device.command_buffer();
+
+        for order in orders {
+            order.font.with(|f| {
                 // bind shader
-                t_order.shader.with(|s| {
+                order.shader.with(|s| {
                     self.device.cmd_bind_shader(cmd, s);
-                    unique_shaders.insert(s.handle());
+                    // unique_shaders.insert(s.handle());
                 });
                 stats.shader_rebinds += 1;
 
                 // bind material
-                let material = target.resources.material(&t_order.material);
+                let material = resources.material(&order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
-                unique_materials.insert(material.descriptor());
+                // unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
 
-                let font_size = t_order.size;
-                let sampler_index = t_order.sampler_index;
+                let font_size = order.size;
+                let sampler_index = order.sampler_index;
 
                 let albedo_index = f.texture(font_size).image_index();
                 let mesh = f.mesh(font_size);
                 let margin = f.margin(font_size);
                 self.device.cmd_bind_mesh(cmd, mesh);
 
-                let mut transform = t_order.transform;
+                let mut transform = order.transform;
                 let start_x = transform.position.x;
                 transform.scale *= font_size as f32;
                 transform.position.x -= margin * font_size as f32;
 
-                for c in t_order.text.chars() {
+                for c in order.text.chars() {
                     // handle whitespace
                     if c == ' ' {
                         transform.position.x += transform.scale.x / 3.0;
@@ -259,24 +424,16 @@ impl ForwardRenderer {
                 }
             });
         }
-
-        // end rendering
-        self.device.cmd_end_render_pass(cmd);
-        framebuffer.blit_to_texture(cmd);
-
-        stats.shaders_used = unique_shaders.len() as u32;
-        stats.materials_used = unique_materials.len() as u32;
-
-        Ok(())
     }
 
     fn shadow_pass(
         &mut self,
         shader_layout: &ShaderLayout,
-        target: &Target<'_>,
+        resources: &ResourceManager,
+        data: &RenderData,
         view: &Camera,
     ) -> Result<()> {
-        let light_dir = match target.lights.iter().find(|l| l.shadows) {
+        let light_dir = match data.lights.iter().find(|l| l.shadows) {
             Some(light) => light.coords,
             // if there is no light with shadows,
             // don't do shadow pass
@@ -292,7 +449,7 @@ impl ForwardRenderer {
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
-        for (i, cs) in target.cascade_splits.iter().enumerate() {
+        for (i, cs) in data.cascade_splits.iter().enumerate() {
             let map_size = self.shadow_frames[current].map_size;
 
             // get view frustum bounding sphere
@@ -328,7 +485,7 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.world_uniform.update(WorldUniformData {
+            framebuffer.world_buffer().update_data(&[WorldUpdateData {
                 light_matrices: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 lights: [Default::default(); 4],
@@ -337,7 +494,7 @@ impl ForwardRenderer {
                 bias: 0.0,
                 time: 0.0,
                 pcf: 0.0,
-            })?;
+            }])?;
 
             // do render pass
             self.device
@@ -345,14 +502,14 @@ impl ForwardRenderer {
             self.device
                 .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
             self.device
-                .cmd_bind_uniform(cmd, shader_layout, &framebuffer.world_uniform);
+                .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
             self.device.cmd_bind_shader(cmd, &self.shadow_shader);
 
-            for s_order in &target.orders_by_shader {
+            for s_order in &data.orders_by_shader {
                 for m_order in &s_order.orders_by_material {
                     for order in &m_order.orders {
                         if order.cast_shadows {
-                            self.draw_order(target, shader_layout, order);
+                            self.draw_order(resources, shader_layout, order);
                         }
                     }
                 }
@@ -363,13 +520,18 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn draw_order(&self, target: &Target<'_>, shader_layout: &ShaderLayout, order: &Order) -> u32 {
+    fn draw_order(
+        &self,
+        resources: &ResourceManager,
+        shader_layout: &ShaderLayout,
+        order: &Order,
+    ) -> u32 {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
-            Albedo::Framebuffer(fra) => fra.with(|f| f.texture_index()),
+            Albedo::Framebuffer(fra) => resources.framebuffer(fra).texture_index(),
         };
-        let mesh = target.resources.mesh(&order.mesh);
+        let mesh = resources.mesh(&order.mesh);
 
         self.device.cmd_push_constants(
             cmd,
@@ -423,8 +585,8 @@ impl ShadowMapSet {
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         size: u32,
-    ) -> Result<Framebuffer> {
-        Framebuffer::new(
+    ) -> Result<CoreFramebuffer> {
+        CoreFramebuffer::new(
             device,
             shader_layout,
             image_uniform,

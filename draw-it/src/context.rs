@@ -18,6 +18,7 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::error::ErrorKind;
 use crate::error::Result;
+use crate::image::CoreFramebuffer;
 use crate::image::Cubemap;
 use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
@@ -79,7 +80,7 @@ pub struct Context {
     skybox: Cubemap,
 
     // Vulkan
-    window_framebuffers: Arc<Mutex<Vec<Framebuffer>>>,
+    window_framebuffers: Arc<Mutex<Vec<CoreFramebuffer>>>,
     image_uniform: ImageUniform,
     shader_layout: Arc<ShaderLayout>,
     swapchain: Swapchain,
@@ -152,8 +153,13 @@ impl Context {
         let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy)?;
 
         // setup framebuffers
-        let window_framebuffers =
-            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, options.camera, msaa)?;
+        let window_framebuffers = CoreFramebuffer::for_swapchain(
+            &device,
+            &swapchain,
+            &shader_layout,
+            options.camera,
+            msaa,
+        )?;
 
         // setup resources
         let mut resources = ResourceManager::new();
@@ -247,7 +253,7 @@ impl Context {
             .window_framebuffers
             .lock()
             .expect("poisoned framebuffers");
-        *framebuffers = Framebuffer::for_swapchain(
+        *framebuffers = CoreFramebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
@@ -257,42 +263,48 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.image_uniform, width, height)?;
+            ui.resize(&mut self.image_uniform, width, height);
         }
 
         Ok(())
     }
 
     pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) -> Result<()> {
+        // let user record draw calls
+        let mut target = Target::new(&self.builtins, &mut self.resources)?;
+        draw_callback(&mut target);
+        #[cfg(feature = "ui")]
+        if let Some(ui) = &self.ui {
+            if ui.drawn() {
+                target.blit_framebuffer(ui.framebuffer());
+            }
+        }
+        let render_data = target.render_data();
+
         if let RenderStage::Before = self.render_stage {
+            // begin draw
             self.begin_draw()?;
         }
 
+        // draw
         {
-            let mut target = Target::new(&self.builtins, &mut self.resources)?;
-            draw_callback(&mut target);
-
-            #[cfg(feature = "ui")]
-            if let Some(ui) = &self.ui {
-                if ui.drawn() {
-                    target.blit_framebuffer(ui.framebuffer());
-                }
-            }
-
             let framebuffer = &mut self
                 .window_framebuffers
                 .lock()
                 .expect("poisoned framebuffer")[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
-            self.forward_renderer.draw(
+            self.forward_renderer.draw_core(
                 framebuffer,
+                &mut self.resources,
+                &self.builtins,
                 &self.shader_layout,
-                target,
+                render_data,
                 &mut self.stats,
             )?;
         }
 
+        // end draw
         self.end_draw()?;
 
         Ok(())
@@ -300,19 +312,37 @@ impl Context {
 
     pub fn draw(
         &mut self,
-        framebuffer: &Ref<Framebuffer>,
+        framebuffer: &Framebuffer,
         draw_callback: impl Fn(&mut Target<'_>),
     ) -> Result<()> {
+        // let user record draw calls
+        let mut target = Target::new(&self.builtins, &mut self.resources)?;
+        draw_callback(&mut target);
+        let render_data = target.render_data();
+
+        // update framebuffer
+        self.resources
+            .framebuffer_mut(&framebuffer.index)
+            .update_if_needed(
+                &mut self.image_uniform,
+                framebuffer.data(),
+                framebuffer.index.version(),
+            );
+
         if let RenderStage::Before = self.render_stage {
+            // begin draw
             self.begin_draw()?;
         }
 
-        framebuffer.with(|f| {
-            let mut target = Target::new(&self.builtins, &mut self.resources)?;
-            draw_callback(&mut target);
-            self.forward_renderer
-                .draw(f, &self.shader_layout, target, &mut self.stats)
-        })?;
+        // draw
+        self.forward_renderer.draw(
+            &framebuffer.index,
+            &mut self.resources,
+            &self.builtins,
+            &self.shader_layout,
+            render_data,
+            &mut self.stats,
+        );
 
         Ok(())
     }
@@ -390,8 +420,8 @@ impl Context {
         t: CameraType,
         width: u32,
         height: u32,
-    ) -> Result<Ref<Framebuffer>> {
-        let framebuffer = Framebuffer::new(
+    ) -> Result<Framebuffer> {
+        let index = self.resources.add_framebuffer(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
@@ -403,17 +433,10 @@ impl Context {
                 width,
                 height,
             },
-        )?;
-        Ok(self.resources.add_framebuffer(framebuffer))
-    }
-
-    pub fn resize_framebuffer(
-        &mut self,
-        framebuffer: &Ref<Framebuffer>,
-        width: u32,
-        height: u32,
-    ) -> Result<()> {
-        framebuffer.with(|f| f.resize(width, height, &mut self.image_uniform))
+        )?);
+        let mut framebuffer = Framebuffer::new(index);
+        framebuffer.resize(width, height);
+        Ok(framebuffer)
     }
 
     pub fn create_shader(&mut self, source: &[u8]) -> Result<Ref<Shader>> {
@@ -761,10 +784,12 @@ impl Context {
             self.begin_draw()?;
         }
 
-        self.ui
-            .as_mut()
-            .ok_or(ErrorKind::UnitializedUi)?
-            .draw(&self.shader_layout, draw_fn)?;
+        self.ui.as_mut().ok_or(ErrorKind::UnitializedUi)?.draw(
+            &self.shader_layout,
+            &mut self.resources,
+            &mut self.image_uniform,
+            draw_fn,
+        )?;
 
         Ok(())
     }

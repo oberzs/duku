@@ -11,9 +11,8 @@ pub(crate) mod hash;
 
 use std::collections::HashMap;
 
-use crate::error::Result;
 use crate::font::Font;
-use crate::image::Framebuffer;
+use crate::image::CoreFramebuffer;
 use crate::image::Texture;
 use crate::mesh::CoreMesh;
 use crate::pipeline::CoreMaterial;
@@ -29,8 +28,8 @@ pub(crate) struct ResourceManager {
     textures: Vec<Storage<Texture>>,
     shaders: Vec<Storage<Shader>>,
     fonts: Vec<Storage<Font>>,
-    framebuffers: Vec<Storage<Framebuffer>>,
 
+    framebuffers: HashMap<Index, CoreFramebuffer>,
     materials: HashMap<Index, CoreMaterial>,
     meshes: HashMap<Index, CoreMesh>,
     next_index: u32,
@@ -42,7 +41,7 @@ impl ResourceManager {
             textures: vec![],
             shaders: vec![],
             fonts: vec![],
-            framebuffers: vec![],
+            framebuffers: HashMap::new(),
             materials: HashMap::new(),
             meshes: HashMap::new(),
             next_index: 0,
@@ -84,11 +83,11 @@ impl ResourceManager {
         reference
     }
 
-    pub(crate) fn add_framebuffer(&mut self, framebuffer: Framebuffer) -> Ref<Framebuffer> {
-        let storage = Storage::new(framebuffer);
-        let reference = storage.as_ref();
-        self.framebuffers.push(storage);
-        reference
+    pub(crate) fn add_framebuffer(&mut self, framebuffer: CoreFramebuffer) -> Index {
+        let index = Index::new(self.next_index);
+        self.next_index += 1;
+        self.framebuffers.insert(index.clone(), framebuffer);
+        index
     }
 
     pub(crate) fn material(&self, index: &Index) -> &CoreMaterial {
@@ -107,12 +106,20 @@ impl ResourceManager {
         self.meshes.get_mut(index).expect("bad index")
     }
 
+    pub(crate) fn framebuffer(&self, index: &Index) -> &CoreFramebuffer {
+        self.framebuffers.get(index).expect("bad index")
+    }
+
+    pub(crate) fn framebuffer_mut(&mut self, index: &Index) -> &mut CoreFramebuffer {
+        self.framebuffers.get_mut(index).expect("bad index")
+    }
+
     pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
         self.fonts.retain(|r| r.count() != 0);
         // self.meshes.retain(|r| r.count() != 0);
         // self.materials.retain(|r| r.count() != 0);
         self.shaders.retain(|r| r.count() != 0);
-        self.framebuffers.retain(|r| r.count() != 0);
+        // self.framebuffers.retain(|r| r.count() != 0);
         self.textures
             .drain_filter(|r| r.count() == 0)
             .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
