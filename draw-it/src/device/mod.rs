@@ -26,7 +26,7 @@ use crate::buffer::BufferAccess;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::CoreFramebuffer;
 use crate::image::ImageLayout;
 use crate::image::ImageMemory;
 use crate::instance::GPUProperties;
@@ -613,7 +613,7 @@ impl Device {
     pub(crate) fn cmd_begin_render_pass(
         &self,
         buffer: vk::CommandBuffer,
-        framebuffer: &Framebuffer,
+        framebuffer: &CoreFramebuffer,
         clear: [f32; 4],
     ) {
         // create clear values based on framebuffer image formats
@@ -665,7 +665,7 @@ impl Device {
         }
     }
 
-    fn cmd_bind_descriptor(
+    pub(crate) fn cmd_bind_descriptor(
         &self,
         buffer: vk::CommandBuffer,
         layout: &ShaderLayout,

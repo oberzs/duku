@@ -4,8 +4,8 @@
 // Light - struct for light data
 
 use crate::color::Color;
+use crate::image::LightUpdateData;
 use crate::math::Vector3;
-use crate::pipeline::LightData;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Light {
@@ -47,13 +47,13 @@ impl Light {
         }
     }
 
-    pub(crate) fn data(&self) -> LightData {
+    pub(crate) fn data(&self) -> LightUpdateData {
         let light_type = match self.light_type {
             LightType::Directional => 0,
             LightType::Point => 1,
         };
 
-        LightData {
+        LightUpdateData {
             coords: self.coords,
             color: self.color.to_rgba_norm_vec(),
             light_type,

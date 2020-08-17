@@ -12,33 +12,78 @@ use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
+use crate::buffer::BufferUsage;
+use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Msaa;
+use crate::math::Matrix4;
+use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::pipeline::Attachment;
+use crate::pipeline::Descriptor;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::WorldUniform;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
+use crate::resource::Index;
 use crate::surface::Swapchain;
 
+// user facing Framebuffer data
+#[derive(Debug)]
 pub struct Framebuffer {
-    pub camera: Camera,
+    pub(crate) index: Index,
 
-    pub(crate) world_uniform: WorldUniform,
-
-    handle: vk::Framebuffer,
-    render_pass: RenderPass,
     width: u32,
     height: u32,
+}
+
+// GPU data storage for a framebuffer
+pub(crate) struct CoreFramebuffer {
+    handle: vk::Framebuffer,
+    render_pass: RenderPass,
     images: Vec<ImageMemory>,
-    msaa: Msaa,
     stored_index: usize,
     texture_image: Option<ImageMemory>,
     texture_index: Option<i32>,
+    version: u32,
+
+    pub(crate) camera: Camera,
+    world_descriptor: Descriptor,
+    world_buffer: DynamicBuffer,
+
+    msaa: Msaa,
+    width: u32,
+    height: u32,
+
     device: Arc<Device>,
+}
+
+pub(crate) struct FramebufferUpdateData {
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub(crate) struct WorldUpdateData {
+    pub(crate) world_matrix: Matrix4,
+    pub(crate) lights: [LightUpdateData; 4],
+    pub(crate) camera_position: Vector3,
+    pub(crate) time: f32,
+    pub(crate) light_matrices: [Matrix4; 4],
+    pub(crate) cascade_splits: [f32; 4],
+    pub(crate) bias: f32,
+    pub(crate) pcf: f32,
+}
+
+#[derive(Default, Copy, Clone)]
+#[repr(C)]
+pub(crate) struct LightUpdateData {
+    pub(crate) coords: Vector3,
+    pub(crate) light_type: i32,
+    pub(crate) color: Vector4,
 }
 
 pub(crate) struct FramebufferOptions<'formats> {
@@ -51,6 +96,29 @@ pub(crate) struct FramebufferOptions<'formats> {
 }
 
 impl Framebuffer {
+    pub(crate) fn new(index: Index) -> Self {
+        Self {
+            width: 1,
+            height: 1,
+            index,
+        }
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+        self.index.bump();
+    }
+
+    pub(crate) fn data(&self) -> FramebufferUpdateData {
+        FramebufferUpdateData {
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+impl CoreFramebuffer {
     pub(crate) fn for_swapchain(
         device: &Arc<Device>,
         swapchain: &Swapchain,
@@ -94,7 +162,9 @@ impl Framebuffer {
 
                 let handle = device.create_framebuffer(&info)?;
 
-                let world_uniform = WorldUniform::new(device, shader_layout)?;
+                let world_buffer =
+                    DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
+                let world_descriptor = shader_layout.world_set(&world_buffer)?;
                 let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
                 Ok(Self {
@@ -102,7 +172,9 @@ impl Framebuffer {
                     texture_image: None,
                     texture_index: None,
                     stored_index: 0,
-                    world_uniform,
+                    version: 0,
+                    world_buffer,
+                    world_descriptor,
                     render_pass,
                     handle,
                     width,
@@ -162,7 +234,8 @@ impl Framebuffer {
 
         let handle = device.create_framebuffer(&info)?;
 
-        let world_uniform = WorldUniform::new(device, shader_layout)?;
+        let world_buffer = DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
+        let world_descriptor = shader_layout.world_set(&world_buffer)?;
         let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
         let mut texture_image = ImageMemory::new(
@@ -179,6 +252,7 @@ impl Framebuffer {
                 ..Default::default()
             },
         )?;
+        println!("create framebuffer");
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
@@ -192,7 +266,9 @@ impl Framebuffer {
             texture_image: Some(texture_image),
             texture_index: Some(texture_index),
             device: Arc::clone(device),
-            world_uniform,
+            version: 0,
+            world_buffer,
+            world_descriptor,
             stored_index,
             render_pass,
             handle,
@@ -204,16 +280,17 @@ impl Framebuffer {
         })
     }
 
-    pub(crate) fn resize(
+    pub(crate) fn update(
         &mut self,
-        width: u32,
-        height: u32,
         image_uniform: &mut ImageUniform,
+        data: FramebufferUpdateData,
     ) -> Result<()> {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
         );
+
+        let FramebufferUpdateData { width, height } = data;
 
         // recreate framebuffer images
         let mut stored_format = None;
@@ -261,6 +338,7 @@ impl Framebuffer {
                 ..Default::default()
             },
         )?;
+        println!("update framebuffer");
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
@@ -283,6 +361,18 @@ impl Framebuffer {
         self.height = height;
 
         Ok(())
+    }
+
+    pub(crate) fn update_if_needed(
+        &mut self,
+        image_uniform: &mut ImageUniform,
+        data: FramebufferUpdateData,
+        version: u32,
+    ) {
+        if self.version != version {
+            self.update(image_uniform, data);
+            self.version = version;
+        }
     }
 
     pub(crate) fn blit_to_texture(&mut self, cmd: vk::CommandBuffer) {
@@ -333,9 +423,17 @@ impl Framebuffer {
     pub(crate) fn texture_index(&self) -> i32 {
         self.texture_index.expect("bad framebuffer")
     }
+
+    pub(crate) fn world_buffer(&mut self) -> &mut DynamicBuffer {
+        &mut self.world_buffer
+    }
+
+    pub(crate) fn world_descriptor(&self) -> Descriptor {
+        self.world_descriptor
+    }
 }
 
-impl Drop for Framebuffer {
+impl Drop for CoreFramebuffer {
     fn drop(&mut self) {
         self.device.destroy_framebuffer(self.handle);
     }

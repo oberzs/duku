@@ -11,8 +11,8 @@
     // missing_docs,
     single_use_lifetimes,
     unused_qualifications,
-    clippy::missing_const_for_fn,
-    clippy::redundant_pub_crate,
+    // clippy::missing_const_for_fn,
+    // clippy::redundant_pub_crate,
     clippy::unwrap_used
 )]
 

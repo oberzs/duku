@@ -179,9 +179,7 @@ impl Material {
 impl CoreMaterial {
     pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
         let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1)?;
-
-        let descriptor_set = shader_layout.material_set(&buffer)?;
-        let descriptor = Descriptor(1, descriptor_set);
+        let descriptor = shader_layout.material_set(&buffer)?;
 
         Ok(Self {
             version: 0,

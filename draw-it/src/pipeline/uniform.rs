@@ -6,22 +6,15 @@
 use ash::vk;
 use std::sync::Arc;
 
+use super::Descriptor;
 use super::Sampler;
 use super::SamplerOptions;
 use super::ShaderLayout;
-use super::WorldUniformData;
-use crate::buffer::BufferUsage;
-use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::ImageLayout;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
-
-pub(crate) struct WorldUniform {
-    descriptor: Descriptor,
-    buffer: DynamicBuffer,
-}
 
 pub(crate) struct ImageUniform {
     descriptor: Descriptor,
@@ -36,32 +29,8 @@ pub(crate) struct ShadowMapUniform {
     descriptor: Descriptor,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct Descriptor(pub u32, pub vk::DescriptorSet);
-
 pub(crate) trait Uniform {
     fn descriptor(&self) -> Descriptor;
-}
-
-impl WorldUniform {
-    pub(crate) fn new(device: &Arc<Device>, layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<WorldUniformData>(device, BufferUsage::Uniform, 1)?;
-
-        let descriptor_set = layout.world_set(&buffer)?;
-        let descriptor = Descriptor(0, descriptor_set);
-
-        Ok(Self { buffer, descriptor })
-    }
-
-    pub(crate) fn update(&mut self, data: WorldUniformData) -> Result<()> {
-        self.buffer.update_data(&[data])
-    }
-}
-
-impl Uniform for WorldUniform {
-    fn descriptor(&self) -> Descriptor {
-        self.descriptor
-    }
 }
 
 impl ImageUniform {
@@ -70,8 +39,7 @@ impl ImageUniform {
         layout: &ShaderLayout,
         anisotropy: f32,
     ) -> Result<Self> {
-        let descriptor_set = layout.image_set()?;
-        let descriptor = Descriptor(2, descriptor_set);
+        let descriptor = layout.image_set()?;
 
         // create sampler combinations
         let mut sampler_combinations = vec![];
@@ -114,6 +82,7 @@ impl ImageUniform {
             .iter()
             .position(|img| img.is_none())
             .unwrap_or(next_index);
+        println!("add {} {:?}", index, image);
 
         // add new or replace image
         if index == next_index {
@@ -131,6 +100,7 @@ impl ImageUniform {
             (index as usize) < self.images.len(),
             "image index out of bounds"
         );
+        println!("remove {}", index);
 
         // mark image as removed
         self.images[index as usize] = None;
@@ -146,6 +116,7 @@ impl ImageUniform {
     pub(crate) fn update_if_needed(&mut self) {
         // update if image was added/removed
         if self.should_update {
+            println!("update");
             let mut writes = vec![];
 
             // configure image writes to descriptor
@@ -156,6 +127,7 @@ impl ImageUniform {
                         Some(Some(img)) => *img,
                         _ => self.images[0].expect("bad code"),
                     };
+                    println!("view {:?}", image);
 
                     vk::DescriptorImageInfo::builder()
                         .image_layout(ImageLayout::ShaderColor.flag())
@@ -226,8 +198,7 @@ impl Uniform for ImageUniform {
 
 impl ShadowMapUniform {
     pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 4]) -> Result<Self> {
-        let descriptor_set = layout.shadow_map_set(views)?;
-        let descriptor = Descriptor(3, descriptor_set);
+        let descriptor = layout.shadow_map_set(views)?;
 
         Ok(Self { descriptor })
     }

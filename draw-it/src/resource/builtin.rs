@@ -13,7 +13,7 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
-use crate::image::Framebuffer;
+use crate::image::CoreFramebuffer;
 use crate::image::ImageFormat;
 use crate::image::Texture;
 use crate::image::TextureOptions;
@@ -52,7 +52,7 @@ impl Builtins {
     pub(crate) fn new(
         device: &Arc<Device>,
         resources: &mut ResourceManager,
-        framebuffer: &Framebuffer,
+        framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         uniform: &mut ImageUniform,
     ) -> Result<Self> {

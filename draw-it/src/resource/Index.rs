@@ -9,8 +9,9 @@ use std::hash::Hasher;
 use std::ops::Deref;
 use std::rc::Rc;
 
+// TODO: add pub(crate)
 #[derive(Clone, Eq)]
-pub(crate) struct Index {
+pub struct Index {
     pointer: Rc<u32>,
     version: u32,
 }

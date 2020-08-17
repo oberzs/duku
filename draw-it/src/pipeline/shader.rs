@@ -14,7 +14,7 @@ use super::ShaderLayout;
 use super::ShapeMode;
 use crate::device::Device;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::CoreFramebuffer;
 use crate::mesh::Vertex;
 
 pub struct Shader {
@@ -34,7 +34,7 @@ struct ShaderFile {
 impl Shader {
     pub(crate) fn new(
         device: &Arc<Device>,
-        framebuffer: &Framebuffer,
+        framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         source: &[u8],
     ) -> Result<Self> {
