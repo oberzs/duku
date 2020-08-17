@@ -5,9 +5,6 @@
 
 mod builtin;
 mod index;
-mod storage;
-
-pub(crate) mod hash;
 
 use std::collections::HashMap;
 use std::sync::mpsc;
@@ -25,11 +22,9 @@ use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::MaterialUpdateData;
-use storage::Storage;
 
 pub(crate) use builtin::Builtins;
 pub(crate) use index::Index;
-pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
     pub(crate) shaders: Resource<CoreShader>,
@@ -59,15 +54,23 @@ impl ResourceManager {
         }
     }
 
-    pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
-        // self.fonts.retain(|r| r.count() != 0);
-        // self.meshes.retain(|r| r.count() != 0);
-        // self.materials.retain(|r| r.count() != 0);
-        // self.shaders.retain(|r| r.count() != 0);
-        // self.framebuffers.retain(|r| r.count() != 0);
-        // self.textures
-        // .drain_filter(|r| r.count() == 0)
-        // .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
+    pub(crate) fn clean_unused(&mut self, image_uniform: &mut ImageUniform) {
+        self.fonts.stored.retain(|i, _| i.count() > 1);
+        self.meshes.stored.retain(|i, _| i.count() > 1);
+        self.materials.stored.retain(|i, _| i.count() > 1);
+        self.shaders.stored.retain(|i, _| i.count() > 1);
+        self.framebuffers.stored.retain(|i, f| {
+            if i.count() == 1 {
+                image_uniform.remove(f.texture_index());
+            }
+            i.count() > 1
+        });
+        self.textures.stored.retain(|i, t| {
+            if i.count() == 1 {
+                image_uniform.remove(t.image_index());
+            }
+            i.count() > 1
+        });
     }
 
     pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) -> Result<()> {

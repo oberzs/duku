@@ -13,7 +13,7 @@
     unused_qualifications,
     // clippy::missing_const_for_fn,
     // clippy::redundant_pub_crate,
-    clippy::unwrap_used
+    // clippy::unwrap_used
 )]
 
 // should be imported first
@@ -43,6 +43,8 @@ pub use color::Color;
 pub use context::Context;
 pub use context::ContextOptions;
 pub use error::Result;
+pub use image::Framebuffer;
+pub use image::Texture;
 pub use image::TextureFilter;
 pub use image::TextureWrap;
 pub use math::Quaternion;
@@ -51,6 +53,8 @@ pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::Mesh;
+pub use pipeline::Material;
+pub use pipeline::Shader;
 pub use quality::Quality;
 pub use quality::QualityOptions;
 pub use renderer::Camera;
@@ -68,9 +72,3 @@ pub use surface::WindowHandle;
 pub mod ui;
 #[cfg(feature = "window")]
 pub mod window;
-
-// special types
-pub type Material = resource::Ref<pipeline::Material>;
-pub type Texture = resource::Ref<image::Texture>;
-pub type Shader = resource::Ref<pipeline::Shader>;
-pub type Framebuffer = resource::Ref<image::Framebuffer>;
