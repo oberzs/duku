@@ -23,7 +23,7 @@ use imgui::Slider;
 use imgui::Ui as ImUi;
 use imgui::Window;
 use std::ffi::CString;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
@@ -48,7 +48,7 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::CameraType;
-use crate::resource::ResourceManager;
+use crate::resource::Storage;
 use crate::stats::Stats;
 
 pub use imgui;
@@ -62,7 +62,7 @@ pub(crate) struct Ui {
 
     imgui: ImContext,
 
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 pub struct UiFrame<'ui> {
@@ -71,10 +71,10 @@ pub struct UiFrame<'ui> {
 
 impl Ui {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
-        resources: &mut ResourceManager,
+        storage: &mut Storage,
         width: u32,
         height: u32,
     ) -> Result<Self> {
@@ -117,7 +117,7 @@ impl Ui {
             style.use_dark_colors();
         }
 
-        // create ui resources
+        // create ui storage
         let texture = {
             let mut fonts = imgui.fonts();
             fonts.add_font(&[FontSource::DefaultFontData {
@@ -160,7 +160,7 @@ impl Ui {
             include_bytes!("../shaders/ui.shader"),
         )?;
 
-        let (index, updater) = resources.framebuffers.add(core_framebuffer);
+        let (index, updater) = storage.framebuffers.add(core_framebuffer);
         let mut framebuffer = Framebuffer::new(index, updater);
         framebuffer.width = width;
         framebuffer.height = height;
@@ -168,7 +168,7 @@ impl Ui {
         let mesh = CoreMesh::new(device)?;
 
         Ok(Self {
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             drawn: false,
             framebuffer,
             texture,
@@ -181,7 +181,7 @@ impl Ui {
     pub(crate) fn draw(
         &mut self,
         shader_layout: &ShaderLayout,
-        resources: &mut ResourceManager,
+        storage: &mut Storage,
         mut draw_fn: impl FnMut(&UiFrame<'_>),
     ) -> Result<()> {
         let draw_data = {
@@ -228,7 +228,7 @@ impl Ui {
 
         // render ui
         let cmd = self.device.command_buffer();
-        let framebuffer = resources.framebuffers.get_mut(&self.framebuffer.index);
+        let framebuffer = storage.framebuffers.get_mut(&self.framebuffer.index);
 
         // update world uniform
         let world_matrix = framebuffer.camera.matrix();
@@ -251,7 +251,7 @@ impl Ui {
             .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
         self.device.cmd_set_line_width(cmd, 1.0);
 
-        // bind resources
+        // bind storage
         self.device
             .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
         self.device.cmd_bind_shader(cmd, &self.shader);
@@ -319,7 +319,7 @@ impl Ui {
 
     pub(crate) fn resize(
         &mut self,
-        resources: &mut ResourceManager,
+        storage: &mut Storage,
         image_uniform: &mut ImageUniform,
         width: u32,
         height: u32,
@@ -327,7 +327,7 @@ impl Ui {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
         self.framebuffer.width = width;
         self.framebuffer.height = height;
-        resources
+        storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
             .update(image_uniform, FramebufferUpdateData { width, height })

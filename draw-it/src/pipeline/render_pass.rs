@@ -4,7 +4,7 @@
 // RenderPass - struct that structures a rendering pass
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::Attachment;
 use super::AttachmentOptions;
@@ -17,12 +17,12 @@ use crate::image::Msaa;
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
     attachments: Vec<Attachment>,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 impl RenderPass {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         attachment_formats: &[ImageFormat],
         msaa: Msaa,
         depth: bool,

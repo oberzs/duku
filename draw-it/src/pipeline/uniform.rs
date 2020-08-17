@@ -4,7 +4,7 @@
 // uniform structs to manage shader accessible uniform data
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::Descriptor;
 use super::Sampler;
@@ -22,7 +22,7 @@ pub(crate) struct ImageUniform {
     images: Vec<Option<vk::ImageView>>,
     skybox: Option<vk::ImageView>,
     should_update: bool,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 pub(crate) struct ShadowMapUniform {
@@ -34,11 +34,7 @@ pub(crate) trait Uniform {
 }
 
 impl ImageUniform {
-    pub(crate) fn new(
-        device: &Arc<Device>,
-        layout: &ShaderLayout,
-        anisotropy: f32,
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Result<Self> {
         let descriptor = layout.image_set()?;
 
         // create sampler combinations
@@ -69,7 +65,7 @@ impl ImageUniform {
             images: vec![],
             skybox: None,
             should_update: true,
-            device: Arc::clone(device),
+            device: Rc::clone(device),
         })
     }
 

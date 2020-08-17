@@ -3,7 +3,7 @@
 
 // ForwardRenderer - renderer that renders shadowmap and then normal render pass
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::Albedo;
 use super::Camera;
@@ -30,14 +30,14 @@ use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
 use crate::resource::Builtins;
 use crate::resource::Index;
-use crate::resource::ResourceManager;
+use crate::resource::Storage;
 use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
     shadow_shader: CoreShader,
     pcf: Pcf,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -57,7 +57,7 @@ struct ShadowMapSet {
 
 impl ForwardRenderer {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         shadow_map_size: u32,
@@ -76,7 +76,7 @@ impl ForwardRenderer {
         )?;
 
         Ok(Self {
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             shadow_frames,
             shadow_shader,
             pcf,
@@ -86,7 +86,7 @@ impl ForwardRenderer {
     pub(crate) fn draw(
         &mut self,
         framebuffer: &Index,
-        resources: &mut ResourceManager,
+        storage: &mut Storage,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
         data: RenderData,
@@ -103,9 +103,9 @@ impl ForwardRenderer {
 
         // shadow mapping
         if data.has_shadow_casters {
-            let mut view = resources.framebuffers.get(framebuffer).camera.clone();
+            let mut view = storage.framebuffers.get(framebuffer).camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, resources, &data, &view)?;
+            self.shadow_pass(shader_layout, storage, &data, &view)?;
         }
 
         // bind current shadow map set
@@ -126,15 +126,15 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        let camera_position = resources
+        let camera_position = storage
             .framebuffers
             .get(framebuffer)
             .camera
             .transform
             .position;
-        let camera_depth = resources.framebuffers.get(framebuffer).camera.depth;
-        let world_matrix = resources.framebuffers.get(framebuffer).camera.matrix();
-        resources
+        let camera_depth = storage.framebuffers.get(framebuffer).camera.depth;
+        let world_matrix = storage.framebuffers.get(framebuffer).camera.matrix();
+        storage
             .framebuffers
             .get_mut(framebuffer)
             .world_buffer()
@@ -151,7 +151,7 @@ impl ForwardRenderer {
 
         // do render pass
         {
-            let framebuffer = resources.framebuffers.get(framebuffer);
+            let framebuffer = storage.framebuffers.get(framebuffer);
             self.device
                 .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
             self.device
@@ -167,7 +167,7 @@ impl ForwardRenderer {
         if data.skybox {
             self.skybox_pass(
                 builtins,
-                resources,
+                storage,
                 shader_layout,
                 camera_position,
                 camera_depth,
@@ -176,14 +176,14 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
+        self.normal_pass(&data.orders_by_shader, storage, shader_layout, stats);
 
         // text rendering
-        self.text_pass(&data.text_orders, resources, builtins, shader_layout, stats);
+        self.text_pass(&data.text_orders, storage, builtins, shader_layout, stats);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
-        resources
+        storage
             .framebuffers
             .get_mut(framebuffer)
             .blit_to_texture(cmd);
@@ -197,7 +197,7 @@ impl ForwardRenderer {
     pub(crate) fn draw_core(
         &mut self,
         framebuffer: &mut CoreFramebuffer,
-        resources: &mut ResourceManager,
+        storage: &mut Storage,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
         data: RenderData,
@@ -216,7 +216,7 @@ impl ForwardRenderer {
         if data.has_shadow_casters {
             let mut view = framebuffer.camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, resources, &data, &view)?;
+            self.shadow_pass(shader_layout, storage, &data, &view)?;
         }
 
         // bind current shadow map set
@@ -266,7 +266,7 @@ impl ForwardRenderer {
         if data.skybox {
             self.skybox_pass(
                 builtins,
-                resources,
+                storage,
                 shader_layout,
                 camera_position,
                 camera_depth,
@@ -275,10 +275,10 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
+        self.normal_pass(&data.orders_by_shader, storage, shader_layout, stats);
 
         // text rendering
-        self.text_pass(&data.text_orders, resources, builtins, shader_layout, stats);
+        self.text_pass(&data.text_orders, storage, builtins, shader_layout, stats);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -293,7 +293,7 @@ impl ForwardRenderer {
     fn normal_pass(
         &self,
         orders_by_shader: &[OrdersByShader],
-        resources: &ResourceManager,
+        storage: &Storage,
         shader_layout: &ShaderLayout,
         stats: &mut Stats,
     ) {
@@ -301,20 +301,20 @@ impl ForwardRenderer {
 
         for s_order in orders_by_shader {
             // bind shader
-            let shader = resources.shaders.get(&s_order.shader);
+            let shader = storage.shaders.get(&s_order.shader);
             self.device.cmd_bind_shader(cmd, shader);
             // unique_shaders.insert(s.handle());
             stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
                 // bind material
-                let material = resources.materials.get(&m_order.material);
+                let material = storage.materials.get(&m_order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
                 // unique_materials.insert(material.descriptor());
                 stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    stats.drawn_indices += self.draw_order(resources, shader_layout, order);
+                    stats.drawn_indices += self.draw_order(storage, shader_layout, order);
                     stats.draw_calls += 1;
                 }
             }
@@ -324,7 +324,7 @@ impl ForwardRenderer {
     fn skybox_pass(
         &self,
         builtins: &Builtins,
-        resources: &ResourceManager,
+        storage: &Storage,
         shader_layout: &ShaderLayout,
         camera_position: Vector3,
         camera_depth: f32,
@@ -332,12 +332,12 @@ impl ForwardRenderer {
     ) {
         let cmd = self.device.command_buffer();
 
-        let shader = resources.shaders.get(&builtins.skybox_shader.index);
+        let shader = storage.shaders.get(&builtins.skybox_shader.index);
         self.device.cmd_bind_shader(cmd, shader);
         // unique_shaders.insert(s.handle());
         stats.shader_rebinds += 1;
 
-        let mesh = resources.meshes.get(&builtins.cube_mesh.index);
+        let mesh = storage.meshes.get(&builtins.cube_mesh.index);
         self.device.cmd_bind_mesh(cmd, mesh);
 
         let model_matrix = (Transform {
@@ -364,7 +364,7 @@ impl ForwardRenderer {
     fn text_pass(
         &self,
         orders: &[TextOrder],
-        resources: &ResourceManager,
+        storage: &Storage,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
         stats: &mut Stats,
@@ -372,7 +372,7 @@ impl ForwardRenderer {
         let cmd = self.device.command_buffer();
 
         for order in orders {
-            let font = resources.fonts.get(&order.font);
+            let font = storage.fonts.get(&order.font);
 
             let font_size = order.size;
 
@@ -384,13 +384,13 @@ impl ForwardRenderer {
             let sampler_index = if font.is_bitmap(font_size) { 7 } else { 1 };
 
             // bind shader
-            let shader = resources.shaders.get(&shader_index);
+            let shader = storage.shaders.get(&shader_index);
             self.device.cmd_bind_shader(cmd, shader);
             // unique_shaders.insert(s.handle());
             stats.shader_rebinds += 1;
 
             // bind material
-            let material = resources.materials.get(&order.material);
+            let material = storage.materials.get(&order.material);
             self.device.cmd_bind_material(cmd, shader_layout, material);
             // unique_materials.insert(material.descriptor());
             stats.material_rebinds += 1;
@@ -441,7 +441,7 @@ impl ForwardRenderer {
     fn shadow_pass(
         &mut self,
         shader_layout: &ShaderLayout,
-        resources: &ResourceManager,
+        storage: &Storage,
         data: &RenderData,
         view: &Camera,
     ) -> Result<()> {
@@ -521,7 +521,7 @@ impl ForwardRenderer {
                 for m_order in &s_order.orders_by_material {
                     for order in &m_order.orders {
                         if order.cast_shadows {
-                            self.draw_order(resources, shader_layout, order);
+                            self.draw_order(storage, shader_layout, order);
                         }
                     }
                 }
@@ -532,18 +532,13 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn draw_order(
-        &self,
-        resources: &ResourceManager,
-        shader_layout: &ShaderLayout,
-        order: &Order,
-    ) -> u32 {
+    fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) -> u32 {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
-            Albedo::Texture(tex) => resources.textures.get(tex).image_index(),
-            Albedo::Framebuffer(fra) => resources.framebuffers.get(fra).texture_index(),
+            Albedo::Texture(tex) => storage.textures.get(tex).image_index(),
+            Albedo::Framebuffer(fra) => storage.framebuffers.get(fra).texture_index(),
         };
-        let mesh = resources.meshes.get(&order.mesh);
+        let mesh = storage.meshes.get(&order.mesh);
 
         self.device.cmd_push_constants(
             cmd,
@@ -562,7 +557,7 @@ impl ForwardRenderer {
 
 impl ShadowMapSet {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         map_size: u32,
@@ -593,7 +588,7 @@ impl ShadowMapSet {
     }
 
     fn shadow_framebuffer(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         size: u32,

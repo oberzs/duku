@@ -5,9 +5,7 @@ use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
 
-use crate::resource::Index;
-
-pub(crate) fn watch_file(path: impl AsRef<Path>, index: Index, sender: Sender<(Index, PathBuf)>) {
+pub(crate) fn watch_file(path: impl AsRef<Path>, pointer: u32, sender: Sender<(u32, PathBuf)>) {
     let path = path.as_ref().to_owned();
 
     thread::spawn(move || {
@@ -19,7 +17,7 @@ pub(crate) fn watch_file(path: impl AsRef<Path>, index: Index, sender: Sender<(I
             let modified = metadata.modified().unwrap();
             if let Some(m) = last_modified {
                 if m != modified {
-                    sender.send((index.clone(), path.clone())).unwrap();
+                    sender.send((pointer, path.clone())).unwrap();
                 }
             }
             last_modified = Some(modified);

@@ -7,19 +7,22 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
-use std::sync::Arc;
+use std::rc::Rc;
 
-// TODO: add pub(crate)
 #[derive(Clone, Eq)]
-pub struct Index(Arc<u32>);
+pub(crate) struct Index(Rc<u32>);
 
 impl Index {
     pub(crate) fn new(pointer: u32) -> Self {
-        Self(Arc::new(pointer))
+        Self(Rc::new(pointer))
     }
 
     pub(crate) fn count(&self) -> usize {
-        Arc::strong_count(&self.0)
+        Rc::strong_count(&self.0)
+    }
+
+    pub(crate) fn pointer(&self) -> u32 {
+        *self.0
     }
 }
 

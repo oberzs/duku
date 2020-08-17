@@ -5,7 +5,7 @@
 
 use ash::vk;
 use std::mem;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
@@ -20,7 +20,7 @@ pub(crate) struct ShaderLayout {
     image_layout: vk::DescriptorSetLayout,
     shadow_map_layout: vk::DescriptorSetLayout,
     descriptor_pool: vk::DescriptorPool,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 #[derive(Copy, Clone)]
@@ -35,7 +35,7 @@ pub(crate) struct PushConstants {
 pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl ShaderLayout {
-    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>) -> Result<Self> {
         // world uniform layout
         let world_binding = [vk::DescriptorSetLayoutBinding::builder()
             .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
@@ -145,7 +145,7 @@ impl ShaderLayout {
             image_layout,
             shadow_map_layout,
             descriptor_pool,
-            device: Arc::clone(device),
+            device: Rc::clone(device),
         })
     }
 

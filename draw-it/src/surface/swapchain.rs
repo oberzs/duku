@@ -4,7 +4,7 @@
 // Swapchain - struct that holds images for specific surface
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::ColorSpace;
 use super::Surface;
@@ -20,12 +20,12 @@ pub(crate) struct Swapchain {
     current_image: usize,
     width: u32,
     height: u32,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 impl Swapchain {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         surface: &Surface,
         gpu_properties: &GPUProperties,
         vsync: VSync,
@@ -36,7 +36,7 @@ impl Swapchain {
         let height = gpu_properties.extent.height;
 
         Ok(Self {
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             current_image: 0,
             handle,
             width,

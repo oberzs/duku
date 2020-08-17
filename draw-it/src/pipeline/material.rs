@@ -3,8 +3,8 @@
 
 // Material - struct to pass additional data to shader
 
+use std::rc::Rc;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 
 use super::Descriptor;
 use super::ShaderLayout;
@@ -165,7 +165,7 @@ impl Material {
 }
 
 impl CoreMaterial {
-    pub(crate) fn new(device: &Arc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
         let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1)?;
         let descriptor = shader_layout.material_set(&buffer)?;
 

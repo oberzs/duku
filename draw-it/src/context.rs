@@ -6,11 +6,10 @@
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Instant;
 
 use crate::color::Color;
@@ -45,7 +44,7 @@ use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::resource::Builtins;
 use crate::resource::Index;
-use crate::resource::ResourceManager;
+use crate::resource::Storage;
 use crate::stats::Stats;
 use crate::surface::Surface;
 use crate::surface::Swapchain;
@@ -77,18 +76,18 @@ pub struct Context {
     ui: Option<Ui>,
 
     // Resources
-    resources: ResourceManager,
+    storage: Storage,
     skybox: Cubemap,
 
     // Vulkan
-    window_framebuffers: Arc<Mutex<Vec<CoreFramebuffer>>>,
+    window_framebuffers: Vec<CoreFramebuffer>,
     image_uniform: ImageUniform,
-    shader_layout: Arc<ShaderLayout>,
+    shader_layout: ShaderLayout,
     swapchain: Swapchain,
-    device: Arc<Device>,
+    device: Rc<Device>,
     surface: Surface,
     gpu_index: usize,
-    instance: Arc<Instance>,
+    instance: Rc<Instance>,
 
     // Misc
     camera_type: CameraType,
@@ -102,8 +101,8 @@ pub struct Context {
     vsync: VSync,
 
     // Hot Reload
-    hot_reload_sender: Sender<(Index, PathBuf)>,
-    hot_reload_receiver: Receiver<(Index, PathBuf)>,
+    hot_reload_sender: Sender<(u32, PathBuf)>,
+    hot_reload_receiver: Receiver<(u32, PathBuf)>,
 
     // Window
     #[cfg(feature = "window")]
@@ -127,7 +126,7 @@ enum RenderStage {
 
 impl Context {
     pub fn new(window: WindowHandle, options: ContextOptions) -> Result<Self> {
-        let instance = Arc::new(Instance::new()?);
+        let instance = Rc::new(Instance::new()?);
         let surface = Surface::new(&instance, window)?;
 
         let QualityOptions {
@@ -142,7 +141,7 @@ impl Context {
         let mut gpu_properties_list = instance.gpu_properties(&surface)?;
         let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
         let gpu_properties = gpu_properties_list.remove(gpu_index);
-        let device = Arc::new(Device::new(&instance, &gpu_properties, gpu_index)?);
+        let device = Rc::new(Device::new(&instance, &gpu_properties, gpu_index)?);
         let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync)?;
 
         info!("using anisotropy level {}", anisotropy);
@@ -162,11 +161,11 @@ impl Context {
             msaa,
         )?;
 
-        // setup resources
-        let mut resources = ResourceManager::new();
+        // setup storage
+        let mut storage = Storage::new();
         let builtins = Builtins::new(
             &device,
-            &mut resources,
+            &mut storage,
             &window_framebuffers[0],
             &shader_layout,
             &mut image_uniform,
@@ -205,8 +204,6 @@ impl Context {
         let (hot_reload_sender, hot_reload_receiver) = mpsc::channel();
 
         Ok(Self {
-            window_framebuffers: Arc::new(Mutex::new(window_framebuffers)),
-            shader_layout: Arc::new(shader_layout),
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             camera_type: options.camera,
@@ -214,12 +211,14 @@ impl Context {
             frame_time: Instant::now(),
             stats: Default::default(),
             frame_count: 0,
+            window_framebuffers,
             hot_reload_receiver,
             hot_reload_sender,
             forward_renderer,
             image_uniform,
+            shader_layout,
             main_camera,
-            resources,
+            storage,
             swapchain,
             gpu_index,
             builtins,
@@ -252,11 +251,7 @@ impl Context {
         self.swapchain
             .recreate(&self.surface, &gpu_properties, self.vsync)?;
 
-        let mut framebuffers = self
-            .window_framebuffers
-            .lock()
-            .expect("poisoned framebuffers");
-        *framebuffers = CoreFramebuffer::for_swapchain(
+        self.window_framebuffers = CoreFramebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
@@ -266,7 +261,7 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.resources, &mut self.image_uniform, width, height)?;
+            ui.resize(&mut self.storage, &mut self.image_uniform, width, height)?;
         }
 
         Ok(())
@@ -290,15 +285,12 @@ impl Context {
 
         // draw
         {
-            let framebuffer = &mut self
-                .window_framebuffers
-                .lock()
-                .expect("poisoned framebuffer")[self.swapchain.current()];
+            let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
             framebuffer.camera = self.main_camera.clone();
 
             self.forward_renderer.draw_core(
                 framebuffer,
-                &mut self.resources,
+                &mut self.storage,
                 &self.builtins,
                 &self.shader_layout,
                 render_data,
@@ -327,7 +319,7 @@ impl Context {
         // draw
         self.forward_renderer.draw(
             &framebuffer.index,
-            &mut self.resources,
+            &mut self.storage,
             &self.builtins,
             &self.shader_layout,
             render_data,
@@ -343,7 +335,7 @@ impl Context {
             .map(|p| vec![p.r, p.g, p.b, p.a])
             .flatten()
             .collect::<Vec<_>>();
-        let (index, _) = self.resources.textures.add(CoreTexture::new(
+        let (index, _) = self.storage.textures.add(CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -378,12 +370,12 @@ impl Context {
     }
 
     pub fn create_mesh(&mut self) -> Result<Mesh> {
-        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
         Ok(Mesh::new(index, updater))
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
-        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
         let mut result = Mesh::new(index, updater);
         result.vertices = mesh.vertices.clone();
         result.normals = mesh.normals.clone();
@@ -395,13 +387,13 @@ impl Context {
     }
 
     pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
-        let (index, updater) = self.resources.meshes.add(CoreMesh::new(&self.device)?);
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
         Ok(Mesh::combine(index, updater, meshes))
     }
 
     pub fn create_material(&mut self) -> Result<Material> {
         let (index, updater) = self
-            .resources
+            .storage
             .materials
             .add(CoreMaterial::new(&self.device, &self.shader_layout)?);
         Ok(Material::new(index, updater))
@@ -413,7 +405,7 @@ impl Context {
         width: u32,
         height: u32,
     ) -> Result<Framebuffer> {
-        let (index, updater) = self.resources.framebuffers.add(CoreFramebuffer::new(
+        let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
@@ -433,13 +425,9 @@ impl Context {
     }
 
     pub fn create_shader(&mut self, source: &[u8]) -> Result<Shader> {
-        let framebuffer = &self
-            .window_framebuffers
-            .lock()
-            .expect("poisoned framebuffers")[0];
-        let (index, _) = self.resources.shaders.add(CoreShader::new(
+        let (index, _) = self.storage.shaders.add(CoreShader::new(
             &self.device,
-            framebuffer,
+            &self.window_framebuffers[0],
             &self.shader_layout,
             source,
         )?);
@@ -458,15 +446,15 @@ impl Context {
     fn begin_draw(&mut self) -> Result<()> {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain)?;
-        self.resources.clean_unused(&mut self.image_uniform);
-        self.resources.update_if_needed(&mut self.image_uniform)?;
+        self.storage.clean_unused(&mut self.image_uniform);
+        self.storage.update_if_needed(&mut self.image_uniform)?;
 
         // hot-reload shaders
-        for (index, path) in self.hot_reload_receiver.try_iter() {
+        for (pointer, path) in self.hot_reload_receiver.try_iter() {
             let source = fs::read(&path).expect("bad read");
-            *self.resources.shaders.get_mut(&index) = CoreShader::new(
+            *self.storage.shaders.get_mut(&Index::new(pointer)) = CoreShader::new(
                 &self.device,
-                &self.window_framebuffers.lock().expect("bad lock")[0],
+                &self.window_framebuffers[0],
                 &self.shader_layout,
                 &source,
             )
@@ -595,7 +583,7 @@ impl Context {
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
-            &mut self.resources,
+            &mut self.storage,
             width,
             height,
         )?;
@@ -658,7 +646,7 @@ impl Context {
 
     pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
         let shader = self.create_shader_from_file(&path)?;
-        watch_file(path, shader.index.clone(), self.hot_reload_sender.clone());
+        watch_file(path, shader.index.pointer(), self.hot_reload_sender.clone());
         Ok(shader)
     }
 
@@ -681,7 +669,7 @@ impl Context {
             _ => return Err(ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into()),
         };
 
-        let (index, _) = self.resources.textures.add(CoreTexture::new(
+        let (index, _) = self.storage.textures.add(CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -769,7 +757,7 @@ impl Context {
 
         self.ui.as_mut().ok_or(ErrorKind::UnitializedUi)?.draw(
             &self.shader_layout,
-            &mut self.resources,
+            &mut self.storage,
             draw_fn,
         )?;
 

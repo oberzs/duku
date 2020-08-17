@@ -3,7 +3,7 @@
 
 // Texture - simple image that can be used for rendering
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::with_alpha;
 use super::ImageFormat;
@@ -47,7 +47,7 @@ impl Texture {
 
 impl CoreTexture {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         uniform: &mut ImageUniform,
         options: TextureOptions,
     ) -> Result<Self> {

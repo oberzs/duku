@@ -6,7 +6,7 @@
 use ash::vk;
 use serde::Deserialize;
 use std::ffi::CString;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::CullMode;
 use super::DepthMode;
@@ -27,7 +27,7 @@ pub struct Shader {
 // GPU data storage for a shader
 pub(crate) struct CoreShader {
     handle: vk::Pipeline,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 #[derive(Deserialize)]
@@ -47,7 +47,7 @@ impl Shader {
 
 impl CoreShader {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         source: &[u8],
@@ -191,7 +191,7 @@ impl CoreShader {
 
         Ok(Self {
             handle,
-            device: Arc::clone(device),
+            device: Rc::clone(device),
         })
     }
 

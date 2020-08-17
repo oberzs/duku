@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::sync::Arc;
+use std::rc::Rc;
 
-use super::ResourceManager;
+use super::Storage;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
@@ -52,15 +52,15 @@ pub struct Builtins {
 
 impl Builtins {
     pub(crate) fn new(
-        device: &Arc<Device>,
-        resources: &mut ResourceManager,
+        device: &Rc<Device>,
+        storage: &mut Storage,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         uniform: &mut ImageUniform,
     ) -> Result<Self> {
         // textures
         let white_texture = {
-            let (index, _) = resources.textures.add(CoreTexture::new(
+            let (index, _) = storage.textures.add(CoreTexture::new(
                 device,
                 uniform,
                 TextureOptions {
@@ -75,7 +75,7 @@ impl Builtins {
 
         // materials
         let white_material = {
-            let (index, updater) = resources.materials.add(CoreMaterial::new(device, layout)?);
+            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout)?);
             let mut mat = Material::new(index, updater);
             mat.set_phong_color([255, 255, 255]);
             mat.update();
@@ -83,7 +83,7 @@ impl Builtins {
         };
 
         let font_material = {
-            let (index, updater) = resources.materials.add(CoreMaterial::new(device, layout)?);
+            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout)?);
             let mut mat = Material::new(index, updater);
             mat.set_font_color([0, 0, 0]);
             mat.set_font_width(0.5);
@@ -93,15 +93,15 @@ impl Builtins {
         };
 
         // meshes
-        let surface_mesh = create_surface(device, resources)?;
-        let quad_mesh = create_quad(device, resources)?;
-        let cube_mesh = create_cube(device, resources)?;
-        let sphere_mesh = create_sphere(device, resources, 3)?;
-        let grid_mesh = create_grid(device, resources, 50)?;
+        let surface_mesh = create_surface(device, storage)?;
+        let quad_mesh = create_quad(device, storage)?;
+        let cube_mesh = create_cube(device, storage)?;
+        let sphere_mesh = create_sphere(device, storage, 3)?;
+        let grid_mesh = create_grid(device, storage, 50)?;
 
         // shaders
         let phong_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -111,7 +111,7 @@ impl Builtins {
         };
 
         let sdf_font_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -121,7 +121,7 @@ impl Builtins {
         };
 
         let bitmap_font_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -131,7 +131,7 @@ impl Builtins {
         };
 
         let blit_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -141,7 +141,7 @@ impl Builtins {
         };
 
         let wireframe_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -151,7 +151,7 @@ impl Builtins {
         };
 
         let line_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -161,7 +161,7 @@ impl Builtins {
         };
 
         let unshaded_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -171,7 +171,7 @@ impl Builtins {
         };
 
         let skybox_shader = {
-            let (index, _) = resources.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::new(
                 device,
                 framebuffer,
                 layout,
@@ -182,7 +182,7 @@ impl Builtins {
 
         // fonts
         let kenney_font = {
-            let (index, _) = resources.fonts.add(CoreFont::new(
+            let (index, _) = storage.fonts.add(CoreFont::new(
                 device,
                 uniform,
                 include_bytes!("../../fonts/kenney-future.font"),
@@ -212,8 +212,8 @@ impl Builtins {
     }
 }
 
-fn create_surface(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![
@@ -235,8 +235,8 @@ fn create_surface(device: &Arc<Device>, resources: &mut ResourceManager) -> Resu
     Ok(mesh)
 }
 
-fn create_quad(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![
@@ -258,10 +258,10 @@ fn create_quad(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
     Ok(mesh)
 }
 
-fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<Mesh> {
+fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
     let top = create_rectangle(
         device,
-        resources,
+        storage,
         [-0.5, 0.5, 0.5],
         [0.5, 0.5, 0.5],
         [0.5, 0.5, -0.5],
@@ -270,7 +270,7 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
 
     let bottom = create_rectangle(
         device,
-        resources,
+        storage,
         [0.5, -0.5, 0.5],
         [-0.5, -0.5, 0.5],
         [-0.5, -0.5, -0.5],
@@ -279,7 +279,7 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
 
     let back = create_rectangle(
         device,
-        resources,
+        storage,
         [0.5, 0.5, 0.5],
         [-0.5, 0.5, 0.5],
         [-0.5, -0.5, 0.5],
@@ -288,7 +288,7 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
 
     let front = create_rectangle(
         device,
-        resources,
+        storage,
         [-0.5, 0.5, -0.5],
         [0.5, 0.5, -0.5],
         [0.5, -0.5, -0.5],
@@ -297,7 +297,7 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
 
     let left = create_rectangle(
         device,
-        resources,
+        storage,
         [-0.5, 0.5, 0.5],
         [-0.5, 0.5, -0.5],
         [-0.5, -0.5, -0.5],
@@ -306,14 +306,14 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
 
     let right = create_rectangle(
         device,
-        resources,
+        storage,
         [0.5, 0.5, -0.5],
         [0.5, 0.5, 0.5],
         [0.5, -0.5, 0.5],
         [0.5, -0.5, -0.5],
     )?;
 
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
 
     Ok(Mesh::combine(
         index,
@@ -322,7 +322,7 @@ fn create_cube(device: &Arc<Device>, resources: &mut ResourceManager) -> Result<
     ))
 }
 
-fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32) -> Result<Mesh> {
+fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Result<Mesh> {
     let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
@@ -357,7 +357,7 @@ fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32)
         indices.extend(&[vc, vc + 1]);
     }
 
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
     let mut mesh = Mesh::new(index, updater);
     mesh.vertices = vertices;
     mesh.colors = colors;
@@ -367,14 +367,14 @@ fn create_grid(device: &Arc<Device>, resources: &mut ResourceManager, size: u32)
 }
 
 fn create_rectangle<V: Into<Vector3>>(
-    device: &Arc<Device>,
-    resources: &mut ResourceManager,
+    device: &Rc<Device>,
+    storage: &mut Storage,
     p1: V,
     p2: V,
     p3: V,
     p4: V,
 ) -> Result<Mesh> {
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
@@ -390,11 +390,7 @@ fn create_rectangle<V: Into<Vector3>>(
     Ok(mesh)
 }
 
-fn create_sphere(
-    device: &Arc<Device>,
-    resources: &mut ResourceManager,
-    detail_level: u32,
-) -> Result<Mesh> {
+fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) -> Result<Mesh> {
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -466,7 +462,7 @@ fn create_sphere(
         uvs.push(Vector2::new(u, v));
     }
 
-    let (index, updater) = resources.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
     let mut mesh = Mesh::new(index, updater);
     mesh.vertices = vertices;
     mesh.indices = indices;

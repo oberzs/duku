@@ -6,8 +6,8 @@
 mod vertex;
 
 use ash::vk;
+use std::rc::Rc;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
@@ -128,7 +128,7 @@ impl Mesh {
 }
 
 impl CoreMesh {
-    pub(crate) fn new(device: &Arc<Device>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>) -> Result<Self> {
         let vertex_buffer = DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, 1)?;
         let index_buffer = DynamicBuffer::new::<u16>(device, BufferUsage::Index, 3)?;
 

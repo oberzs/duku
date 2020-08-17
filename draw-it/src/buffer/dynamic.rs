@@ -5,7 +5,7 @@
 
 use ash::vk;
 use std::mem;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::BufferAccess;
 use super::BufferMemory;
@@ -18,12 +18,12 @@ pub(crate) struct DynamicBuffer {
     usage: BufferUsage,
     access: BufferAccess,
     size: usize,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 impl DynamicBuffer {
     pub(crate) fn new<T: Copy>(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         usage: BufferUsage,
         capacity: usize,
     ) -> Result<Self> {
@@ -34,7 +34,7 @@ impl DynamicBuffer {
         let memory = BufferMemory::new(device, &[usage], access, size)?;
 
         Ok(Self {
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             memory,
             usage,
             access,

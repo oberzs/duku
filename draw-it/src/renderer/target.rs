@@ -86,7 +86,7 @@ pub(crate) struct TextOrder {
 }
 
 #[derive(Clone)]
-pub enum Albedo {
+pub(crate) enum Albedo {
     Texture(Index),
     Framebuffer(Index),
 }
@@ -233,8 +233,12 @@ impl<'b> Target<'b> {
         self.current_font_material = material.index.clone();
     }
 
-    pub fn set_albedo(&mut self, albedo: impl Into<Albedo>) {
-        self.current_albedo = albedo.into();
+    pub fn set_albedo(&mut self, texture: &Texture) {
+        self.current_albedo = Albedo::Texture(texture.index.clone());
+    }
+
+    pub fn set_albedo_framebuffer(&mut self, framebuffer: &Framebuffer) {
+        self.current_albedo = Albedo::Framebuffer(framebuffer.index.clone());
     }
 
     pub fn set_shader(&mut self, shader: &Shader) {
@@ -351,17 +355,5 @@ impl<'b> Target<'b> {
         self.texture_wrap = cache.texture_wrap;
         self.texture_mipmaps = cache.texture_mipmaps;
         self.cast_shadows = cache.cast_shadows;
-    }
-}
-
-impl From<&Texture> for Albedo {
-    fn from(r: &Texture) -> Self {
-        Self::Texture(r.index.clone())
-    }
-}
-
-impl From<&Framebuffer> for Albedo {
-    fn from(r: &Framebuffer) -> Self {
-        Self::Framebuffer(r.index.clone())
     }
 }
