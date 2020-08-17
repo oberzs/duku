@@ -11,8 +11,8 @@ use std::sync::Arc;
 use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
+use crate::image::CoreTexture;
 use crate::image::ImageFormat;
-use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -34,7 +34,7 @@ pub(crate) struct CharData {
 }
 
 struct FontData {
-    texture: Texture,
+    texture: CoreTexture,
     mesh: CoreMesh,
     margin: f32,
     char_data: HashMap<char, CharData>,
@@ -100,7 +100,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn texture(&self, font_size: u32) -> &Texture {
+    pub(crate) fn texture(&self, font_size: u32) -> &CoreTexture {
         // if has bitmap font of that size, choose bitmap
         // otherwise choose sdf font
         match self.bitmap_data.get(&font_size) {
@@ -137,7 +137,7 @@ fn create_font(
     margin: u32,
     char_metrics: &HashMap<char, CharMetrics>,
 ) -> Result<FontData> {
-    let texture = Texture::new(
+    let texture = CoreTexture::new(
         device,
         uniform,
         TextureOptions {
@@ -188,8 +188,6 @@ fn create_font(
     }
 
     let vertex_count = vertices.len();
-    let index_count = indices.len();
-
     let normals = vec![Vector3::ZERO; vertex_count];
     let colors = vec![Color::WHITE; vertex_count];
 
@@ -200,7 +198,7 @@ fn create_font(
         colors,
         uvs,
         indices,
-    });
+    })?;
 
     Ok(FontData {
         margin: norm_margin,

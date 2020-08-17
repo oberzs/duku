@@ -19,6 +19,7 @@ use crate::device::Device;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
+use crate::image::CoreTexture;
 use crate::image::Cubemap;
 use crate::image::CubemapOptions;
 use crate::image::Framebuffer;
@@ -275,7 +276,7 @@ impl Context {
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins, &mut self.resources)?;
+        let mut target = Target::new(&self.builtins)?;
         draw_callback(&mut target);
         #[cfg(feature = "ui")]
         if let Some(ui) = &self.ui {
@@ -317,7 +318,7 @@ impl Context {
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins, &mut self.resources)?;
+        let mut target = Target::new(&self.builtins)?;
         draw_callback(&mut target);
         let render_data = target.render_data();
 
@@ -329,18 +330,18 @@ impl Context {
             &self.shader_layout,
             render_data,
             &mut self.stats,
-        );
+        )?;
 
         Ok(())
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Result<Ref<Texture>> {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Result<Texture> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
             .flatten()
             .collect::<Vec<_>>();
-        let texture = Texture::new(
+        let (index, _) = self.resources.textures.add(CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -349,8 +350,8 @@ impl Context {
                 width,
                 data,
             },
-        )?;
-        Ok(self.resources.add_texture(texture))
+        )?);
+        Ok(Texture::new(index))
     }
 
     pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) -> Result<()> {
@@ -671,7 +672,7 @@ impl Context {
     }
 
     #[cfg(feature = "image")]
-    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Ref<Texture>> {
+    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Texture> {
         use png::ColorType;
         use png::Decoder;
         use std::fs::File;
@@ -689,7 +690,7 @@ impl Context {
             _ => return Err(ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into()),
         };
 
-        let texture = Texture::new(
+        let (index, _) = self.resources.textures.add(CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
             TextureOptions {
@@ -698,8 +699,8 @@ impl Context {
                 format,
                 data,
             },
-        )?;
-        Ok(self.resources.add_texture(texture))
+        )?);
+        Ok(Texture::new(index))
     }
 
     #[cfg(feature = "image")]

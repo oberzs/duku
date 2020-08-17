@@ -18,8 +18,16 @@ use crate::buffer::BufferUsage;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
+use crate::resource::Index;
 
+// user facing texture data
+#[derive(Debug)]
 pub struct Texture {
+    pub(crate) index: Index,
+}
+
+// GPU data storage for a texture
+pub(crate) struct CoreTexture {
     _memory: ImageMemory,
     image_index: i32,
 }
@@ -32,6 +40,12 @@ pub(crate) struct TextureOptions {
 }
 
 impl Texture {
+    pub(crate) fn new(index: Index) -> Self {
+        Self { index }
+    }
+}
+
+impl CoreTexture {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &mut ImageUniform,

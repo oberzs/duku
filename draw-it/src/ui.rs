@@ -29,12 +29,12 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
+use crate::image::CoreTexture;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::FramebufferUpdateData;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
-use crate::image::Texture;
 use crate::image::TextureOptions;
 use crate::image::WorldUpdateData;
 use crate::math::Matrix4;
@@ -57,7 +57,7 @@ pub(crate) struct Ui {
     framebuffer: Framebuffer,
     shader: Shader,
     mesh: CoreMesh,
-    texture: Texture,
+    texture: CoreTexture,
     drawn: bool,
 
     imgui: ImContext,
@@ -127,7 +127,7 @@ impl Ui {
                 }),
             }]);
             let ui_texture = fonts.build_alpha8_texture();
-            Texture::new(
+            CoreTexture::new(
                 device,
                 image_uniform,
                 TextureOptions {

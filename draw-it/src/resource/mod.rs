@@ -14,10 +14,11 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
+use crate::error::Result;
 use crate::font::Font;
 use crate::image::CoreFramebuffer;
+use crate::image::CoreTexture;
 use crate::image::FramebufferUpdateData;
-use crate::image::Texture;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::CoreMaterial;
@@ -31,10 +32,10 @@ pub(crate) use index::Index;
 pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
-    textures: Vec<Storage<Texture>>,
     shaders: Vec<Storage<Shader>>,
     fonts: Vec<Storage<Font>>,
 
+    pub(crate) textures: Resource<CoreTexture, ()>,
     pub(crate) framebuffers: Resource<CoreFramebuffer, FramebufferUpdateData>,
     pub(crate) materials: Resource<CoreMaterial, MaterialUpdateData>,
     pub(crate) meshes: Resource<CoreMesh, MeshUpdateData>,
@@ -50,20 +51,13 @@ pub(crate) struct Resource<T, U> {
 impl ResourceManager {
     pub(crate) fn new() -> Self {
         Self {
-            textures: vec![],
             shaders: vec![],
             fonts: vec![],
+            textures: Resource::new(),
             framebuffers: Resource::new(),
             materials: Resource::new(),
             meshes: Resource::new(),
         }
-    }
-
-    pub(crate) fn add_texture(&mut self, texture: Texture) -> Ref<Texture> {
-        let storage = Storage::new(texture);
-        let reference = storage.as_ref();
-        self.textures.push(storage);
-        reference
     }
 
     pub(crate) fn add_shader(&mut self, shader: Shader) -> Ref<Shader> {
@@ -86,19 +80,19 @@ impl ResourceManager {
         // self.materials.retain(|r| r.count() != 0);
         self.shaders.retain(|r| r.count() != 0);
         // self.framebuffers.retain(|r| r.count() != 0);
-        self.textures
-            .drain_filter(|r| r.count() == 0)
-            .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
+        // self.textures
+        // .drain_filter(|r| r.count() == 0)
+        // .for_each(|r| uniform.remove(r.with(|t| t.image_index())));
     }
 
-    pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) {
+    pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) -> Result<()> {
         // update meshes
         for (i, data) in self.meshes.receiver.try_iter() {
             self.meshes
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data);
+                .update(data)?;
         }
 
         // update materials
@@ -107,7 +101,7 @@ impl ResourceManager {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data);
+                .update(data)?;
         }
 
         // update framebuffers
@@ -116,8 +110,10 @@ impl ResourceManager {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(image_uniform, data);
+                .update(image_uniform, data)?;
         }
+
+        Ok(())
     }
 }
 
