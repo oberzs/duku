@@ -20,6 +20,7 @@ use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
 use crate::resource::Index;
+use crate::resource::NewIndex;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
 
@@ -96,7 +97,7 @@ pub(crate) struct TextOrder {
 #[derive(Clone)]
 pub enum Albedo {
     Texture(Ref<Texture>),
-    Framebuffer(Index),
+    Framebuffer(NewIndex),
 }
 
 struct Cache {

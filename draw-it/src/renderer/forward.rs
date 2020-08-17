@@ -31,6 +31,7 @@ use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
 use crate::resource::Builtins;
 use crate::resource::Index;
+use crate::resource::NewIndex;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 
@@ -86,7 +87,7 @@ impl ForwardRenderer {
 
     pub(crate) fn draw(
         &mut self,
-        framebuffer: &Index,
+        framebuffer: &NewIndex,
         resources: &mut ResourceManager,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
@@ -104,7 +105,7 @@ impl ForwardRenderer {
 
         // shadow mapping
         if data.has_shadow_casters {
-            let mut view = resources.framebuffer(framebuffer).camera.clone();
+            let mut view = resources.framebuffers.get(framebuffer).camera.clone();
             view.depth = 50.0;
             self.shadow_pass(shader_layout, resources, &data, &view)?;
         }
@@ -127,11 +128,17 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        let camera_position = resources.framebuffer(framebuffer).camera.transform.position;
-        let camera_depth = resources.framebuffer(framebuffer).camera.depth;
-        let world_matrix = resources.framebuffer(framebuffer).camera.matrix();
+        let camera_position = resources
+            .framebuffers
+            .get(framebuffer)
+            .camera
+            .transform
+            .position;
+        let camera_depth = resources.framebuffers.get(framebuffer).camera.depth;
+        let world_matrix = resources.framebuffers.get(framebuffer).camera.matrix();
         resources
-            .framebuffer_mut(framebuffer)
+            .framebuffers
+            .get_mut(framebuffer)
             .world_buffer()
             .update_data(&[WorldUpdateData {
                 cascade_splits: self.shadow_frames[current].cascades,
@@ -146,7 +153,7 @@ impl ForwardRenderer {
 
         // do render pass
         {
-            let framebuffer = resources.framebuffer(framebuffer);
+            let framebuffer = resources.framebuffers.get(framebuffer);
             self.device
                 .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
             self.device
@@ -178,7 +185,10 @@ impl ForwardRenderer {
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
-        resources.framebuffer_mut(framebuffer).blit_to_texture(cmd);
+        resources
+            .framebuffers
+            .get_mut(framebuffer)
+            .blit_to_texture(cmd);
 
         // stats.shaders_used = unique_shaders.len() as u32;
         // stats.materials_used = unique_materials.len() as u32;
@@ -529,7 +539,7 @@ impl ForwardRenderer {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => tex.with(|t| t.image_index()),
-            Albedo::Framebuffer(fra) => resources.framebuffer(fra).texture_index(),
+            Albedo::Framebuffer(fra) => resources.framebuffers.get(fra).texture_index(),
         };
         let mesh = resources.mesh(&order.mesh);
 

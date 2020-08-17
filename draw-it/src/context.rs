@@ -263,13 +263,17 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.image_uniform, width, height);
+            ui.resize(&mut self.resources, &mut self.image_uniform, width, height);
         }
 
         Ok(())
     }
 
     pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) -> Result<()> {
+        if let RenderStage::Before = self.render_stage {
+            self.begin_draw()?;
+        }
+
         // let user record draw calls
         let mut target = Target::new(&self.builtins, &mut self.resources)?;
         draw_callback(&mut target);
@@ -280,11 +284,6 @@ impl Context {
             }
         }
         let render_data = target.render_data();
-
-        if let RenderStage::Before = self.render_stage {
-            // begin draw
-            self.begin_draw()?;
-        }
 
         // draw
         {
@@ -304,9 +303,7 @@ impl Context {
             )?;
         }
 
-        // end draw
         self.end_draw()?;
-
         Ok(())
     }
 
@@ -315,24 +312,14 @@ impl Context {
         framebuffer: &Framebuffer,
         draw_callback: impl Fn(&mut Target<'_>),
     ) -> Result<()> {
+        if let RenderStage::Before = self.render_stage {
+            self.begin_draw()?;
+        }
+
         // let user record draw calls
         let mut target = Target::new(&self.builtins, &mut self.resources)?;
         draw_callback(&mut target);
         let render_data = target.render_data();
-
-        // update framebuffer
-        self.resources
-            .framebuffer_mut(&framebuffer.index)
-            .update_if_needed(
-                &mut self.image_uniform,
-                framebuffer.data(),
-                framebuffer.index.version(),
-            );
-
-        if let RenderStage::Before = self.render_stage {
-            // begin draw
-            self.begin_draw()?;
-        }
 
         // draw
         self.forward_renderer.draw(
@@ -421,7 +408,7 @@ impl Context {
         width: u32,
         height: u32,
     ) -> Result<Framebuffer> {
-        let index = self.resources.add_framebuffer(CoreFramebuffer::new(
+        let (index, updater) = self.resources.framebuffers.add(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
@@ -434,8 +421,9 @@ impl Context {
                 height,
             },
         )?);
-        let mut framebuffer = Framebuffer::new(index);
-        framebuffer.resize(width, height);
+        let mut framebuffer = Framebuffer::new(index, updater);
+        framebuffer.width = width;
+        framebuffer.height = height;
         Ok(framebuffer)
     }
 
@@ -461,6 +449,7 @@ impl Context {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain)?;
         self.resources.clean_unused(&mut self.image_uniform);
+        self.resources.update_if_needed(&mut self.image_uniform);
         self.image_uniform.update_if_needed();
         self.device.cmd_bind_uniform(
             self.device.command_buffer(),

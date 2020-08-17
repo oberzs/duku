@@ -31,6 +31,7 @@ use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
+use crate::image::FramebufferUpdateData;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Texture;
@@ -47,8 +48,6 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::CameraType;
-use crate::resource::Index;
-use crate::resource::Ref;
 use crate::resource::ResourceManager;
 use crate::stats::Stats;
 
@@ -161,9 +160,10 @@ impl Ui {
             include_bytes!("../shaders/ui.shader"),
         )?;
 
-        let index = resources.add_framebuffer(core_framebuffer);
-        let mut framebuffer = Framebuffer::new(index);
-        framebuffer.resize(width, height);
+        let (index, updater) = resources.framebuffers.add(core_framebuffer);
+        let mut framebuffer = Framebuffer::new(index, updater);
+        framebuffer.width = width;
+        framebuffer.height = height;
 
         let mesh = CoreMesh::new(device)?;
 
@@ -232,9 +232,7 @@ impl Ui {
 
         // render ui
         let cmd = self.device.command_buffer();
-
-        let framebuffer = resources.framebuffer_mut(&self.framebuffer.index);
-        framebuffer.update(image_uniform, self.framebuffer.data());
+        let framebuffer = resources.framebuffers.get_mut(&self.framebuffer.index);
 
         // update world uniform
         let world_matrix = framebuffer.camera.matrix();
@@ -323,9 +321,20 @@ impl Ui {
         }
     }
 
-    pub(crate) fn resize(&mut self, uniform: &mut ImageUniform, width: u32, height: u32) {
+    pub(crate) fn resize(
+        &mut self,
+        resources: &mut ResourceManager,
+        image_uniform: &mut ImageUniform,
+        width: u32,
+        height: u32,
+    ) {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
-        self.framebuffer.resize(width, height);
+        self.framebuffer.width = width;
+        self.framebuffer.height = height;
+        resources
+            .framebuffers
+            .get_mut(&self.framebuffer.index)
+            .update(image_uniform, FramebufferUpdateData { width, height });
     }
 
     pub(crate) fn drawn(&self) -> bool {
