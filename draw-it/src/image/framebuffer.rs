@@ -5,8 +5,8 @@
 // also manages world uniform and camera
 
 use ash::vk;
+use std::rc::Rc;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 
 use super::ImageFormat;
 use super::ImageLayout;
@@ -59,7 +59,7 @@ pub(crate) struct CoreFramebuffer {
     width: u32,
     height: u32,
 
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 pub(crate) struct FramebufferUpdateData {
@@ -120,7 +120,7 @@ impl Framebuffer {
 
 impl CoreFramebuffer {
     pub(crate) fn for_swapchain(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
         camera_type: CameraType,
@@ -168,7 +168,7 @@ impl CoreFramebuffer {
                 let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
                 Ok(Self {
-                    device: Arc::clone(device),
+                    device: Rc::clone(device),
                     texture_image: None,
                     texture_index: None,
                     stored_index: 0,
@@ -187,7 +187,7 @@ impl CoreFramebuffer {
     }
 
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         options: FramebufferOptions<'_>,
@@ -263,7 +263,7 @@ impl CoreFramebuffer {
         Ok(Self {
             texture_image: Some(texture_image),
             texture_index: Some(texture_index),
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             world_buffer,
             world_descriptor,
             stored_index,
@@ -424,7 +424,7 @@ impl Drop for CoreFramebuffer {
 }
 
 fn create_attachment_image(
-    device: &Arc<Device>,
+    device: &Rc<Device>,
     attachment: &Attachment,
     width: u32,
     height: u32,

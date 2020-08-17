@@ -6,7 +6,7 @@
 use ash::vk;
 use std::ffi::c_void;
 use std::ptr;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::BufferAccess;
 use super::BufferUsage;
@@ -16,12 +16,12 @@ use crate::error::Result;
 pub(crate) struct BufferMemory {
     handle: vk::Buffer,
     memory: vk::DeviceMemory,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 impl BufferMemory {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         usage: &[BufferUsage],
         access: BufferAccess,
         size: usize,
@@ -37,7 +37,7 @@ impl BufferMemory {
         Ok(Self {
             handle,
             memory,
-            device: Arc::clone(device),
+            device: Rc::clone(device),
         })
     }
 

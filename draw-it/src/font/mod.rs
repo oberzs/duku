@@ -6,7 +6,7 @@
 mod format;
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
@@ -56,7 +56,7 @@ impl Font {
 
 impl CoreFont {
     pub(crate) fn new(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         uniform: &mut ImageUniform,
         source: &[u8],
     ) -> Result<Self> {
@@ -143,7 +143,7 @@ impl CoreFont {
 }
 
 fn create_font(
-    device: &Arc<Device>,
+    device: &Rc<Device>,
     uniform: &mut ImageUniform,
     bitmap: Vec<u8>,
     bitmap_size: u32,

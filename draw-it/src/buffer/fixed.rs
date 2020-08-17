@@ -6,7 +6,7 @@
 #![allow(dead_code)] // TODO: remove when used
 
 use std::mem;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::BufferAccess;
 use super::BufferMemory;
@@ -20,7 +20,7 @@ pub(crate) struct FixedBuffer {
 
 impl FixedBuffer {
     pub(crate) fn new<T: Copy>(
-        device: &Arc<Device>,
+        device: &Rc<Device>,
         usage: BufferUsage,
         data: &[T],
     ) -> Result<Self> {

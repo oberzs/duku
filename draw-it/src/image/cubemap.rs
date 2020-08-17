@@ -4,7 +4,7 @@
 // Cubemap - image with 6 layers to render a skybox
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::ImageFormat;
 use super::ImageLayout;
@@ -34,7 +34,7 @@ pub(crate) struct CubemapOptions<'side> {
 }
 
 impl Cubemap {
-    pub(crate) fn new(device: &Arc<Device>, options: CubemapOptions<'_>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, options: CubemapOptions<'_>) -> Result<Self> {
         let pixel_size = match options.format {
             ImageFormat::Srgba | ImageFormat::Rgba => 4,
             _ => panic!("unsupported cubemap format {:?}", options.format),

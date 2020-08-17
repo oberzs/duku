@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// ResourceManager - resource manager
+// Storage - resource manager
 
 mod builtin;
 mod index;
@@ -26,31 +26,31 @@ use crate::pipeline::MaterialUpdateData;
 pub(crate) use builtin::Builtins;
 pub(crate) use index::Index;
 
-pub(crate) struct ResourceManager {
-    pub(crate) shaders: Resource<CoreShader>,
-    pub(crate) fonts: Resource<CoreFont>,
-    pub(crate) textures: Resource<CoreTexture>,
-    pub(crate) framebuffers: Resource<CoreFramebuffer, FramebufferUpdateData>,
-    pub(crate) materials: Resource<CoreMaterial, MaterialUpdateData>,
-    pub(crate) meshes: Resource<CoreMesh, MeshUpdateData>,
+pub(crate) struct Storage {
+    pub(crate) shaders: Store<CoreShader>,
+    pub(crate) fonts: Store<CoreFont>,
+    pub(crate) textures: Store<CoreTexture>,
+    pub(crate) framebuffers: Store<CoreFramebuffer, FramebufferUpdateData>,
+    pub(crate) materials: Store<CoreMaterial, MaterialUpdateData>,
+    pub(crate) meshes: Store<CoreMesh, MeshUpdateData>,
 }
 
-pub(crate) struct Resource<T, U = ()> {
+pub(crate) struct Store<T, U = ()> {
     stored: HashMap<Index, T>,
     sender: Sender<(Index, U)>,
     receiver: Receiver<(Index, U)>,
     next_index: u32,
 }
 
-impl ResourceManager {
+impl Storage {
     pub(crate) fn new() -> Self {
         Self {
-            shaders: Resource::new(),
-            fonts: Resource::new(),
-            textures: Resource::new(),
-            framebuffers: Resource::new(),
-            materials: Resource::new(),
-            meshes: Resource::new(),
+            shaders: Store::new(),
+            fonts: Store::new(),
+            textures: Store::new(),
+            framebuffers: Store::new(),
+            materials: Store::new(),
+            meshes: Store::new(),
         }
     }
 
@@ -105,7 +105,7 @@ impl ResourceManager {
     }
 }
 
-impl<T, U> Resource<T, U> {
+impl<T, U> Store<T, U> {
     pub(crate) fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
 

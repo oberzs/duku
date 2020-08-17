@@ -4,7 +4,7 @@
 // Sampler - struct that provides image access in shader
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::device::Device;
 use crate::error::Result;
@@ -13,7 +13,7 @@ use crate::image::TextureWrap;
 
 pub(crate) struct Sampler {
     handle: vk::Sampler,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -25,7 +25,7 @@ pub(crate) struct SamplerOptions {
 }
 
 impl Sampler {
-    pub(crate) fn new(device: &Arc<Device>, options: SamplerOptions) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, options: SamplerOptions) -> Result<Self> {
         let max_lod = if options.mipmaps { 16.0 } else { 0.0 };
         let anisotropy = if options.mipmaps {
             options.anisotropy
@@ -59,7 +59,7 @@ impl Sampler {
 
         Ok(Self {
             handle,
-            device: Arc::clone(device),
+            device: Rc::clone(device),
         })
     }
 

@@ -10,15 +10,14 @@ use ash::util;
 use ash::version::DeviceV1_0;
 use ash::vk;
 use ash::Device as VkDevice;
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::cmp;
 use std::ffi::c_void;
 use std::io::Cursor;
 use std::mem;
 use std::ops::Range;
 use std::slice;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Mutex;
 
 pub(crate) use pick::pick_gpu;
 
@@ -54,15 +53,15 @@ pub(crate) struct Device {
     memory_types: Vec<vk::MemoryType>,
 
     command_pools: [vk::CommandPool; IN_FLIGHT_FRAME_COUNT],
-    command_buffers: Mutex<[vk::CommandBuffer; IN_FLIGHT_FRAME_COUNT]>,
+    command_buffers: RefCell<[vk::CommandBuffer; IN_FLIGHT_FRAME_COUNT]>,
     sync_acquire_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
     sync_release_image: [vk::Semaphore; IN_FLIGHT_FRAME_COUNT],
     sync_queue_submit: [vk::Fence; IN_FLIGHT_FRAME_COUNT],
-    current_frame: AtomicUsize,
+    current_frame: Cell<usize>,
 
-    destroyed_pipelines: Mutex<[Vec<vk::Pipeline>; IN_FLIGHT_FRAME_COUNT]>,
-    destroyed_buffers: Mutex<[Vec<(vk::Buffer, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
-    destroyed_images: Mutex<[Vec<(vk::Image, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
+    destroyed_pipelines: RefCell<[Vec<vk::Pipeline>; IN_FLIGHT_FRAME_COUNT]>,
+    destroyed_buffers: RefCell<[Vec<(vk::Buffer, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
+    destroyed_images: RefCell<[Vec<(vk::Image, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
 }
 
 impl Device {
@@ -152,13 +151,13 @@ impl Device {
         let destroyed_images = [vec![], vec![]];
 
         Ok(Self {
-            destroyed_pipelines: Mutex::new(destroyed_pipelines),
-            destroyed_buffers: Mutex::new(destroyed_buffers),
-            command_buffers: Mutex::new(command_buffers),
-            destroyed_images: Mutex::new(destroyed_images),
+            destroyed_pipelines: RefCell::new(destroyed_pipelines),
+            destroyed_buffers: RefCell::new(destroyed_buffers),
+            destroyed_images: RefCell::new(destroyed_images),
+            command_buffers: RefCell::new(command_buffers),
             graphics_queue: (g_index, graphics_queue),
             present_queue: (p_index, present_queue),
-            current_frame: AtomicUsize::new(0),
+            current_frame: Cell::new(0),
             memory_types,
             sync_release_image,
             sync_acquire_image,
@@ -170,8 +169,9 @@ impl Device {
     }
 
     pub(crate) fn next_frame(&self, swapchain: &mut Swapchain) -> Result<()> {
-        let mut current = self.current_frame();
+        let mut current = self.current_frame.get();
         current = (current + 1) % IN_FLIGHT_FRAME_COUNT;
+        let mut buffers = self.command_buffers.borrow_mut();
 
         swapchain.next(self.sync_acquire_image[current])?;
 
@@ -182,10 +182,9 @@ impl Device {
 
         // reset command buffer
         let pool = self.command_pools[current];
-        let mut buffers = self.command_buffers.lock().expect("bad buffers");
         self.free_command_buffer(pool, buffers[current])?;
 
-        // cleanup destroyed resources
+        // cleanup destroyed storage
         self.cleanup_resources(current);
 
         // create new command buffer
@@ -198,7 +197,7 @@ impl Device {
         // begin new command buffer
         self.begin_command_buffer(buffers[current])?;
 
-        self.current_frame.store(current, Ordering::Release);
+        self.current_frame.set(current);
 
         Ok(())
     }
@@ -217,10 +216,10 @@ impl Device {
     }
 
     pub(crate) fn submit(&self) -> Result<()> {
-        let current = self.current_frame();
+        let current = self.current_frame.get();
+        let buffers = self.command_buffers.borrow();
 
         // end command buffer
-        let buffers = self.command_buffers.lock().expect("bad buffers");
         self.end_command_buffer(buffers[current])?;
 
         // submit
@@ -244,7 +243,7 @@ impl Device {
     }
 
     pub(crate) fn present(&self, swapchain: &Swapchain) -> Result<()> {
-        let current = self.current_frame();
+        let current = self.current_frame.get();
         let wait = [self.sync_release_image[current]];
         let image = [swapchain.current() as u32];
         let handle = [swapchain.handle()];
@@ -263,9 +262,7 @@ impl Device {
     }
 
     pub(crate) fn command_buffer(&self) -> vk::CommandBuffer {
-        let buffers = self.command_buffers.lock().expect("bad buffers");
-        let current = self.current_frame();
-        buffers[current]
+        self.command_buffers.borrow()[self.current_frame.get()]
     }
 
     pub(crate) fn wait_for_idle(&self) -> Result<()> {
@@ -314,6 +311,10 @@ impl Device {
         self.graphics_queue.0
     }
 
+    pub(crate) fn current_frame(&self) -> usize {
+        self.current_frame.get()
+    }
+
     pub(crate) fn find_memory_type(
         &self,
         type_filter: u32,
@@ -354,8 +355,7 @@ impl Device {
     }
 
     pub(crate) fn free_buffer(&self, handle: vk::Buffer, memory: vk::DeviceMemory) {
-        self.destroyed_buffers.lock().expect("bad buffers")[self.current_frame()]
-            .push((handle, memory));
+        self.destroyed_buffers.borrow_mut()[self.current_frame.get()].push((handle, memory));
     }
 
     pub(crate) fn allocate_image(
@@ -535,7 +535,7 @@ impl Device {
     }
 
     pub(crate) fn destroy_pipeline(&self, handle: vk::Pipeline) {
-        self.destroyed_pipelines.lock().expect("bad pipelines")[self.current_frame()].push(handle);
+        self.destroyed_pipelines.borrow_mut()[self.current_frame.get()].push(handle);
     }
 
     pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
@@ -969,8 +969,7 @@ impl Device {
 
     fn cleanup_resources(&self, frame: usize) {
         // cleanup pipelines
-        let destroyed_pipelines =
-            &mut self.destroyed_pipelines.lock().expect("bad pipelines")[frame];
+        let destroyed_pipelines = &mut self.destroyed_pipelines.borrow_mut()[frame];
         for p in destroyed_pipelines.iter() {
             unsafe {
                 self.handle.destroy_pipeline(*p, None);
@@ -979,7 +978,7 @@ impl Device {
         destroyed_pipelines.clear();
 
         // cleanup buffers
-        let destroyed_buffers = &mut self.destroyed_buffers.lock().expect("bad pipelines")[frame];
+        let destroyed_buffers = &mut self.destroyed_buffers.borrow_mut()[frame];
         for (b, m) in destroyed_buffers.iter() {
             unsafe {
                 self.handle.destroy_buffer(*b, None);
@@ -989,7 +988,7 @@ impl Device {
         destroyed_buffers.clear();
 
         // cleanup images
-        let destroyed_images = &mut self.destroyed_images.lock().expect("bad pipelines")[frame];
+        let destroyed_images = &mut self.destroyed_images.borrow_mut()[frame];
         for (i, m) in destroyed_images.iter() {
             unsafe {
                 self.handle.destroy_image(*i, None);
@@ -997,10 +996,6 @@ impl Device {
             }
         }
         destroyed_images.clear();
-    }
-
-    pub(crate) fn current_frame(&self) -> usize {
-        self.current_frame.load(Ordering::Relaxed)
     }
 }
 

@@ -8,7 +8,7 @@ mod properties;
 mod swapchain;
 
 use ash::vk;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::error::Result;
 use crate::instance::Instance;
@@ -23,12 +23,12 @@ pub(crate) struct Surface {
     handle: vk::SurfaceKHR,
     width: u32,
     height: u32,
-    instance: Arc<Instance>,
+    instance: Rc<Instance>,
 }
 
 impl Surface {
     #[cfg(target_os = "windows")]
-    pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
         use std::os::raw::c_void;
         use std::ptr;
         use winapi::um::libloaderapi::GetModuleHandleW;
@@ -49,7 +49,7 @@ impl Surface {
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
         let info = vk::XlibSurfaceCreateInfoKHR::builder()
             .window(window.xlib_window as u64)
             .dpy(window.xlib_display as *mut vk::Display);
@@ -65,7 +65,7 @@ impl Surface {
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn new(instance: &Arc<Instance>, window: WindowHandle) -> Result<Self> {
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
         use cocoa::appkit::NSView;
         use cocoa::appkit::NSWindow;
         use cocoa::base::id as cocoa_id;

@@ -5,7 +5,7 @@
 
 use ash::vk;
 use std::cmp;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::ImageFormat;
 use super::ImageLayout;
@@ -26,7 +26,7 @@ pub(crate) struct ImageMemory {
     layer_count: u32,
     format: ImageFormat,
     layout: ImageLayout,
-    device: Arc<Device>,
+    device: Rc<Device>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -42,7 +42,7 @@ pub(crate) struct ImageMemoryOptions<'usage> {
 }
 
 impl ImageMemory {
-    pub(crate) fn new(device: &Arc<Device>, options: ImageMemoryOptions<'_>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, options: ImageMemoryOptions<'_>) -> Result<Self> {
         // calculate mip count
         let mip_count = match options.mips {
             ImageMips::One => 1,
@@ -94,7 +94,7 @@ impl ImageMemory {
         };
 
         Ok(Self {
-            device: Arc::clone(device),
+            device: Rc::clone(device),
             width: options.width,
             height: options.height,
             format: options.format,
