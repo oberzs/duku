@@ -179,7 +179,7 @@ impl ForwardRenderer {
         self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
 
         // text rendering
-        self.text_pass(&data.text_orders, resources, shader_layout, stats);
+        self.text_pass(&data.text_orders, resources, builtins, shader_layout, stats);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -278,7 +278,7 @@ impl ForwardRenderer {
         self.normal_pass(&data.orders_by_shader, resources, shader_layout, stats);
 
         // text rendering
-        self.text_pass(&data.text_orders, resources, shader_layout, stats);
+        self.text_pass(&data.text_orders, resources, builtins, shader_layout, stats);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -367,70 +367,83 @@ impl ForwardRenderer {
         &self,
         orders: &[TextOrder],
         resources: &ResourceManager,
+        builtins: &Builtins,
         shader_layout: &ShaderLayout,
         stats: &mut Stats,
     ) {
         let cmd = self.device.command_buffer();
 
+        // let (shader, sampler_index) = if self.current_font.with(|f| f.is_bitmap(self.font_size)) {
+        //     (self.builtins.bitmap_font_shader.clone(), 7)
+        // } else {
+        //     (self.builtins.sdf_font_shader.clone(), 1)
+        // };
+
         for order in orders {
-            order.font.with(|f| {
-                // bind shader
-                order.shader.with(|s| {
-                    self.device.cmd_bind_shader(cmd, s);
-                    // unique_shaders.insert(s.handle());
-                });
-                stats.shader_rebinds += 1;
+            let font = resources.fonts.get(&order.font);
 
-                // bind material
-                let material = resources.materials.get(&order.material);
-                self.device.cmd_bind_material(cmd, shader_layout, material);
-                // unique_materials.insert(material.descriptor());
-                stats.material_rebinds += 1;
+            let font_size = order.size;
 
-                let font_size = order.size;
-                let sampler_index = order.sampler_index;
+            let shader = if font.is_bitmap(font_size) {
+                builtins.bitmap_font_shader.clone()
+            } else {
+                builtins.sdf_font_shader.clone()
+            };
+            let sampler_index = if font.is_bitmap(font_size) { 7 } else { 1 };
 
-                let albedo_index = f.texture(font_size).image_index();
-                let mesh = f.mesh(font_size);
-                let margin = f.margin(font_size);
-                self.device.cmd_bind_mesh(cmd, mesh);
-
-                let mut transform = order.transform;
-                let start_x = transform.position.x;
-                transform.scale *= font_size as f32;
-                transform.position.x -= margin * font_size as f32;
-
-                for c in order.text.chars() {
-                    // handle whitespace
-                    if c == ' ' {
-                        transform.position.x += transform.scale.x / 3.0;
-                        continue;
-                    }
-                    if c == '\n' {
-                        transform.position.x = start_x;
-                        transform.position.y -= transform.scale.y;
-                        continue;
-                    }
-
-                    self.device.cmd_push_constants(
-                        cmd,
-                        shader_layout,
-                        PushConstants {
-                            model_matrix: transform.as_matrix(),
-                            sampler_index,
-                            albedo_index,
-                        },
-                    );
-
-                    let data = f.char_data(font_size, c);
-                    self.device.cmd_draw(cmd, 6, data.offset);
-
-                    stats.drawn_indices += 6;
-                    stats.draw_calls += 1;
-
-                    transform.position.x += data.advance * transform.scale.x;
-                }
+            // bind shader
+            shader.with(|s| {
+                self.device.cmd_bind_shader(cmd, s);
+                // unique_shaders.insert(s.handle());
             });
+            stats.shader_rebinds += 1;
+
+            // bind material
+            let material = resources.materials.get(&order.material);
+            self.device.cmd_bind_material(cmd, shader_layout, material);
+            // unique_materials.insert(material.descriptor());
+            stats.material_rebinds += 1;
+
+            let albedo_index = font.texture(font_size).image_index();
+            let mesh = font.mesh(font_size);
+            let margin = font.margin(font_size);
+            self.device.cmd_bind_mesh(cmd, mesh);
+
+            let mut transform = order.transform;
+            let start_x = transform.position.x;
+            transform.scale *= font_size as f32;
+            transform.position.x -= margin * font_size as f32;
+
+            for c in order.text.chars() {
+                // handle whitespace
+                if c == ' ' {
+                    transform.position.x += transform.scale.x / 3.0;
+                    continue;
+                }
+                if c == '\n' {
+                    transform.position.x = start_x;
+                    transform.position.y -= transform.scale.y;
+                    continue;
+                }
+
+                self.device.cmd_push_constants(
+                    cmd,
+                    shader_layout,
+                    PushConstants {
+                        model_matrix: transform.as_matrix(),
+                        sampler_index,
+                        albedo_index,
+                    },
+                );
+
+                let data = font.char_data(font_size, c);
+                self.device.cmd_draw(cmd, 6, data.offset);
+
+                stats.drawn_indices += 6;
+                stats.draw_calls += 1;
+
+                transform.position.x += data.advance * transform.scale.x;
+            }
         }
     }
 

@@ -19,10 +19,18 @@ use crate::math::Vector3;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::ImageUniform;
+use crate::resource::Index;
 use format::CharMetrics;
 use format::FontFile;
 
+// user facing framebuffer data
+#[derive(Debug)]
 pub struct Font {
+    pub(crate) index: Index,
+}
+
+// GPU data storage for a font
+pub(crate) struct CoreFont {
     bitmap_data: HashMap<u32, FontData>,
     sdf_data: FontData,
 }
@@ -41,6 +49,12 @@ struct FontData {
 }
 
 impl Font {
+    pub(crate) fn new(index: Index) -> Self {
+        Self { index }
+    }
+}
+
+impl CoreFont {
     pub(crate) fn new(
         device: &Arc<Device>,
         uniform: &mut ImageUniform,
@@ -77,7 +91,7 @@ impl Font {
             &sdf_font.char_metrics,
         )?;
 
-        Ok(Font {
+        Ok(Self {
             bitmap_data,
             sdf_data,
         })

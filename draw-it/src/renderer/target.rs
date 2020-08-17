@@ -5,7 +5,6 @@
 
 use crate::color::Color;
 use crate::error::Result;
-use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::image::TextureFilter;
@@ -43,7 +42,7 @@ pub struct Target<'b> {
     current_material: Index,
     current_font_material: Index,
     current_albedo: Albedo,
-    current_font: Ref<Font>,
+    current_font: Index,
 }
 
 pub(crate) struct RenderData {
@@ -80,13 +79,11 @@ pub(crate) struct Order {
 }
 
 pub(crate) struct TextOrder {
-    pub(crate) font: Ref<Font>,
+    pub(crate) font: Index,
     pub(crate) size: u32,
-    pub(crate) shader: Ref<Shader>,
     pub(crate) material: Index,
     pub(crate) text: String,
     pub(crate) transform: Transform,
-    pub(crate) sampler_index: i32,
 }
 
 #[derive(Clone)]
@@ -100,7 +97,7 @@ struct Cache {
     current_material: Index,
     current_font_material: Index,
     current_albedo: Albedo,
-    current_font: Ref<Font>,
+    current_font: Index,
     texture_filter: TextureFilter,
     texture_wrap: TextureWrap,
     texture_mipmaps: bool,
@@ -123,7 +120,7 @@ impl<'b> Target<'b> {
             current_material: builtins.white_material.index.clone(),
             current_font_material: builtins.font_material.index.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.index.clone()),
-            current_font: builtins.kenney_font.clone(),
+            current_font: builtins.kenney_font.index.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
             texture_mipmaps: true,
@@ -220,20 +217,12 @@ impl<'b> Target<'b> {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        let (shader, sampler_index) = if self.current_font.with(|f| f.is_bitmap(self.font_size)) {
-            (self.builtins.bitmap_font_shader.clone(), 7)
-        } else {
-            (self.builtins.sdf_font_shader.clone(), 1)
-        };
-
         self.text_orders.push(TextOrder {
             font: self.current_font.clone(),
             size: self.font_size,
             text: text.as_ref().to_string(),
             transform: transform.into(),
             material: self.current_font_material.clone(),
-            sampler_index,
-            shader,
         });
     }
 

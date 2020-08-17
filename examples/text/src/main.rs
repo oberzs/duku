@@ -31,6 +31,7 @@ fn main() -> Result<()> {
 
     let mut material_1 = context.create_material()?;
     material_1.set_font_color(Color::RED);
+    material_1.update();
     let mut material_2 = context.create_material()?;
     material_2.set_font_color(Color::BLUE);
     material_2.set_font_border_color(Color::WHITE);
@@ -38,6 +39,7 @@ fn main() -> Result<()> {
     material_2.set_font_edge(0.1);
     material_2.set_font_border_width(0.8);
     material_2.set_font_border_edge(0.1);
+    material_2.update();
 
     let start_time = Instant::now();
     let left = -250.0;

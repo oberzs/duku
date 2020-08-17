@@ -15,7 +15,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
 use crate::error::Result;
-use crate::font::Font;
+use crate::font::CoreFont;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::FramebufferUpdateData;
@@ -33,8 +33,8 @@ pub use storage::Ref;
 
 pub(crate) struct ResourceManager {
     shaders: Vec<Storage<Shader>>,
-    fonts: Vec<Storage<Font>>,
 
+    pub(crate) fonts: Resource<CoreFont, ()>,
     pub(crate) textures: Resource<CoreTexture, ()>,
     pub(crate) framebuffers: Resource<CoreFramebuffer, FramebufferUpdateData>,
     pub(crate) materials: Resource<CoreMaterial, MaterialUpdateData>,
@@ -52,7 +52,7 @@ impl ResourceManager {
     pub(crate) fn new() -> Self {
         Self {
             shaders: vec![],
-            fonts: vec![],
+            fonts: Resource::new(),
             textures: Resource::new(),
             framebuffers: Resource::new(),
             materials: Resource::new(),
@@ -67,15 +67,8 @@ impl ResourceManager {
         reference
     }
 
-    pub(crate) fn add_font(&mut self, font: Font) -> Ref<Font> {
-        let storage = Storage::new(font);
-        let reference = storage.as_ref();
-        self.fonts.push(storage);
-        reference
-    }
-
     pub(crate) fn clean_unused(&mut self, uniform: &mut ImageUniform) {
-        self.fonts.retain(|r| r.count() != 0);
+        // self.fonts.retain(|r| r.count() != 0);
         // self.meshes.retain(|r| r.count() != 0);
         // self.materials.retain(|r| r.count() != 0);
         self.shaders.retain(|r| r.count() != 0);
