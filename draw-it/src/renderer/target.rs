@@ -13,14 +13,11 @@ use crate::image::TextureWrap;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::mesh::Mesh;
-use crate::mesh::MeshUpdateData;
 use crate::pipeline::Material;
-use crate::pipeline::MaterialUpdateData;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::resource::Builtins;
 use crate::resource::Index;
-use crate::resource::NewIndex;
 use crate::resource::Ref;
 use crate::resource::ResourceManager;
 
@@ -97,7 +94,7 @@ pub(crate) struct TextOrder {
 #[derive(Clone)]
 pub enum Albedo {
     Texture(Ref<Texture>),
-    Framebuffer(NewIndex),
+    Framebuffer(Index),
 }
 
 struct Cache {
@@ -117,19 +114,6 @@ impl<'storage> Target<'storage> {
         builtins: &'storage Builtins,
         resources: &'storage mut ResourceManager,
     ) -> Result<Self> {
-        // update builtins
-        let current_material = &builtins.white_material;
-        resources
-            .material_mut(&current_material.index)
-            .update_if_needed(current_material.data(), current_material.index.version())?;
-        let current_font_material = &builtins.font_material;
-        resources
-            .material_mut(&current_font_material.index)
-            .update_if_needed(
-                current_font_material.data(),
-                current_font_material.index.version(),
-            )?;
-
         Ok(Self {
             orders_by_shader: vec![],
             text_orders: vec![],
@@ -141,8 +125,8 @@ impl<'storage> Target<'storage> {
                 Light::NONE,
             ],
             current_shader: builtins.phong_shader.clone(),
-            current_material: current_material.index.clone(),
-            current_font_material: current_font_material.index.clone(),
+            current_material: builtins.white_material.index.clone(),
+            current_font_material: builtins.font_material.index.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.clone()),
             current_font: builtins.kenney_font.clone(),
             texture_filter: TextureFilter::Linear,
@@ -162,14 +146,6 @@ impl<'storage> Target<'storage> {
     }
 
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
-        // update mesh if needed
-        self.resources
-            .mesh_mut(&mesh.index)
-            .update_if_needed(mesh.data(), mesh.index.version());
-        // TODO: error on out of memory
-        // most Vulkan errors are unrecoverable
-
-        // add order for mesh
         self.add_order(Order {
             mesh: mesh.index.clone(),
             albedo: self.current_albedo.clone(),
@@ -268,20 +244,10 @@ impl<'storage> Target<'storage> {
     }
 
     pub fn set_material(&mut self, material: &Material) {
-        // update material if needed
-        self.resources
-            .material_mut(&material.index)
-            .update_if_needed(material.data(), material.index.version());
-
         self.current_material = material.index.clone();
     }
 
     pub fn set_font_material(&mut self, material: &Material) {
-        // update material if needed
-        self.resources
-            .material_mut(&material.index)
-            .update_if_needed(material.data(), material.index.version());
-
         self.current_font_material = material.index.clone();
     }
 

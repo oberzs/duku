@@ -158,9 +158,10 @@ fn square_mesh(
     }
 
     let mut mesh = context.create_mesh()?;
-    mesh.set_vertices(vertices);
-    mesh.set_indices(indices);
+    mesh.vertices = vertices;
+    mesh.indices = indices;
     mesh.calculate_normals();
+    mesh.update();
 
     Ok(mesh)
 }

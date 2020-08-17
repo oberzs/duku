@@ -194,16 +194,13 @@ fn create_font(
     let colors = vec![Color::WHITE; vertex_count];
 
     let mut mesh = CoreMesh::new(device)?;
-    mesh.update_if_needed(
-        MeshUpdateData {
-            vertices: &vertices,
-            normals: &normals,
-            colors: &colors,
-            uvs: &uvs,
-            indices: &indices,
-        },
-        1,
-    );
+    mesh.update(MeshUpdateData {
+        vertices,
+        normals,
+        colors,
+        uvs,
+        indices,
+    });
 
     Ok(FontData {
         margin: norm_margin,

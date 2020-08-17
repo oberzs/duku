@@ -219,16 +219,13 @@ impl Ui {
         }
 
         // update mesh
-        self.mesh.update_if_needed(
-            MeshUpdateData {
-                vertices: &vertices,
-                normals: &normals,
-                colors: &colors,
-                uvs: &uvs,
-                indices: &indices,
-            },
-            self.mesh.version() + 1,
-        )?;
+        self.mesh.update(MeshUpdateData {
+            vertices,
+            normals,
+            colors,
+            uvs,
+            indices,
+        })?;
 
         // render ui
         let cmd = self.device.command_buffer();

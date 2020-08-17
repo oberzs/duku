@@ -82,7 +82,6 @@ impl ImageUniform {
             .iter()
             .position(|img| img.is_none())
             .unwrap_or(next_index);
-        println!("add {} {:?}", index, image);
 
         // add new or replace image
         if index == next_index {
@@ -100,7 +99,6 @@ impl ImageUniform {
             (index as usize) < self.images.len(),
             "image index out of bounds"
         );
-        println!("remove {}", index);
 
         // mark image as removed
         self.images[index as usize] = None;
@@ -116,7 +114,6 @@ impl ImageUniform {
     pub(crate) fn update_if_needed(&mut self) {
         // update if image was added/removed
         if self.should_update {
-            println!("update");
             let mut writes = vec![];
 
             // configure image writes to descriptor
@@ -127,7 +124,6 @@ impl ImageUniform {
                         Some(Some(img)) => *img,
                         _ => self.images[0].expect("bad code"),
                     };
-                    println!("view {:?}", image);
 
                     vk::DescriptorImageInfo::builder()
                         .image_layout(ImageLayout::ShaderColor.flag())

@@ -33,8 +33,9 @@ fn main() -> Result<()> {
     }
 
     let mut square = context.create_mesh()?;
-    square.set_vertices(square_vertices(square_size, 0.0));
-    square.set_indices(square_indices(square_size));
+    square.vertices = square_vertices(square_size, 0.0);
+    square.indices = square_indices(square_size);
+    square.update();
     let time = Instant::now();
 
     while window.is_open() {
@@ -44,7 +45,8 @@ fn main() -> Result<()> {
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
-        square.set_vertices(square_vertices(square_size, elapsed));
+        square.vertices = square_vertices(square_size, elapsed);
+        square.update();
 
         context.draw_on_window(|target| {
             target.wireframes = true;

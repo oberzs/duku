@@ -28,7 +28,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
-use crate::resource::NewIndex;
+use crate::resource::Index;
 use crate::surface::Swapchain;
 
 // user facing Framebuffer data
@@ -37,9 +37,9 @@ pub struct Framebuffer {
     pub width: u32,
     pub height: u32,
 
-    pub(crate) index: NewIndex,
+    pub(crate) index: Index,
 
-    updater: Sender<(NewIndex, FramebufferUpdateData)>,
+    updater: Sender<(Index, FramebufferUpdateData)>,
 }
 
 // GPU data storage for a framebuffer
@@ -98,7 +98,7 @@ pub(crate) struct FramebufferOptions<'formats> {
 }
 
 impl Framebuffer {
-    pub(crate) fn new(index: NewIndex, updater: Sender<(NewIndex, FramebufferUpdateData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, FramebufferUpdateData)>) -> Self {
         Self {
             width: 1,
             height: 1,
@@ -251,7 +251,6 @@ impl CoreFramebuffer {
                 ..Default::default()
             },
         )?;
-        println!("create framebuffer");
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
@@ -336,7 +335,6 @@ impl CoreFramebuffer {
                 ..Default::default()
             },
         )?;
-        println!("update framebuffer");
         let texture_index = image_uniform.add(texture_image.add_view()?);
 
         // ready image layouts
