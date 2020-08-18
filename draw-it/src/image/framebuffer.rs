@@ -28,7 +28,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::Camera;
 use crate::renderer::CameraType;
-use crate::resource::Index;
+use crate::storage::Index;
 use crate::surface::Swapchain;
 
 // user facing framebuffer data

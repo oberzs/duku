@@ -29,9 +29,9 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
-use crate::resource::Builtins;
-use crate::resource::Index;
-use crate::resource::Storage;
+use crate::storage::Builtins;
+use crate::storage::Index;
+use crate::storage::Storage;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],

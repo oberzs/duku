@@ -19,7 +19,7 @@ use crate::math::Vector3;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::ImageUniform;
-use crate::resource::Index;
+use crate::storage::Index;
 use format::CharMetrics;
 use format::FontFile;
 

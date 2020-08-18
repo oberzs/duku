@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// Index - reference-counted index into mesh storage
+// Index - reference-counted index into storage
 
 use std::fmt;
 use std::hash::Hash;

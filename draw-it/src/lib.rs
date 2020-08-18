@@ -32,7 +32,7 @@ mod mesh;
 mod pipeline;
 mod quality;
 mod renderer;
-mod resource;
+mod storage;
 mod surface;
 mod sync;
 mod watch;

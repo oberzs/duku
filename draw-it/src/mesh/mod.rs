@@ -16,7 +16,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::resource::Index;
+use crate::storage::Index;
 pub(crate) use vertex::Vertex;
 
 // user facing Mesh data

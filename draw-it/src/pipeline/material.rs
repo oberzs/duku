@@ -16,7 +16,7 @@ use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::resource::Index;
+use crate::storage::Index;
 
 // user facing Material data
 #[derive(Debug)]

@@ -15,8 +15,8 @@ use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
-use crate::resource::Builtins;
-use crate::resource::Index;
+use crate::storage::Builtins;
+use crate::storage::Index;
 
 pub struct Target<'b> {
     pub bias: f32,

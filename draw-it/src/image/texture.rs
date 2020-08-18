@@ -18,7 +18,7 @@ use crate::buffer::BufferUsage;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
-use crate::resource::Index;
+use crate::storage::Index;
 
 // user facing texture data
 #[derive(Debug)]

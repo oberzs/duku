@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// Storage - resource manager
+// Storage - Vulkan resource storage
 
 mod builtin;
 mod index;

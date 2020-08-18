@@ -16,7 +16,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::mesh::Vertex;
-use crate::resource::Index;
+use crate::storage::Index;
 
 // user facing texture data
 #[derive(Debug)]

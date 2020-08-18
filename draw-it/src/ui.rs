@@ -49,7 +49,7 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::CameraType;
-use crate::resource::Storage;
+use crate::storage::Storage;
 
 pub use imgui;
 
