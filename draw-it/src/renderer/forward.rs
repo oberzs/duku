@@ -4,6 +4,7 @@
 // ForwardRenderer - renderer that renders shadowmap and then normal render pass
 
 use std::rc::Rc;
+use std::time::Instant;
 
 use super::Albedo;
 use super::Camera;
@@ -31,11 +32,11 @@ use crate::pipeline::ShadowMapUniform;
 use crate::resource::Builtins;
 use crate::resource::Index;
 use crate::resource::Storage;
-use crate::stats::Stats;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
     shadow_shader: CoreShader,
+    start_time: Instant,
     pcf: Pcf,
     device: Rc<Device>,
 }
@@ -77,6 +78,7 @@ impl ForwardRenderer {
 
         Ok(Self {
             device: Rc::clone(device),
+            start_time: Instant::now(),
             shadow_frames,
             shadow_shader,
             pcf,
@@ -90,7 +92,6 @@ impl ForwardRenderer {
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
         data: RenderData,
-        stats: &mut Stats,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
         self.device.cmd_set_line_width(cmd, data.line_width);
@@ -142,7 +143,7 @@ impl ForwardRenderer {
                 cascade_splits: self.shadow_frames[current].cascades,
                 light_matrices: self.shadow_frames[current].matrices,
                 bias: data.bias,
-                time: stats.time,
+                time: self.start_time.elapsed().as_secs_f32(),
                 camera_position,
                 world_matrix,
                 lights,
@@ -160,9 +161,6 @@ impl ForwardRenderer {
                 .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
         }
 
-        // let mut unique_shaders = HashSet::new();
-        // let mut unique_materials = HashSet::new();
-
         // skybox rendering
         if data.skybox {
             self.skybox_pass(
@@ -171,15 +169,14 @@ impl ForwardRenderer {
                 shader_layout,
                 camera_position,
                 camera_depth,
-                stats,
             );
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, storage, shader_layout, stats);
+        self.normal_pass(&data.orders_by_shader, storage, shader_layout);
 
         // text rendering
-        self.text_pass(&data.text_orders, storage, builtins, shader_layout, stats);
+        self.text_pass(&data.text_orders, storage, builtins, shader_layout);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -187,9 +184,6 @@ impl ForwardRenderer {
             .framebuffers
             .get_mut(framebuffer)
             .blit_to_texture(cmd);
-
-        // stats.shaders_used = unique_shaders.len() as u32;
-        // stats.materials_used = unique_materials.len() as u32;
 
         Ok(())
     }
@@ -201,7 +195,6 @@ impl ForwardRenderer {
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
         data: RenderData,
-        stats: &mut Stats,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
         self.device.cmd_set_line_width(cmd, data.line_width);
@@ -244,7 +237,7 @@ impl ForwardRenderer {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             bias: data.bias,
-            time: stats.time,
+            time: self.start_time.elapsed().as_secs_f32(),
             camera_position,
             world_matrix,
             lights,
@@ -259,9 +252,6 @@ impl ForwardRenderer {
         self.device
             .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
 
-        // let mut unique_shaders = HashSet::new();
-        // let mut unique_materials = HashSet::new();
-
         // skybox rendering
         if data.skybox {
             self.skybox_pass(
@@ -270,22 +260,18 @@ impl ForwardRenderer {
                 shader_layout,
                 camera_position,
                 camera_depth,
-                stats,
             );
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, storage, shader_layout, stats);
+        self.normal_pass(&data.orders_by_shader, storage, shader_layout);
 
         // text rendering
-        self.text_pass(&data.text_orders, storage, builtins, shader_layout, stats);
+        self.text_pass(&data.text_orders, storage, builtins, shader_layout);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
-
-        // stats.shaders_used = unique_shaders.len() as u32;
-        // stats.materials_used = unique_materials.len() as u32;
 
         Ok(())
     }
@@ -295,7 +281,6 @@ impl ForwardRenderer {
         orders_by_shader: &[OrdersByShader],
         storage: &Storage,
         shader_layout: &ShaderLayout,
-        stats: &mut Stats,
     ) {
         let cmd = self.device.command_buffer();
 
@@ -303,19 +288,14 @@ impl ForwardRenderer {
             // bind shader
             let shader = storage.shaders.get(&s_order.shader);
             self.device.cmd_bind_shader(cmd, shader);
-            // unique_shaders.insert(s.handle());
-            stats.shader_rebinds += 1;
 
             for m_order in &s_order.orders_by_material {
                 // bind material
                 let material = storage.materials.get(&m_order.material);
                 self.device.cmd_bind_material(cmd, shader_layout, material);
-                // unique_materials.insert(material.descriptor());
-                stats.material_rebinds += 1;
 
                 for order in &m_order.orders {
-                    stats.drawn_indices += self.draw_order(storage, shader_layout, order);
-                    stats.draw_calls += 1;
+                    self.draw_order(storage, shader_layout, order);
                 }
             }
         }
@@ -328,14 +308,11 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         camera_position: Vector3,
         camera_depth: f32,
-        stats: &mut Stats,
     ) {
         let cmd = self.device.command_buffer();
 
         let shader = storage.shaders.get(&builtins.skybox_shader.index);
         self.device.cmd_bind_shader(cmd, shader);
-        // unique_shaders.insert(s.handle());
-        stats.shader_rebinds += 1;
 
         let mesh = storage.meshes.get(&builtins.cube_mesh.index);
         self.device.cmd_bind_mesh(cmd, mesh);
@@ -356,9 +333,6 @@ impl ForwardRenderer {
             },
         );
         self.device.cmd_draw(cmd, mesh.index_count(), 0);
-
-        stats.drawn_indices += mesh.index_count() as u32;
-        stats.draw_calls += 1;
     }
 
     fn text_pass(
@@ -367,7 +341,6 @@ impl ForwardRenderer {
         storage: &Storage,
         builtins: &Builtins,
         shader_layout: &ShaderLayout,
-        stats: &mut Stats,
     ) {
         let cmd = self.device.command_buffer();
 
@@ -386,14 +359,10 @@ impl ForwardRenderer {
             // bind shader
             let shader = storage.shaders.get(&shader_index);
             self.device.cmd_bind_shader(cmd, shader);
-            // unique_shaders.insert(s.handle());
-            stats.shader_rebinds += 1;
 
             // bind material
             let material = storage.materials.get(&order.material);
             self.device.cmd_bind_material(cmd, shader_layout, material);
-            // unique_materials.insert(material.descriptor());
-            stats.material_rebinds += 1;
 
             let albedo_index = font.texture(font_size).image_index();
             let mesh = font.mesh(font_size);
@@ -429,9 +398,6 @@ impl ForwardRenderer {
 
                 let data = font.char_data(font_size, c);
                 self.device.cmd_draw(cmd, 6, data.offset);
-
-                stats.drawn_indices += 6;
-                stats.draw_calls += 1;
 
                 transform.position.x += data.advance * transform.scale.x;
             }
@@ -532,7 +498,7 @@ impl ForwardRenderer {
         Ok(())
     }
 
-    fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) -> u32 {
+    fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
         let cmd = self.device.command_buffer();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => storage.textures.get(tex).image_index(),
@@ -551,7 +517,6 @@ impl ForwardRenderer {
         );
         self.device.cmd_bind_mesh(cmd, mesh);
         self.device.cmd_draw(cmd, mesh.index_count(), 0);
-        mesh.index_count() as u32
     }
 }
 

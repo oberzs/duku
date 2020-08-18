@@ -27,6 +27,7 @@ use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
+use crate::device::Stats;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -49,7 +50,6 @@ use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
 use crate::renderer::CameraType;
 use crate::resource::Storage;
-use crate::stats::Stats;
 
 pub use imgui;
 
@@ -415,23 +415,17 @@ impl UiFrame<'_> {
             .build(&self.frame, build_fn);
     }
 
-    pub fn stats_window(&self, stats: Stats) {
+    pub fn stats_window(&self, stats: Stats, fps: u32, delta_time: f32) {
         let pad = 14;
 
-        let fps = format!("{1:0$} : {2}", pad, "Fps", stats.fps);
-        let frame_time = format!(
-            "{1:0$} : {2:.2}ms",
-            pad,
-            "Frame Time",
-            stats.delta_time * 1000.0
-        );
-        let total_time = format!("{1:0$} : {2:.2}s", pad, "Total Time", stats.time);
+        let fps = format!("{1:0$} : {2}", pad, "Fps", fps);
+        let frame_time = format!("{1:0$} : {2:.2}ms", pad, "Frame Time", delta_time * 1000.0);
         let drawn_indices = format!(
             "{1:0$} : {2}({3})",
             pad,
             "Drawn Indices",
             stats.drawn_indices,
-            stats.drawn_triangles()
+            stats.drawn_indices / 3
         );
         let shader_rebinds = format!(
             "{1:0$} : {2}({3})",
@@ -453,7 +447,6 @@ impl UiFrame<'_> {
             .build(&self.frame, || {
                 self.frame.text(fps);
                 self.frame.text(frame_time);
-                self.frame.text(total_time);
                 self.frame.separator();
                 self.frame.text(drawn_indices);
                 self.frame.text(draw_calls);

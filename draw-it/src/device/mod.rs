@@ -13,6 +13,7 @@ use ash::Device as VkDevice;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::cmp;
+use std::collections::HashSet;
 use std::ffi::c_void;
 use std::io::Cursor;
 use std::mem;
@@ -62,6 +63,20 @@ pub(crate) struct Device {
     destroyed_pipelines: RefCell<[Vec<vk::Pipeline>; IN_FLIGHT_FRAME_COUNT]>,
     destroyed_buffers: RefCell<[Vec<(vk::Buffer, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
     destroyed_images: RefCell<[Vec<(vk::Image, vk::DeviceMemory)>; IN_FLIGHT_FRAME_COUNT]>,
+
+    stats: Cell<Stats>,
+    used_materials: RefCell<HashSet<Descriptor>>,
+    used_shaders: RefCell<HashSet<vk::Pipeline>>,
+}
+
+#[derive(Copy, Clone, Default)]
+pub struct Stats {
+    pub drawn_indices: u32,
+    pub shaders_used: u32,
+    pub shader_rebinds: u32,
+    pub materials_used: u32,
+    pub material_rebinds: u32,
+    pub draw_calls: u32,
 }
 
 impl Device {
@@ -158,6 +173,9 @@ impl Device {
             graphics_queue: (g_index, graphics_queue),
             present_queue: (p_index, present_queue),
             current_frame: Cell::new(0),
+            stats: Cell::new(Stats::default()),
+            used_materials: RefCell::new(HashSet::new()),
+            used_shaders: RefCell::new(HashSet::new()),
             memory_types,
             sync_release_image,
             sync_acquire_image,
@@ -186,6 +204,11 @@ impl Device {
 
         // cleanup destroyed storage
         self.cleanup_resources(current);
+
+        // reset stats
+        self.stats.set(Stats::default());
+        self.used_materials.borrow_mut().clear();
+        self.used_shaders.borrow_mut().clear();
 
         // create new command buffer
         let buffer_info = vk::CommandBufferAllocateInfo::builder()
@@ -313,6 +336,10 @@ impl Device {
 
     pub(crate) fn current_frame(&self) -> usize {
         self.current_frame.get()
+    }
+
+    pub(crate) fn stats(&self) -> Stats {
+        self.stats.get()
     }
 
     pub(crate) fn find_memory_type(
@@ -659,10 +686,41 @@ impl Device {
     }
 
     pub(crate) fn cmd_bind_shader(&self, buffer: vk::CommandBuffer, shader: &CoreShader) {
+        // update stats
+        let mut stats = self.stats.get();
+        let mut used = self.used_shaders.borrow_mut();
+        if !used.contains(&shader.handle()) {
+            used.insert(shader.handle());
+            stats.shaders_used += 1;
+        }
+        stats.shader_rebinds += 1;
+        self.stats.set(stats);
+
+        // bind shader
         unsafe {
             self.handle
                 .cmd_bind_pipeline(buffer, vk::PipelineBindPoint::GRAPHICS, shader.handle());
         }
+    }
+
+    pub(crate) fn cmd_bind_material(
+        &self,
+        buffer: vk::CommandBuffer,
+        layout: &ShaderLayout,
+        material: &CoreMaterial,
+    ) {
+        // update stats
+        let mut stats = self.stats.get();
+        let mut used = self.used_materials.borrow_mut();
+        if !used.contains(&material.descriptor()) {
+            used.insert(material.descriptor());
+            stats.materials_used += 1;
+        }
+        stats.material_rebinds += 1;
+        self.stats.set(stats);
+
+        // bind material
+        self.cmd_bind_descriptor(buffer, layout, material.descriptor());
     }
 
     pub(crate) fn cmd_bind_descriptor(
@@ -691,15 +749,6 @@ impl Device {
         uniform: &impl Uniform,
     ) {
         self.cmd_bind_descriptor(buffer, layout, uniform.descriptor());
-    }
-
-    pub(crate) fn cmd_bind_material(
-        &self,
-        buffer: vk::CommandBuffer,
-        layout: &ShaderLayout,
-        material: &CoreMaterial,
-    ) {
-        self.cmd_bind_descriptor(buffer, layout, material.descriptor());
     }
 
     pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &CoreMesh) {
@@ -746,6 +795,13 @@ impl Device {
     }
 
     pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: usize, offset: usize) {
+        // update stats
+        let mut stats = self.stats.get();
+        stats.drawn_indices += count as u32;
+        stats.draw_calls += 1;
+        self.stats.set(stats);
+
+        // draw
         unsafe {
             self.handle
                 .cmd_draw_indexed(buffer, count as u32, 1, offset as u32, 0, 0);
