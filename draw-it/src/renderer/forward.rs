@@ -11,7 +11,7 @@ use super::Camera;
 use super::CameraType;
 use super::Order;
 use super::OrdersByShader;
-use super::RenderData;
+use super::Target;
 use super::TextOrder;
 use crate::device::Device;
 use crate::device::IN_FLIGHT_FRAME_COUNT;
@@ -29,7 +29,6 @@ use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShadowMapUniform;
-use crate::storage::Builtins;
 use crate::storage::Index;
 use crate::storage::Storage;
 
@@ -89,12 +88,11 @@ impl ForwardRenderer {
         &mut self,
         framebuffer: &Index,
         storage: &mut Storage,
-        builtins: &Builtins,
         shader_layout: &ShaderLayout,
-        data: RenderData,
+        target: Target<'_>,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, data.line_width);
+        self.device.cmd_set_line_width(cmd, target.line_width);
 
         let current = self.device.current_frame();
 
@@ -103,10 +101,10 @@ impl ForwardRenderer {
         self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
-        if data.has_shadow_casters {
+        if target.has_shadow_casters {
             let mut view = storage.framebuffers.get(framebuffer).camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, storage, &data, &view)?;
+            self.shadow_pass(shader_layout, storage, &target, &view)?;
         }
 
         // bind current shadow map set
@@ -120,10 +118,10 @@ impl ForwardRenderer {
         };
 
         let lights = [
-            data.lights[0].data(),
-            data.lights[1].data(),
-            data.lights[2].data(),
-            data.lights[3].data(),
+            target.lights[0].data(),
+            target.lights[1].data(),
+            target.lights[2].data(),
+            target.lights[3].data(),
         ];
 
         // update world uniform
@@ -142,7 +140,7 @@ impl ForwardRenderer {
             .update_data(&[WorldUpdateData {
                 cascade_splits: self.shadow_frames[current].cascades,
                 light_matrices: self.shadow_frames[current].matrices,
-                bias: data.bias,
+                bias: target.bias,
                 time: self.start_time.elapsed().as_secs_f32(),
                 camera_position,
                 world_matrix,
@@ -154,7 +152,7 @@ impl ForwardRenderer {
         {
             let framebuffer = storage.framebuffers.get(framebuffer);
             self.device
-                .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
+                .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
             self.device
                 .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
             self.device
@@ -162,9 +160,9 @@ impl ForwardRenderer {
         }
 
         // skybox rendering
-        if data.skybox {
+        if target.skybox {
             self.skybox_pass(
-                builtins,
+                &target,
                 storage,
                 shader_layout,
                 camera_position,
@@ -173,10 +171,10 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, storage, shader_layout);
+        self.normal_pass(&target.orders_by_shader, storage, shader_layout);
 
         // text rendering
-        self.text_pass(&data.text_orders, storage, builtins, shader_layout);
+        self.text_pass(&target.text_orders, storage, &target, shader_layout);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -192,12 +190,11 @@ impl ForwardRenderer {
         &mut self,
         framebuffer: &mut CoreFramebuffer,
         storage: &mut Storage,
-        builtins: &Builtins,
         shader_layout: &ShaderLayout,
-        data: RenderData,
+        target: Target<'_>,
     ) -> Result<()> {
         let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, data.line_width);
+        self.device.cmd_set_line_width(cmd, target.line_width);
 
         let current = self.device.current_frame();
 
@@ -206,10 +203,10 @@ impl ForwardRenderer {
         self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
-        if data.has_shadow_casters {
+        if target.has_shadow_casters {
             let mut view = framebuffer.camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, storage, &data, &view)?;
+            self.shadow_pass(shader_layout, storage, &target, &view)?;
         }
 
         // bind current shadow map set
@@ -223,10 +220,10 @@ impl ForwardRenderer {
         };
 
         let lights = [
-            data.lights[0].data(),
-            data.lights[1].data(),
-            data.lights[2].data(),
-            data.lights[3].data(),
+            target.lights[0].data(),
+            target.lights[1].data(),
+            target.lights[2].data(),
+            target.lights[3].data(),
         ];
 
         // update world uniform
@@ -236,7 +233,7 @@ impl ForwardRenderer {
         framebuffer.world_buffer().update_data(&[WorldUpdateData {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
-            bias: data.bias,
+            bias: target.bias,
             time: self.start_time.elapsed().as_secs_f32(),
             camera_position,
             world_matrix,
@@ -246,16 +243,16 @@ impl ForwardRenderer {
 
         // do render pass
         self.device
-            .cmd_begin_render_pass(cmd, framebuffer, data.clear.to_rgba_norm());
+            .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
         self.device
             .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
         self.device
             .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
 
         // skybox rendering
-        if data.skybox {
+        if target.skybox {
             self.skybox_pass(
-                builtins,
+                &target,
                 storage,
                 shader_layout,
                 camera_position,
@@ -264,10 +261,10 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        self.normal_pass(&data.orders_by_shader, storage, shader_layout);
+        self.normal_pass(&target.orders_by_shader, storage, shader_layout);
 
         // text rendering
-        self.text_pass(&data.text_orders, storage, builtins, shader_layout);
+        self.text_pass(&target.text_orders, storage, &target, shader_layout);
 
         // end rendering
         self.device.cmd_end_render_pass(cmd);
@@ -303,7 +300,7 @@ impl ForwardRenderer {
 
     fn skybox_pass(
         &self,
-        builtins: &Builtins,
+        target: &Target<'_>,
         storage: &Storage,
         shader_layout: &ShaderLayout,
         camera_position: Vector3,
@@ -311,10 +308,10 @@ impl ForwardRenderer {
     ) {
         let cmd = self.device.command_buffer();
 
-        let shader = storage.shaders.get(&builtins.skybox_shader.index);
+        let shader = storage.shaders.get(&target.builtins.skybox_shader.index);
         self.device.cmd_bind_shader(cmd, shader);
 
-        let mesh = storage.meshes.get(&builtins.cube_mesh.index);
+        let mesh = storage.meshes.get(&target.builtins.cube_mesh.index);
         self.device.cmd_bind_mesh(cmd, mesh);
 
         let model_matrix = (Transform {
@@ -339,7 +336,7 @@ impl ForwardRenderer {
         &self,
         orders: &[TextOrder],
         storage: &Storage,
-        builtins: &Builtins,
+        target: &Target<'_>,
         shader_layout: &ShaderLayout,
     ) {
         let cmd = self.device.command_buffer();
@@ -350,9 +347,9 @@ impl ForwardRenderer {
             let font_size = order.size;
 
             let shader_index = if font.is_bitmap(font_size) {
-                builtins.bitmap_font_shader.index.clone()
+                target.builtins.bitmap_font_shader.index.clone()
             } else {
-                builtins.sdf_font_shader.index.clone()
+                target.builtins.sdf_font_shader.index.clone()
             };
             let sampler_index = if font.is_bitmap(font_size) { 7 } else { 1 };
 
@@ -408,10 +405,10 @@ impl ForwardRenderer {
         &mut self,
         shader_layout: &ShaderLayout,
         storage: &Storage,
-        data: &RenderData,
+        target: &Target<'_>,
         view: &Camera,
     ) -> Result<()> {
-        let light_dir = match data.lights.iter().find(|l| l.shadows) {
+        let light_dir = match target.lights.iter().find(|l| l.shadows) {
             Some(light) => light.coords,
             // if there is no light with shadows,
             // don't do shadow pass
@@ -427,7 +424,7 @@ impl ForwardRenderer {
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
-        for (i, cs) in data.cascade_splits.iter().enumerate() {
+        for (i, cs) in target.cascade_splits.iter().enumerate() {
             let map_size = self.shadow_frames[current].map_size;
 
             // get view frustum bounding sphere
@@ -483,7 +480,7 @@ impl ForwardRenderer {
                 .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
             self.device.cmd_bind_shader(cmd, &self.shadow_shader);
 
-            for s_order in &data.orders_by_shader {
+            for s_order in &target.orders_by_shader {
                 for m_order in &s_order.orders_by_material {
                     for order in &m_order.orders {
                         if order.cast_shadows {

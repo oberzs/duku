@@ -28,7 +28,7 @@ enum Mode {
 }
 
 impl Controller {
-    pub fn fly() -> Self {
+    pub const fn fly() -> Self {
         Self {
             camera_angle: 0.0,
             pivot: Vector3::ZERO,

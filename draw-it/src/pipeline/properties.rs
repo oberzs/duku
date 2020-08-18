@@ -28,7 +28,7 @@ pub(crate) enum DepthMode {
 }
 
 impl CullMode {
-    pub(crate) fn flag(&self) -> vk::CullModeFlags {
+    pub(crate) const fn flag(&self) -> vk::CullModeFlags {
         match *self {
             Self::Back => vk::CullModeFlags::BACK,
             Self::Front => vk::CullModeFlags::FRONT,
@@ -38,7 +38,7 @@ impl CullMode {
 }
 
 impl ShapeMode {
-    pub(crate) fn polygon(&self) -> vk::PolygonMode {
+    pub(crate) const fn polygon(&self) -> vk::PolygonMode {
         match *self {
             Self::FilledTriangles => vk::PolygonMode::FILL,
             Self::LinedTriangles => vk::PolygonMode::LINE,
@@ -46,7 +46,7 @@ impl ShapeMode {
         }
     }
 
-    pub(crate) fn topology(&self) -> vk::PrimitiveTopology {
+    pub(crate) const fn topology(&self) -> vk::PrimitiveTopology {
         match *self {
             Self::FilledTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
             Self::LinedTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
@@ -56,11 +56,11 @@ impl ShapeMode {
 }
 
 impl DepthMode {
-    pub(crate) fn test(&self) -> bool {
+    pub(crate) const fn test(&self) -> bool {
         matches!(*self, Self::Test | Self::TestAndWrite)
     }
 
-    pub(crate) fn write(&self) -> bool {
+    pub(crate) const fn write(&self) -> bool {
         matches!(*self, Self::Write | Self::TestAndWrite)
     }
 }

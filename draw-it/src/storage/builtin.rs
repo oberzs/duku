@@ -456,7 +456,7 @@ fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) 
     }
 
     let mut uvs = vec![];
-    for vertex in vertices.iter() {
+    for vertex in &vertices {
         let u = vertex.z.atan2(vertex.x) / (2.0 * PI);
         let v = (vertex.y.asin() / PI) + 0.5;
         uvs.push(Vector2::new(u, v));

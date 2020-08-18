@@ -57,8 +57,8 @@ impl DynamicBuffer {
         Ok(())
     }
 
-    pub(crate) fn size(&self) -> u32 {
-        self.size as u32
+    pub(crate) const fn size(&self) -> usize {
+        self.size
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {

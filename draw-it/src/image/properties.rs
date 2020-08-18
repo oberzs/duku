@@ -84,7 +84,7 @@ impl ImageUsage {
             })
     }
 
-    pub(crate) fn flag(&self) -> vk::ImageUsageFlags {
+    pub(crate) const fn flag(&self) -> vk::ImageUsageFlags {
         match *self {
             Self::Color => vk::ImageUsageFlags::COLOR_ATTACHMENT,
             Self::Depth => vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
@@ -97,7 +97,7 @@ impl ImageUsage {
 }
 
 impl ImageFormat {
-    pub(crate) fn flag(&self) -> vk::Format {
+    pub(crate) const fn flag(&self) -> vk::Format {
         match *self {
             Self::Rgb => vk::Format::R8G8B8_UNORM,
             Self::Rgba => vk::Format::R8G8B8A8_UNORM,
@@ -134,7 +134,7 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) fn is_color(&self) -> bool {
+    pub(crate) const fn is_color(&self) -> bool {
         matches!(
             *self,
             Self::Float2
@@ -148,13 +148,13 @@ impl ImageFormat {
     }
 
     // probably will some day be needed
-    pub(crate) fn _is_depth(&self) -> bool {
+    pub(crate) const fn _is_depth(&self) -> bool {
         matches!(*self, Self::Depth | Self::DepthStencil)
     }
 }
 
 impl ImageLayout {
-    pub(crate) fn flag(&self) -> vk::ImageLayout {
+    pub(crate) const fn flag(&self) -> vk::ImageLayout {
         match *self {
             Self::Undefined => vk::ImageLayout::UNDEFINED,
             Self::Color => vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
@@ -167,7 +167,7 @@ impl ImageLayout {
         }
     }
 
-    pub(crate) fn access_flag(&self) -> vk::AccessFlags {
+    pub(crate) const fn access_flag(&self) -> vk::AccessFlags {
         match *self {
             Self::TransferSrc => vk::AccessFlags::TRANSFER_READ,
             Self::TransferDst => vk::AccessFlags::TRANSFER_WRITE,
@@ -196,7 +196,7 @@ impl ImageLayout {
 }
 
 impl Msaa {
-    pub(crate) fn flag(&self) -> vk::SampleCountFlags {
+    pub(crate) const fn flag(&self) -> vk::SampleCountFlags {
         match *self {
             Self::Disabled => vk::SampleCountFlags::TYPE_1,
             Self::X4 => vk::SampleCountFlags::TYPE_4,
@@ -207,7 +207,7 @@ impl Msaa {
 }
 
 impl TextureWrap {
-    pub(crate) fn flag(&self) -> vk::SamplerAddressMode {
+    pub(crate) const fn flag(&self) -> vk::SamplerAddressMode {
         match *self {
             Self::ClampBorder => vk::SamplerAddressMode::CLAMP_TO_BORDER,
             Self::ClampEdge => vk::SamplerAddressMode::CLAMP_TO_EDGE,
@@ -217,7 +217,7 @@ impl TextureWrap {
 }
 
 impl TextureFilter {
-    pub(crate) fn flag(&self) -> vk::Filter {
+    pub(crate) const fn flag(&self) -> vk::Filter {
         match *self {
             Self::Linear => vk::Filter::LINEAR,
             Self::Nearest => vk::Filter::NEAREST,

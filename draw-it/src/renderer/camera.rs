@@ -95,7 +95,7 @@ impl Camera {
         let inverse_projection = projection.inverse().expect("bad projection");
 
         // get projection frustum corners from NDC
-        for corner in frustum_corners.iter_mut() {
+        for corner in &mut frustum_corners {
             let point = inverse_projection * corner.extend(1.0);
             *corner = point.shrink() / point.w;
         }
@@ -114,7 +114,7 @@ impl Camera {
         // get bounding sphere radius
         // sphere makes it axis-aligned
         let mut radius = 0.0;
-        for corner in frustum_corners.iter() {
+        for corner in &frustum_corners {
             let distance = (*corner - frustum_center).length();
             if distance > radius {
                 radius = distance;

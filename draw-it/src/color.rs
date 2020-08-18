@@ -26,7 +26,7 @@ impl Color {
     }
 
     pub fn hsv(h: u16, s: u8, v: u8) -> Self {
-        let mut h_norm = h as f32;
+        let mut h_norm = f32::from(h);
         let s_norm = to_norm(s);
         let v_norm = to_norm(v);
 
@@ -36,7 +36,7 @@ impl Color {
 
         h_norm /= 60.0;
         let integr = h_norm.floor() as u16;
-        let fract = h_norm - integr as f32;
+        let fract = h_norm - f32::from(integr);
         let pv = v_norm * (1.0 - s_norm);
         let qv = v_norm * (1.0 - s_norm * fract);
         let tv = v_norm * (1.0 - s_norm * (1.0 - fract));
@@ -92,10 +92,10 @@ impl Color {
 
         let delta = max_norm - min_norm;
 
-        let saturation = if max != 0 {
-            to_byte(delta / max_norm)
-        } else {
+        let saturation = if max == 0 {
             return (0, 0, value);
+        } else {
+            to_byte(delta / max_norm)
         };
 
         let mut hue = if self.r == max {

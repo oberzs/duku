@@ -229,7 +229,7 @@ impl ImageMemory {
         self.views[index]
     }
 
-    pub(crate) fn handle(&self) -> vk::Image {
+    pub(crate) const fn handle(&self) -> vk::Image {
         self.handle
     }
 
@@ -241,15 +241,15 @@ impl ImageMemory {
         self.format.all_aspects()
     }
 
-    pub(crate) fn layer_count(&self) -> u32 {
+    pub(crate) const fn layer_count(&self) -> u32 {
         self.layer_count
     }
 
-    pub(crate) fn width(&self) -> u32 {
+    pub(crate) const fn width(&self) -> u32 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u32 {
+    pub(crate) const fn height(&self) -> u32 {
         self.height
     }
 }

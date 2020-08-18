@@ -75,27 +75,27 @@ impl Attachment {
         }
     }
 
-    pub(crate) fn description(&self) -> vk::AttachmentDescription {
+    pub(crate) const fn description(&self) -> vk::AttachmentDescription {
         self.description
     }
 
-    pub(crate) fn reference(&self) -> vk::AttachmentReference {
+    pub(crate) const fn reference(&self) -> vk::AttachmentReference {
         self.reference
     }
 
-    pub(crate) fn format(&self) -> ImageFormat {
+    pub(crate) const fn format(&self) -> ImageFormat {
         self.format
     }
 
-    pub(crate) fn layout(&self) -> ImageLayout {
+    pub(crate) const fn layout(&self) -> ImageLayout {
         self.layout
     }
 
-    pub(crate) fn msaa(&self) -> Msaa {
+    pub(crate) const fn msaa(&self) -> Msaa {
         self.msaa
     }
 
-    pub(crate) fn is_stored(&self) -> bool {
+    pub(crate) const fn is_stored(&self) -> bool {
         self.is_stored
     }
 }

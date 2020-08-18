@@ -177,7 +177,7 @@ impl CoreMaterial {
         Ok(())
     }
 
-    pub(crate) fn descriptor(&self) -> Descriptor {
+    pub(crate) const fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }

@@ -44,20 +44,6 @@ pub struct Target<'b> {
     current_font: Index,
 }
 
-pub(crate) struct RenderData {
-    pub(crate) line_width: f32,
-    pub(crate) bias: f32,
-    pub(crate) clear: Color,
-    pub(crate) skybox: bool,
-
-    pub(crate) has_shadow_casters: bool,
-    pub(crate) lights: [Light; 4],
-    pub(crate) cascade_splits: [f32; 4],
-
-    pub(crate) orders_by_shader: Vec<OrdersByShader>,
-    pub(crate) text_orders: Vec<TextOrder>,
-}
-
 pub(crate) struct OrdersByShader {
     pub(crate) shader: Index,
     pub(crate) orders_by_material: Vec<OrdersByMaterial>,
@@ -245,20 +231,6 @@ impl<'b> Target<'b> {
         self.current_shader = shader.index.clone();
     }
 
-    pub(crate) fn render_data(self) -> RenderData {
-        RenderData {
-            line_width: self.line_width,
-            bias: self.bias,
-            clear: self.clear,
-            skybox: self.skybox,
-            has_shadow_casters: self.has_shadow_casters,
-            lights: self.lights,
-            cascade_splits: self.cascade_splits,
-            orders_by_shader: self.orders_by_shader,
-            text_orders: self.text_orders,
-        }
-    }
-
     fn add_order(&mut self, order: Order) {
         let material = self.current_material.clone();
         let shader = self.current_shader.clone();
@@ -311,7 +283,7 @@ impl<'b> Target<'b> {
         }
     }
 
-    fn sampler_index(&self) -> i32 {
+    const fn sampler_index(&self) -> i32 {
         use TextureFilter as F;
         use TextureWrap as W;
 

@@ -289,7 +289,7 @@ impl Device {
     }
 
     pub(crate) fn wait_for_idle(&self) -> Result<()> {
-        for fen in self.sync_queue_submit.iter() {
+        for fen in &self.sync_queue_submit {
             fence::wait_for(&self.handle, *fen)?;
         }
 
@@ -330,7 +330,7 @@ impl Device {
         })
     }
 
-    pub(crate) fn graphics_index(&self) -> u32 {
+    pub(crate) const fn graphics_index(&self) -> u32 {
         self.graphics_queue.0
     }
 

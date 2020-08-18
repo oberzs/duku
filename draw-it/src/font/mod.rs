@@ -49,7 +49,7 @@ struct FontData {
 }
 
 impl Font {
-    pub(crate) fn new(index: Index) -> Self {
+    pub(crate) const fn new(index: Index) -> Self {
         Self { index }
     }
 }

@@ -188,7 +188,7 @@ impl RenderPass {
         let handle = device.create_render_pass(&info)?;
 
         Ok(Self {
-            device: device.clone(),
+            device: Rc::clone(device),
             attachments,
             handle,
         })
@@ -198,7 +198,7 @@ impl RenderPass {
         self.attachments.iter()
     }
 
-    pub(crate) fn handle(&self) -> vk::RenderPass {
+    pub(crate) const fn handle(&self) -> vk::RenderPass {
         self.handle
     }
 }

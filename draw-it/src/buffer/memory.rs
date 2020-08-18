@@ -55,7 +55,7 @@ impl BufferMemory {
         })
     }
 
-    pub(crate) fn handle(&self) -> vk::Buffer {
+    pub(crate) const fn handle(&self) -> vk::Buffer {
         self.handle
     }
 }

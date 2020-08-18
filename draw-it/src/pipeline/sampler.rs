@@ -63,7 +63,7 @@ impl Sampler {
         })
     }
 
-    pub(crate) fn handle(&self) -> vk::Sampler {
+    pub(crate) const fn handle(&self) -> vk::Sampler {
         self.handle
     }
 }

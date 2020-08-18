@@ -157,7 +157,7 @@ impl ShaderLayout {
         let buffer_info = vk::DescriptorBufferInfo::builder()
             .buffer(buffer.handle())
             .offset(0)
-            .range(buffer.size().into())
+            .range(buffer.size() as u64)
             .build();
 
         let buffer_infos = [buffer_info];
@@ -182,7 +182,7 @@ impl ShaderLayout {
         let buffer_info = vk::DescriptorBufferInfo::builder()
             .buffer(buffer.handle())
             .offset(0)
-            .range(buffer.size().into())
+            .range(buffer.size() as u64)
             .build();
 
         let buffer_infos = [buffer_info];
@@ -233,7 +233,7 @@ impl ShaderLayout {
         Ok(Descriptor(3, set))
     }
 
-    pub(crate) fn handle(&self) -> vk::PipelineLayout {
+    pub(crate) const fn handle(&self) -> vk::PipelineLayout {
         self.handle
     }
 }

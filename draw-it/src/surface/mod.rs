@@ -44,7 +44,7 @@ impl Surface {
             handle,
             width: window.width,
             height: window.height,
-            instance: instance.clone(),
+            instance: Rc::clone(instance),
         })
     }
 
@@ -103,15 +103,15 @@ impl Surface {
         self.height = height;
     }
 
-    pub(crate) fn width(&self) -> u32 {
+    pub(crate) const fn width(&self) -> u32 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u32 {
+    pub(crate) const fn height(&self) -> u32 {
         self.height
     }
 
-    pub(crate) fn handle(&self) -> vk::SurfaceKHR {
+    pub(crate) const fn handle(&self) -> vk::SurfaceKHR {
         self.handle
     }
 }

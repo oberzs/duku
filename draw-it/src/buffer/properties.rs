@@ -29,7 +29,7 @@ impl BufferUsage {
             })
     }
 
-    pub(crate) fn flag(&self) -> vk::BufferUsageFlags {
+    pub(crate) const fn flag(&self) -> vk::BufferUsageFlags {
         match *self {
             Self::Vertex => vk::BufferUsageFlags::VERTEX_BUFFER,
             Self::Index => vk::BufferUsageFlags::INDEX_BUFFER,

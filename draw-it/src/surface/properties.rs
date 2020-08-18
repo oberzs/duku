@@ -17,13 +17,13 @@ pub enum VSync {
 }
 
 impl ColorSpace {
-    pub(crate) fn flag(&self) -> vk::ColorSpaceKHR {
+    pub(crate) const fn flag(&self) -> vk::ColorSpaceKHR {
         vk::ColorSpaceKHR::SRGB_NONLINEAR
     }
 }
 
 impl VSync {
-    pub(crate) fn flag(&self) -> vk::PresentModeKHR {
+    pub(crate) const fn flag(&self) -> vk::PresentModeKHR {
         match *self {
             Self::On => vk::PresentModeKHR::FIFO,
             Self::Off => vk::PresentModeKHR::IMMEDIATE,

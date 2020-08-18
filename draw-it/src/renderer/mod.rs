@@ -12,7 +12,6 @@ pub(crate) use forward::ForwardRenderer;
 pub(crate) use target::Albedo;
 pub(crate) use target::Order;
 pub(crate) use target::OrdersByShader;
-pub(crate) use target::RenderData;
 pub(crate) use target::TextOrder;
 
 pub use camera::Camera;

@@ -376,7 +376,7 @@ impl CoreFramebuffer {
         }
     }
 
-    pub(crate) fn handle(&self) -> vk::Framebuffer {
+    pub(crate) const fn handle(&self) -> vk::Framebuffer {
         self.handle
     }
 
@@ -384,15 +384,15 @@ impl CoreFramebuffer {
         self.render_pass.handle()
     }
 
-    pub(crate) fn msaa(&self) -> Msaa {
+    pub(crate) const fn msaa(&self) -> Msaa {
         self.msaa
     }
 
-    pub(crate) fn width(&self) -> u32 {
+    pub(crate) const fn width(&self) -> u32 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u32 {
+    pub(crate) const fn height(&self) -> u32 {
         self.height
     }
 
@@ -412,7 +412,7 @@ impl CoreFramebuffer {
         &mut self.world_buffer
     }
 
-    pub(crate) fn world_descriptor(&self) -> Descriptor {
+    pub(crate) const fn world_descriptor(&self) -> Descriptor {
         self.world_descriptor
     }
 }

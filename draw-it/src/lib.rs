@@ -11,9 +11,16 @@
     // missing_docs,
     single_use_lifetimes,
     unused_qualifications,
-    // clippy::missing_const_for_fn,
-    // clippy::redundant_pub_crate,
-    clippy::unwrap_used
+    clippy::missing_const_for_fn,
+    clippy::unwrap_used,
+    clippy::cast_lossless,
+    clippy::clone_on_ref_ptr,
+    clippy::cognitive_complexity,
+    clippy::explicit_iter_loop,
+    clippy::explicit_into_iter_loop,
+    clippy::if_not_else,
+    clippy::imprecise_flops,
+    clippy::inefficient_to_string
 )]
 
 // should be imported first

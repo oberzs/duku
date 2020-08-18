@@ -333,7 +333,7 @@ impl Ui {
             .update(image_uniform, FramebufferUpdateData { width, height })
     }
 
-    pub(crate) fn drawn(&self) -> bool {
+    pub(crate) const fn drawn(&self) -> bool {
         self.drawn
     }
 
@@ -341,7 +341,7 @@ impl Ui {
         self.drawn = false;
     }
 
-    pub(crate) fn framebuffer(&self) -> &Framebuffer {
+    pub(crate) const fn framebuffer(&self) -> &Framebuffer {
         &self.framebuffer
     }
 }

@@ -281,7 +281,6 @@ impl Context {
                 target.blit_framebuffer(ui.framebuffer());
             }
         }
-        let render_data = target.render_data();
 
         // draw
         {
@@ -291,9 +290,8 @@ impl Context {
             self.forward_renderer.draw_core(
                 framebuffer,
                 &mut self.storage,
-                &self.builtins,
                 &self.shader_layout,
-                render_data,
+                target,
             )?;
         }
 
@@ -313,15 +311,13 @@ impl Context {
         // let user record draw calls
         let mut target = Target::new(&self.builtins)?;
         draw_callback(&mut target);
-        let render_data = target.render_data();
 
         // draw
         self.forward_renderer.draw(
             &framebuffer.index,
             &mut self.storage,
-            &self.builtins,
             &self.shader_layout,
-            render_data,
+            target,
         )?;
 
         Ok(())
@@ -441,11 +437,11 @@ impl Context {
         self.device.stats()
     }
 
-    pub fn delta_time(&self) -> f32 {
+    pub const fn delta_time(&self) -> f32 {
         self.delta_time
     }
 
-    pub fn fps(&self) -> u32 {
+    pub const fn fps(&self) -> u32 {
         self.fps
     }
 

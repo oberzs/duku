@@ -40,7 +40,7 @@ struct ShaderFile {
 }
 
 impl Shader {
-    pub(crate) fn new(index: Index) -> Self {
+    pub(crate) const fn new(index: Index) -> Self {
         Self { index }
     }
 }
@@ -195,7 +195,7 @@ impl CoreShader {
         })
     }
 
-    pub(crate) fn handle(&self) -> vk::Pipeline {
+    pub(crate) const fn handle(&self) -> vk::Pipeline {
         self.handle
     }
 }

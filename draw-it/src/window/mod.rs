@@ -110,20 +110,20 @@ impl Window {
         self.buttons_clicked.contains(&button)
     }
 
-    pub fn mouse_position(&self) -> Vector2 {
+    pub const fn mouse_position(&self) -> Vector2 {
         self.mouse_position
     }
 
     pub fn set_mouse_position(&mut self, position: Vector2) {
         self.handle
-            .set_cursor_pos(position.x as f64, position.y as f64);
+            .set_cursor_pos(f64::from(position.x), f64::from(position.y));
     }
 
-    pub fn mouse_delta(&self) -> Vector2 {
+    pub const fn mouse_delta(&self) -> Vector2 {
         self.mouse_delta
     }
 
-    pub fn scroll_delta(&self) -> Vector2 {
+    pub const fn scroll_delta(&self) -> Vector2 {
         self.scroll_delta
     }
 
@@ -224,7 +224,7 @@ impl Window {
         self.last_resize = None;
     }
 
-    pub(crate) fn last_resize(&self) -> Option<Instant> {
+    pub(crate) const fn last_resize(&self) -> Option<Instant> {
         self.last_resize
     }
 

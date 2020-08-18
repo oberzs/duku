@@ -68,19 +68,19 @@ impl Swapchain {
         Ok(())
     }
 
-    pub(crate) fn current(&self) -> usize {
-        self.current_image as usize
+    pub(crate) const fn current(&self) -> usize {
+        self.current_image
     }
 
-    pub(crate) fn width(&self) -> u32 {
+    pub(crate) const fn width(&self) -> u32 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u32 {
+    pub(crate) const fn height(&self) -> u32 {
         self.height
     }
 
-    pub(crate) fn handle(&self) -> vk::SwapchainKHR {
+    pub(crate) const fn handle(&self) -> vk::SwapchainKHR {
         self.handle
     }
 }
@@ -117,12 +117,12 @@ fn swapchain_info(
         gpu_properties.graphics_index.expect("bad graphics index"),
         gpu_properties.present_index.expect("bad present index"),
     ];
-    if indices[0] != indices[1] {
+    if indices[0] == indices[1] {
+        info = info.image_sharing_mode(vk::SharingMode::EXCLUSIVE);
+    } else {
         info = info
             .image_sharing_mode(vk::SharingMode::CONCURRENT)
             .queue_family_indices(&indices);
-    } else {
-        info = info.image_sharing_mode(vk::SharingMode::EXCLUSIVE);
     }
 
     info.build()

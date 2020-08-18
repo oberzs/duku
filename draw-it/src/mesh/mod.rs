@@ -107,7 +107,7 @@ impl Mesh {
                 self.normals[b] += normal;
                 self.normals[c] += normal;
             }
-            for norm in self.normals.iter_mut() {
+            for norm in &mut self.normals {
                 *norm = norm.unit();
             }
         }
@@ -169,7 +169,7 @@ impl CoreMesh {
         self.index_buffer.handle()
     }
 
-    pub(crate) fn index_count(&self) -> usize {
+    pub(crate) const fn index_count(&self) -> usize {
         self.index_count
     }
 }

@@ -40,7 +40,7 @@ pub(crate) struct TextureOptions {
 }
 
 impl Texture {
-    pub(crate) fn new(index: Index) -> Self {
+    pub(crate) const fn new(index: Index) -> Self {
         Self { index }
     }
 }
@@ -104,7 +104,7 @@ impl CoreTexture {
         })
     }
 
-    pub(crate) fn image_index(&self) -> i32 {
+    pub(crate) const fn image_index(&self) -> i32 {
         self.image_index
     }
 }
