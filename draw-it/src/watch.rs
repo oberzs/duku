@@ -9,15 +9,15 @@ pub(crate) fn watch_file(path: impl AsRef<Path>, pointer: u32, sender: Sender<(u
     let path = path.as_ref().to_owned();
 
     thread::spawn(move || {
-        let file = File::open(&path).unwrap();
+        let file = File::open(&path).expect("bad path");
         let mut last_modified = None;
 
         loop {
-            let metadata = file.metadata().unwrap();
-            let modified = metadata.modified().unwrap();
+            let metadata = file.metadata().expect("bad metadata");
+            let modified = metadata.modified().expect("bad modified");
             if let Some(m) = last_modified {
                 if m != modified {
-                    sender.send((pointer, path.clone())).unwrap();
+                    sender.send((pointer, path.clone())).expect("bad receiver");
                 }
             }
             last_modified = Some(modified);

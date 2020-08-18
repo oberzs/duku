@@ -13,7 +13,7 @@
     unused_qualifications,
     // clippy::missing_const_for_fn,
     // clippy::redundant_pub_crate,
-    // clippy::unwrap_used
+    clippy::unwrap_used
 )]
 
 // should be imported first
