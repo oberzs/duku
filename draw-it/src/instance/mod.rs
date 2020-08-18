@@ -6,9 +6,6 @@
 mod extension;
 mod properties;
 
-#[cfg(debug_assertions)]
-mod validator;
-
 use ash::extensions::khr::Surface as SurfaceExt;
 use ash::extensions::khr::Swapchain as SwapchainExt;
 use ash::version::EntryV1_0;
@@ -19,9 +16,6 @@ use ash::Entry;
 use ash::Instance as VkInstance;
 use std::cmp;
 use std::ffi::CStr;
-
-#[cfg(debug_assertions)]
-use ash::extensions::ext::DebugUtils as DebugExt;
 
 use crate::error::Result;
 use crate::surface::Surface;
@@ -35,11 +29,6 @@ pub(crate) struct Instance {
     entry: Entry,
     gpus: Vec<vk::PhysicalDevice>,
     surface_ext: SurfaceExt,
-
-    #[cfg(debug_assertions)]
-    messenger: vk::DebugUtilsMessengerEXT,
-    #[cfg(debug_assertions)]
-    debug_ext: DebugExt,
 }
 
 impl Instance {
@@ -80,15 +69,6 @@ impl Instance {
 
         let handle = unsafe { entry.create_instance(&info, None)? };
 
-        // create validator if in debug mode
-        #[cfg(debug_assertions)]
-        let (debug_ext, messenger) = {
-            let debug_ext = DebugExt::new(&entry, &handle);
-            let config = validator::messenger_config();
-            let messenger = unsafe { debug_ext.create_debug_utils_messenger(&config, None)? };
-            (debug_ext, messenger)
-        };
-
         // create extensions
         let surface_ext = SurfaceExt::new(&entry, &handle);
 
@@ -100,11 +80,6 @@ impl Instance {
             handle,
             entry,
             gpus,
-
-            #[cfg(debug_assertions)]
-            messenger,
-            #[cfg(debug_assertions)]
-            debug_ext,
         })
     }
 
@@ -262,9 +237,6 @@ impl Instance {
 impl Drop for Instance {
     fn drop(&mut self) {
         unsafe {
-            #[cfg(debug_assertions)]
-            self.debug_ext
-                .destroy_debug_utils_messenger(self.messenger, None);
             self.handle.destroy_instance(None);
         };
     }
