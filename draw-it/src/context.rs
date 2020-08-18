@@ -16,7 +16,6 @@ use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
-use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -654,6 +653,8 @@ impl Context {
         use png::Decoder;
         use std::fs::File;
 
+        use crate::error::ErrorKind;
+
         let decoder = Decoder::new(File::open(path)?);
         let (info, mut reader) = decoder.read_info()?;
 
@@ -686,6 +687,7 @@ impl Context {
         use png::Decoder;
         use std::fs::File;
 
+        use crate::error::ErrorKind;
         use crate::image::with_alpha;
 
         let mut size = 0;
@@ -749,6 +751,8 @@ impl Context {
 
     #[cfg(feature = "ui")]
     pub fn draw_ui(&mut self, draw_fn: impl FnMut(&UiFrame<'_>)) -> Result<()> {
+        use crate::error::ErrorKind;
+
         if let RenderStage::Before = self.render_stage {
             self.begin_draw()?;
         }
