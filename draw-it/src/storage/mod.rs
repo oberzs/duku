@@ -107,7 +107,7 @@ impl Storage {
 
 impl<T, U> Store<T, U> {
     pub(crate) fn new() -> Self {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel::<(Index, U)>();
 
         Self {
             stored: HashMap::new(),
