@@ -39,9 +39,9 @@ fn main() -> Result<()> {
     let time = Instant::now();
 
     while window.is_open() {
-        let stats = context.stats();
+        let delta_time = context.delta_time();
         context.poll_events(&mut window)?;
-        controller.update(&mut context.main_camera, &mut window, stats.delta_time);
+        controller.update(&mut context.main_camera, &mut window, delta_time);
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();

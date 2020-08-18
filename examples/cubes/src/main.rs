@@ -62,11 +62,13 @@ fn main() -> Result<()> {
         // update
         context.poll_events(&mut window)?;
         let stats = context.stats();
-        controller.update(&mut context.main_camera, &mut window, stats.delta_time);
+        let fps = context.fps();
+        let delta_time = context.delta_time();
+        controller.update(&mut context.main_camera, &mut window, delta_time);
 
         // render
         context.draw_ui(|ui| {
-            ui.stats_window(stats);
+            ui.stats_window(stats, fps, delta_time);
         })?;
 
         context.draw_on_window(|target| {

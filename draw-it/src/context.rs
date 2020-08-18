@@ -15,6 +15,7 @@ use std::time::Instant;
 use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
+use crate::device::Stats;
 use crate::error::ErrorKind;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
@@ -45,7 +46,6 @@ use crate::renderer::Target;
 use crate::resource::Builtins;
 use crate::resource::Index;
 use crate::resource::Storage;
-use crate::stats::Stats;
 use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
@@ -62,7 +62,7 @@ use crate::window::Window;
 #[cfg(feature = "window")]
 use crate::window::WindowOptions;
 
-const FPS_SAMPLE_COUNT: usize = 128;
+const FPS_SAMPLE_COUNT: usize = 64;
 
 pub struct Context {
     pub main_camera: Camera,
@@ -91,12 +91,12 @@ pub struct Context {
 
     // Misc
     camera_type: CameraType,
-    stats: Stats,
     render_stage: RenderStage,
-    start_time: Instant,
     frame_time: Instant,
     frame_count: usize,
     fps_samples: [u32; FPS_SAMPLE_COUNT],
+    fps: u32,
+    delta_time: f32,
     msaa: Msaa,
     vsync: VSync,
 
@@ -207,9 +207,9 @@ impl Context {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             camera_type: options.camera,
-            start_time: Instant::now(),
             frame_time: Instant::now(),
-            stats: Default::default(),
+            fps: 0,
+            delta_time: 0.0,
             frame_count: 0,
             window_framebuffers,
             hot_reload_receiver,
@@ -294,7 +294,6 @@ impl Context {
                 &self.builtins,
                 &self.shader_layout,
                 render_data,
-                &mut self.stats,
             )?;
         }
 
@@ -323,7 +322,6 @@ impl Context {
             &self.builtins,
             &self.shader_layout,
             render_data,
-            &mut self.stats,
         )?;
 
         Ok(())
@@ -440,7 +438,15 @@ impl Context {
     }
 
     pub fn stats(&self) -> Stats {
-        self.stats
+        self.device.stats()
+    }
+
+    pub fn delta_time(&self) -> f32 {
+        self.delta_time
+    }
+
+    pub fn fps(&self) -> u32 {
+        self.fps
     }
 
     fn begin_draw(&mut self) -> Result<()> {
@@ -468,10 +474,6 @@ impl Context {
             &self.shader_layout,
             &self.image_uniform,
         );
-        self.stats = Stats {
-            time: self.start_time.elapsed().as_secs_f32(),
-            ..Default::default()
-        };
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
@@ -488,12 +490,12 @@ impl Context {
 
         // update delta time
         let delta_time = self.frame_time.elapsed();
-        self.stats.delta_time = delta_time.as_secs_f32();
+        self.delta_time = delta_time.as_secs_f32();
         self.frame_time = Instant::now();
         self.fps_samples[self.frame_count % FPS_SAMPLE_COUNT] =
             1_000_000 / delta_time.as_micros() as u32;
         self.frame_count += 1;
-        self.stats.fps =
+        self.fps =
             (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
 
         Ok(())
