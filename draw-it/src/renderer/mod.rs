@@ -15,7 +15,7 @@ pub(crate) use target::OrdersByShader;
 pub(crate) use target::TextOrder;
 
 pub use camera::Camera;
-pub use camera::CameraType;
+pub use camera::Projection;
 pub use forward::Pcf;
 pub use light::Light;
 pub use light::LightType;

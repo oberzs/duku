@@ -8,7 +8,6 @@ use std::time::Instant;
 
 use super::Albedo;
 use super::Camera;
-use super::CameraType;
 use super::Order;
 use super::OrdersByShader;
 use super::Target;
@@ -87,6 +86,7 @@ impl ForwardRenderer {
     pub(crate) fn draw(
         &mut self,
         framebuffer: &Index,
+        camera: &Camera,
         storage: &mut Storage,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
@@ -102,7 +102,7 @@ impl ForwardRenderer {
 
         // shadow mapping
         if target.has_shadow_casters {
-            let mut view = storage.framebuffers.get(framebuffer).camera.clone();
+            let mut view = camera.clone();
             view.depth = 50.0;
             self.shadow_pass(shader_layout, storage, &target, &view)?;
         }
@@ -125,14 +125,6 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        let camera_position = storage
-            .framebuffers
-            .get(framebuffer)
-            .camera
-            .transform
-            .position;
-        let camera_depth = storage.framebuffers.get(framebuffer).camera.depth;
-        let world_matrix = storage.framebuffers.get(framebuffer).camera.matrix();
         storage
             .framebuffers
             .get_mut(framebuffer)
@@ -142,8 +134,8 @@ impl ForwardRenderer {
                 light_matrices: self.shadow_frames[current].matrices,
                 bias: target.bias,
                 time: self.start_time.elapsed().as_secs_f32(),
-                camera_position,
-                world_matrix,
+                camera_position: camera.transform.position,
+                world_matrix: camera.matrix(),
                 lights,
                 pcf,
             }])?;
@@ -161,13 +153,7 @@ impl ForwardRenderer {
 
         // skybox rendering
         if target.skybox {
-            self.skybox_pass(
-                &target,
-                storage,
-                shader_layout,
-                camera_position,
-                camera_depth,
-            );
+            self.skybox_pass(&target, storage, shader_layout, camera);
         }
 
         // normal mesh rendering
@@ -189,6 +175,7 @@ impl ForwardRenderer {
     pub(crate) fn draw_core(
         &mut self,
         framebuffer: &mut CoreFramebuffer,
+        camera: &Camera,
         storage: &mut Storage,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
@@ -204,7 +191,7 @@ impl ForwardRenderer {
 
         // shadow mapping
         if target.has_shadow_casters {
-            let mut view = framebuffer.camera.clone();
+            let mut view = camera.clone();
             view.depth = 50.0;
             self.shadow_pass(shader_layout, storage, &target, &view)?;
         }
@@ -227,16 +214,13 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        let camera_position = framebuffer.camera.transform.position;
-        let camera_depth = framebuffer.camera.depth;
-        let world_matrix = framebuffer.camera.matrix();
         framebuffer.world_buffer().update_data(&[WorldUpdateData {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             bias: target.bias,
             time: self.start_time.elapsed().as_secs_f32(),
-            camera_position,
-            world_matrix,
+            camera_position: camera.transform.position,
+            world_matrix: camera.matrix(),
             lights,
             pcf,
         }])?;
@@ -251,13 +235,7 @@ impl ForwardRenderer {
 
         // skybox rendering
         if target.skybox {
-            self.skybox_pass(
-                &target,
-                storage,
-                shader_layout,
-                camera_position,
-                camera_depth,
-            );
+            self.skybox_pass(&target, storage, shader_layout, camera);
         }
 
         // normal mesh rendering
@@ -303,8 +281,7 @@ impl ForwardRenderer {
         target: &Target<'_>,
         storage: &Storage,
         shader_layout: &ShaderLayout,
-        camera_position: Vector3,
-        camera_depth: f32,
+        camera: &Camera,
     ) {
         let cmd = self.device.command_buffer();
 
@@ -315,8 +292,8 @@ impl ForwardRenderer {
         self.device.cmd_bind_mesh(cmd, mesh);
 
         let model_matrix = (Transform {
-            position: camera_position,
-            scale: Vector3::uniform(camera_depth * 2.0 - 0.1),
+            position: camera.transform.position,
+            scale: Vector3::uniform(camera.depth * 2.0 - 0.1),
             ..Default::default()
         })
         .as_matrix();
@@ -561,7 +538,6 @@ impl ShadowMapSet {
             image_uniform,
             FramebufferOptions {
                 attachment_formats: &[],
-                camera_type: CameraType::Orthographic,
                 msaa: Msaa::Disabled,
                 depth: true,
                 width: size,

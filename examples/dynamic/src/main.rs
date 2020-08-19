@@ -5,6 +5,7 @@
 
 use draw_it::window::Controller;
 use draw_it::window::WindowOptions;
+use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::Result;
@@ -13,24 +14,22 @@ use std::time::Instant;
 
 fn main() -> Result<()> {
     let square_size = 10;
+    let (width, height) = (720, 640);
 
     let (mut context, mut window) = Context::with_window(
         Default::default(),
         WindowOptions {
             title: "Draw-it example: Dynamic",
-            width: 720,
-            height: 640,
+            width,
+            height,
             ..Default::default()
         },
     )?;
 
     let mut controller = Controller::fly();
-
-    {
-        let cam_t = &mut context.main_camera.transform;
-        cam_t.move_backward(10.0);
-        cam_t.look_at([0.0, 0.0, 0.0]);
-    }
+    let mut camera = Camera::perspective(width as f32, height as f32, 90);
+    camera.transform.move_backward(10.0);
+    camera.transform.look_at([0.0, 0.0, 0.0]);
 
     let mut square = context.create_mesh()?;
     square.vertices = square_vertices(square_size, 0.0);
@@ -39,16 +38,15 @@ fn main() -> Result<()> {
     let time = Instant::now();
 
     while window.is_open() {
-        let delta_time = context.delta_time();
         context.poll_events(&mut window)?;
-        controller.update(&mut context.main_camera, &mut window, delta_time);
+        controller.update(&mut camera, &mut window, context.delta_time());
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
         square.vertices = square_vertices(square_size, elapsed);
         square.update();
 
-        context.draw_on_window(|target| {
+        context.draw_on_window(&camera, |target| {
             target.wireframes = true;
             target.clear = Color::ORANGE;
 

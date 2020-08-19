@@ -48,13 +48,14 @@ use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
-use crate::renderer::CameraType;
+use crate::renderer::Camera;
 use crate::storage::Storage;
 
 pub use imgui;
 
 pub(crate) struct Ui {
     framebuffer: Framebuffer,
+    camera: Camera,
     shader: CoreShader,
     mesh: CoreMesh,
     texture: CoreTexture,
@@ -145,13 +146,14 @@ impl Ui {
             image_uniform,
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
-                camera_type: CameraType::Orthographic,
                 msaa: Msaa::Disabled,
                 depth: false,
                 width,
                 height,
             },
         )?;
+
+        let camera = Camera::orthographic(width as f32, height as f32);
 
         let shader = CoreShader::new(
             device,
@@ -171,6 +173,7 @@ impl Ui {
             device: Rc::clone(device),
             drawn: false,
             framebuffer,
+            camera,
             texture,
             shader,
             mesh,
@@ -231,8 +234,8 @@ impl Ui {
         let framebuffer = storage.framebuffers.get_mut(&self.framebuffer.index);
 
         // update world uniform
-        let world_matrix = framebuffer.camera.matrix();
-        let camera_position = framebuffer.camera.transform.position;
+        let world_matrix = self.camera.matrix();
+        let camera_position = self.camera.transform.position;
         framebuffer.world_buffer().update_data(&[WorldUpdateData {
             light_matrices: [Matrix4::identity(); 4],
             lights: [Default::default(); 4],
@@ -327,6 +330,8 @@ impl Ui {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
         self.framebuffer.width = width;
         self.framebuffer.height = height;
+        self.camera.width = width as f32;
+        self.camera.height = height as f32;
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)

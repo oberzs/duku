@@ -5,22 +5,20 @@
 // https://github.com/Gekkio/imgui-rs
 
 use draw_it::window::WindowOptions;
-use draw_it::CameraType;
+use draw_it::Camera;
 use draw_it::Context;
-use draw_it::ContextOptions;
 use draw_it::Result;
 
 fn main() -> Result<()> {
     let (mut context, mut window) = Context::with_window(
-        ContextOptions {
-            camera: CameraType::Orthographic,
-            ..Default::default()
-        },
+        Default::default(),
         WindowOptions {
             title: "Draw-it example: UI",
             ..Default::default()
         },
     )?;
+
+    let camera = Camera::orthographic(500.0, 500.0);
 
     let mut show_demo = true;
 
@@ -29,7 +27,7 @@ fn main() -> Result<()> {
         context.draw_ui(|ui| {
             ui.frame.show_demo_window(&mut show_demo);
         })?;
-        context.draw_on_window(|_| {})?;
+        context.draw_on_window(&camera, |_| {})?;
     }
 
     Ok(())

@@ -1,9 +1,10 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// "Hello, World!" example to open a rainbow resizable window
+// "Hello, World!" example to open a rainbow window
 
 use draw_it::window::WindowOptions;
+use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::Result;
@@ -13,10 +14,11 @@ fn main() -> Result<()> {
         Default::default(),
         WindowOptions {
             title: "Draw-it example: Hello",
-            resizable: true,
             ..Default::default()
         },
     )?;
+
+    let camera = Camera::orthographic(500.0, 500.0);
 
     let mut hue = 0;
 
@@ -25,7 +27,7 @@ fn main() -> Result<()> {
 
         hue = (hue + 1) % 360;
 
-        context.draw_on_window(|target| {
+        context.draw_on_window(&camera, |target| {
             target.clear = Color::hsv(hue, 255, 255);
         })?;
     }

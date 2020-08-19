@@ -5,9 +5,11 @@
 
 use draw_it::window::Controller;
 use draw_it::window::WindowOptions;
+use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::Event;
 use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
@@ -18,6 +20,8 @@ use draw_it::Vector2;
 use draw_it::Vector3;
 
 fn main() -> Result<()> {
+    let (width, height) = (720, 640);
+
     let (mut context, mut window) = Context::with_window(
         ContextOptions {
             vsync: VSync::Off,
@@ -26,16 +30,14 @@ fn main() -> Result<()> {
         WindowOptions {
             title: "Draw-it example: Cubes",
             resizable: true,
-            width: 720,
-            height: 640,
+            width,
+            height,
         },
     )?;
 
-    {
-        let cam_t = &mut context.main_camera.transform;
-        cam_t.move_by([1.0, 3.0, -3.0]);
-        cam_t.look_dir(Vector3::FORWARD);
-    }
+    let mut camera = Camera::perspective(width as f32, height as f32, 90);
+    camera.transform.move_by([1.0, 3.0, -3.0]);
+    camera.transform.look_dir(Vector3::FORWARD);
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
@@ -61,17 +63,24 @@ fn main() -> Result<()> {
     while window.is_open() {
         // update
         context.poll_events(&mut window)?;
-        let stats = context.stats();
-        let fps = context.fps();
+
+        for event in window.events() {
+            let Event::Resize(w, h) = event;
+            camera.width = w as f32;
+            camera.height = h as f32;
+        }
+
         let delta_time = context.delta_time();
-        controller.update(&mut context.main_camera, &mut window, delta_time);
+        controller.update(&mut camera, &mut window, delta_time);
 
         // render
+        let stats = context.stats();
+        let fps = context.fps();
         context.draw_ui(|ui| {
             ui.stats_window(stats, fps, delta_time);
         })?;
 
-        context.draw_on_window(|target| {
+        context.draw_on_window(&camera, |target| {
             target.skybox = true;
             target.lights[0] = main_light;
             // target.draw_grid();

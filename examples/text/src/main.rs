@@ -4,7 +4,7 @@
 // example that draws text
 
 use draw_it::window::WindowOptions;
-use draw_it::CameraType;
+use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
@@ -15,19 +15,21 @@ use draw_it::Vector3;
 use std::time::Instant;
 
 fn main() -> Result<()> {
+    let (width, height) = (600, 400);
     let (mut context, mut window) = Context::with_window(
         ContextOptions {
             quality: Quality::Low,
-            camera: CameraType::Orthographic,
             ..Default::default()
         },
         WindowOptions {
             title: "Draw-it example: Text",
-            width: 600,
-            height: 400,
+            width,
+            height,
             ..Default::default()
         },
     )?;
+
+    let camera = Camera::orthographic(width as f32, height as f32);
 
     let mut material_1 = context.create_material()?;
     material_1.set_font_color(Color::RED);
@@ -51,7 +53,7 @@ fn main() -> Result<()> {
         let sdf_size = 40 + size_mut.round() as u32;
         let dynamic_size = 1.0 + (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5);
 
-        context.draw_on_window(|target| {
+        context.draw_on_window(&camera, |target| {
             target.clear = Color::ORANGE;
             target.font_size = sdf_size;
             target.draw_text(

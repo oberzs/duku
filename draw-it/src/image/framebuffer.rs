@@ -26,8 +26,6 @@ use crate::pipeline::Descriptor;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
-use crate::renderer::Camera;
-use crate::renderer::CameraType;
 use crate::storage::Index;
 use crate::surface::Swapchain;
 
@@ -51,7 +49,6 @@ pub(crate) struct CoreFramebuffer {
     texture_image: Option<ImageMemory>,
     texture_index: Option<i32>,
 
-    pub(crate) camera: Camera,
     world_descriptor: Descriptor,
     world_buffer: DynamicBuffer,
 
@@ -90,7 +87,6 @@ pub(crate) struct LightUpdateData {
 
 pub(crate) struct FramebufferOptions<'formats> {
     pub(crate) attachment_formats: &'formats [ImageFormat],
-    pub(crate) camera_type: CameraType,
     pub(crate) msaa: Msaa,
     pub(crate) depth: bool,
     pub(crate) width: u32,
@@ -123,7 +119,6 @@ impl CoreFramebuffer {
         device: &Rc<Device>,
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
-        camera_type: CameraType,
         msaa: Msaa,
     ) -> Result<Vec<Self>> {
         let width = swapchain.width();
@@ -165,7 +160,6 @@ impl CoreFramebuffer {
                 let world_buffer =
                     DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
                 let world_descriptor = shader_layout.world_set(&world_buffer)?;
-                let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
                 Ok(Self {
                     device: Rc::clone(device),
@@ -179,7 +173,6 @@ impl CoreFramebuffer {
                     width,
                     height,
                     images,
-                    camera,
                     msaa,
                 })
             })
@@ -198,7 +191,6 @@ impl CoreFramebuffer {
             attachment_formats,
             msaa,
             depth,
-            camera_type,
         } = options;
 
         let render_pass = RenderPass::new(device, attachment_formats, msaa, depth, false)?;
@@ -235,7 +227,6 @@ impl CoreFramebuffer {
 
         let world_buffer = DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
         let world_descriptor = shader_layout.world_set(&world_buffer)?;
-        let camera = Camera::new(camera_type, width as f32, height as f32, 100.0);
 
         let mut texture_image = ImageMemory::new(
             device,
@@ -272,7 +263,6 @@ impl CoreFramebuffer {
             width,
             height,
             images,
-            camera,
             msaa,
         })
     }
@@ -351,8 +341,6 @@ impl CoreFramebuffer {
         self.stored_index = stored_index;
         self.texture_image = Some(texture_image);
         self.texture_index = Some(texture_index);
-        self.camera.width = width as f32;
-        self.camera.height = height as f32;
         self.width = width;
         self.height = height;
 

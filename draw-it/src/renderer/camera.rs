@@ -15,51 +15,51 @@ pub struct Camera {
     pub width: f32,
     pub height: f32,
     pub depth: f32,
-    camera_type: CameraType,
+    pub projection: Projection,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum CameraType {
+pub enum Projection {
     Orthographic,
     Perspective,
 }
 
 impl Camera {
-    pub fn perspective(width: f32, height: f32, depth: f32, fov: u32) -> Self {
+    pub fn perspective(width: f32, height: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
-            camera_type: CameraType::Perspective,
-            depth,
+            projection: Projection::Perspective,
+            depth: 100.0,
             width,
             height,
             fov,
         }
     }
 
-    pub fn orthographic(width: f32, height: f32, depth: f32) -> Self {
+    pub fn orthographic(width: f32, height: f32) -> Self {
         Self {
             transform: Transform::default(),
-            camera_type: CameraType::Orthographic,
-            depth,
+            projection: Projection::Orthographic,
+            depth: 100.0,
             fov: 0,
             width,
             height,
         }
     }
 
-    pub fn new(camera_type: CameraType, width: f32, height: f32, depth: f32) -> Self {
+    pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
-            fov: 90,
+            fov,
             depth,
-            camera_type,
+            projection,
             width,
             height,
         }
     }
 
     pub fn fake_orthographic(&mut self, enable: bool) {
-        if let CameraType::Orthographic = self.camera_type {
+        if let Projection::Orthographic = self.projection {
             return;
         }
         if enable {
@@ -134,11 +134,11 @@ impl Camera {
     }
 
     fn projection(&self) -> Matrix4 {
-        match self.camera_type {
-            CameraType::Orthographic => {
+        match self.projection {
+            Projection::Orthographic => {
                 Matrix4::orthographic_center(self.width, self.height, 0.0, self.depth)
             }
-            CameraType::Perspective => {
+            Projection::Perspective => {
                 Matrix4::perspective(self.fov as f32, self.width / self.height, 0.001, self.depth)
             }
         }

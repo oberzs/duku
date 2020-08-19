@@ -54,21 +54,20 @@
 ```rust
 use draw_it::Color;
 use draw_it::window::Window;
+use draw_it::Camera;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
     let (mut context, mut window) = Context::with_window(Default::default(), Default::default())?;
 
-    {
-        let camera = &mut context.main_camera.transform;
-        camera.move_by([2.0, 1.5, 2.0]);
-        camera.look_at([0.0, 0.0, 0.0]);
-    }
+    let mut camera = Camera::perspective(1.0, 1.0, 90);
+    camera.transform.move_by([2.0, 1.5, 2.0]);
+    camera.transform.look_at([0.0, 0.0, 0.0]);
 
     while window.is_open() {
         context.poll_events(&mut window);
-        context.draw_on_window(|target| {
+        context.draw_on_window(&camera, |target| {
             target.clear = Color::SKY_BLUE;
             target.draw_cube([0.0, 0.0, 0.0]);
         });

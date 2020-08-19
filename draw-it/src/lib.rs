@@ -65,13 +65,14 @@ pub use pipeline::Shader;
 pub use quality::Quality;
 pub use quality::QualityOptions;
 pub use renderer::Camera;
-pub use renderer::CameraType;
 pub use renderer::Light;
 pub use renderer::LightType;
 pub use renderer::Pcf;
+pub use renderer::Projection;
 pub use renderer::Target;
 pub use surface::VSync;
 pub use surface::WindowHandle;
+pub use window::Event;
 
 // optional feature exports
 #[cfg(feature = "ui")]

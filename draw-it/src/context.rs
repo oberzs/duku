@@ -39,7 +39,6 @@ use crate::pipeline::ShaderLayout;
 use crate::quality::Quality;
 use crate::quality::QualityOptions;
 use crate::renderer::Camera;
-use crate::renderer::CameraType;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::storage::Builtins;
@@ -64,9 +63,6 @@ use crate::window::WindowOptions;
 const FPS_SAMPLE_COUNT: usize = 64;
 
 pub struct Context {
-    pub main_camera: Camera,
-    pub builtins: Builtins,
-
     // Renderers
     forward_renderer: ForwardRenderer,
 
@@ -77,6 +73,7 @@ pub struct Context {
     // Resources
     storage: Storage,
     skybox: Cubemap,
+    builtins: Builtins,
 
     // Vulkan
     window_framebuffers: Vec<CoreFramebuffer>,
@@ -89,7 +86,6 @@ pub struct Context {
     instance: Rc<Instance>,
 
     // Misc
-    camera_type: CameraType,
     render_stage: RenderStage,
     frame_time: Instant,
     frame_count: usize,
@@ -114,7 +110,6 @@ pub struct Context {
 pub struct ContextOptions {
     pub quality: Quality,
     pub vsync: VSync,
-    pub camera: CameraType,
 }
 
 #[derive(Copy, Clone)]
@@ -152,13 +147,8 @@ impl Context {
         let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy)?;
 
         // setup framebuffers
-        let window_framebuffers = CoreFramebuffer::for_swapchain(
-            &device,
-            &swapchain,
-            &shader_layout,
-            options.camera,
-            msaa,
-        )?;
+        let window_framebuffers =
+            CoreFramebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa)?;
 
         // setup storage
         let mut storage = Storage::new();
@@ -193,19 +183,11 @@ impl Context {
             pcf,
         )?;
 
-        let main_camera = Camera::new(
-            options.camera,
-            window.width as f32,
-            window.height as f32,
-            100.0,
-        );
-
         let (hot_reload_sender, hot_reload_receiver) = mpsc::channel();
 
         Ok(Self {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
-            camera_type: options.camera,
             frame_time: Instant::now(),
             fps: 0,
             delta_time: 0.0,
@@ -216,7 +198,6 @@ impl Context {
             forward_renderer,
             image_uniform,
             shader_layout,
-            main_camera,
             storage,
             swapchain,
             gpu_index,
@@ -240,8 +221,6 @@ impl Context {
     pub fn resize(&mut self, width: u32, height: u32) -> Result<()> {
         self.device.wait_for_idle()?;
         self.surface.resize(width, height);
-        self.main_camera.width = width as f32;
-        self.main_camera.height = height as f32;
 
         let gpu_properties = self
             .instance
@@ -254,7 +233,6 @@ impl Context {
             &self.device,
             &self.swapchain,
             &self.shader_layout,
-            self.camera_type,
             self.msaa,
         )?;
 
@@ -266,7 +244,11 @@ impl Context {
         Ok(())
     }
 
-    pub fn draw_on_window(&mut self, draw_callback: impl Fn(&mut Target<'_>)) -> Result<()> {
+    pub fn draw_on_window(
+        &mut self,
+        camera: &Camera,
+        draw_callback: impl Fn(&mut Target<'_>),
+    ) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw()?;
         }
@@ -282,17 +264,13 @@ impl Context {
         }
 
         // draw
-        {
-            let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
-            framebuffer.camera = self.main_camera.clone();
-
-            self.forward_renderer.draw_core(
-                framebuffer,
-                &mut self.storage,
-                &self.shader_layout,
-                target,
-            )?;
-        }
+        self.forward_renderer.draw_core(
+            &mut self.window_framebuffers[self.swapchain.current()],
+            camera,
+            &mut self.storage,
+            &self.shader_layout,
+            target,
+        )?;
 
         self.end_draw()?;
         Ok(())
@@ -301,6 +279,7 @@ impl Context {
     pub fn draw(
         &mut self,
         framebuffer: &Framebuffer,
+        camera: &Camera,
         draw_callback: impl Fn(&mut Target<'_>),
     ) -> Result<()> {
         if let RenderStage::Before = self.render_stage {
@@ -314,6 +293,7 @@ impl Context {
         // draw
         self.forward_renderer.draw(
             &framebuffer.index,
+            camera,
             &mut self.storage,
             &self.shader_layout,
             target,
@@ -392,12 +372,7 @@ impl Context {
         Ok(Material::new(index, updater))
     }
 
-    pub fn create_framebuffer(
-        &mut self,
-        t: CameraType,
-        width: u32,
-        height: u32,
-    ) -> Result<Framebuffer> {
+    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Framebuffer> {
         let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
@@ -405,7 +380,6 @@ impl Context {
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
                 msaa: self.msaa,
-                camera_type: t,
                 depth: true,
                 width,
                 height,
@@ -778,7 +752,6 @@ impl Default for ContextOptions {
         Self {
             quality: Quality::Medium,
             vsync: VSync::On,
-            camera: CameraType::Perspective,
         }
     }
 }
