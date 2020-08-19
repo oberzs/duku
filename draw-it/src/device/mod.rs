@@ -49,8 +49,7 @@ pub(crate) struct Device {
     handle: VkDevice,
     swapchain_ext: SwapchainExt,
 
-    graphics_queue: (u32, vk::Queue),
-    present_queue: (u32, vk::Queue),
+    queue: (u32, vk::Queue),
     memory_types: Vec<vk::MemoryType>,
 
     command_pools: [vk::CommandPool; IN_FLIGHT_FRAME_COUNT],
@@ -92,23 +91,12 @@ impl Device {
             .wide_lines(true);
 
         // configure queues
-        let g_index = gpu_properties.graphics_index.expect("bad graphics index");
-        let p_index = gpu_properties.present_index.expect("bad present index");
+        let queue_index = gpu_properties.queue_index.expect("bad queue index");
         let queue_priorities = [1.0];
-
-        let g_queue_info = vk::DeviceQueueCreateInfo::builder()
-            .queue_family_index(g_index)
+        let queue_infos = [vk::DeviceQueueCreateInfo::builder()
+            .queue_family_index(queue_index)
             .queue_priorities(&queue_priorities)
-            .build();
-        let p_queue_info = vk::DeviceQueueCreateInfo::builder()
-            .queue_family_index(p_index)
-            .queue_priorities(&queue_priorities)
-            .build();
-
-        let mut queue_infos = vec![g_queue_info];
-        if g_index != p_index {
-            queue_infos.push(p_queue_info);
-        }
+            .build()];
 
         // open GPU
         let extensions = DEVICE_EXTENSIONS.as_ptr();
@@ -122,9 +110,8 @@ impl Device {
         // create swapchain extension
         let swapchain_ext = instance.create_swapchain_extension(&handle);
 
-        // get device queues
-        let graphics_queue = unsafe { handle.get_device_queue(g_index, 0) };
-        let present_queue = unsafe { handle.get_device_queue(p_index, 0) };
+        // get device queue
+        let queue = unsafe { handle.get_device_queue(queue_index, 0) };
 
         let memory_types = gpu_properties.memory.memory_types.to_vec();
 
@@ -136,7 +123,7 @@ impl Device {
         // create command pools and buffers
         let pool_info = vk::CommandPoolCreateInfo::builder()
             .flags(vk::CommandPoolCreateFlags::TRANSIENT)
-            .queue_family_index(g_index);
+            .queue_family_index(queue_index);
         let command_pools = unsafe {
             [
                 handle.create_command_pool(&pool_info, None)?,
@@ -170,8 +157,7 @@ impl Device {
             destroyed_buffers: RefCell::new(destroyed_buffers),
             destroyed_images: RefCell::new(destroyed_images),
             command_buffers: RefCell::new(command_buffers),
-            graphics_queue: (g_index, graphics_queue),
-            present_queue: (p_index, present_queue),
+            queue: (queue_index, queue),
             current_frame: Cell::new(0),
             stats: Cell::new(Stats::default()),
             used_materials: RefCell::new(HashSet::new()),
@@ -232,7 +218,7 @@ impl Device {
 
         unsafe {
             self.handle
-                .queue_submit(self.graphics_queue.1, &infos, vk::Fence::null())?;
+                .queue_submit(self.queue.1, &infos, vk::Fence::null())?;
             self.handle.device_wait_idle()?;
         }
         Ok(())
@@ -258,10 +244,7 @@ impl Device {
             .wait_dst_stage_mask(&stage_mask)
             .command_buffers(&buffers)
             .build()];
-        unsafe {
-            self.handle
-                .queue_submit(self.graphics_queue.1, &info, done)?
-        };
+        unsafe { self.handle.queue_submit(self.queue.1, &info, done)? };
         Ok(())
     }
 
@@ -277,8 +260,7 @@ impl Device {
             .image_indices(&image);
 
         unsafe {
-            self.swapchain_ext
-                .queue_present(self.present_queue.1, &info)?;
+            self.swapchain_ext.queue_present(self.queue.1, &info)?;
         }
 
         Ok(())
@@ -294,8 +276,7 @@ impl Device {
         }
 
         unsafe {
-            self.handle.queue_wait_idle(self.graphics_queue.1)?;
-            self.handle.queue_wait_idle(self.present_queue.1)?;
+            self.handle.queue_wait_idle(self.queue.1)?;
             self.handle.device_wait_idle()?;
         }
         Ok(())
@@ -328,10 +309,6 @@ impl Device {
                 .acquire_next_image(handle, u64::max_value(), signal, Default::default())?
                 .0 as usize
         })
-    }
-
-    pub(crate) const fn graphics_index(&self) -> u32 {
-        self.graphics_queue.0
     }
 
     pub(crate) fn current_frame(&self) -> usize {
@@ -589,7 +566,7 @@ impl Device {
     ) -> Result<()> {
         let pool_info = vk::CommandPoolCreateInfo::builder()
             .flags(vk::CommandPoolCreateFlags::TRANSIENT)
-            .queue_family_index(self.graphics_index());
+            .queue_family_index(self.queue.0);
         let pool = unsafe { self.handle.create_command_pool(&pool_info, None)? };
 
         let buffer_info = vk::CommandBufferAllocateInfo::builder()

@@ -99,8 +99,11 @@ fn swapchain_info(
     let transform = gpu_properties.capabilities.current_transform;
     let image_count = gpu_properties.image_count;
     let extent = gpu_properties.extent;
+    let indices = [gpu_properties.queue_index.expect("bad queue index")];
 
-    let mut info = vk::SwapchainCreateInfoKHR::builder()
+    vk::SwapchainCreateInfoKHR::builder()
+        .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
+        .queue_family_indices(&indices)
         .surface(surface.handle())
         .image_format(ImageFormat::Sbgra.flag())
         .image_color_space(ColorSpace::Srgb.flag())
@@ -111,19 +114,6 @@ fn swapchain_info(
         .min_image_count(image_count)
         .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
         .present_mode(vsync.flag())
-        .clipped(true);
-
-    let indices = [
-        gpu_properties.graphics_index.expect("bad graphics index"),
-        gpu_properties.present_index.expect("bad present index"),
-    ];
-    if indices[0] == indices[1] {
-        info = info.image_sharing_mode(vk::SharingMode::EXCLUSIVE);
-    } else {
-        info = info
-            .image_sharing_mode(vk::SharingMode::CONCURRENT)
-            .queue_family_indices(&indices);
-    }
-
-    info.build()
+        .clipped(true)
+        .build()
 }

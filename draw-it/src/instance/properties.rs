@@ -17,8 +17,7 @@ pub(crate) struct GPUProperties {
     pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
     pub(crate) present_modes: Vec<vk::PresentModeKHR>,
 
-    pub(crate) graphics_index: Option<u32>,
-    pub(crate) present_index: Option<u32>,
+    pub(crate) queue_index: Option<u32>,
 
     pub(crate) extent: vk::Extent2D,
     pub(crate) image_count: u32,

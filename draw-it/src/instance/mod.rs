@@ -117,9 +117,8 @@ impl Instance {
                     .surface_ext
                     .get_physical_device_surface_capabilities(*gpu, surface.handle())?;
 
-                // get queue indices
-                let mut graphics_index = None;
-                let mut present_index = None;
+                // get queue index
+                let mut queue_index = None;
 
                 let families = self
                     .handle
@@ -133,11 +132,8 @@ impl Instance {
                     )?;
                     let graphics_support = props.queue_flags.contains(vk::QueueFlags::GRAPHICS);
 
-                    if props.queue_count > 0 && present_support {
-                        present_index = Some(i as u32);
-                    }
-                    if props.queue_count > 0 && graphics_support {
-                        graphics_index = Some(i as u32);
+                    if props.queue_count > 0 && present_support && graphics_support {
+                        queue_index = Some(i as u32);
                     }
                 }
 
@@ -171,8 +167,7 @@ impl Instance {
                     capabilities,
                     formats,
                     present_modes,
-                    graphics_index,
-                    present_index,
+                    queue_index,
                     extent,
                     image_count,
                     supports_extensions,

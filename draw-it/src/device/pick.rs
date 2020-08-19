@@ -37,7 +37,7 @@ pub(crate) fn pick_gpu(
             if !props.supports_extensions {
                 score = 0;
             }
-            if props.graphics_index.is_none() || props.present_index.is_none() {
+            if props.queue_index.is_none() {
                 score = 0;
             }
             if props.features.sampler_anisotropy == 0 {
