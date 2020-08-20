@@ -6,17 +6,12 @@
 use rusttype::Font;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::path::Path;
 
-use crate::bitmap::Bitmap;
+use super::bitmap::Bitmap;
+use super::sdf::Sdf;
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
 use crate::error::Result;
-use crate::sdf::Sdf;
 
 #[derive(Serialize)]
 struct FontFile {
@@ -55,33 +50,21 @@ pub struct FontOptions<'sizes> {
     pub bitmap_sizes: &'sizes [u32],
 }
 
-pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) -> Result<()> {
-    eprint!(
-        "Converting {} ... ",
-        in_path
-            .file_name()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default()
-    );
-    io::stderr().lock().flush()?;
-
+pub fn import_font(data: &[u8], options: FontOptions<'_>) -> Result<Vec<u8>> {
     let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,?!:-_+=@#(){}[]/";
     let tile_count = (chars.len() as f32).sqrt().ceil() as u32;
 
-    let font_data = fs::read(in_path)?;
-    let font =
-        Font::try_from_bytes(&font_data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
+    let font = Font::try_from_bytes(data).ok_or(ErrorType::Internal(ErrorKind::InvalidFont))?;
 
     // create sdf font
     let sdf = Sdf::new(options.sdf_sample, options.sdf_size, options.sdf_margin);
-    let sdf_tile_size = sdf.sdf_size + sdf.sdf_margin as u32 * 2;
+    let sdf_tile_size = sdf.sdf_size + u32::from(sdf.sdf_margin) * 2;
     let sdf_bitmap_size = tile_count * sdf_tile_size;
 
     let mut sdf_font = SdfFont {
         bitmap_size: sdf_bitmap_size,
         font_size: sdf.sdf_size,
-        margin: sdf.sdf_margin as u32,
+        margin: u32::from(sdf.sdf_margin),
         char_metrics: HashMap::new(),
         bitmap: vec![],
     };
@@ -144,11 +127,5 @@ pub fn import_font(in_path: &Path, out_path: &Path, options: FontOptions<'_>) ->
     };
 
     let binary = bincode::serialize(&data)?;
-    let out_path = out_path.with_extension("font");
-    let mut out_file = File::create(out_path)?;
-
-    out_file.write_all(&binary)?;
-
-    eprintln!("done");
-    Ok(())
+    Ok(binary)
 }

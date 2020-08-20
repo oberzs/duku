@@ -1,6 +1,6 @@
 [workspace]
 members = [
   "draw-it",
-  "import",
+  "dai",
   "examples/*"
 ]

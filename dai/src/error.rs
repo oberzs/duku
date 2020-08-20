@@ -16,6 +16,7 @@ pub enum ErrorType {
     Io(io::Error),
     Binary(Box<bincode::ErrorKind>),
     Shader(shaderc::Error),
+    Image(png::DecodingError),
     // Internal error
     Internal(ErrorKind),
 }
@@ -26,6 +27,8 @@ pub enum ErrorKind {
     InvalidShader(String),
     NoBounds,
     NoCompiler,
+    IndexedFormatNotSupported,
+    NonMatchingImages,
 }
 
 impl Error for ErrorType {}
@@ -54,6 +57,12 @@ impl From<Box<bincode::ErrorKind>> for ErrorType {
 impl From<shaderc::Error> for ErrorType {
     fn from(err: shaderc::Error) -> Self {
         Self::Shader(err)
+    }
+}
+
+impl From<png::DecodingError> for ErrorType {
+    fn from(e: png::DecodingError) -> Self {
+        Self::Image(e)
     }
 }
 

@@ -5,8 +5,8 @@
 
 use rusttype::Font;
 
-use crate::bitmap::Bitmap;
-use crate::diamond_iterator::DiamondIterator;
+use super::bitmap::Bitmap;
+use super::diamond_iterator::DiamondIterator;
 use crate::error::Result;
 
 pub struct Sdf {
@@ -27,12 +27,12 @@ impl Sdf {
     pub fn generate(&self, font: &Font<'_>, c: char) -> Result<(Bitmap, u32)> {
         // ttf to png
         let sample_margin =
-            (self.sdf_margin as f32 / self.sdf_size as f32) * self.sample_size as f32;
+            (f32::from(self.sdf_margin) / self.sdf_size as f32) * self.sample_size as f32;
         let (sample_bitmap, advance) =
             Bitmap::rasterize(font, self.sample_size, sample_margin as u32, c)?;
 
         // png to sdf
-        let bitmap_size = self.sdf_size + self.sdf_margin as u32 * 2;
+        let bitmap_size = self.sdf_size + u32::from(self.sdf_margin) * 2;
         let mut bitmap = Bitmap::new(bitmap_size, bitmap_size);
         for x in 0..bitmap_size {
             for y in 0..bitmap_size {
@@ -51,8 +51,9 @@ impl Sdf {
 
     fn distance_to_zone(&self, sample: &Bitmap, out_x: u32, out_y: u32) -> u8 {
         let threshold = 127;
-        let bitmap_size = self.sdf_size + self.sdf_margin as u32 * 2;
-        let sample_max = (self.sdf_margin as f32 / self.sdf_size as f32) * self.sample_size as f32;
+        let bitmap_size = self.sdf_size + u32::from(self.sdf_margin) * 2;
+        let sample_max =
+            (f32::from(self.sdf_margin) / self.sdf_size as f32) * self.sample_size as f32;
 
         let mid_x = (out_x * sample.width()) / bitmap_size;
         let mid_y = (out_y * sample.height()) / bitmap_size;

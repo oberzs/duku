@@ -63,7 +63,7 @@ impl Iterator for DiamondIterator {
                     self.side = Side::TopRight;
                     self.radius += 1;
                     self.x = 0;
-                    self.y = -(self.radius as i32);
+                    self.y = -i32::from(self.radius);
                 }
             }
         }

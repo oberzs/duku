@@ -8,11 +8,6 @@ use shaderc::CompilationArtifact;
 use shaderc::Compiler;
 use shaderc::ShaderKind;
 use std::collections::HashMap;
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::path::Path;
 
 use crate::error::ErrorKind;
 use crate::error::ErrorType;
@@ -32,19 +27,8 @@ struct Defines {
     values: HashMap<String, String>,
 }
 
-pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
-    eprint!(
-        "Converting {} ... ",
-        in_path
-            .file_name()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default()
-    );
-    io::stderr().lock().flush()?;
-
-    let shader_src = fs::read_to_string(in_path)?;
-    let defines = Defines::new(&shader_src);
+pub fn import_shader(src: &str) -> Result<Vec<u8>> {
+    let defines = Defines::new(src);
 
     // get depth mode
     let depth_mode = defines.get("DEPTH");
@@ -95,7 +79,7 @@ pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     }
 
     let vert_bin = compile_vert(&defines)?;
-    let frag_bin = compile_frag(&shader_src, &defines)?;
+    let frag_bin = compile_frag(&src, &defines)?;
 
     // Create .shader file
     let data = ShaderFile {
@@ -107,20 +91,13 @@ pub fn import_shader(in_path: &Path, out_path: &Path) -> Result<()> {
     };
 
     let binary = bincode::serialize(&data)?;
-
-    let out_path = out_path.with_extension("shader");
-    let mut out_file = File::create(out_path)?;
-
-    out_file.write_all(&binary)?;
-
-    eprintln!("done");
-    Ok(())
+    Ok(binary)
 }
 
 fn compile_vert(defines: &Defines) -> Result<CompilationArtifact> {
-    let mut vert_glsl = include_str!("../glsl/vert.glsl").to_string();
-    let objects_glsl = include_str!("../glsl/objects.glsl");
-    let srgb_glsl = include_str!("../glsl/srgb.glsl");
+    let mut vert_glsl = include_str!("../../glsl/vert.glsl").to_string();
+    let objects_glsl = include_str!("../../glsl/objects.glsl");
+    let srgb_glsl = include_str!("../../glsl/srgb.glsl");
 
     // create real glsl code
     let mut real_src = "#version 450\n".to_string();
@@ -158,10 +135,10 @@ fn compile_vert(defines: &Defines) -> Result<CompilationArtifact> {
 }
 
 fn compile_frag(src: &str, defines: &Defines) -> Result<CompilationArtifact> {
-    let frag_glsl = include_str!("../glsl/frag.glsl");
-    let objects_glsl = include_str!("../glsl/objects.glsl");
-    let shadow_glsl = include_str!("../glsl/shadow.glsl");
-    let srgb_glsl = include_str!("../glsl/srgb.glsl");
+    let frag_glsl = include_str!("../../glsl/frag.glsl");
+    let objects_glsl = include_str!("../../glsl/objects.glsl");
+    let shadow_glsl = include_str!("../../glsl/shadow.glsl");
+    let srgb_glsl = include_str!("../../glsl/srgb.glsl");
 
     // create real glsl code
     let mut real_src = "#version 450\n".to_string();
