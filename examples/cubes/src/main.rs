@@ -4,12 +4,12 @@
 // Mesh drawing example
 
 use draw_it::window::Controller;
+use draw_it::window::Event;
 use draw_it::window::WindowOptions;
 use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
-use draw_it::Event;
 use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;

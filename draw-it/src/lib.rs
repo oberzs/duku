@@ -72,7 +72,6 @@ pub use renderer::Projection;
 pub use renderer::Target;
 pub use surface::VSync;
 pub use surface::WindowHandle;
-pub use window::Event;
 
 // optional feature exports
 #[cfg(feature = "ui")]
