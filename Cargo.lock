@@ -181,7 +181,6 @@ dependencies = [
  "glfw",
  "imgui",
  "metal",
- "png",
  "serde",
  "winapi",
 ]

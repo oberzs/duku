@@ -94,6 +94,5 @@ Assets
 
 Optional projects for extra functionality:
 
-- [Png](https://github.com/image-rs/image-png) - PNG loading
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI

@@ -4,6 +4,7 @@
 // Cubemap - image with 6 layers to render a skybox
 
 use ash::vk;
+use serde::Deserialize;
 use std::rc::Rc;
 
 use super::ImageFormat;
@@ -33,7 +34,43 @@ pub(crate) struct CubemapOptions<'side> {
     pub(crate) format: ImageFormat,
 }
 
+#[derive(Deserialize)]
+struct CubemapFile {
+    top: Vec<u8>,
+    bottom: Vec<u8>,
+    front: Vec<u8>,
+    back: Vec<u8>,
+    left: Vec<u8>,
+    right: Vec<u8>,
+    width: u32,
+    _height: u32,
+    channels: u8,
+}
+
 impl Cubemap {
+    pub(crate) fn from_file(device: &Rc<Device>, data: Vec<u8>) -> Result<Self> {
+        let cubemap_file: CubemapFile = bincode::deserialize(&data)?;
+
+        let format = match cubemap_file.channels {
+            4 => ImageFormat::Srgba,
+            _ => unreachable!(),
+        };
+
+        Self::new(
+            device,
+            CubemapOptions {
+                top: &cubemap_file.top,
+                bottom: &cubemap_file.bottom,
+                front: &cubemap_file.front,
+                back: &cubemap_file.back,
+                left: &cubemap_file.left,
+                right: &cubemap_file.right,
+                size: cubemap_file.width,
+                format,
+            },
+        )
+    }
+
     pub(crate) fn new(device: &Rc<Device>, options: CubemapOptions<'_>) -> Result<Self> {
         let pixel_size = match options.format {
             ImageFormat::Srgba | ImageFormat::Rgba => 4,

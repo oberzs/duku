@@ -41,14 +41,7 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
-    context.set_skybox_from_file([
-        "examples/cubes/textures/Skybox/glacier_up.png",
-        "examples/cubes/textures/Skybox/glacier_down.png",
-        "examples/cubes/textures/Skybox/glacier_front.png",
-        "examples/cubes/textures/Skybox/glacier_back.png",
-        "examples/cubes/textures/Skybox/glacier_left.png",
-        "examples/cubes/textures/Skybox/glacier_right.png",
-    ])?;
+    context.set_skybox_from_file("examples/cubes/textures/Skybox/glacier_up.cubemap")?;
 
     let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0])?;
 

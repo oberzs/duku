@@ -621,105 +621,21 @@ impl Context {
         Ok(shader)
     }
 
-    #[cfg(feature = "image")]
     pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Texture> {
-        use png::ColorType;
-        use png::Decoder;
-        use std::fs::File;
-
-        use crate::error::ErrorKind;
-
-        let decoder = Decoder::new(File::open(path)?);
-        let (info, mut reader) = decoder.read_info()?;
-
-        let mut data = vec![0; info.buffer_size()];
-        reader.next_frame(&mut data)?;
-
-        let format = match info.color_type {
-            ColorType::RGBA => ImageFormat::Srgba,
-            ColorType::RGB => ImageFormat::Srgb,
-            ColorType::Grayscale => ImageFormat::Gray,
-            _ => return Err(ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into()),
-        };
-
-        let (index, _) = self.storage.textures.add(CoreTexture::new(
+        let data = fs::read(path.as_ref())?;
+        let (index, _) = self.storage.textures.add(CoreTexture::from_file(
             &self.device,
             &mut self.image_uniform,
-            TextureOptions {
-                width: info.width,
-                height: info.height,
-                format,
-                data,
-            },
+            data,
         )?);
         Ok(Texture::new(index))
     }
 
-    #[cfg(feature = "image")]
-    pub fn set_skybox_from_file(&mut self, paths: [impl AsRef<Path>; 6]) -> Result<()> {
-        use png::ColorType;
-        use png::Decoder;
-        use std::fs::File;
-
-        use crate::error::ErrorKind;
-        use crate::image::with_alpha;
-
-        let mut size = 0;
-        let mut format = ImageFormat::Srgba;
-        let mut data = vec![];
-        for path in &paths {
-            let decoder = Decoder::new(File::open(path)?);
-            let (info, mut reader) = decoder.read_info()?;
-
-            let mut buf = vec![0; info.buffer_size()];
-            reader.next_frame(&mut buf)?;
-
-            let f = match info.color_type {
-                ColorType::RGBA | ColorType::RGB => ImageFormat::Srgba,
-                ColorType::Grayscale => ImageFormat::Gray,
-                _ => {
-                    return Err(
-                        ErrorKind::UnsupportedFormat(format!("{:?}", info.color_type)).into(),
-                    )
-                }
-            };
-
-            if let ColorType::RGB = info.color_type {
-                buf = with_alpha(buf);
-            }
-
-            if f != format {
-                return Err(ErrorKind::NonMatchingCubemapFormat(format!(
-                    "{:?} ({:?})",
-                    f,
-                    path.as_ref()
-                ))
-                .into());
-            }
-
-            format = f;
-
-            size = info.width;
-            data.push(buf);
-        }
-
-        let mut cubemap = Cubemap::new(
-            &self.device,
-            CubemapOptions {
-                top: &data[0],
-                bottom: &data[1],
-                front: &data[2],
-                back: &data[3],
-                left: &data[4],
-                right: &data[5],
-                format,
-                size,
-            },
-        )?;
-
+    pub fn set_skybox_from_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
+        let data = fs::read(path.as_ref())?;
+        let mut cubemap = Cubemap::from_file(&self.device, data)?;
         self.image_uniform.set_skybox(cubemap.add_view()?);
         self.skybox = cubemap;
-
         Ok(())
     }
 

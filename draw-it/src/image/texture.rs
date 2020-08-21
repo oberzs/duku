@@ -3,6 +3,7 @@
 
 // Texture - simple image that can be used for rendering
 
+use serde::Deserialize;
 use std::rc::Rc;
 
 use super::with_alpha;
@@ -39,6 +40,14 @@ pub(crate) struct TextureOptions {
     pub(crate) format: ImageFormat,
 }
 
+#[derive(Deserialize)]
+struct ImageFile {
+    data: Vec<u8>,
+    width: u32,
+    height: u32,
+    channels: u8,
+}
+
 impl Texture {
     pub(crate) const fn new(index: Index) -> Self {
         Self { index }
@@ -46,6 +55,31 @@ impl Texture {
 }
 
 impl CoreTexture {
+    pub(crate) fn from_file(
+        device: &Rc<Device>,
+        uniform: &mut ImageUniform,
+        data: Vec<u8>,
+    ) -> Result<Self> {
+        let image_file: ImageFile = bincode::deserialize(&data)?;
+
+        let format = match image_file.channels {
+            1 => ImageFormat::Gray,
+            4 => ImageFormat::Srgba,
+            _ => unreachable!(),
+        };
+
+        Self::new(
+            device,
+            uniform,
+            TextureOptions {
+                data: image_file.data,
+                width: image_file.width,
+                height: image_file.height,
+                format,
+            },
+        )
+    }
+
     pub(crate) fn new(
         device: &Rc<Device>,
         uniform: &mut ImageUniform,
