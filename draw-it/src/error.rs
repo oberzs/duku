@@ -40,9 +40,7 @@ impl Error for ErrorType {}
 
 impl fmt::Display for ErrorType {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
-        match *self {
-            ref e => write!(fmt, "{:?}", e),
-        }
+        write!(fmt, "{:?}", self)
     }
 }
 

@@ -13,16 +13,12 @@ pub(crate) struct Version {
 }
 
 impl Version {
-    pub(crate) fn from_vk(value: u32) -> Self {
+    pub(crate) const fn from_vk(value: u32) -> Self {
         Self {
             major: ((value & 0xffc00000) >> 22) as u16,
             minor: ((value & 0x003ff000) >> 12) as u16,
             patch: (value & 0x00000fff) as u16,
         }
-    }
-
-    pub(crate) fn into_vk(&self) -> u32 {
-        (self.major as u32) << 22 | (self.minor as u32) << 12 | (self.patch as u32)
     }
 }
 

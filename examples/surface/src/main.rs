@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     while window.is_open() {
         // poll events
-        context.poll_events(&mut window)?;
+        context.poll_events(&mut window);
 
         // draw ui
         let stats = context.stats();
@@ -47,7 +47,7 @@ fn main() -> Result<()> {
         context.draw_on_window(&camera, |target| {
             target.set_shader(&shader);
             target.draw_surface();
-        })?;
+        });
     }
 
     Ok(())

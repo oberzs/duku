@@ -368,7 +368,7 @@ impl CoreFramebuffer {
         self.handle
     }
 
-    pub(crate) fn render_pass(&self) -> vk::RenderPass {
+    pub(crate) const fn render_pass(&self) -> vk::RenderPass {
         self.render_pass.handle()
     }
 

@@ -54,7 +54,7 @@ impl DynamicBuffer {
         self.size
     }
 
-    pub(crate) fn handle(&self) -> vk::Buffer {
+    pub(crate) const fn handle(&self) -> vk::Buffer {
         self.memory.handle()
     }
 }

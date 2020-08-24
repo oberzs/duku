@@ -40,7 +40,7 @@ impl Instance {
         // log version information
         let mut vk_version = 0;
         unsafe {
-            vk::enumerate_instance_version(&mut vk_version);
+            vk::check(vk::enumerate_instance_version(&mut vk_version));
         }
         let version = Version::from_vk(vk_version);
         info!("using Vulkan {}", version);
@@ -48,13 +48,13 @@ impl Instance {
         // enumerate extensions
         let extensions = unsafe {
             let mut count = 0;
-            vk_check!(vk::enumerate_instance_extension_properties(
+            vk::check(vk::enumerate_instance_extension_properties(
                 ptr::null(),
                 &mut count,
-                ptr::null_mut()
+                ptr::null_mut(),
             ));
             let mut properties: Vec<vk::ExtensionProperties> = Vec::with_capacity(count as usize);
-            vk_check!(vk::enumerate_instance_extension_properties(
+            vk::check(vk::enumerate_instance_extension_properties(
                 ptr::null(),
                 &mut count,
                 properties.as_mut_ptr(),
@@ -101,26 +101,26 @@ impl Instance {
         };
         let mut handle = 0;
         unsafe {
-            vk_check!(vk::create_instance(
+            vk::check(vk::create_instance(
                 &instance_info,
                 ptr::null(),
-                &mut handle
+                &mut handle,
             ));
         }
 
         // enumerate GPUs on system
         let gpus = unsafe {
             let mut count = 0;
-            vk_check!(vk::enumerate_physical_devices(
+            vk::check(vk::enumerate_physical_devices(
                 handle,
                 &mut count,
-                ptr::null_mut()
+                ptr::null_mut(),
             ));
             let mut devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(count as usize);
-            vk_check!(vk::enumerate_physical_devices(
+            vk::check(vk::enumerate_physical_devices(
                 handle,
                 &mut count,
-                devices.as_mut_ptr()
+                devices.as_mut_ptr(),
             ));
             devices.set_len(count as usize);
             devices
@@ -136,15 +136,15 @@ impl Instance {
             // enumerate extensions
             let extensions = unsafe {
                 let mut count = 0;
-                vk_check!(vk::enumerate_device_extension_properties(
+                vk::check(vk::enumerate_device_extension_properties(
                     *gpu,
                     ptr::null(),
                     &mut count,
-                    ptr::null_mut()
+                    ptr::null_mut(),
                 ));
                 let mut properties: Vec<vk::ExtensionProperties> =
                     Vec::with_capacity(count as usize);
-                vk_check!(vk::enumerate_device_extension_properties(
+                vk::check(vk::enumerate_device_extension_properties(
                     *gpu,
                     ptr::null(),
                     &mut count,
@@ -177,45 +177,45 @@ impl Instance {
             // get surface things
             let mut capabilities = unsafe { mem::zeroed() };
             unsafe {
-                vk::get_physical_device_surface_capabilities_khr(
+                vk::check(vk::get_physical_device_surface_capabilities_khr(
                     *gpu,
                     surface.handle(),
                     &mut capabilities,
-                );
+                ));
             }
             let formats = unsafe {
                 let mut count = 0;
-                vk::get_physical_device_surface_formats_khr(
+                vk::check(vk::get_physical_device_surface_formats_khr(
                     *gpu,
                     surface.handle(),
                     &mut count,
                     ptr::null_mut(),
-                );
+                ));
                 let mut fs: Vec<vk::SurfaceFormatKHR> = Vec::with_capacity(count as usize);
-                vk::get_physical_device_surface_formats_khr(
+                vk::check(vk::get_physical_device_surface_formats_khr(
                     *gpu,
                     surface.handle(),
                     &mut count,
                     fs.as_mut_ptr(),
-                );
+                ));
                 fs.set_len(count as usize);
                 fs
             };
             let present_modes = unsafe {
                 let mut count = 0;
-                vk::get_physical_device_surface_present_modes_khr(
+                vk::check(vk::get_physical_device_surface_present_modes_khr(
                     *gpu,
                     surface.handle(),
                     &mut count,
                     ptr::null_mut(),
-                );
+                ));
                 let mut pms: Vec<vk::PresentModeKHR> = Vec::with_capacity(count as usize);
-                vk::get_physical_device_surface_present_modes_khr(
+                vk::check(vk::get_physical_device_surface_present_modes_khr(
                     *gpu,
                     surface.handle(),
                     &mut count,
                     pms.as_mut_ptr(),
-                );
+                ));
                 pms.set_len(count as usize);
                 pms
             };
@@ -239,12 +239,12 @@ impl Instance {
             for (i, props) in families.iter().enumerate() {
                 let mut present_support = 0;
                 unsafe {
-                    vk::get_physical_device_surface_support_khr(
+                    vk::check(vk::get_physical_device_surface_support_khr(
                         *gpu,
                         i as u32,
                         surface.handle(),
                         &mut present_support,
-                    );
+                    ));
                 }
                 let graphics_support = (props.queue_flags & vk::QUEUE_GRAPHICS_BIT) != 0;
 
@@ -296,11 +296,11 @@ impl Instance {
     pub(crate) fn create_surface(&self, info: &vk::Win32SurfaceCreateInfoKHR) -> vk::SurfaceKHR {
         let mut surface = 0;
         unsafe {
-            vk_check!(vk::create_win32_surface_khr(
+            vk::check(vk::create_win32_surface_khr(
                 self.handle,
                 info,
                 ptr::null(),
-                &mut surface
+                &mut surface,
             ));
         }
         surface
@@ -310,11 +310,11 @@ impl Instance {
     pub(crate) fn create_surface(&self, info: &vk::XlibSurfaceCreateInfoKHR) -> vk::SurfaceKHR {
         let mut surface = 0;
         unsafe {
-            vk_check!(vk::create_xlib_surface_khr(
+            vk::check(vk::create_xlib_surface_khr(
                 self.handle,
                 info,
                 ptr::null(),
-                &mut surface
+                &mut surface,
             ));
         }
         surface
@@ -327,11 +327,11 @@ impl Instance {
     ) -> Result<vk::SurfaceKHR> {
         let mut surface = 0;
         unsafe {
-            vk_check!(vk::create_mac_os_surface_khr(
+            vk::check(vk::create_mac_os_surface_khr(
                 self.handle,
                 info,
                 ptr::null(),
-                &mut surface
+                &mut surface,
             ));
         }
         surface
@@ -350,7 +350,12 @@ impl Instance {
     ) -> vk::Device {
         let mut device = 0;
         unsafe {
-            vk::create_device(self.gpus[gpu_index], info, ptr::null(), &mut device);
+            vk::check(vk::create_device(
+                self.gpus[gpu_index],
+                info,
+                ptr::null(),
+                &mut device,
+            ));
         }
         device
     }

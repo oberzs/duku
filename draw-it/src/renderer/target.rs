@@ -282,7 +282,7 @@ impl<'b> Target<'b> {
         }
     }
 
-    const fn sampler_index(&self) -> i32 {
+    fn sampler_index(&self) -> i32 {
         use TextureFilter as F;
         use TextureWrap as W;
 

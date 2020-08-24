@@ -158,11 +158,11 @@ impl CoreMesh {
         self.index_count = data.indices.len();
     }
 
-    pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
+    pub(crate) const fn vertex_buffer(&self) -> vk::Buffer {
         self.vertex_buffer.handle()
     }
 
-    pub(crate) fn index_buffer(&self) -> vk::Buffer {
+    pub(crate) const fn index_buffer(&self) -> vk::Buffer {
         self.index_buffer.handle()
     }
 

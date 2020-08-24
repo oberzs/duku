@@ -13,7 +13,6 @@ use std::rc::Rc;
 use crate::instance::Instance;
 use crate::vk;
 
-pub(crate) use properties::ColorSpace;
 pub(crate) use swapchain::Swapchain;
 
 pub use handle::WindowHandle;

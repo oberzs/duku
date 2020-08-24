@@ -83,7 +83,7 @@ Want more? Check out these other [examples](https://github.com/OllieBerzs/draw-i
 
 This library uses these open source projects:
 
-- [Ash](https://github.com/MaikKlein/ash) - Vulkan API support
+- [Vulkan SDK](https://vulkan.lunarg.com/) - Vulkan API support
 - [Serde](https://github.com/serde-rs/serde) - Deserialize assets
 - [Bincode](https://github.com/servo/bincode) - Serde helper for binary
 

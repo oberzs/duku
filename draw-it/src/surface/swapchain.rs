@@ -6,7 +6,6 @@
 use std::ptr;
 use std::rc::Rc;
 
-use super::ColorSpace;
 use super::Surface;
 use super::VSync;
 use crate::device::Device;
@@ -106,7 +105,7 @@ fn swapchain_info(
         surface: surface.handle(),
         min_image_count: image_count,
         image_format: ImageFormat::Sbgra.flag(),
-        image_color_space: ColorSpace::Srgb.flag(),
+        image_color_space: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
         image_extent: extent,
         image_array_layers: 1,
         image_usage: ImageUsage::Color.flag(),
