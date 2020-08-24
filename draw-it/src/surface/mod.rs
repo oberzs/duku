@@ -51,19 +51,23 @@ impl Surface {
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
-        let info = vk::XlibSurfaceCreateInfoKHR::builder()
-            .window(window.xlib_window as u64)
-            .dpy(window.xlib_display as *mut vk::Display);
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
+        let info = vk::XlibSurfaceCreateInfoKHR {
+            s_type: vk::STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+            p_next: ptr::null(),
+            flags: 0,
+            dpy: window.xlib_display.cast(),
+            window: window.xlib_window as u64,
+        };
 
-        let handle = instance.create_surface(&info)?;
+        let handle = instance.create_surface(&info);
 
-        Ok(Self {
+        Self {
             handle,
             width: window.width,
             height: window.height,
             instance: Rc::clone(instance),
-        })
+        }
     }
 
     #[cfg(target_os = "macos")]

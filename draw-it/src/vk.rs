@@ -10336,7 +10336,7 @@ pub type VoidFunction = extern "system" fn() -> ();
 // Unused types
 pub type Display = c_void;
 pub type VisualID = c_void;
-pub type Window = c_void;
+pub type Window = u64;
 pub type RROutput = c_void;
 pub type wl_display = c_void;
 pub type wl_surface = c_void;
@@ -10367,6 +10367,7 @@ pub type AccelerationStructureMemoryRequirementsTypeNV = c_void;
 pub const STRUCTURE_TYPE_PRESENT_INFO_KHR: u32 = 1000001001;
 pub const STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR: u32 = 1000001000;
 pub const STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR: u32 = 1000009000;
+pub const STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR: u32 = 1000004000;
 pub const IMAGE_LAYOUT_PRESENT_SRC_KHR: u32 = 1000001002;
 
 // Utils

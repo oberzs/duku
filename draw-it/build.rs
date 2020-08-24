@@ -6,10 +6,8 @@
 use std::env;
 
 fn main() {
-    #[cfg(target_os = "windows")]
-    println!(
-        "cargo:rustc-link-search={}/vulkan",
-        env::var("CARGO_MANIFEST_DIR").unwrap()
-    );
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+
+    println!("cargo:rustc-link-search={}/vulkan", manifest_dir);
     println!("cargo:rustc-link-lib=vulkan");
 }
