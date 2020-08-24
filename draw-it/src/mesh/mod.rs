@@ -5,7 +5,6 @@
 
 mod vertex;
 
-use ash::vk;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
@@ -13,10 +12,10 @@ use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
-use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::storage::Index;
+use crate::vk;
 pub(crate) use vertex::Vertex;
 
 // user facing Mesh data
@@ -128,19 +127,19 @@ impl Mesh {
 }
 
 impl CoreMesh {
-    pub(crate) fn new(device: &Rc<Device>) -> Result<Self> {
-        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, 1)?;
-        let index_buffer = DynamicBuffer::new::<u16>(device, BufferUsage::Index, 3)?;
+    pub(crate) fn new(device: &Rc<Device>) -> Self {
+        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, 1);
+        let index_buffer = DynamicBuffer::new::<u16>(device, BufferUsage::Index, 3);
 
-        Ok(Self {
+        Self {
             index_count: 3,
             vertex_buffer,
             index_buffer,
-        })
+        }
     }
 
-    pub(crate) fn update(&mut self, data: MeshUpdateData) -> Result<()> {
-        let vertices = data
+    pub(crate) fn update(&mut self, data: MeshUpdateData) {
+        let vertices: Vec<_> = data
             .vertices
             .iter()
             .zip(data.uvs.iter().chain([Vector2::ZERO].iter().cycle()))
@@ -152,13 +151,11 @@ impl CoreMesh {
                 norm: *normal,
                 col: col.to_rgba_norm_vec(),
             })
-            .collect::<Vec<_>>();
+            .collect();
 
-        self.vertex_buffer.update_data(&vertices)?;
-        self.index_buffer.update_data(&data.indices)?;
+        self.vertex_buffer.update_data(&vertices);
+        self.index_buffer.update_data(&data.indices);
         self.index_count = data.indices.len();
-
-        Ok(())
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {

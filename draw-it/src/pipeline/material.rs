@@ -12,7 +12,6 @@ use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
-use crate::error::Result;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
@@ -165,16 +164,15 @@ impl Material {
 }
 
 impl CoreMaterial {
-    pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Result<Self> {
-        let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1)?;
-        let descriptor = shader_layout.material_set(&buffer)?;
+    pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Self {
+        let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1);
+        let descriptor = shader_layout.material_set(&buffer);
 
-        Ok(Self { buffer, descriptor })
+        Self { buffer, descriptor }
     }
 
-    pub(crate) fn update(&mut self, data: MaterialUpdateData) -> Result<()> {
-        self.buffer.update_data(&[data])?;
-        Ok(())
+    pub(crate) fn update(&mut self, data: MaterialUpdateData) {
+        self.buffer.update_data(&[data]);
     }
 
     pub(crate) const fn descriptor(&self) -> Descriptor {

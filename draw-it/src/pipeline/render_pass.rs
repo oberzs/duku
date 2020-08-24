@@ -3,16 +3,16 @@
 
 // RenderPass - struct that structures a rendering pass
 
-use ash::vk;
+use std::ptr;
 use std::rc::Rc;
 
 use super::Attachment;
 use super::AttachmentOptions;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
 use crate::image::Msaa;
+use crate::vk;
 
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
@@ -27,7 +27,7 @@ impl RenderPass {
         msaa: Msaa,
         depth: bool,
         present: bool,
-    ) -> Result<Self> {
+    ) -> Self {
         debug_assert!(
             !present || attachment_formats.len() == 1,
             "present render pass should only have 1 attachment"
@@ -120,78 +120,95 @@ impl RenderPass {
             // depth pass
             [
                 // start of render pass dependency
-                vk::SubpassDependency::builder()
-                    .src_subpass(vk::SUBPASS_EXTERNAL)
-                    .dst_subpass(0)
-                    .src_stage_mask(vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
-                    .dst_stage_mask(vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
-                    .src_access_mask(vk::AccessFlags::empty())
-                    .dst_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
-                    .dependency_flags(vk::DependencyFlags::BY_REGION)
-                    .build(),
+                vk::SubpassDependency {
+                    src_subpass: vk::SUBPASS_EXTERNAL,
+                    dst_subpass: 0,
+                    src_stage_mask: vk::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                    dst_stage_mask: vk::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                    src_access_mask: 0,
+                    dst_access_mask: vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    dependency_flags: vk::DEPENDENCY_BY_REGION_BIT,
+                },
                 // end of render pass dependency
-                vk::SubpassDependency::builder()
-                    .src_subpass(0)
-                    .dst_subpass(vk::SUBPASS_EXTERNAL)
-                    .src_stage_mask(vk::PipelineStageFlags::LATE_FRAGMENT_TESTS)
-                    .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
-                    .src_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
-                    .dst_access_mask(vk::AccessFlags::empty())
-                    .dependency_flags(vk::DependencyFlags::BY_REGION)
-                    .build(),
+                vk::SubpassDependency {
+                    src_subpass: 0,
+                    dst_subpass: vk::SUBPASS_EXTERNAL,
+                    src_stage_mask: vk::PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                    dst_stage_mask: vk::PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    src_access_mask: vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    dst_access_mask: 0,
+                    dependency_flags: vk::DEPENDENCY_BY_REGION_BIT,
+                },
             ]
         } else {
             // color pass
             [
                 // start of render pass dependency
-                vk::SubpassDependency::builder()
-                    .src_subpass(vk::SUBPASS_EXTERNAL)
-                    .dst_subpass(0)
-                    .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                    .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                    .src_access_mask(vk::AccessFlags::empty())
-                    .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-                    .dependency_flags(vk::DependencyFlags::BY_REGION)
-                    .build(),
+                vk::SubpassDependency {
+                    src_subpass: vk::SUBPASS_EXTERNAL,
+                    dst_subpass: 0,
+                    src_stage_mask: vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    dst_stage_mask: vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    src_access_mask: 0,
+                    dst_access_mask: vk::ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    dependency_flags: vk::DEPENDENCY_BY_REGION_BIT,
+                },
                 // end of render pass dependency
-                vk::SubpassDependency::builder()
-                    .src_subpass(0)
-                    .dst_subpass(vk::SUBPASS_EXTERNAL)
-                    .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-                    .dst_stage_mask(vk::PipelineStageFlags::BOTTOM_OF_PIPE)
-                    .src_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-                    .dst_access_mask(vk::AccessFlags::empty())
-                    .dependency_flags(vk::DependencyFlags::BY_REGION)
-                    .build(),
+                vk::SubpassDependency {
+                    src_subpass: 0,
+                    dst_subpass: vk::SUBPASS_EXTERNAL,
+                    src_stage_mask: vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    dst_stage_mask: vk::PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    src_access_mask: vk::ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    dst_access_mask: 0,
+                    dependency_flags: vk::DEPENDENCY_BY_REGION_BIT,
+                },
             ]
         };
 
         // create render pass
-        let mut subpass_builder =
-            vk::SubpassDescription::builder().pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS);
+        let mut subpass = [vk::SubpassDescription {
+            flags: 0,
+            pipeline_bind_point: vk::PIPELINE_BIND_POINT_GRAPHICS,
+            input_attachment_count: 0,
+            p_input_attachments: ptr::null(),
+            color_attachment_count: 0,
+            p_color_attachments: ptr::null(),
+            p_resolve_attachments: ptr::null(),
+            p_depth_stencil_attachment: ptr::null(),
+            preserve_attachment_count: 0,
+            p_preserve_attachments: ptr::null(),
+        }];
         if let Some(depth_a) = &depth_attachment {
-            subpass_builder = subpass_builder.depth_stencil_attachment(depth_a);
+            subpass[0].p_depth_stencil_attachment = depth_a;
         }
         if !color_attachments.is_empty() {
-            subpass_builder = subpass_builder.color_attachments(&color_attachments);
+            subpass[0].color_attachment_count = color_attachments.len() as u32;
+            subpass[0].p_color_attachments = color_attachments.as_ptr();
         }
         if !resolve_attachments.is_empty() {
-            subpass_builder = subpass_builder.resolve_attachments(&resolve_attachments);
+            subpass[0].p_resolve_attachments = resolve_attachments.as_ptr();
         }
-        let subpass = [subpass_builder.build()];
 
-        let info = vk::RenderPassCreateInfo::builder()
-            .attachments(&attachment_descriptions)
-            .subpasses(&subpass)
-            .dependencies(&dependencies);
+        let info = vk::RenderPassCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            attachment_count: attachment_descriptions.len() as u32,
+            p_attachments: attachment_descriptions.as_ptr(),
+            subpass_count: subpass.len() as u32,
+            p_subpasses: subpass.as_ptr(),
+            dependency_count: dependencies.len() as u32,
+            p_dependencies: dependencies.as_ptr(),
+        };
 
-        let handle = device.create_render_pass(&info)?;
+        let handle = device.create_render_pass(&info);
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             attachments,
             handle,
-        })
+        }
     }
 
     pub(crate) fn attachments(&self) -> impl Iterator<Item = &Attachment> {

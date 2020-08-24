@@ -10,7 +10,6 @@ window = ["glfw"]
 ui = ["window", "imgui"]
 
 [dependencies]
-ash = "0.31.0"
 serde = { version = "1.0.115", features = ["derive"] }
 bincode = "1.3.1"
 

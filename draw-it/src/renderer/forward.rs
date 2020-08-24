@@ -13,7 +13,7 @@ use super::OrdersByShader;
 use super::Target;
 use super::TextOrder;
 use crate::device::Device;
-use crate::device::IN_FLIGHT_FRAME_COUNT;
+use crate::device::FRAMES_IN_FLIGHT;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::FramebufferOptions;
@@ -32,7 +32,7 @@ use crate::storage::Index;
 use crate::storage::Storage;
 
 pub(crate) struct ForwardRenderer {
-    shadow_frames: [ShadowMapSet; IN_FLIGHT_FRAME_COUNT],
+    shadow_frames: [ShadowMapSet; FRAMES_IN_FLIGHT],
     shadow_shader: CoreShader,
     start_time: Instant,
     pcf: Pcf,
@@ -63,8 +63,8 @@ impl ForwardRenderer {
         pcf: Pcf,
     ) -> Result<Self> {
         let shadow_frames = [
-            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
-            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size)?,
+            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
+            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
         ];
 
         let shadow_shader = CoreShader::new(
@@ -90,7 +90,7 @@ impl ForwardRenderer {
         storage: &mut Storage,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
-    ) -> Result<()> {
+    ) {
         let cmd = self.device.command_buffer();
         self.device.cmd_set_line_width(cmd, target.line_width);
 
@@ -104,7 +104,7 @@ impl ForwardRenderer {
         if target.has_shadow_casters {
             let mut view = camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, storage, &target, &view)?;
+            self.shadow_pass(shader_layout, storage, &target, &view);
         }
 
         // bind current shadow map set
@@ -138,7 +138,7 @@ impl ForwardRenderer {
                 world_matrix: camera.matrix(),
                 lights,
                 pcf,
-            }])?;
+            }]);
 
         // do render pass
         {
@@ -168,8 +168,6 @@ impl ForwardRenderer {
             .framebuffers
             .get_mut(framebuffer)
             .blit_to_texture(cmd);
-
-        Ok(())
     }
 
     pub(crate) fn draw_core(
@@ -179,7 +177,7 @@ impl ForwardRenderer {
         storage: &mut Storage,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
-    ) -> Result<()> {
+    ) {
         let cmd = self.device.command_buffer();
         self.device.cmd_set_line_width(cmd, target.line_width);
 
@@ -193,7 +191,7 @@ impl ForwardRenderer {
         if target.has_shadow_casters {
             let mut view = camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(shader_layout, storage, &target, &view)?;
+            self.shadow_pass(shader_layout, storage, &target, &view);
         }
 
         // bind current shadow map set
@@ -223,7 +221,7 @@ impl ForwardRenderer {
             world_matrix: camera.matrix(),
             lights,
             pcf,
-        }])?;
+        }]);
 
         // do render pass
         self.device
@@ -247,8 +245,6 @@ impl ForwardRenderer {
         // end rendering
         self.device.cmd_end_render_pass(cmd);
         framebuffer.blit_to_texture(cmd);
-
-        Ok(())
     }
 
     fn normal_pass(
@@ -384,12 +380,12 @@ impl ForwardRenderer {
         storage: &Storage,
         target: &Target<'_>,
         view: &Camera,
-    ) -> Result<()> {
+    ) {
         let light_dir = match target.lights.iter().find(|l| l.shadows) {
             Some(light) => light.coords,
             // if there is no light with shadows,
             // don't do shadow pass
-            None => return Ok(()),
+            None => return,
         };
 
         let cmd = self.device.command_buffer();
@@ -446,7 +442,7 @@ impl ForwardRenderer {
                 bias: 0.0,
                 time: 0.0,
                 pcf: 0.0,
-            }])?;
+            }]);
 
             // do render pass
             self.device
@@ -468,8 +464,6 @@ impl ForwardRenderer {
             }
             self.device.cmd_end_render_pass(cmd);
         }
-
-        Ok(())
     }
 
     fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
@@ -500,12 +494,12 @@ impl ShadowMapSet {
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         map_size: u32,
-    ) -> Result<Self> {
+    ) -> Self {
         let framebuffers = [
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size)?,
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
+            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
         ];
         let uniform = ShadowMapUniform::new(
             shader_layout,
@@ -515,15 +509,15 @@ impl ShadowMapSet {
                 framebuffers[2].stored_view(),
                 framebuffers[3].stored_view(),
             ],
-        )?;
+        );
 
-        Ok(Self {
+        Self {
             matrices: [Matrix4::identity(); 4],
             cascades: [0.0; 4],
             framebuffers,
             uniform,
             map_size,
-        })
+        }
     }
 
     fn shadow_framebuffer(
@@ -531,7 +525,7 @@ impl ShadowMapSet {
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         size: u32,
-    ) -> Result<CoreFramebuffer> {
+    ) -> CoreFramebuffer {
         CoreFramebuffer::new(
             device,
             shader_layout,

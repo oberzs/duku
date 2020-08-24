@@ -20,7 +20,8 @@
     clippy::explicit_into_iter_loop,
     clippy::if_not_else,
     clippy::imprecise_flops,
-    clippy::inefficient_to_string
+    clippy::inefficient_to_string,
+    clippy::unused_self,
 )]
 
 // should be imported first
@@ -41,7 +42,7 @@ mod quality;
 mod renderer;
 mod storage;
 mod surface;
-mod sync;
+mod vk;
 mod watch;
 
 // normal exports

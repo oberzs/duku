@@ -43,7 +43,7 @@ fn main() -> Result<()> {
 
     context.set_skybox_from_file("examples/cubes/textures/Skybox/glacier_up.cubemap")?;
 
-    let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0])?;
+    let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0]);
 
     let floor_transform = Transform {
         scale: Vector3::new(80.0, 0.2, 80.0),
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
 
     while window.is_open() {
         // update
-        context.poll_events(&mut window)?;
+        context.poll_events(&mut window);
 
         for event in window.events() {
             let Event::Resize(w, h) = event;
@@ -82,13 +82,13 @@ fn main() -> Result<()> {
             target.draw_cube([0.0, 0.0, 0.0]);
             target.draw_cube([-2.0, 1.0, 0.0]);
             target.draw_sphere([-4.0, 1.0, 0.0]);
-        })?;
+        });
     }
 
     Ok(())
 }
 
-fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Result<Mesh> {
+fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Mesh {
     let size = size.into();
 
     let top = square_mesh(
@@ -96,39 +96,39 @@ fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Result<Mesh> {
         [size.x, size.z],
         [0.0, size.y / 2.0, 0.0],
         Quaternion::axis_rotation(Vector3::RIGHT, 0.0),
-    )?;
+    );
     let bottom = square_mesh(
         context,
         [size.x, size.z],
         [0.0, -size.y / 2.0, 0.0],
         Quaternion::axis_rotation(Vector3::RIGHT, 180.0),
-    )?;
+    );
 
     let left = square_mesh(
         context,
         [size.z, size.y],
         [-size.x / 2.0, 0.0, 0.0],
         Quaternion::axis_rotation(Vector3::FORWARD, 90.0),
-    )?;
+    );
     let right = square_mesh(
         context,
         [size.z, size.y],
         [size.x / 2.0, 0.0, 0.0],
         Quaternion::axis_rotation(Vector3::FORWARD, -90.0),
-    )?;
+    );
 
     let front = square_mesh(
         context,
         [size.x, size.y],
         [0.0, 0.0, -size.z / 2.0],
         Quaternion::axis_rotation(Vector3::RIGHT, -90.0),
-    )?;
+    );
     let back = square_mesh(
         context,
         [size.x, size.y],
         [0.0, 0.0, size.z / 2.0],
         Quaternion::axis_rotation(Vector3::RIGHT, 90.0),
-    )?;
+    );
 
     context.combine_meshes(&[top, bottom, left, right, front, back])
 }
@@ -138,7 +138,7 @@ fn square_mesh(
     size: impl Into<Vector2>,
     position: impl Into<Vector3>,
     rotation: Quaternion,
-) -> Result<Mesh> {
+) -> Mesh {
     let size = size.into();
     let position = position.into();
 
@@ -161,11 +161,11 @@ fn square_mesh(
         *v += position;
     }
 
-    let mut mesh = context.create_mesh()?;
+    let mut mesh = context.create_mesh();
     mesh.vertices = vertices;
     mesh.indices = indices;
     mesh.calculate_normals();
     mesh.update();
 
-    Ok(mesh)
+    mesh
 }

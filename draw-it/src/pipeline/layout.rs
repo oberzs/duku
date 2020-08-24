@@ -3,15 +3,15 @@
 
 // ShaderLayout - struct that holds shader layout
 
-use ash::vk;
 use std::mem;
+use std::ptr;
 use std::rc::Rc;
 
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::ImageLayout;
 use crate::math::Matrix4;
+use crate::vk;
 
 pub(crate) struct ShaderLayout {
     handle: vk::PipelineLayout,
@@ -35,78 +35,84 @@ pub(crate) struct PushConstants {
 pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl ShaderLayout {
-    pub(crate) fn new(device: &Rc<Device>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>) -> Self {
         // world uniform layout
-        let world_binding = [vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-            .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(1)
-            .binding(0)
-            .build()];
-        let world_layout = device.create_descriptor_set_layout(&world_binding)?;
+        let world_binding = [vk::DescriptorSetLayoutBinding {
+            binding: 0,
+            descriptor_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            descriptor_count: 1,
+            stage_flags: vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        }];
+        let world_layout = device.create_descriptor_set_layout(&world_binding);
 
         let max_world_count = 100;
-        let world_pool_size = vk::DescriptorPoolSize::builder()
-            .descriptor_count(max_world_count)
-            .ty(vk::DescriptorType::UNIFORM_BUFFER)
-            .build();
+        let world_pool_size = vk::DescriptorPoolSize {
+            vk_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            descriptor_count: max_world_count,
+        };
 
         // material uniform layout
-        let material_binding = [vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-            .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(1)
-            .binding(0)
-            .build()];
-        let material_layout = device.create_descriptor_set_layout(&material_binding)?;
+        let material_binding = [vk::DescriptorSetLayoutBinding {
+            binding: 0,
+            descriptor_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            descriptor_count: 1,
+            stage_flags: vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        }];
+        let material_layout = device.create_descriptor_set_layout(&material_binding);
 
         let max_material_count = 100;
-        let material_pool_size = vk::DescriptorPoolSize::builder()
-            .descriptor_count(max_material_count)
-            .ty(vk::DescriptorType::UNIFORM_BUFFER)
-            .build();
+        let material_pool_size = vk::DescriptorPoolSize {
+            vk_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            descriptor_count: max_material_count,
+        };
 
         // image uniform layout
         let max_image_count = 100;
         let sampler_count = 2 * 3 * 2;
-        let image_binding = vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(max_image_count)
-            .binding(0)
-            .build();
-        let sampler_binding = vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::SAMPLER)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(sampler_count)
-            .binding(1)
-            .build();
-        let skybox_binding = vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(1)
-            .binding(2)
-            .build();
+        let image_binding = vk::DescriptorSetLayoutBinding {
+            binding: 0,
+            descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            descriptor_count: max_image_count,
+            stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        };
+        let sampler_binding = vk::DescriptorSetLayoutBinding {
+            binding: 1,
+            descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLER,
+            descriptor_count: sampler_count,
+            stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        };
+        let skybox_binding = vk::DescriptorSetLayoutBinding {
+            binding: 2,
+            descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            descriptor_count: 1,
+            stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        };
         let image_bindings = [image_binding, sampler_binding, skybox_binding];
-        let image_layout = device.create_descriptor_set_layout(&image_bindings)?;
+        let image_layout = device.create_descriptor_set_layout(&image_bindings);
 
-        let image_pool_size = vk::DescriptorPoolSize::builder()
-            .descriptor_count(1)
-            .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-            .build();
+        let image_pool_size = vk::DescriptorPoolSize {
+            vk_type: vk::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            descriptor_count: 1,
+        };
 
         // shadow map layout
-        let shadow_map_binding = [vk::DescriptorSetLayoutBinding::builder()
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT)
-            .descriptor_count(4)
-            .binding(0)
-            .build()];
-        let shadow_map_layout = device.create_descriptor_set_layout(&shadow_map_binding)?;
-        let shadow_map_pool_size = vk::DescriptorPoolSize::builder()
-            .descriptor_count(10)
-            .ty(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-            .build();
+        let shadow_map_binding = [vk::DescriptorSetLayoutBinding {
+            binding: 0,
+            descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            descriptor_count: 4,
+            stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
+            p_immutable_samplers: ptr::null(),
+        }];
+        let shadow_map_layout = device.create_descriptor_set_layout(&shadow_map_binding);
+        let shadow_map_pool_size = vk::DescriptorPoolSize {
+            vk_type: vk::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            descriptor_count: 10,
+        };
 
         // descriptor pool
         let pool_sizes = [
@@ -116,14 +122,14 @@ impl ShaderLayout {
             shadow_map_pool_size,
         ];
         let descriptor_pool =
-            device.create_descriptor_pool(&pool_sizes, 1 + max_world_count + max_material_count)?;
+            device.create_descriptor_pool(&pool_sizes, 1 + max_world_count + max_material_count);
 
         // push constants
-        let push_constant = vk::PushConstantRange::builder()
-            .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)
-            .size(mem::size_of::<PushConstants>() as u32)
-            .offset(0)
-            .build();
+        let push_constant = vk::PushConstantRange {
+            stage_flags: vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
+            offset: 0,
+            size: mem::size_of::<PushConstants>() as u32,
+        };
 
         // pipeline layout
         let constant_ranges = [push_constant];
@@ -133,104 +139,120 @@ impl ShaderLayout {
             image_layout,
             shadow_map_layout,
         ];
-        let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder()
-            .push_constant_ranges(&constant_ranges)
-            .set_layouts(&set_layouts);
-        let handle = device.create_pipeline_layout(&pipeline_layout_info)?;
+        let pipeline_layout_info = vk::PipelineLayoutCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            set_layout_count: set_layouts.len() as u32,
+            p_set_layouts: set_layouts.as_ptr(),
+            push_constant_range_count: 1,
+            p_push_constant_ranges: constant_ranges.as_ptr(),
+        };
+        let handle = device.create_pipeline_layout(&pipeline_layout_info);
 
-        Ok(Self {
+        Self {
+            device: Rc::clone(device),
             handle,
             world_layout,
             material_layout,
             image_layout,
             shadow_map_layout,
             descriptor_pool,
-            device: Rc::clone(device),
-        })
+        }
     }
 
-    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Result<Descriptor> {
+    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Descriptor {
         let set = self
             .device
-            .allocate_descriptor_set(self.world_layout, self.descriptor_pool)?;
+            .allocate_descriptor_set(self.world_layout, self.descriptor_pool);
 
-        let buffer_info = vk::DescriptorBufferInfo::builder()
-            .buffer(buffer.handle())
-            .offset(0)
-            .range(buffer.size() as u64)
-            .build();
-
-        let buffer_infos = [buffer_info];
-        let write = [vk::WriteDescriptorSet::builder()
-            .dst_set(set)
-            .dst_binding(0)
-            .dst_array_element(0)
-            .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-            .buffer_info(&buffer_infos)
-            .build()];
+        let buffer_info = [vk::DescriptorBufferInfo {
+            buffer: buffer.handle(),
+            offset: 0,
+            range: buffer.size() as u64,
+        }];
+        let write = [vk::WriteDescriptorSet {
+            s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            p_next: ptr::null(),
+            dst_set: set,
+            dst_binding: 0,
+            dst_array_element: 0,
+            descriptor_count: 1,
+            descriptor_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            p_image_info: ptr::null(),
+            p_buffer_info: buffer_info.as_ptr(),
+            p_texel_buffer_view: ptr::null(),
+        }];
 
         self.device.update_descriptor_sets(&write);
 
-        Ok(Descriptor(0, set))
+        Descriptor(0, set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Result<Descriptor> {
+    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Descriptor {
         let set = self
             .device
-            .allocate_descriptor_set(self.material_layout, self.descriptor_pool)?;
+            .allocate_descriptor_set(self.material_layout, self.descriptor_pool);
 
-        let buffer_info = vk::DescriptorBufferInfo::builder()
-            .buffer(buffer.handle())
-            .offset(0)
-            .range(buffer.size() as u64)
-            .build();
-
-        let buffer_infos = [buffer_info];
-        let write = [vk::WriteDescriptorSet::builder()
-            .dst_set(set)
-            .dst_binding(0)
-            .dst_array_element(0)
-            .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-            .buffer_info(&buffer_infos)
-            .build()];
+        let buffer_info = [vk::DescriptorBufferInfo {
+            buffer: buffer.handle(),
+            offset: 0,
+            range: buffer.size() as u64,
+        }];
+        let write = [vk::WriteDescriptorSet {
+            s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            p_next: ptr::null(),
+            dst_set: set,
+            dst_binding: 0,
+            dst_array_element: 0,
+            descriptor_count: 1,
+            descriptor_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            p_image_info: ptr::null(),
+            p_buffer_info: buffer_info.as_ptr(),
+            p_texel_buffer_view: ptr::null(),
+        }];
 
         self.device.update_descriptor_sets(&write);
 
-        Ok(Descriptor(1, set))
+        Descriptor(1, set)
     }
 
-    pub(crate) fn image_set(&self) -> Result<Descriptor> {
+    pub(crate) fn image_set(&self) -> Descriptor {
         let set = self
             .device
-            .allocate_descriptor_set(self.image_layout, self.descriptor_pool)?;
-        Ok(Descriptor(2, set))
+            .allocate_descriptor_set(self.image_layout, self.descriptor_pool);
+        Descriptor(2, set)
     }
 
-    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Result<Descriptor> {
+    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Descriptor {
         let set = self
             .device
-            .allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool)?;
+            .allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool);
 
-        let image_infos = views
+        let image_infos: Vec<_> = views
             .iter()
-            .map(|v| {
-                vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::ShaderDepth.flag())
-                    .image_view(*v)
-                    .build()
+            .map(|v| vk::DescriptorImageInfo {
+                sampler: 0,
+                image_view: *v,
+                image_layout: ImageLayout::ShaderDepth.flag(),
             })
-            .collect::<Vec<_>>();
-        let image_write = [vk::WriteDescriptorSet::builder()
-            .dst_set(set)
-            .dst_binding(0)
-            .dst_array_element(0)
-            .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-            .image_info(&image_infos)
-            .build()];
+            .collect();
+        let image_write = [vk::WriteDescriptorSet {
+            s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            p_next: ptr::null(),
+            dst_set: set,
+            dst_binding: 0,
+            dst_array_element: 0,
+            descriptor_count: image_infos.len() as u32,
+            descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            p_image_info: image_infos.as_ptr(),
+            p_buffer_info: ptr::null(),
+            p_texel_buffer_view: ptr::null(),
+        }];
 
         self.device.update_descriptor_sets(&image_write);
 
-        Ok(Descriptor(3, set))
+        Descriptor(3, set)
     }
 
     pub(crate) const fn handle(&self) -> vk::PipelineLayout {

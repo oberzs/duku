@@ -137,7 +137,7 @@ impl Ui {
                     width: ui_texture.width,
                     height: ui_texture.height,
                 },
-            )?
+            )
         };
 
         let core_framebuffer = CoreFramebuffer::new(
@@ -151,7 +151,7 @@ impl Ui {
                 width,
                 height,
             },
-        )?;
+        );
 
         let camera = Camera::orthographic(width as f32, height as f32);
 
@@ -167,7 +167,7 @@ impl Ui {
         framebuffer.width = width;
         framebuffer.height = height;
 
-        let mesh = CoreMesh::new(device)?;
+        let mesh = CoreMesh::new(device);
 
         Ok(Self {
             device: Rc::clone(device),
@@ -186,7 +186,7 @@ impl Ui {
         shader_layout: &ShaderLayout,
         storage: &mut Storage,
         mut draw_fn: impl FnMut(&UiFrame<'_>),
-    ) -> Result<()> {
+    ) {
         let draw_data = {
             let ui_frame = UiFrame {
                 frame: self.imgui.frame(),
@@ -227,7 +227,7 @@ impl Ui {
             colors,
             uvs,
             indices,
-        })?;
+        });
 
         // render ui
         let cmd = self.device.command_buffer();
@@ -245,7 +245,7 @@ impl Ui {
             pcf: 0.0,
             camera_position,
             world_matrix,
-        }])?;
+        }]);
 
         // begin render pass
         self.device
@@ -277,8 +277,6 @@ impl Ui {
         framebuffer.blit_to_texture(cmd);
 
         self.drawn = true;
-
-        Ok(())
     }
 
     pub(crate) fn handle_event(&mut self, event: &WindowEvent) {
@@ -326,7 +324,7 @@ impl Ui {
         image_uniform: &mut ImageUniform,
         width: u32,
         height: u32,
-    ) -> Result<()> {
+    ) {
         self.imgui.io_mut().display_size = [width as f32, height as f32];
         self.framebuffer.width = width;
         self.framebuffer.height = height;
@@ -335,7 +333,7 @@ impl Ui {
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(image_uniform, FramebufferUpdateData { width, height })
+            .update(image_uniform, FramebufferUpdateData { width, height });
     }
 
     pub(crate) const fn drawn(&self) -> bool {

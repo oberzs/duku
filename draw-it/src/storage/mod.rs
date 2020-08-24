@@ -11,7 +11,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
-use crate::error::Result;
 use crate::font::CoreFont;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -73,14 +72,14 @@ impl Storage {
         });
     }
 
-    pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) -> Result<()> {
+    pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) {
         // update meshes
         for (i, data) in self.meshes.receiver.try_iter() {
             self.meshes
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data)?;
+                .update(data);
         }
 
         // update materials
@@ -89,7 +88,7 @@ impl Storage {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data)?;
+                .update(data);
         }
 
         // update framebuffers
@@ -98,10 +97,8 @@ impl Storage {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(image_uniform, data)?;
+                .update(image_uniform, data);
         }
-
-        Ok(())
     }
 }
 

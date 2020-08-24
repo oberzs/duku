@@ -69,13 +69,13 @@ impl Builtins {
                     width: 1,
                     height: 1,
                 },
-            )?);
+            ));
             Texture::new(index)
         };
 
         // materials
         let white_material = {
-            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout)?);
+            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
             let mut mat = Material::new(index, updater);
             mat.set_phong_color([255, 255, 255]);
             mat.update();
@@ -83,7 +83,7 @@ impl Builtins {
         };
 
         let font_material = {
-            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout)?);
+            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
             let mut mat = Material::new(index, updater);
             mat.set_font_color([0, 0, 0]);
             mat.set_font_width(0.5);
@@ -93,11 +93,11 @@ impl Builtins {
         };
 
         // meshes
-        let surface_mesh = create_surface(device, storage)?;
-        let quad_mesh = create_quad(device, storage)?;
-        let cube_mesh = create_cube(device, storage)?;
-        let sphere_mesh = create_sphere(device, storage, 3)?;
-        let grid_mesh = create_grid(device, storage, 50)?;
+        let surface_mesh = create_surface(device, storage);
+        let quad_mesh = create_quad(device, storage);
+        let cube_mesh = create_cube(device, storage);
+        let sphere_mesh = create_sphere(device, storage, 3);
+        let grid_mesh = create_grid(device, storage, 50);
 
         // shaders
         let phong_shader = {
@@ -212,8 +212,8 @@ impl Builtins {
     }
 }
 
-fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![
@@ -232,11 +232,11 @@ fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
     mesh.calculate_normals();
     mesh.update();
 
-    Ok(mesh)
+    mesh
 }
 
-fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![
@@ -255,10 +255,10 @@ fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
     mesh.calculate_normals();
     mesh.update();
 
-    Ok(mesh)
+    mesh
 }
 
-fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
+fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
     let top = create_rectangle(
         device,
         storage,
@@ -266,7 +266,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [0.5, 0.5, 0.5],
         [0.5, 0.5, -0.5],
         [-0.5, 0.5, -0.5],
-    )?;
+    );
 
     let bottom = create_rectangle(
         device,
@@ -275,7 +275,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [-0.5, -0.5, 0.5],
         [-0.5, -0.5, -0.5],
         [0.5, -0.5, -0.5],
-    )?;
+    );
 
     let back = create_rectangle(
         device,
@@ -284,7 +284,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [-0.5, 0.5, 0.5],
         [-0.5, -0.5, 0.5],
         [0.5, -0.5, 0.5],
-    )?;
+    );
 
     let front = create_rectangle(
         device,
@@ -293,7 +293,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [0.5, 0.5, -0.5],
         [0.5, -0.5, -0.5],
         [-0.5, -0.5, -0.5],
-    )?;
+    );
 
     let left = create_rectangle(
         device,
@@ -302,7 +302,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [-0.5, 0.5, -0.5],
         [-0.5, -0.5, -0.5],
         [-0.5, -0.5, 0.5],
-    )?;
+    );
 
     let right = create_rectangle(
         device,
@@ -311,18 +311,14 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Result<Mesh> {
         [0.5, 0.5, 0.5],
         [0.5, -0.5, 0.5],
         [0.5, -0.5, -0.5],
-    )?;
+    );
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
 
-    Ok(Mesh::combine(
-        index,
-        updater,
-        &[top, bottom, front, back, left, right],
-    ))
+    Mesh::combine(index, updater, &[top, bottom, front, back, left, right])
 }
 
-fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Result<Mesh> {
+fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Mesh {
     let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
@@ -357,13 +353,13 @@ fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Result<
         indices.extend(&[vc, vc + 1]);
     }
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
     mesh.vertices = vertices;
     mesh.colors = colors;
     mesh.indices = indices;
     mesh.update();
-    Ok(mesh)
+    mesh
 }
 
 fn create_rectangle<V: Into<Vector3>>(
@@ -373,8 +369,8 @@ fn create_rectangle<V: Into<Vector3>>(
     p2: V,
     p3: V,
     p4: V,
-) -> Result<Mesh> {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+) -> Mesh {
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
 
     mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
@@ -387,10 +383,10 @@ fn create_rectangle<V: Into<Vector3>>(
     mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
 
-    Ok(mesh)
+    mesh
 }
 
-fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) -> Result<Mesh> {
+fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -462,14 +458,14 @@ fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) 
         uvs.push(Vector2::new(u, v));
     }
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device)?);
+    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
     mesh.vertices = vertices;
     mesh.indices = indices;
     mesh.uvs = uvs;
     mesh.calculate_normals();
     mesh.update();
-    Ok(mesh)
+    mesh
 }
 
 fn get_middle_point(

@@ -77,7 +77,7 @@ impl CoreFont {
                     font.font_size,
                     0,
                     &font.char_metrics,
-                )?,
+                ),
             );
         }
 
@@ -89,7 +89,7 @@ impl CoreFont {
             sdf_font.font_size,
             sdf_font.margin,
             &sdf_font.char_metrics,
-        )?;
+        );
 
         Ok(Self {
             bitmap_data,
@@ -150,7 +150,7 @@ fn create_font(
     font_size: u32,
     margin: u32,
     char_metrics: &HashMap<char, CharMetrics>,
-) -> Result<FontData> {
+) -> FontData {
     let texture = CoreTexture::new(
         device,
         uniform,
@@ -160,7 +160,7 @@ fn create_font(
             height: bitmap_size,
             format: ImageFormat::Gray,
         },
-    )?;
+    );
 
     let mut vertices = vec![];
     let mut uvs = vec![];
@@ -205,19 +205,19 @@ fn create_font(
     let normals = vec![Vector3::ZERO; vertex_count];
     let colors = vec![Color::WHITE; vertex_count];
 
-    let mut mesh = CoreMesh::new(device)?;
+    let mut mesh = CoreMesh::new(device);
     mesh.update(MeshUpdateData {
         vertices,
         normals,
         colors,
         uvs,
         indices,
-    })?;
+    });
 
-    Ok(FontData {
+    FontData {
         margin: norm_margin,
         char_data,
         texture,
         mesh,
-    })
+    }
 }

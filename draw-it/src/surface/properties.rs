@@ -3,7 +3,7 @@
 
 // properties for surface
 
-use ash::vk;
+use crate::vk;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ColorSpace {
@@ -18,15 +18,15 @@ pub enum VSync {
 
 impl ColorSpace {
     pub(crate) const fn flag(&self) -> vk::ColorSpaceKHR {
-        vk::ColorSpaceKHR::SRGB_NONLINEAR
+        vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
     }
 }
 
 impl VSync {
     pub(crate) const fn flag(&self) -> vk::PresentModeKHR {
         match *self {
-            Self::On => vk::PresentModeKHR::FIFO,
-            Self::Off => vk::PresentModeKHR::IMMEDIATE,
+            Self::On => vk::PRESENT_MODE_FIFO_KHR,
+            Self::Off => vk::PRESENT_MODE_IMMEDIATE_KHR,
         }
     }
 }

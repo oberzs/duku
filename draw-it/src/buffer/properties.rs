@@ -3,7 +3,7 @@
 
 // enums for possible buffer properties
 
-use ash::vk;
+use crate::vk;
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum BufferUsage {
@@ -22,20 +22,16 @@ pub(crate) enum BufferAccess {
 
 impl BufferUsage {
     pub(crate) fn combine(usages: &[Self]) -> vk::BufferUsageFlags {
-        usages
-            .iter()
-            .fold(vk::BufferUsageFlags::empty(), |acc, usage| {
-                acc | usage.flag()
-            })
+        usages.iter().fold(0, |acc, usage| acc | usage.flag())
     }
 
     pub(crate) const fn flag(&self) -> vk::BufferUsageFlags {
         match *self {
-            Self::Vertex => vk::BufferUsageFlags::VERTEX_BUFFER,
-            Self::Index => vk::BufferUsageFlags::INDEX_BUFFER,
-            Self::Uniform => vk::BufferUsageFlags::UNIFORM_BUFFER,
-            Self::TransferSrc => vk::BufferUsageFlags::TRANSFER_SRC,
-            Self::TransferDst => vk::BufferUsageFlags::TRANSFER_DST,
+            Self::Vertex => vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            Self::Index => vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
+            Self::Uniform => vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            Self::TransferSrc => vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+            Self::TransferDst => vk::BUFFER_USAGE_TRANSFER_DST_BIT,
         }
     }
 }
@@ -43,9 +39,9 @@ impl BufferUsage {
 impl BufferAccess {
     pub(crate) fn flag(&self) -> vk::MemoryPropertyFlags {
         match *self {
-            Self::Gpu => vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            Self::Gpu => vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             Self::Cpu => {
-                vk::MemoryPropertyFlags::HOST_COHERENT | vk::MemoryPropertyFlags::HOST_VISIBLE
+                vk::MEMORY_PROPERTY_HOST_COHERENT_BIT | vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT
             }
         }
     }
