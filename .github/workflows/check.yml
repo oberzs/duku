@@ -11,12 +11,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install Rust nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-
       - name: Check
         working-directory: ./draw-it
         run: cargo check --no-default-features

@@ -17,7 +17,7 @@
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
-    <img src="https://img.shields.io/badge/rust-1.46.0--nightly-orange?style=flat-square" alt="Rust Version" />
+    <img src="https://img.shields.io/badge/rust-1.45.2-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
   <a href="https://github.com/OllieBerzs/draw-it/blob/develop/LICENSE">
