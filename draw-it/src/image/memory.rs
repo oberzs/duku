@@ -13,6 +13,7 @@ use super::ImageMips;
 use super::ImageUsage;
 use super::Msaa;
 use crate::buffer::BufferMemory;
+use crate::device::Commands;
 use crate::device::Device;
 use crate::vk;
 
@@ -170,15 +171,13 @@ impl ImageMemory {
                 },
             };
 
-            self.device
-                .cmd_copy_buffer_to_image(cmd, memory.handle(), self.handle, region);
+            cmd.copy_buffer_to_image(memory.handle(), self.handle, region);
         });
     }
 
     pub(crate) fn change_layout(&mut self, new_layout: ImageLayout) {
         self.device.do_commands(|cmd| {
-            self.device.cmd_change_image_layout(
-                cmd,
+            cmd.change_image_layout(
                 self,
                 self.layout,
                 new_layout,
@@ -189,9 +188,8 @@ impl ImageMemory {
         self.layout = new_layout;
     }
 
-    pub(crate) fn change_layout_sync(&mut self, cmd: vk::CommandBuffer, new_layout: ImageLayout) {
-        self.device.cmd_change_image_layout(
-            cmd,
+    pub(crate) fn change_layout_sync(&mut self, cmd: &Commands, new_layout: ImageLayout) {
+        cmd.change_image_layout(
             self,
             self.layout,
             new_layout,
@@ -204,8 +202,7 @@ impl ImageMemory {
     pub(crate) fn generate_mipmaps(&self) {
         self.device.do_commands(|cmd| {
             for i in 1..self.mip_count {
-                self.device.cmd_change_image_layout(
-                    cmd,
+                cmd.change_image_layout(
                     self,
                     ImageLayout::TransferDst,
                     ImageLayout::TransferSrc,
@@ -213,10 +210,9 @@ impl ImageMemory {
                     0..self.layer_count,
                 );
 
-                self.device.cmd_blit_image_mip(cmd, self, i - 1, i);
+                cmd.blit_image_mip(self, i - 1, i);
 
-                self.device.cmd_change_image_layout(
-                    cmd,
+                cmd.change_image_layout(
                     self,
                     ImageLayout::TransferSrc,
                     ImageLayout::ShaderColor,
@@ -224,8 +220,7 @@ impl ImageMemory {
                     0..self.layer_count,
                 );
             }
-            self.device.cmd_change_image_layout(
-                cmd,
+            cmd.change_image_layout(
                 self,
                 ImageLayout::TransferDst,
                 ImageLayout::ShaderColor,

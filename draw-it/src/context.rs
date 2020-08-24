@@ -427,11 +427,9 @@ impl Context {
         }
 
         self.image_uniform.update_if_needed();
-        self.device.cmd_bind_uniform(
-            self.device.command_buffer(),
-            &self.shader_layout,
-            &self.image_uniform,
-        );
+        self.device
+            .commands()
+            .bind_uniform(&self.shader_layout, &self.image_uniform);
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {

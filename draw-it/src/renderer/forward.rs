@@ -91,9 +91,6 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         target: Target<'_>,
     ) {
-        let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, target.line_width);
-
         let current = self.device.current_frame();
 
         // reset current matrices and cascades
@@ -107,9 +104,11 @@ impl ForwardRenderer {
             self.shadow_pass(shader_layout, storage, &target, &view);
         }
 
+        let cmd = self.device.commands();
+        cmd.set_line_width(target.line_width);
+
         // bind current shadow map set
-        self.device
-            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
+        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
 
         let pcf = match self.pcf {
             Pcf::Disabled => 2.0,
@@ -143,12 +142,9 @@ impl ForwardRenderer {
         // do render pass
         {
             let framebuffer = storage.framebuffers.get(framebuffer);
-            self.device
-                .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
-            self.device
-                .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-            self.device
-                .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
+            cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
+            cmd.set_view(framebuffer.width(), framebuffer.height());
+            cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
         }
 
         // skybox rendering
@@ -163,7 +159,7 @@ impl ForwardRenderer {
         self.text_pass(&target.text_orders, storage, &target, shader_layout);
 
         // end rendering
-        self.device.cmd_end_render_pass(cmd);
+        cmd.end_render_pass();
         storage
             .framebuffers
             .get_mut(framebuffer)
@@ -178,9 +174,6 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         target: Target<'_>,
     ) {
-        let cmd = self.device.command_buffer();
-        self.device.cmd_set_line_width(cmd, target.line_width);
-
         let current = self.device.current_frame();
 
         // reset current matrices and cascades
@@ -194,9 +187,11 @@ impl ForwardRenderer {
             self.shadow_pass(shader_layout, storage, &target, &view);
         }
 
+        let cmd = self.device.commands();
+        cmd.set_line_width(target.line_width);
+
         // bind current shadow map set
-        self.device
-            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
+        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
 
         let pcf = match self.pcf {
             Pcf::Disabled => 2.0,
@@ -224,12 +219,9 @@ impl ForwardRenderer {
         }]);
 
         // do render pass
-        self.device
-            .cmd_begin_render_pass(cmd, framebuffer, target.clear.to_rgba_norm());
-        self.device
-            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-        self.device
-            .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
+        cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
+        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
 
         // skybox rendering
         if target.skybox {
@@ -243,7 +235,7 @@ impl ForwardRenderer {
         self.text_pass(&target.text_orders, storage, &target, shader_layout);
 
         // end rendering
-        self.device.cmd_end_render_pass(cmd);
+        cmd.end_render_pass();
         framebuffer.blit_to_texture(cmd);
     }
 
@@ -253,17 +245,17 @@ impl ForwardRenderer {
         storage: &Storage,
         shader_layout: &ShaderLayout,
     ) {
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
 
         for s_order in orders_by_shader {
             // bind shader
             let shader = storage.shaders.get(&s_order.shader);
-            self.device.cmd_bind_shader(cmd, shader);
+            cmd.bind_shader(shader);
 
             for m_order in &s_order.orders_by_material {
                 // bind material
                 let material = storage.materials.get(&m_order.material);
-                self.device.cmd_bind_material(cmd, shader_layout, material);
+                cmd.bind_material(shader_layout, material);
 
                 for order in &m_order.orders {
                     self.draw_order(storage, shader_layout, order);
@@ -279,13 +271,13 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         camera: &Camera,
     ) {
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
 
         let shader = storage.shaders.get(&target.builtins.skybox_shader.index);
-        self.device.cmd_bind_shader(cmd, shader);
+        cmd.bind_shader(shader);
 
         let mesh = storage.meshes.get(&target.builtins.cube_mesh.index);
-        self.device.cmd_bind_mesh(cmd, mesh);
+        cmd.bind_mesh(mesh);
 
         let model_matrix = (Transform {
             position: camera.transform.position,
@@ -293,8 +285,7 @@ impl ForwardRenderer {
             ..Default::default()
         })
         .as_matrix();
-        self.device.cmd_push_constants(
-            cmd,
+        cmd.push_constants(
             shader_layout,
             PushConstants {
                 sampler_index: 0,
@@ -302,7 +293,7 @@ impl ForwardRenderer {
                 model_matrix,
             },
         );
-        self.device.cmd_draw(cmd, mesh.index_count(), 0);
+        cmd.draw(mesh.index_count(), 0);
     }
 
     fn text_pass(
@@ -312,7 +303,7 @@ impl ForwardRenderer {
         target: &Target<'_>,
         shader_layout: &ShaderLayout,
     ) {
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
 
         for order in orders {
             let font = storage.fonts.get(&order.font);
@@ -328,16 +319,16 @@ impl ForwardRenderer {
 
             // bind shader
             let shader = storage.shaders.get(&shader_index);
-            self.device.cmd_bind_shader(cmd, shader);
+            cmd.bind_shader(shader);
 
             // bind material
             let material = storage.materials.get(&order.material);
-            self.device.cmd_bind_material(cmd, shader_layout, material);
+            cmd.bind_material(shader_layout, material);
 
             let albedo_index = font.texture(font_size).image_index();
             let mesh = font.mesh(font_size);
             let margin = font.margin(font_size);
-            self.device.cmd_bind_mesh(cmd, mesh);
+            cmd.bind_mesh(mesh);
 
             let mut transform = order.transform;
             let start_x = transform.position.x;
@@ -356,8 +347,7 @@ impl ForwardRenderer {
                     continue;
                 }
 
-                self.device.cmd_push_constants(
-                    cmd,
+                cmd.push_constants(
                     shader_layout,
                     PushConstants {
                         model_matrix: transform.as_matrix(),
@@ -367,7 +357,7 @@ impl ForwardRenderer {
                 );
 
                 let data = font.char_data(font_size, c);
-                self.device.cmd_draw(cmd, 6, data.offset);
+                cmd.draw(6, data.offset);
 
                 transform.position.x += data.advance * transform.scale.x;
             }
@@ -388,12 +378,11 @@ impl ForwardRenderer {
             None => return,
         };
 
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
         let current = self.device.current_frame();
 
         // bind temp shadow map set so we can write to main one
-        self.device
-            .cmd_bind_uniform(cmd, shader_layout, &self.shadow_frames[current].uniform);
+        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
@@ -445,13 +434,10 @@ impl ForwardRenderer {
             }]);
 
             // do render pass
-            self.device
-                .cmd_begin_render_pass(cmd, framebuffer, [1.0, 1.0, 1.0, 1.0]);
-            self.device
-                .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-            self.device
-                .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
-            self.device.cmd_bind_shader(cmd, &self.shadow_shader);
+            cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
+            cmd.set_view(framebuffer.width(), framebuffer.height());
+            cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
+            cmd.bind_shader(&self.shadow_shader);
 
             for s_order in &target.orders_by_shader {
                 for m_order in &s_order.orders_by_material {
@@ -462,20 +448,19 @@ impl ForwardRenderer {
                     }
                 }
             }
-            self.device.cmd_end_render_pass(cmd);
+            cmd.end_render_pass();
         }
     }
 
     fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
         let albedo_index = match &order.albedo {
             Albedo::Texture(tex) => storage.textures.get(tex).image_index(),
             Albedo::Framebuffer(fra) => storage.framebuffers.get(fra).texture_index(),
         };
         let mesh = storage.meshes.get(&order.mesh);
 
-        self.device.cmd_push_constants(
-            cmd,
+        cmd.push_constants(
             shader_layout,
             PushConstants {
                 model_matrix: order.model,
@@ -483,8 +468,8 @@ impl ForwardRenderer {
                 albedo_index,
             },
         );
-        self.device.cmd_bind_mesh(cmd, mesh);
-        self.device.cmd_draw(cmd, mesh.index_count(), 0);
+        cmd.bind_mesh(mesh);
+        cmd.draw(mesh.index_count(), 0);
     }
 }
 

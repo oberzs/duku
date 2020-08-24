@@ -53,10 +53,8 @@ impl BufferMemory {
     }
 
     pub(crate) fn copy_from_memory(&self, memory: &Self, size: usize) {
-        self.device.do_commands(|cmd| {
-            self.device
-                .cmd_copy_buffer(cmd, memory.handle(), self.handle, size);
-        });
+        self.device
+            .do_commands(|cmd| cmd.copy_buffer(memory.handle(), self.handle, size));
     }
 
     pub(crate) const fn handle(&self) -> vk::Buffer {

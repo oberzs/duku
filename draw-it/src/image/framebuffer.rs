@@ -15,6 +15,7 @@ use super::ImageMemoryOptions;
 use super::ImageUsage;
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
+use crate::device::Commands;
 use crate::device::Device;
 use crate::image::Msaa;
 use crate::math::Matrix4;
@@ -347,7 +348,7 @@ impl CoreFramebuffer {
         self.height = height;
     }
 
-    pub(crate) fn blit_to_texture(&mut self, cmd: vk::CommandBuffer) {
+    pub(crate) fn blit_to_texture(&mut self, cmd: &Commands) {
         if let Some(texture_image) = &mut self.texture_image {
             let stored_image = &mut self.images[self.stored_index];
 
@@ -356,7 +357,7 @@ impl CoreFramebuffer {
             texture_image.change_layout_sync(cmd, ImageLayout::TransferDst);
 
             // blit to shader image
-            self.device.cmd_blit_image(cmd, stored_image, texture_image);
+            cmd.blit_image(stored_image, texture_image);
 
             // set images back to initial state
             stored_image.change_layout_sync(cmd, ImageLayout::ShaderColor);

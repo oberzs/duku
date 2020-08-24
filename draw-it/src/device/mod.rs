@@ -3,11 +3,11 @@
 
 // Device - struct to access GPU API layer
 
+mod commands;
 mod pick;
 
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::cmp;
 use std::collections::HashSet;
 use std::ffi::c_void;
 use std::ffi::CString;
@@ -16,26 +16,19 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::mem;
-use std::ops::Range;
 use std::ptr;
 use std::slice;
 
+pub(crate) use commands::Commands;
 pub(crate) use pick::pick_gpu;
 
 use crate::buffer::BufferAccess;
-use crate::image::CoreFramebuffer;
-use crate::image::ImageLayout;
-use crate::image::ImageMemory;
+use crate::error::ErrorKind;
+use crate::error::Result;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
-use crate::mesh::CoreMesh;
-use crate::pipeline::CoreMaterial;
-use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
-use crate::pipeline::PushConstants;
-use crate::pipeline::ShaderLayout;
-use crate::pipeline::Uniform;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -47,8 +40,7 @@ pub(crate) struct Device {
     queue: (u32, vk::Queue),
     memory_types: Vec<vk::MemoryType>,
 
-    command_pools: [vk::CommandPool; FRAMES_IN_FLIGHT],
-    command_buffers: RefCell<[vk::CommandBuffer; FRAMES_IN_FLIGHT]>,
+    commands: [Commands; FRAMES_IN_FLIGHT],
     sync_acquire: [vk::Semaphore; FRAMES_IN_FLIGHT],
     sync_release: [vk::Semaphore; FRAMES_IN_FLIGHT],
     sync_submit: [vk::Fence; FRAMES_IN_FLIGHT],
@@ -235,6 +227,11 @@ impl Device {
             ));
         }
 
+        let commands = [
+            Commands::new(handle, queue_index),
+            Commands::new(handle, queue_index),
+        ];
+
         // create destroyed resource storage
         let destroyed_pipelines = [vec![], vec![]];
         let destroyed_buffers = [vec![], vec![]];
@@ -244,17 +241,16 @@ impl Device {
             destroyed_pipelines: RefCell::new(destroyed_pipelines),
             destroyed_buffers: RefCell::new(destroyed_buffers),
             destroyed_images: RefCell::new(destroyed_images),
-            command_buffers: RefCell::new(command_buffers),
             queue: (queue_index, queue),
             current_frame: Cell::new(0),
             stats: Cell::new(Stats::default()),
             used_materials: RefCell::new(HashSet::new()),
             used_shaders: RefCell::new(HashSet::new()),
+            commands,
             memory_types,
             sync_release,
             sync_acquire,
             sync_submit,
-            command_pools,
             handle,
         }
     }
@@ -262,7 +258,6 @@ impl Device {
     pub(crate) fn next_frame(&self, swapchain: &mut Swapchain) {
         let mut current = self.current_frame.get();
         current = (current + 1) % FRAMES_IN_FLIGHT;
-        let mut buffers = self.command_buffers.borrow_mut();
 
         swapchain.next(self.sync_acquire[current]);
 
@@ -281,8 +276,7 @@ impl Device {
         }
 
         // reset command buffer
-        let pool = self.command_pools[current];
-        self.free_command_buffer(pool, buffers[current]);
+        self.commands[current].free(self.handle);
 
         // cleanup destroyed storage
         self.cleanup_resources(current);
@@ -293,17 +287,10 @@ impl Device {
         self.used_shaders.borrow_mut().clear();
 
         // create new command buffer
-        let buffer_info = vk::CommandBufferAllocateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            p_next: ptr::null(),
-            command_pool: pool,
-            level: vk::COMMAND_BUFFER_LEVEL_PRIMARY,
-            command_buffer_count: 1,
-        };
-        unsafe { vk::allocate_command_buffers(self.handle, &buffer_info, &mut buffers[current]) };
+        self.commands[current].recreate(self.handle);
 
         // begin new command buffer
-        self.begin_command_buffer(buffers[current]);
+        self.commands[current].begin();
 
         self.current_frame.set(current);
     }
@@ -330,16 +317,15 @@ impl Device {
 
     pub(crate) fn submit(&self) {
         let current = self.current_frame.get();
-        let buffers = self.command_buffers.borrow();
 
         // end command buffer
-        self.end_command_buffer(buffers[current]);
+        self.commands[current].end();
 
         // submit
         let wait = [self.sync_acquire[current]];
         let signal = [self.sync_release[current]];
         let done = self.sync_submit[current];
-        let buffers = [buffers[current]];
+        let buffers = [self.commands[current].buffer()];
         let stage_mask = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
 
         let infos = [vk::SubmitInfo {
@@ -381,8 +367,8 @@ impl Device {
         }
     }
 
-    pub(crate) fn command_buffer(&self) -> vk::CommandBuffer {
-        self.command_buffers.borrow()[self.current_frame.get()]
+    pub(crate) fn commands(&self) -> &Commands {
+        &self.commands[self.current_frame.get()]
     }
 
     pub(crate) fn wait_idle(&self) {
@@ -782,44 +768,44 @@ impl Device {
         self.destroyed_pipelines.borrow_mut()[self.current_frame.get()].push(pipeline);
     }
 
-    pub(crate) fn create_shader_module(&self, source: &[u8]) -> vk::ShaderModule {
+    pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
         let mut cursor = Cursor::new(&source[..]);
 
-        let size = cursor.seek(SeekFrom::End(0)).unwrap();
-        // if size % 4 != 0 {
-        //     return Err(io::Error::new(
-        //         io::ErrorKind::InvalidData,
-        //         "input length not divisible by 4",
-        //     ));
-        // }
-        // if size > usize::max_value() as u64 {
-        //     return Err(io::Error::new(io::ErrorKind::InvalidData, "input too long"));
-        // }
+        // check data size
+        let size = cursor.seek(SeekFrom::End(0)).expect("bad index");
+        if size % 4 != 0 {
+            return Err(ErrorKind::InvalidShader.into());
+        }
+        if size > usize::max_value() as u64 {
+            return Err(ErrorKind::InvalidShader.into());
+        }
+
+        // read data
         let words = (size / 4) as usize;
         let mut code = Vec::<u32>::with_capacity(words);
-        cursor.seek(SeekFrom::Start(0)).unwrap();
+        cursor.seek(SeekFrom::Start(0)).expect("bad index");
         unsafe {
             cursor
                 .read_exact(slice::from_raw_parts_mut(
                     code.as_mut_ptr() as *mut u8,
                     words * 4,
                 ))
-                .unwrap();
+                .expect("bad read");
             code.set_len(words);
         }
-        const MAGIC_NUMBER: u32 = 0x0723_0203;
-        if !code.is_empty() && code[0] == MAGIC_NUMBER.swap_bytes() {
+
+        // check magic number
+        let magic_number = 0x0723_0203u32;
+        if !code.is_empty() && code[0] == magic_number.swap_bytes() {
             for word in &mut code {
                 *word = word.swap_bytes();
             }
         }
-        // if code.is_empty() || code[0] != MAGIC_NUMBER {
-        // return Err(io::Error::new(
-        // io::ErrorKind::InvalidData,
-        // "input missing SPIR-V magic number",
-        // ));
-        // }
+        if code.is_empty() || code[0] != magic_number {
+            return Err(ErrorKind::InvalidShader.into());
+        }
 
+        // create module
         let info = vk::ShaderModuleCreateInfo {
             s_type: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             p_next: ptr::null(),
@@ -836,7 +822,7 @@ impl Device {
                 &mut module,
             ));
         }
-        module
+        Ok(module)
     }
 
     pub(crate) fn destroy_shader_module(&self, module: vk::ShaderModule) {
@@ -845,487 +831,16 @@ impl Device {
         }
     }
 
-    pub(crate) fn destroy_command_pool(&self, pool: vk::CommandPool) {
-        unsafe {
-            vk::destroy_command_pool(self.handle, pool, ptr::null());
-        }
-    }
-
-    pub(crate) fn do_commands(&self, mut fun: impl FnMut(vk::CommandBuffer)) {
-        // create single use command pool
-        let pool_info = vk::CommandPoolCreateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            p_next: ptr::null(),
-            flags: vk::COMMAND_POOL_CREATE_TRANSIENT_BIT,
-            queue_family_index: self.queue.0,
-        };
-        let mut command_pool = 0;
-        unsafe {
-            vk::check(vk::create_command_pool(
-                self.handle,
-                &pool_info,
-                ptr::null(),
-                &mut command_pool,
-            ));
-        }
-
-        // create single use command buffer
-        let buffer_info = vk::CommandBufferAllocateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            p_next: ptr::null(),
-            level: vk::COMMAND_BUFFER_LEVEL_PRIMARY,
-            command_buffer_count: 1,
-            command_pool,
-        };
-        let mut buffer = 0;
-        unsafe {
-            vk::check(vk::allocate_command_buffers(
-                self.handle,
-                &buffer_info,
-                &mut buffer,
-            ));
-        }
+    pub(crate) fn do_commands(&self, mut fun: impl FnMut(&Commands)) {
+        // create single use commands
+        let cmd = Commands::new(self.handle, self.queue.0);
 
         // do commands
-        self.begin_command_buffer(buffer);
-        fun(buffer);
-        self.end_command_buffer(buffer);
-        self.submit_and_wait(buffer);
-        self.destroy_command_pool(command_pool);
-    }
-
-    pub(crate) fn free_command_buffer(&self, pool: vk::CommandPool, buffer: vk::CommandBuffer) {
-        let buffers = [buffer];
-        unsafe {
-            vk::check(vk::reset_command_pool(
-                self.handle,
-                pool,
-                vk::COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT,
-            ));
-            vk::free_command_buffers(self.handle, pool, 1, buffers.as_ptr());
-        }
-    }
-
-    pub(crate) fn begin_command_buffer(&self, buffer: vk::CommandBuffer) {
-        let info = vk::CommandBufferBeginInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            p_next: ptr::null(),
-            flags: vk::COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-            p_inheritance_info: ptr::null(),
-        };
-        unsafe {
-            vk::check(vk::begin_command_buffer(buffer, &info));
-        }
-    }
-
-    pub(crate) fn end_command_buffer(&self, buffer: vk::CommandBuffer) {
-        unsafe {
-            vk::check(vk::end_command_buffer(buffer));
-        }
-    }
-
-    pub(crate) fn cmd_begin_render_pass(
-        &self,
-        buffer: vk::CommandBuffer,
-        framebuffer: &CoreFramebuffer,
-        clear: [f32; 4],
-    ) {
-        // create clear values based on framebuffer image formats
-        let clear_values: Vec<_> = framebuffer
-            .iter_images()
-            .map(|image| {
-                if image.has_depth_format() {
-                    vk::ClearValue {
-                        depth_stencil: vk::ClearDepthStencilValue {
-                            depth: 1.0,
-                            stencil: 0,
-                        },
-                    }
-                } else {
-                    vk::ClearValue {
-                        color: vk::ClearColorValue { float32: clear },
-                    }
-                }
-            })
-            .collect();
-
-        let info = vk::RenderPassBeginInfo {
-            s_type: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            p_next: ptr::null(),
-            render_pass: framebuffer.render_pass(),
-            framebuffer: framebuffer.handle(),
-            render_area: vk::Rect2D {
-                offset: vk::Offset2D { x: 0, y: 0 },
-                extent: vk::Extent2D {
-                    width: framebuffer.width(),
-                    height: framebuffer.height(),
-                },
-            },
-            clear_value_count: clear_values.len() as u32,
-            p_clear_values: clear_values.as_ptr(),
-        };
-
-        unsafe {
-            vk::cmd_begin_render_pass(buffer, &info, vk::SUBPASS_CONTENTS_INLINE);
-        }
-    }
-
-    pub(crate) fn cmd_end_render_pass(&self, buffer: vk::CommandBuffer) {
-        unsafe {
-            vk::cmd_end_render_pass(buffer);
-        }
-    }
-
-    pub(crate) fn cmd_bind_shader(&self, buffer: vk::CommandBuffer, shader: &CoreShader) {
-        // update stats
-        let mut stats = self.stats.get();
-        let mut used = self.used_shaders.borrow_mut();
-        if !used.contains(&shader.handle()) {
-            used.insert(shader.handle());
-            stats.shaders_used += 1;
-        }
-        stats.shader_rebinds += 1;
-        self.stats.set(stats);
-
-        // bind shader
-        unsafe {
-            vk::cmd_bind_pipeline(buffer, vk::PIPELINE_BIND_POINT_GRAPHICS, shader.handle());
-        }
-    }
-
-    pub(crate) fn cmd_bind_material(
-        &self,
-        buffer: vk::CommandBuffer,
-        layout: &ShaderLayout,
-        material: &CoreMaterial,
-    ) {
-        // update stats
-        let mut stats = self.stats.get();
-        let mut used = self.used_materials.borrow_mut();
-        if !used.contains(&material.descriptor()) {
-            used.insert(material.descriptor());
-            stats.materials_used += 1;
-        }
-        stats.material_rebinds += 1;
-        self.stats.set(stats);
-
-        // bind material
-        self.cmd_bind_descriptor(buffer, layout, material.descriptor());
-    }
-
-    pub(crate) fn cmd_bind_descriptor(
-        &self,
-        buffer: vk::CommandBuffer,
-        layout: &ShaderLayout,
-        descriptor: Descriptor,
-    ) {
-        let sets = [descriptor.1];
-        unsafe {
-            vk::cmd_bind_descriptor_sets(
-                buffer,
-                vk::PIPELINE_BIND_POINT_GRAPHICS,
-                layout.handle(),
-                descriptor.0,
-                1,
-                sets.as_ptr(),
-                0,
-                ptr::null(),
-            );
-        }
-    }
-
-    pub(crate) fn cmd_bind_uniform(
-        &self,
-        buffer: vk::CommandBuffer,
-        layout: &ShaderLayout,
-        uniform: &impl Uniform,
-    ) {
-        self.cmd_bind_descriptor(buffer, layout, uniform.descriptor());
-    }
-
-    pub(crate) fn cmd_bind_mesh(&self, buffer: vk::CommandBuffer, mesh: &CoreMesh) {
-        self.cmd_bind_index_buffer(buffer, mesh.index_buffer());
-        self.cmd_bind_vertex_buffer(buffer, mesh.vertex_buffer());
-    }
-
-    fn cmd_bind_vertex_buffer(&self, buffer: vk::CommandBuffer, v_buffer: vk::Buffer) {
-        let buffers = [v_buffer];
-        let offsets = [0];
-        unsafe {
-            vk::cmd_bind_vertex_buffers(buffer, 0, 1, buffers.as_ptr(), offsets.as_ptr());
-        }
-    }
-
-    fn cmd_bind_index_buffer(&self, buffer: vk::CommandBuffer, i_buffer: vk::Buffer) {
-        unsafe {
-            vk::cmd_bind_index_buffer(buffer, i_buffer, 0, vk::INDEX_TYPE_UINT16);
-        }
-    }
-
-    pub(crate) fn cmd_push_constants(
-        &self,
-        buffer: vk::CommandBuffer,
-        layout: &ShaderLayout,
-        constants: PushConstants,
-    ) {
-        unsafe {
-            let data: &[u8] = slice::from_raw_parts(
-                &constants as *const PushConstants as *const u8,
-                mem::size_of::<PushConstants>(),
-            );
-
-            vk::cmd_push_constants(
-                buffer,
-                layout.handle(),
-                vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
-                0,
-                data.len() as u32,
-                data.as_ptr().cast(),
-            );
-        }
-    }
-
-    pub(crate) fn cmd_draw(&self, buffer: vk::CommandBuffer, count: usize, offset: usize) {
-        // update stats
-        let mut stats = self.stats.get();
-        stats.drawn_indices += count as u32;
-        stats.draw_calls += 1;
-        self.stats.set(stats);
-
-        // draw
-        unsafe {
-            vk::cmd_draw_indexed(buffer, count as u32, 1, offset as u32, 0, 0);
-        }
-    }
-
-    pub(crate) fn cmd_copy_buffer(
-        &self,
-        buffer: vk::CommandBuffer,
-        src: vk::Buffer,
-        dst: vk::Buffer,
-        size: usize,
-    ) {
-        let region = [vk::BufferCopy {
-            src_offset: 0,
-            dst_offset: 0,
-            size: size as u64,
-        }];
-        unsafe {
-            vk::cmd_copy_buffer(buffer, src, dst, 1, region.as_ptr());
-        }
-    }
-
-    pub(crate) fn cmd_copy_buffer_to_image(
-        &self,
-        buffer: vk::CommandBuffer,
-        src: vk::Buffer,
-        dst: vk::Image,
-        region: vk::BufferImageCopy,
-    ) {
-        let regions = [region];
-        unsafe {
-            vk::cmd_copy_buffer_to_image(
-                buffer,
-                src,
-                dst,
-                ImageLayout::TransferDst.flag(),
-                1,
-                regions.as_ptr(),
-            );
-        }
-    }
-
-    pub(crate) fn cmd_set_view(&self, buffer: vk::CommandBuffer, width: u32, height: u32) {
-        let viewport = [vk::Viewport {
-            x: 0.0,
-            y: height as f32,
-            width: width as f32,
-            height: -(height as f32),
-            min_depth: 0.0,
-            max_depth: 1.0,
-        }];
-        let scissor = [vk::Rect2D {
-            offset: vk::Offset2D { x: 0, y: 0 },
-            extent: vk::Extent2D { width, height },
-        }];
-
-        unsafe {
-            vk::cmd_set_viewport(buffer, 0, 1, viewport.as_ptr());
-            vk::cmd_set_scissor(buffer, 0, 1, scissor.as_ptr());
-        }
-    }
-
-    pub(crate) fn cmd_set_line_width(&self, buffer: vk::CommandBuffer, width: f32) {
-        unsafe {
-            vk::cmd_set_line_width(buffer, width);
-        }
-    }
-
-    pub(crate) fn cmd_blit_image_mip(
-        &self,
-        buffer: vk::CommandBuffer,
-        image: &ImageMemory,
-        src: u32,
-        dst: u32,
-    ) {
-        fn mip_offsets(image: &ImageMemory, mip: u32) -> [vk::Offset3D; 2] {
-            let orig_width = image.width();
-            let orig_height = image.height();
-            let scale = 2u32.pow(mip);
-            let width = cmp::max(orig_width / scale, 1);
-            let height = cmp::max(orig_height / scale, 1);
-            [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: width as i32,
-                    y: height as i32,
-                    z: 1,
-                },
-            ]
-        }
-
-        let src_offsets = mip_offsets(image, src);
-        let dst_offsets = mip_offsets(image, dst);
-
-        let src_subresource = vk::ImageSubresourceLayers {
-            aspect_mask: image.all_aspects(),
-            mip_level: src,
-            base_array_layer: 0,
-            layer_count: image.layer_count(),
-        };
-        let dst_subresource = vk::ImageSubresourceLayers {
-            aspect_mask: image.all_aspects(),
-            mip_level: dst,
-            base_array_layer: 0,
-            layer_count: image.layer_count(),
-        };
-        let blit = [vk::ImageBlit {
-            src_subresource,
-            dst_subresource,
-            src_offsets,
-            dst_offsets,
-        }];
-
-        unsafe {
-            vk::cmd_blit_image(
-                buffer,
-                image.handle(),
-                ImageLayout::TransferSrc.flag(),
-                image.handle(),
-                ImageLayout::TransferDst.flag(),
-                1,
-                blit.as_ptr(),
-                vk::FILTER_LINEAR,
-            );
-        }
-    }
-
-    pub(crate) fn cmd_blit_image(
-        &self,
-        buffer: vk::CommandBuffer,
-        src: &ImageMemory,
-        dst: &ImageMemory,
-    ) {
-        debug_assert!(
-            src.width() == dst.width() && src.height() == dst.height(),
-            "cannot blit image, sizes are different"
-        );
-        debug_assert!(
-            src.all_aspects() == dst.all_aspects(),
-            "cannot blit image, aspects are different"
-        );
-        debug_assert!(
-            src.layer_count() == dst.layer_count(),
-            "cannot blit image, layer counts are different"
-        );
-
-        let blit = [vk::ImageBlit {
-            src_subresource: vk::ImageSubresourceLayers {
-                aspect_mask: src.all_aspects(),
-                mip_level: 0,
-                base_array_layer: 0,
-                layer_count: src.layer_count(),
-            },
-            dst_subresource: vk::ImageSubresourceLayers {
-                aspect_mask: src.all_aspects(),
-                mip_level: 0,
-                base_array_layer: 0,
-                layer_count: src.layer_count(),
-            },
-            src_offsets: [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: src.width() as i32,
-                    y: src.height() as i32,
-                    z: 1,
-                },
-            ],
-            dst_offsets: [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: src.width() as i32,
-                    y: src.height() as i32,
-                    z: 1,
-                },
-            ],
-        }];
-
-        unsafe {
-            vk::cmd_blit_image(
-                buffer,
-                src.handle(),
-                ImageLayout::TransferSrc.flag(),
-                dst.handle(),
-                ImageLayout::TransferDst.flag(),
-                1,
-                blit.as_ptr(),
-                vk::FILTER_LINEAR,
-            );
-        }
-    }
-
-    pub(crate) fn cmd_change_image_layout(
-        &self,
-        buffer: vk::CommandBuffer,
-        image: &ImageMemory,
-        old_layout: ImageLayout,
-        new_layout: ImageLayout,
-        mips: Range<u32>,
-        layers: Range<u32>,
-    ) {
-        let subresource = vk::ImageSubresourceRange {
-            aspect_mask: image.all_aspects(),
-            base_mip_level: mips.start,
-            level_count: mips.end - mips.start,
-            base_array_layer: layers.start,
-            layer_count: layers.end - layers.start,
-        };
-        let barrier = [vk::ImageMemoryBarrier {
-            s_type: vk::STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            p_next: ptr::null(),
-            src_access_mask: old_layout.access_flag(),
-            dst_access_mask: new_layout.access_flag(),
-            old_layout: old_layout.flag(),
-            new_layout: new_layout.flag(),
-            src_queue_family_index: vk::QUEUE_FAMILY_IGNORED,
-            dst_queue_family_index: vk::QUEUE_FAMILY_IGNORED,
-            image: image.handle(),
-            subresource_range: subresource,
-        }];
-        unsafe {
-            vk::cmd_pipeline_barrier(
-                buffer,
-                old_layout.stage_flag(),
-                new_layout.stage_flag(),
-                0,
-                0,
-                ptr::null(),
-                0,
-                ptr::null(),
-                1,
-                barrier.as_ptr(),
-            );
-        }
+        cmd.begin();
+        fun(&cmd);
+        cmd.end();
+        self.submit_and_wait(cmd.buffer());
+        cmd.destroy(self.handle);
     }
 
     fn cleanup_resources(&self, frame: usize) {
@@ -1388,8 +903,8 @@ impl Drop for Device {
             for f in &self.sync_submit {
                 vk::destroy_fence(self.handle, *f, ptr::null());
             }
-            for p in &self.command_pools {
-                self.destroy_command_pool(*p);
+            for c in &self.commands {
+                c.destroy(self.handle);
             }
             vk::destroy_device(self.handle, ptr::null());
         }

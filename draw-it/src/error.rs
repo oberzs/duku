@@ -30,6 +30,7 @@ pub enum ErrorType {
 pub enum ErrorKind {
     UnsupportedExtension(String),
     UnsupportedMemoryType,
+    InvalidShader,
     NoSuitableGpu,
     NoSuitableMemoryType,
     #[cfg(feature = "ui")]

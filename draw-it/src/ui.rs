@@ -230,7 +230,7 @@ impl Ui {
         });
 
         // render ui
-        let cmd = self.device.command_buffer();
+        let cmd = self.device.commands();
         let framebuffer = storage.framebuffers.get_mut(&self.framebuffer.index);
 
         // update world uniform
@@ -248,20 +248,16 @@ impl Ui {
         }]);
 
         // begin render pass
-        self.device
-            .cmd_begin_render_pass(cmd, framebuffer, [0.0, 0.0, 0.0, 0.0]);
-        self.device
-            .cmd_set_view(cmd, framebuffer.width(), framebuffer.height());
-        self.device.cmd_set_line_width(cmd, 1.0);
+        cmd.begin_render_pass(framebuffer, [0.0, 0.0, 0.0, 0.0]);
+        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.set_line_width(1.0);
 
         // bind storage
-        self.device
-            .cmd_bind_descriptor(cmd, shader_layout, framebuffer.world_descriptor());
-        self.device.cmd_bind_shader(cmd, &self.shader);
+        cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
+        cmd.bind_shader(&self.shader);
 
         // render mesh
-        self.device.cmd_push_constants(
-            cmd,
+        cmd.push_constants(
             shader_layout,
             PushConstants {
                 albedo_index: self.texture.image_index(),
@@ -270,10 +266,10 @@ impl Ui {
             },
         );
 
-        self.device.cmd_bind_mesh(cmd, &self.mesh);
-        self.device.cmd_draw(cmd, self.mesh.index_count(), 0);
+        cmd.bind_mesh(&self.mesh);
+        cmd.draw(self.mesh.index_count(), 0);
 
-        self.device.cmd_end_render_pass(cmd);
+        cmd.end_render_pass();
         framebuffer.blit_to_texture(cmd);
 
         self.drawn = true;

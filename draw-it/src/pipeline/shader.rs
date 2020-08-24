@@ -59,8 +59,8 @@ impl CoreShader {
         let shape_mode = ShapeMode::from(&data.shape_mode);
         let cull_mode = CullMode::from(&data.cull_mode);
 
-        let vert_module = device.create_shader_module(&data.vert);
-        let frag_module = device.create_shader_module(&data.frag);
+        let vert_module = device.create_shader_module(&data.vert)?;
+        let frag_module = device.create_shader_module(&data.frag)?;
         let entry_point = CString::new("main").expect("bad code");
 
         // configure stages
