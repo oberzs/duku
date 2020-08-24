@@ -7,11 +7,11 @@ mod handle;
 mod properties;
 mod swapchain;
 
-use ash::vk;
+use std::ptr;
 use std::rc::Rc;
 
-use crate::error::Result;
 use crate::instance::Instance;
+use crate::vk;
 
 pub(crate) use properties::ColorSpace;
 pub(crate) use swapchain::Swapchain;
@@ -28,24 +28,27 @@ pub(crate) struct Surface {
 
 impl Surface {
     #[cfg(target_os = "windows")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
         use std::os::raw::c_void;
-        use std::ptr;
         use winapi::um::libloaderapi::GetModuleHandleW;
 
         let hinstance = unsafe { GetModuleHandleW(ptr::null()) } as *const c_void;
-        let info = vk::Win32SurfaceCreateInfoKHR::builder()
-            .hwnd(window.hwnd)
-            .hinstance(hinstance);
+        let info = vk::Win32SurfaceCreateInfoKHR {
+            s_type: vk::STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+            p_next: ptr::null(),
+            flags: 0,
+            hwnd: window.hwnd,
+            hinstance,
+        };
 
-        let handle = instance.create_surface(&info)?;
+        let handle = instance.create_surface(&info);
 
-        Ok(Self {
+        Self {
             handle,
             width: window.width,
             height: window.height,
             instance: Rc::clone(instance),
-        })
+        }
     }
 
     #[cfg(target_os = "linux")]

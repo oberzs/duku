@@ -3,8 +3,8 @@
 
 // ImageMemory - struct that manages allocated image memory
 
-use ash::vk;
 use std::cmp;
+use std::ptr;
 use std::rc::Rc;
 
 use super::ImageFormat;
@@ -14,7 +14,7 @@ use super::ImageUsage;
 use super::Msaa;
 use crate::buffer::BufferMemory;
 use crate::device::Device;
-use crate::error::Result;
+use crate::vk;
 
 pub(crate) struct ImageMemory {
     handle: vk::Image,
@@ -42,7 +42,7 @@ pub(crate) struct ImageMemoryOptions<'usage> {
 }
 
 impl ImageMemory {
-    pub(crate) fn new(device: &Rc<Device>, options: ImageMemoryOptions<'_>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, options: ImageMemoryOptions<'_>) -> Self {
         // calculate mip count
         let mip_count = match options.mips {
             ImageMips::One => 1,
@@ -60,9 +60,9 @@ impl ImageMemory {
         // cubemap info
         let array_layers = if options.cubemap { 6 } else { 1 };
         let flags = if options.cubemap {
-            vk::ImageCreateFlags::CUBE_COMPATIBLE
+            vk::IMAGE_CREATE_CUBE_COMPATIBLE_BIT
         } else {
-            vk::ImageCreateFlags::empty()
+            0
         };
 
         // allocate memory if a handle was not supplied
@@ -71,29 +71,34 @@ impl ImageMemory {
             Some(handle) => (handle, None),
             None => {
                 // create image
-                let image_info = vk::ImageCreateInfo::builder()
-                    .image_type(vk::ImageType::TYPE_2D)
-                    .extent(vk::Extent3D {
+                let image_info = vk::ImageCreateInfo {
+                    s_type: vk::STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                    p_next: ptr::null(),
+                    image_type: vk::IMAGE_TYPE_2D,
+                    format: options.format.flag(),
+                    extent: vk::Extent3D {
                         width: options.width,
                         height: options.height,
                         depth: 1,
-                    })
-                    .mip_levels(mip_count)
-                    .array_layers(array_layers)
-                    .format(options.format.flag())
-                    .tiling(vk::ImageTiling::OPTIMAL)
-                    .initial_layout(layout.flag())
-                    .usage(ImageUsage::combine(options.usage))
-                    .sharing_mode(vk::SharingMode::EXCLUSIVE)
-                    .samples(options.msaa.flag())
-                    .flags(flags);
+                    },
+                    mip_levels: mip_count,
+                    samples: options.msaa.flag(),
+                    tiling: vk::IMAGE_TILING_OPTIMAL,
+                    usage: ImageUsage::combine(options.usage),
+                    sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
+                    queue_family_index_count: 0,
+                    p_queue_family_indices: ptr::null(),
+                    initial_layout: layout.flag(),
+                    array_layers,
+                    flags,
+                };
 
-                let (handle, memory) = device.allocate_image(&image_info)?;
+                let (handle, memory) = device.allocate_image(&image_info);
                 (handle, Some(memory))
             }
         };
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             width: options.width,
             height: options.height,
@@ -104,65 +109,73 @@ impl ImageMemory {
             mip_count,
             layout,
             memory,
-        })
+        }
     }
 
-    pub(crate) fn add_view(&mut self) -> Result<vk::ImageView> {
+    pub(crate) fn add_view(&mut self) -> vk::ImageView {
         let view_type = if self.layer_count == 6 {
-            vk::ImageViewType::CUBE
+            vk::IMAGE_VIEW_TYPE_CUBE
         } else {
-            vk::ImageViewType::TYPE_2D
+            vk::IMAGE_VIEW_TYPE_2D
         };
 
-        let subresource = vk::ImageSubresourceRange::builder()
-            .aspect_mask(self.format.aspect())
-            .base_mip_level(0)
-            .base_array_layer(0)
-            .layer_count(self.layer_count)
-            .level_count(self.mip_count)
-            .build();
-        let view_info = vk::ImageViewCreateInfo::builder()
-            .image(self.handle)
-            .view_type(view_type)
-            .format(self.format.flag())
-            .subresource_range(subresource);
+        let subresource = vk::ImageSubresourceRange {
+            aspect_mask: self.format.aspect(),
+            base_mip_level: 0,
+            level_count: self.mip_count,
+            base_array_layer: 0,
+            layer_count: self.layer_count,
+        };
+        let view_info = vk::ImageViewCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            image: self.handle,
+            format: self.format.flag(),
+            components: vk::ComponentMapping {
+                r: vk::COMPONENT_SWIZZLE_R,
+                g: vk::COMPONENT_SWIZZLE_G,
+                b: vk::COMPONENT_SWIZZLE_B,
+                a: vk::COMPONENT_SWIZZLE_A,
+            },
+            subresource_range: subresource,
+            view_type,
+        };
 
-        let view = self.device.create_image_view(&view_info)?;
+        let view = self.device.create_image_view(&view_info);
         self.views.push(view);
-        Ok(view)
+        view
     }
 
-    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory, layer: u32) -> Result<()> {
+    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory, layer: u32) {
         debug_assert!(layer < self.layer_count, "layer out of bounds");
 
-        let subresource = vk::ImageSubresourceLayers::builder()
-            .aspect_mask(self.format.aspect())
-            .base_array_layer(layer)
-            .layer_count(1)
-            .mip_level(0)
-            .build();
-
-        let region = vk::BufferImageCopy::builder()
-            .buffer_offset(0)
-            .buffer_row_length(0)
-            .buffer_image_height(0)
-            .image_subresource(subresource)
-            .image_offset(vk::Offset3D { x: 0, y: 0, z: 0 })
-            .image_extent(vk::Extent3D {
-                width: self.width,
-                height: self.height,
-                depth: 1,
-            })
-            .build();
-
         self.device.do_commands(|cmd| {
+            let subresource = vk::ImageSubresourceLayers {
+                aspect_mask: self.format.aspect(),
+                mip_level: 0,
+                base_array_layer: layer,
+                layer_count: 1,
+            };
+            let region = vk::BufferImageCopy {
+                buffer_offset: 0,
+                buffer_row_length: 0,
+                buffer_image_height: 0,
+                image_subresource: subresource,
+                image_offset: vk::Offset3D { x: 0, y: 0, z: 0 },
+                image_extent: vk::Extent3D {
+                    width: self.width,
+                    height: self.height,
+                    depth: 1,
+                },
+            };
+
             self.device
                 .cmd_copy_buffer_to_image(cmd, memory.handle(), self.handle, region);
-            Ok(())
-        })
+        });
     }
 
-    pub(crate) fn change_layout(&mut self, new_layout: ImageLayout) -> Result<()> {
+    pub(crate) fn change_layout(&mut self, new_layout: ImageLayout) {
         self.device.do_commands(|cmd| {
             self.device.cmd_change_image_layout(
                 cmd,
@@ -172,10 +185,8 @@ impl ImageMemory {
                 0..self.mip_count,
                 0..self.layer_count,
             );
-            Ok(())
-        })?;
+        });
         self.layout = new_layout;
-        Ok(())
     }
 
     pub(crate) fn change_layout_sync(&mut self, cmd: vk::CommandBuffer, new_layout: ImageLayout) {
@@ -190,7 +201,7 @@ impl ImageMemory {
         self.layout = new_layout;
     }
 
-    pub(crate) fn generate_mipmaps(&self) -> Result<()> {
+    pub(crate) fn generate_mipmaps(&self) {
         self.device.do_commands(|cmd| {
             for i in 1..self.mip_count {
                 self.device.cmd_change_image_layout(
@@ -221,8 +232,7 @@ impl ImageMemory {
                 (self.mip_count - 1)..self.mip_count,
                 0..self.layer_count,
             );
-            Ok(())
-        })
+        });
     }
 
     pub(crate) fn get_view(&self, index: usize) -> vk::ImageView {

@@ -3,7 +3,7 @@
 
 // enums for possible image properties
 
-use ash::vk;
+use crate::vk;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum ImageFormat {
@@ -77,21 +77,17 @@ pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
 
 impl ImageUsage {
     pub(crate) fn combine(usages: &[Self]) -> vk::ImageUsageFlags {
-        usages
-            .iter()
-            .fold(vk::ImageUsageFlags::empty(), |acc, usage| {
-                acc | usage.flag()
-            })
+        usages.iter().fold(0, |acc, usage| acc | usage.flag())
     }
 
     pub(crate) const fn flag(&self) -> vk::ImageUsageFlags {
         match *self {
-            Self::Color => vk::ImageUsageFlags::COLOR_ATTACHMENT,
-            Self::Depth => vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
-            Self::Transient => vk::ImageUsageFlags::TRANSIENT_ATTACHMENT,
-            Self::TransferSrc => vk::ImageUsageFlags::TRANSFER_SRC,
-            Self::TransferDst => vk::ImageUsageFlags::TRANSFER_DST,
-            Self::Sampled => vk::ImageUsageFlags::SAMPLED,
+            Self::Color => vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            Self::Depth => vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            Self::Transient => vk::IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+            Self::TransferSrc => vk::IMAGE_USAGE_TRANSFER_SRC_BIT,
+            Self::TransferDst => vk::IMAGE_USAGE_TRANSFER_DST_BIT,
+            Self::Sampled => vk::IMAGE_USAGE_SAMPLED_BIT,
         }
     }
 }
@@ -99,15 +95,15 @@ impl ImageUsage {
 impl ImageFormat {
     pub(crate) const fn flag(&self) -> vk::Format {
         match *self {
-            Self::Rgb => vk::Format::R8G8B8_UNORM,
-            Self::Rgba => vk::Format::R8G8B8A8_UNORM,
-            Self::Srgb => vk::Format::R8G8B8_SRGB,
-            Self::Srgba => vk::Format::R8G8B8A8_SRGB,
-            Self::Sbgra => vk::Format::B8G8R8A8_SRGB,
-            Self::Depth => vk::Format::D32_SFLOAT_S8_UINT,
-            Self::DepthStencil => vk::Format::D32_SFLOAT_S8_UINT,
-            Self::Float2 => vk::Format::R32G32_SFLOAT,
-            Self::Gray => vk::Format::R8_UNORM,
+            Self::Rgb => vk::FORMAT_R8G8B8_UNORM,
+            Self::Rgba => vk::FORMAT_R8G8B8A8_UNORM,
+            Self::Srgb => vk::FORMAT_R8G8B8_SRGB,
+            Self::Srgba => vk::FORMAT_R8G8B8A8_SRGB,
+            Self::Sbgra => vk::FORMAT_B8G8R8A8_SRGB,
+            Self::Depth => vk::FORMAT_D32_SFLOAT_S8_UINT,
+            Self::DepthStencil => vk::FORMAT_D32_SFLOAT_S8_UINT,
+            Self::Float2 => vk::FORMAT_R32G32_SFLOAT,
+            Self::Gray => vk::FORMAT_R8_UNORM,
         }
     }
 
@@ -119,16 +115,16 @@ impl ImageFormat {
             | Self::Srgba
             | Self::Srgb
             | Self::Float2
-            | Self::Gray => vk::ImageAspectFlags::COLOR,
-            Self::Depth => vk::ImageAspectFlags::DEPTH,
-            Self::DepthStencil => vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL,
+            | Self::Gray => vk::IMAGE_ASPECT_COLOR_BIT,
+            Self::Depth => vk::IMAGE_ASPECT_DEPTH_BIT,
+            Self::DepthStencil => vk::IMAGE_ASPECT_DEPTH_BIT | vk::IMAGE_ASPECT_STENCIL_BIT,
         }
     }
 
     pub(crate) fn all_aspects(&self) -> vk::ImageAspectFlags {
         let aspect = self.aspect();
-        if aspect == vk::ImageAspectFlags::DEPTH {
-            aspect | vk::ImageAspectFlags::STENCIL
+        if aspect == vk::IMAGE_ASPECT_DEPTH_BIT {
+            aspect | vk::IMAGE_ASPECT_STENCIL_BIT
         } else {
             aspect
         }
@@ -156,41 +152,41 @@ impl ImageFormat {
 impl ImageLayout {
     pub(crate) const fn flag(&self) -> vk::ImageLayout {
         match *self {
-            Self::Undefined => vk::ImageLayout::UNDEFINED,
-            Self::Color => vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
-            Self::Depth => vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            Self::ShaderColor => vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            Self::ShaderDepth => vk::ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-            Self::Present => vk::ImageLayout::PRESENT_SRC_KHR,
-            Self::TransferSrc => vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            Self::TransferDst => vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+            Self::Undefined => vk::IMAGE_LAYOUT_UNDEFINED,
+            Self::Color => vk::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            Self::Depth => vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            Self::ShaderColor => vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            Self::ShaderDepth => vk::IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+            Self::Present => vk::IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            Self::TransferSrc => vk::IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            Self::TransferDst => vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         }
     }
 
     pub(crate) const fn access_flag(&self) -> vk::AccessFlags {
         match *self {
-            Self::TransferSrc => vk::AccessFlags::TRANSFER_READ,
-            Self::TransferDst => vk::AccessFlags::TRANSFER_WRITE,
-            Self::ShaderColor => vk::AccessFlags::SHADER_READ,
-            Self::ShaderDepth => vk::AccessFlags::SHADER_READ,
-            Self::Color => vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-            Self::Depth => vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
-            _ => vk::AccessFlags::TRANSFER_READ,
+            Self::TransferSrc => vk::ACCESS_TRANSFER_READ_BIT,
+            Self::TransferDst => vk::ACCESS_TRANSFER_WRITE_BIT,
+            Self::ShaderColor => vk::ACCESS_SHADER_READ_BIT,
+            Self::ShaderDepth => vk::ACCESS_SHADER_READ_BIT,
+            Self::Color => vk::ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            Self::Depth => vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            _ => vk::ACCESS_TRANSFER_READ_BIT,
         }
     }
 
     pub(crate) fn stage_flag(&self) -> vk::PipelineStageFlags {
         match *self {
-            Self::TransferSrc => vk::PipelineStageFlags::TRANSFER,
-            Self::TransferDst => vk::PipelineStageFlags::TRANSFER,
-            Self::ShaderColor => vk::PipelineStageFlags::FRAGMENT_SHADER,
-            Self::ShaderDepth => vk::PipelineStageFlags::FRAGMENT_SHADER,
-            Self::Color => vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+            Self::TransferSrc => vk::PIPELINE_STAGE_TRANSFER_BIT,
+            Self::TransferDst => vk::PIPELINE_STAGE_TRANSFER_BIT,
+            Self::ShaderColor => vk::PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            Self::ShaderDepth => vk::PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            Self::Color => vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             Self::Depth => {
-                vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
-                    | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS
+                vk::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                    | vk::PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
             }
-            _ => vk::PipelineStageFlags::TRANSFER,
+            _ => vk::PIPELINE_STAGE_TRANSFER_BIT,
         }
     }
 }
@@ -198,10 +194,10 @@ impl ImageLayout {
 impl Msaa {
     pub(crate) const fn flag(&self) -> vk::SampleCountFlags {
         match *self {
-            Self::Disabled => vk::SampleCountFlags::TYPE_1,
-            Self::X4 => vk::SampleCountFlags::TYPE_4,
-            Self::X8 => vk::SampleCountFlags::TYPE_8,
-            Self::X16 => vk::SampleCountFlags::TYPE_16,
+            Self::Disabled => vk::SAMPLE_COUNT_1_BIT,
+            Self::X4 => vk::SAMPLE_COUNT_4_BIT,
+            Self::X8 => vk::SAMPLE_COUNT_8_BIT,
+            Self::X16 => vk::SAMPLE_COUNT_16_BIT,
         }
     }
 }
@@ -209,9 +205,9 @@ impl Msaa {
 impl TextureWrap {
     pub(crate) const fn flag(&self) -> vk::SamplerAddressMode {
         match *self {
-            Self::ClampBorder => vk::SamplerAddressMode::CLAMP_TO_BORDER,
-            Self::ClampEdge => vk::SamplerAddressMode::CLAMP_TO_EDGE,
-            Self::Repeat => vk::SamplerAddressMode::REPEAT,
+            Self::ClampBorder => vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            Self::ClampEdge => vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            Self::Repeat => vk::SAMPLER_ADDRESS_MODE_REPEAT,
         }
     }
 }
@@ -219,8 +215,8 @@ impl TextureWrap {
 impl TextureFilter {
     pub(crate) const fn flag(&self) -> vk::Filter {
         match *self {
-            Self::Linear => vk::Filter::LINEAR,
-            Self::Nearest => vk::Filter::NEAREST,
+            Self::Linear => vk::FILTER_LINEAR,
+            Self::Nearest => vk::FILTER_NEAREST,
         }
     }
 }

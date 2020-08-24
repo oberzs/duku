@@ -20,11 +20,6 @@ pub enum ErrorType {
     NoNul(ffi::FromBytesWithNulError),
     Binary(Box<bincode::ErrorKind>),
     Poison(sync::PoisonError<()>),
-    VulkanInstance(ash::InstanceError),
-    VulkanLoad(ash::LoadingError),
-    VulkanCode(i32),
-    #[cfg(feature = "image")]
-    Image(png::DecodingError),
     #[cfg(feature = "window")]
     Window(glfw::InitError),
     // Internal error
@@ -39,10 +34,6 @@ pub enum ErrorKind {
     NoSuitableMemoryType,
     #[cfg(feature = "ui")]
     UnitializedUi,
-    #[cfg(feature = "image")]
-    UnsupportedFormat(String),
-    #[cfg(feature = "image")]
-    NonMatchingCubemapFormat(String),
 }
 
 impl Error for ErrorType {}
@@ -50,7 +41,6 @@ impl Error for ErrorType {}
 impl fmt::Display for ErrorType {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
-            ErrorType::VulkanCode(e) => write!(fmt, "vulkan code {}", e),
             ref e => write!(fmt, "{:?}", e),
         }
     }
@@ -83,31 +73,6 @@ impl From<Box<bincode::ErrorKind>> for ErrorType {
 impl From<sync::PoisonError<()>> for ErrorType {
     fn from(e: sync::PoisonError<()>) -> Self {
         Self::Poison(e)
-    }
-}
-
-impl From<ash::InstanceError> for ErrorType {
-    fn from(e: ash::InstanceError) -> Self {
-        Self::VulkanInstance(e)
-    }
-}
-
-impl From<ash::LoadingError> for ErrorType {
-    fn from(e: ash::LoadingError) -> Self {
-        Self::VulkanLoad(e)
-    }
-}
-
-impl From<ash::vk::Result> for ErrorType {
-    fn from(e: ash::vk::Result) -> Self {
-        Self::VulkanCode(e.as_raw())
-    }
-}
-
-#[cfg(feature = "image")]
-impl From<png::DecodingError> for ErrorType {
-    fn from(e: png::DecodingError) -> Self {
-        Self::Image(e)
     }
 }
 

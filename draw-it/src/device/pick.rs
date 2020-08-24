@@ -3,7 +3,6 @@
 
 // picks the most suitable GPU
 
-use ash::vk;
 use std::ffi::CStr;
 
 use crate::error::ErrorKind;
@@ -11,8 +10,10 @@ use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::instance::GPUProperties;
+use crate::instance::Version;
 use crate::surface::ColorSpace;
 use crate::surface::VSync;
+use crate::vk;
 
 pub(crate) fn pick_gpu(
     gpu_properties: &[GPUProperties],
@@ -29,7 +30,7 @@ pub(crate) fn pick_gpu(
             let mut score = 1;
 
             // optional
-            if props.properties.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
+            if props.properties.device_type == vk::PHYSICAL_DEVICE_TYPE_DISCRETE_GPU {
                 score += 100;
             }
 
@@ -55,10 +56,15 @@ pub(crate) fn pick_gpu(
             if !props.supports_msaa(msaa) {
                 score = 0;
             }
-            if !props.formats.contains(&vk::SurfaceFormatKHR {
-                color_space: ColorSpace::Srgb.flag(),
-                format: ImageFormat::Sbgra.flag(),
-            }) {
+            if props
+                .formats
+                .iter()
+                .find(|f| {
+                    f.color_space == ColorSpace::Srgb.flag()
+                        && f.format == ImageFormat::Sbgra.flag()
+                })
+                .is_none()
+            {
                 score = 0;
             }
 
@@ -73,23 +79,18 @@ pub(crate) fn pick_gpu(
         None => Err(ErrorKind::NoSuitableGpu.into()),
         Some((picked, _)) => {
             // log picked GPU information
-            let info = gpu_properties[*picked].properties;
+            let info = &gpu_properties[*picked].properties;
             let device_name = unsafe { CStr::from_ptr(info.device_name.as_ptr()) };
             let device_type = match info.device_type {
-                vk::PhysicalDeviceType::DISCRETE_GPU => "(discrete)",
-                vk::PhysicalDeviceType::INTEGRATED_GPU => "(integrated)",
-                vk::PhysicalDeviceType::VIRTUAL_GPU => "(virtual)",
+                vk::PHYSICAL_DEVICE_TYPE_DISCRETE_GPU => "(discrete)",
+                vk::PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU => "(integrated)",
+                vk::PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU => "(virtual)",
                 _ => "",
             };
-            let driver_major = vk::version_major(info.driver_version);
-            let driver_minor = vk::version_minor(info.driver_version);
-            let driver_patch = vk::version_patch(info.driver_version);
+            let version = Version::from_vk(info.driver_version);
 
             info!("using {:?} {}", device_name, device_type);
-            info!(
-                "using driver version {}.{}.{}",
-                driver_major, driver_minor, driver_patch
-            );
+            info!("using driver version {}", version);
 
             Ok(*picked)
         }

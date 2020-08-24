@@ -3,12 +3,10 @@
 
 // GPUProperties - properties for the specific GPU
 
-use ash::vk;
-
 use crate::image::Msaa;
 use crate::surface::VSync;
+use crate::vk;
 
-#[derive(Clone)]
 pub(crate) struct GPUProperties {
     pub(crate) properties: vk::PhysicalDeviceProperties,
     pub(crate) features: vk::PhysicalDeviceFeatures,
@@ -29,7 +27,7 @@ impl GPUProperties {
     pub(crate) fn supports_msaa(&self, msaa: Msaa) -> bool {
         let counts = self.properties.limits.framebuffer_color_sample_counts
             & self.properties.limits.framebuffer_depth_sample_counts;
-        counts.contains(msaa.flag())
+        (counts & msaa.flag()) != 0
     }
 
     pub(crate) fn supports_present_mode(&self, vsync: VSync) -> bool {

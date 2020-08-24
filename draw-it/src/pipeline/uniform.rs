@@ -3,7 +3,7 @@
 
 // uniform structs to manage shader accessible uniform data
 
-use ash::vk;
+use std::ptr;
 use std::rc::Rc;
 
 use super::Descriptor;
@@ -11,10 +11,10 @@ use super::Sampler;
 use super::SamplerOptions;
 use super::ShaderLayout;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::ImageLayout;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
+use crate::vk;
 
 pub(crate) struct ImageUniform {
     descriptor: Descriptor,
@@ -34,8 +34,8 @@ pub(crate) trait Uniform {
 }
 
 impl ImageUniform {
-    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Result<Self> {
-        let descriptor = layout.image_set()?;
+    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
+        let descriptor = layout.image_set();
 
         // create sampler combinations
         let mut sampler_combinations = vec![];
@@ -54,19 +54,19 @@ impl ImageUniform {
                             wrap: *wrap,
                             mipmaps: *mipmaps,
                         },
-                    )?);
+                    ));
                 }
             }
         }
 
-        Ok(Self {
+        Self {
             descriptor,
             sampler_combinations,
             images: vec![],
             skybox: None,
             should_update: true,
             device: Rc::clone(device),
-        })
+        }
     }
 
     pub(crate) fn add(&mut self, image: vk::ImageView) -> i32 {
@@ -113,7 +113,7 @@ impl ImageUniform {
             let mut writes = vec![];
 
             // configure image writes to descriptor
-            let image_infos = (0..100)
+            let image_infos: Vec<_> = (0..100)
                 .map(|i| {
                     // get image or default image
                     let image = match self.images.get(i) {
@@ -121,59 +121,70 @@ impl ImageUniform {
                         _ => self.images[0].expect("bad code"),
                     };
 
-                    vk::DescriptorImageInfo::builder()
-                        .image_layout(ImageLayout::ShaderColor.flag())
-                        .image_view(image)
-                        .build()
+                    vk::DescriptorImageInfo {
+                        sampler: 0,
+                        image_view: image,
+                        image_layout: ImageLayout::ShaderColor.flag(),
+                    }
                 })
-                .collect::<Vec<_>>();
-            writes.push(
-                vk::WriteDescriptorSet::builder()
-                    .dst_set(self.descriptor.1)
-                    .dst_binding(0)
-                    .dst_array_element(0)
-                    .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-                    .image_info(&image_infos)
-                    .build(),
-            );
+                .collect();
+            writes.push(vk::WriteDescriptorSet {
+                s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                p_next: ptr::null(),
+                dst_set: self.descriptor.1,
+                dst_binding: 0,
+                dst_array_element: 0,
+                descriptor_count: image_infos.len() as u32,
+                descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                p_image_info: image_infos.as_ptr(),
+                p_buffer_info: ptr::null(),
+                p_texel_buffer_view: ptr::null(),
+            });
 
             // configure sampler writes to descriptor
-            let sampler_info = self
+            let sampler_info: Vec<_> = self
                 .sampler_combinations
                 .iter()
-                .map(|s| {
-                    vk::DescriptorImageInfo::builder()
-                        .image_layout(ImageLayout::ShaderColor.flag())
-                        .sampler(s.handle())
-                        .build()
+                .map(|s| vk::DescriptorImageInfo {
+                    sampler: s.handle(),
+                    image_view: 0,
+                    image_layout: ImageLayout::ShaderColor.flag(),
                 })
-                .collect::<Vec<_>>();
-            writes.push(
-                vk::WriteDescriptorSet::builder()
-                    .dst_set(self.descriptor.1)
-                    .dst_binding(1)
-                    .dst_array_element(0)
-                    .descriptor_type(vk::DescriptorType::SAMPLER)
-                    .image_info(&sampler_info)
-                    .build(),
-            );
+                .collect();
+            writes.push(vk::WriteDescriptorSet {
+                s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                p_next: ptr::null(),
+                dst_set: self.descriptor.1,
+                dst_binding: 1,
+                dst_array_element: 0,
+                descriptor_count: sampler_info.len() as u32,
+                descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLER,
+                p_image_info: sampler_info.as_ptr(),
+                p_buffer_info: ptr::null(),
+                p_texel_buffer_view: ptr::null(),
+            });
 
             // configure skybox write to descriptor
+            let mut skybox_info = vec![];
             if let Some(skybox) = self.skybox {
-                let skybox_info = [vk::DescriptorImageInfo::builder()
-                    .image_layout(ImageLayout::ShaderColor.flag())
-                    .image_view(skybox)
-                    .build()];
-                writes.push(
-                    vk::WriteDescriptorSet::builder()
-                        .dst_set(self.descriptor.1)
-                        .dst_binding(2)
-                        .dst_array_element(0)
-                        .descriptor_type(vk::DescriptorType::SAMPLED_IMAGE)
-                        .image_info(&skybox_info)
-                        .build(),
-                );
+                skybox_info.push(vk::DescriptorImageInfo {
+                    sampler: 0,
+                    image_view: skybox,
+                    image_layout: ImageLayout::ShaderColor.flag(),
+                });
             };
+            writes.push(vk::WriteDescriptorSet {
+                s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                p_next: ptr::null(),
+                dst_set: self.descriptor.1,
+                dst_binding: 2,
+                dst_array_element: 0,
+                descriptor_count: skybox_info.len() as u32,
+                descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                p_image_info: skybox_info.as_ptr(),
+                p_buffer_info: ptr::null(),
+                p_texel_buffer_view: ptr::null(),
+            });
 
             // write data to descriptor
             self.device.update_descriptor_sets(&writes);
@@ -189,10 +200,9 @@ impl Uniform for ImageUniform {
 }
 
 impl ShadowMapUniform {
-    pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 4]) -> Result<Self> {
-        let descriptor = layout.shadow_map_set(views)?;
-
-        Ok(Self { descriptor })
+    pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 4]) -> Self {
+        let descriptor = layout.shadow_map_set(views);
+        Self { descriptor }
     }
 }
 

@@ -3,17 +3,17 @@
 
 // Swapchain - struct that holds images for specific surface
 
-use ash::vk;
+use std::ptr;
 use std::rc::Rc;
 
 use super::ColorSpace;
 use super::Surface;
 use super::VSync;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
 use crate::instance::GPUProperties;
+use crate::vk;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
@@ -29,19 +29,19 @@ impl Swapchain {
         surface: &Surface,
         gpu_properties: &GPUProperties,
         vsync: VSync,
-    ) -> Result<Self> {
+    ) -> Self {
         let info = swapchain_info(surface, &gpu_properties, vsync);
-        let handle = device.create_swapchain(&info)?;
+        let handle = device.create_swapchain(&info);
         let width = gpu_properties.extent.width;
         let height = gpu_properties.extent.height;
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             current_image: 0,
             handle,
             width,
             height,
-        })
+        }
     }
 
     pub(crate) fn recreate(
@@ -49,23 +49,21 @@ impl Swapchain {
         surface: &Surface,
         gpu_properties: &GPUProperties,
         vsync: VSync,
-    ) -> Result<()> {
+    ) {
         self.device.destroy_swapchain(self.handle);
         let info = swapchain_info(surface, gpu_properties, vsync);
-        self.handle = self.device.create_swapchain(&info)?;
+        self.handle = self.device.create_swapchain(&info);
         self.width = gpu_properties.extent.width;
         self.height = gpu_properties.extent.height;
         self.current_image = 0;
-        Ok(())
     }
 
-    pub(crate) fn iter_images(&self) -> Result<impl Iterator<Item = vk::Image>> {
-        Ok(self.device.get_swapchain_images(self.handle)?.into_iter())
+    pub(crate) fn iter_images(&self) -> impl Iterator<Item = vk::Image> {
+        self.device.get_swapchain_images(self.handle).into_iter()
     }
 
-    pub(crate) fn next(&mut self, signal: vk::Semaphore) -> Result<()> {
-        self.current_image = self.device.get_next_swapchain_image(self.handle, signal)?;
-        Ok(())
+    pub(crate) fn next(&mut self, signal: vk::Semaphore) {
+        self.current_image = self.device.get_next_swapchain_image(self.handle, signal);
     }
 
     pub(crate) const fn current(&self) -> usize {
@@ -101,19 +99,24 @@ fn swapchain_info(
     let extent = gpu_properties.extent;
     let indices = [gpu_properties.queue_index.expect("bad queue index")];
 
-    vk::SwapchainCreateInfoKHR::builder()
-        .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
-        .queue_family_indices(&indices)
-        .surface(surface.handle())
-        .image_format(ImageFormat::Sbgra.flag())
-        .image_color_space(ColorSpace::Srgb.flag())
-        .image_extent(extent)
-        .image_array_layers(1)
-        .image_usage(ImageUsage::Color.flag())
-        .pre_transform(transform)
-        .min_image_count(image_count)
-        .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
-        .present_mode(vsync.flag())
-        .clipped(true)
-        .build()
+    vk::SwapchainCreateInfoKHR {
+        s_type: vk::STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        p_next: ptr::null(),
+        flags: 0,
+        surface: surface.handle(),
+        min_image_count: image_count,
+        image_format: ImageFormat::Sbgra.flag(),
+        image_color_space: ColorSpace::Srgb.flag(),
+        image_extent: extent,
+        image_array_layers: 1,
+        image_usage: ImageUsage::Color.flag(),
+        image_sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
+        queue_family_index_count: 1,
+        p_queue_family_indices: indices.as_ptr(),
+        pre_transform: transform,
+        composite_alpha: vk::COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        present_mode: vsync.flag(),
+        clipped: vk::TRUE,
+        old_swapchain: 0,
+    }
 }

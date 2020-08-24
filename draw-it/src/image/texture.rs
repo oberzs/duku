@@ -68,7 +68,7 @@ impl CoreTexture {
             _ => unreachable!(),
         };
 
-        Self::new(
+        Ok(Self::new(
             device,
             uniform,
             TextureOptions {
@@ -77,14 +77,14 @@ impl CoreTexture {
                 height: image_file.height,
                 format,
             },
-        )
+        ))
     }
 
     pub(crate) fn new(
         device: &Rc<Device>,
         uniform: &mut ImageUniform,
         options: TextureOptions,
-    ) -> Result<Self> {
+    ) -> Self {
         // get byte count based on format
         let pixel_size = match options.format {
             ImageFormat::Srgba | ImageFormat::Rgba | ImageFormat::Srgb | ImageFormat::Rgb => 4,
@@ -106,8 +106,8 @@ impl CoreTexture {
         let size = (options.width * options.height) as usize * pixel_size;
 
         let staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        staging_memory.copy_from_data(&data, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        staging_memory.copy_from_data(&data, size);
 
         let mut memory = ImageMemory::new(
             device,
@@ -123,19 +123,19 @@ impl CoreTexture {
                 format,
                 ..Default::default()
             },
-        )?;
+        );
 
         // copy image from staging memory
-        memory.change_layout(ImageLayout::TransferDst)?;
-        memory.copy_from_memory(&staging_memory, 0)?;
-        memory.generate_mipmaps()?;
+        memory.change_layout(ImageLayout::TransferDst);
+        memory.copy_from_memory(&staging_memory, 0);
+        memory.generate_mipmaps();
 
-        let image_index = uniform.add(memory.add_view()?);
+        let image_index = uniform.add(memory.add_view());
 
-        Ok(Self {
+        Self {
             _memory: memory,
             image_index,
-        })
+        }
     }
 
     pub(crate) const fn image_index(&self) -> i32 {

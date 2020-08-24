@@ -3,7 +3,6 @@
 
 // DynamicBuffer - buffer struct thats memory will change
 
-use ash::vk;
 use std::mem;
 use std::rc::Rc;
 
@@ -11,7 +10,7 @@ use super::BufferAccess;
 use super::BufferMemory;
 use super::BufferUsage;
 use crate::device::Device;
-use crate::error::Result;
+use crate::vk;
 
 pub(crate) struct DynamicBuffer {
     memory: BufferMemory,
@@ -22,39 +21,33 @@ pub(crate) struct DynamicBuffer {
 }
 
 impl DynamicBuffer {
-    pub(crate) fn new<T: Copy>(
-        device: &Rc<Device>,
-        usage: BufferUsage,
-        capacity: usize,
-    ) -> Result<Self> {
+    pub(crate) fn new<T: Copy>(device: &Rc<Device>, usage: BufferUsage, capacity: usize) -> Self {
         let size = mem::size_of::<T>() * capacity;
 
         // on CPU accessible memory, so we can copy to it
         let access = BufferAccess::Cpu;
-        let memory = BufferMemory::new(device, &[usage], access, size)?;
+        let memory = BufferMemory::new(device, &[usage], access, size);
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             memory,
             usage,
             access,
             size,
-        })
+        }
     }
 
-    pub(crate) fn update_data<T: Copy>(&mut self, data: &[T]) -> Result<()> {
+    pub(crate) fn update_data<T: Copy>(&mut self, data: &[T]) {
         let size = mem::size_of::<T>() * data.len();
 
         if size <= self.size {
-            self.memory.copy_from_data(data, size)?;
+            self.memory.copy_from_data(data, size);
         } else {
             // reallocate memory if data is too big
-            self.memory = BufferMemory::new(&self.device, &[self.usage], self.access, size)?;
-            self.memory.copy_from_data(data, size)?;
+            self.memory = BufferMemory::new(&self.device, &[self.usage], self.access, size);
+            self.memory.copy_from_data(data, size);
             self.size = size;
         }
-
-        Ok(())
     }
 
     pub(crate) const fn size(&self) -> usize {

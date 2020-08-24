@@ -3,11 +3,10 @@
 
 // Attachment - represents input/output image in render pass
 
-use ash::vk;
-
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
 use crate::image::Msaa;
+use crate::vk;
 
 pub(crate) struct Attachment {
     description: vk::AttachmentDescription,
@@ -38,32 +37,33 @@ impl Attachment {
         };
 
         let load_op = if options.clear {
-            vk::AttachmentLoadOp::CLEAR
+            vk::ATTACHMENT_LOAD_OP_CLEAR
         } else {
-            vk::AttachmentLoadOp::DONT_CARE
+            vk::ATTACHMENT_LOAD_OP_DONT_CARE
         };
 
         let store_op = if options.store {
-            vk::AttachmentStoreOp::STORE
+            vk::ATTACHMENT_STORE_OP_STORE
         } else {
-            vk::AttachmentStoreOp::DONT_CARE
+            vk::ATTACHMENT_STORE_OP_DONT_CARE
         };
 
-        let description = vk::AttachmentDescription::builder()
-            .format(options.format.flag())
-            .samples(options.msaa.flag())
-            .load_op(load_op)
-            .store_op(store_op)
-            .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
-            .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
-            .initial_layout(ImageLayout::Undefined.flag())
-            .final_layout(options.layout.flag())
-            .build();
+        let description = vk::AttachmentDescription {
+            flags: 0,
+            format: options.format.flag(),
+            samples: options.msaa.flag(),
+            stencil_load_op: vk::ATTACHMENT_LOAD_OP_DONT_CARE,
+            stencil_store_op: vk::ATTACHMENT_STORE_OP_DONT_CARE,
+            initial_layout: ImageLayout::Undefined.flag(),
+            final_layout: options.layout.flag(),
+            load_op,
+            store_op,
+        };
 
-        let reference = vk::AttachmentReference::builder()
-            .attachment(options.index)
-            .layout(layout.flag())
-            .build();
+        let reference = vk::AttachmentReference {
+            attachment: options.index,
+            layout: layout.flag(),
+        };
 
         Self {
             format: options.format,

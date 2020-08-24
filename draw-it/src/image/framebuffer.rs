@@ -4,7 +4,7 @@
 // Framebuffer - image that can be used as a render target
 // also manages world uniform and camera
 
-use ash::vk;
+use std::ptr;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
@@ -16,7 +16,6 @@ use super::ImageUsage;
 use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::Msaa;
 use crate::math::Matrix4;
 use crate::math::Vector3;
@@ -28,6 +27,7 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderLayout;
 use crate::storage::Index;
 use crate::surface::Swapchain;
+use crate::vk;
 
 // user facing framebuffer data
 #[derive(Debug)]
@@ -120,17 +120,17 @@ impl CoreFramebuffer {
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
         msaa: Msaa,
-    ) -> Result<Vec<Self>> {
+    ) -> Vec<Self> {
         let width = swapchain.width();
         let height = swapchain.height();
         let attachment_formats = &[ImageFormat::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         swapchain
-            .iter_images()?
+            .iter_images()
             .map(|img| {
-                let render_pass = RenderPass::new(device, attachment_formats, msaa, true, true)?;
-                let mut images = render_pass
+                let render_pass = RenderPass::new(device, attachment_formats, msaa, true, true);
+                let mut images: Vec<_> = render_pass
                     .attachments()
                     .map(|attachment| {
                         let handle = if attachment.is_stored() {
@@ -141,27 +141,29 @@ impl CoreFramebuffer {
 
                         create_attachment_image(device, &attachment, width, height, handle)
                     })
-                    .collect::<Result<Vec<_>>>()?;
+                    .collect();
 
-                let views = images
-                    .iter_mut()
-                    .map(|i| i.add_view())
-                    .collect::<Result<Vec<_>>>()?;
+                let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
 
-                let info = vk::FramebufferCreateInfo::builder()
-                    .render_pass(render_pass.handle())
-                    .attachments(&views)
-                    .width(width)
-                    .height(height)
-                    .layers(1);
+                let info = vk::FramebufferCreateInfo {
+                    s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                    p_next: ptr::null(),
+                    flags: 0,
+                    render_pass: render_pass.handle(),
+                    attachment_count: views.len() as u32,
+                    p_attachments: views.as_ptr(),
+                    layers: 1,
+                    width,
+                    height,
+                };
 
-                let handle = device.create_framebuffer(&info)?;
+                let handle = device.create_framebuffer(&info);
 
                 let world_buffer =
-                    DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
-                let world_descriptor = shader_layout.world_set(&world_buffer)?;
+                    DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1);
+                let world_descriptor = shader_layout.world_set(&world_buffer);
 
-                Ok(Self {
+                Self {
                     device: Rc::clone(device),
                     texture_image: None,
                     texture_index: None,
@@ -174,7 +176,7 @@ impl CoreFramebuffer {
                     height,
                     images,
                     msaa,
-                })
+                }
             })
             .collect()
     }
@@ -184,7 +186,7 @@ impl CoreFramebuffer {
         shader_layout: &ShaderLayout,
         image_uniform: &mut ImageUniform,
         options: FramebufferOptions<'_>,
-    ) -> Result<Self> {
+    ) -> Self {
         let FramebufferOptions {
             width,
             height,
@@ -193,12 +195,12 @@ impl CoreFramebuffer {
             depth,
         } = options;
 
-        let render_pass = RenderPass::new(device, attachment_formats, msaa, depth, false)?;
+        let render_pass = RenderPass::new(device, attachment_formats, msaa, depth, false);
 
         let mut stored_format = None;
         let mut stored_index = 0;
 
-        let mut images = render_pass
+        let mut images: Vec<_> = render_pass
             .attachments()
             .enumerate()
             .map(|(i, attachment)| {
@@ -209,24 +211,26 @@ impl CoreFramebuffer {
 
                 create_attachment_image(device, &attachment, width, height, None)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect();
 
-        let views = images
-            .iter_mut()
-            .map(|i| i.add_view())
-            .collect::<Result<Vec<_>>>()?;
+        let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
 
-        let info = vk::FramebufferCreateInfo::builder()
-            .render_pass(render_pass.handle())
-            .attachments(&views)
-            .width(width)
-            .height(height)
-            .layers(1);
+        let info = vk::FramebufferCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            render_pass: render_pass.handle(),
+            attachment_count: views.len() as u32,
+            p_attachments: views.as_ptr(),
+            layers: 1,
+            width,
+            height,
+        };
 
-        let handle = device.create_framebuffer(&info)?;
+        let handle = device.create_framebuffer(&info);
 
-        let world_buffer = DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1)?;
-        let world_descriptor = shader_layout.world_set(&world_buffer)?;
+        let world_buffer = DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1);
+        let world_descriptor = shader_layout.world_set(&world_buffer);
 
         let mut texture_image = ImageMemory::new(
             device,
@@ -241,17 +245,17 @@ impl CoreFramebuffer {
                 height,
                 ..Default::default()
             },
-        )?;
-        let texture_index = image_uniform.add(texture_image.add_view()?);
+        );
+        let texture_index = image_uniform.add(texture_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::ShaderColor)?;
+        texture_image.change_layout(ImageLayout::ShaderColor);
         images[stored_index].change_layout(match stored_format {
             Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
             _ => ImageLayout::ShaderColor,
-        })?;
+        });
 
-        Ok(Self {
+        Self {
             texture_image: Some(texture_image),
             texture_index: Some(texture_index),
             device: Rc::clone(device),
@@ -264,14 +268,10 @@ impl CoreFramebuffer {
             height,
             images,
             msaa,
-        })
+        }
     }
 
-    pub(crate) fn update(
-        &mut self,
-        image_uniform: &mut ImageUniform,
-        data: FramebufferUpdateData,
-    ) -> Result<()> {
+    pub(crate) fn update(&mut self, image_uniform: &mut ImageUniform, data: FramebufferUpdateData) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
@@ -283,7 +283,7 @@ impl CoreFramebuffer {
         let mut stored_format = None;
         let mut stored_index = 0;
 
-        let mut images = self
+        let mut images: Vec<_> = self
             .render_pass
             .attachments()
             .enumerate()
@@ -295,19 +295,21 @@ impl CoreFramebuffer {
 
                 create_attachment_image(&self.device, attachment, width, height, None)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect();
 
-        let views = images
-            .iter_mut()
-            .map(|i| i.add_view())
-            .collect::<Result<Vec<_>>>()?;
+        let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
 
-        let info = vk::FramebufferCreateInfo::builder()
-            .render_pass(self.render_pass.handle())
-            .attachments(&views)
-            .width(width)
-            .height(height)
-            .layers(1);
+        let info = vk::FramebufferCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            render_pass: self.render_pass.handle(),
+            attachment_count: views.len() as u32,
+            p_attachments: views.as_ptr(),
+            layers: 1,
+            width,
+            height,
+        };
 
         image_uniform.remove(self.texture_index.expect("bad texture index"));
 
@@ -324,27 +326,25 @@ impl CoreFramebuffer {
                 height,
                 ..Default::default()
             },
-        )?;
-        let texture_index = image_uniform.add(texture_image.add_view()?);
+        );
+        let texture_index = image_uniform.add(texture_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::ShaderColor)?;
+        texture_image.change_layout(ImageLayout::ShaderColor);
         images[stored_index].change_layout(match stored_format {
             Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
             _ => ImageLayout::ShaderColor,
-        })?;
+        });
 
         // reassign new values
         self.device.destroy_framebuffer(self.handle);
-        self.handle = self.device.create_framebuffer(&info)?;
+        self.handle = self.device.create_framebuffer(&info);
         self.images = images;
         self.stored_index = stored_index;
         self.texture_image = Some(texture_image);
         self.texture_index = Some(texture_index);
         self.width = width;
         self.height = height;
-
-        Ok(())
     }
 
     pub(crate) fn blit_to_texture(&mut self, cmd: vk::CommandBuffer) {
@@ -417,7 +417,7 @@ fn create_attachment_image(
     width: u32,
     height: u32,
     handle: Option<vk::Image>,
-) -> Result<ImageMemory> {
+) -> ImageMemory {
     let mut usage = vec![];
 
     match attachment.layout() {

@@ -120,8 +120,8 @@ enum RenderStage {
 
 impl Context {
     pub fn new(window: WindowHandle, options: ContextOptions) -> Result<Self> {
-        let instance = Rc::new(Instance::new()?);
-        let surface = Surface::new(&instance, window)?;
+        let instance = Rc::new(Instance::new());
+        let surface = Surface::new(&instance, window);
 
         let QualityOptions {
             anisotropy,
@@ -132,23 +132,23 @@ impl Context {
         let vsync = options.vsync;
 
         // setup device stuff
-        let mut gpu_properties_list = instance.gpu_properties(&surface)?;
+        let mut gpu_properties_list = instance.gpu_properties(&surface);
         let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
         let gpu_properties = gpu_properties_list.remove(gpu_index);
-        let device = Rc::new(Device::new(&instance, &gpu_properties, gpu_index)?);
-        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync)?;
+        let device = Rc::new(Device::new(&instance, &gpu_properties, gpu_index));
+        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync);
 
         info!("using anisotropy level {}", anisotropy);
         info!("using msaa level {:?}", msaa);
         info!("using vsync {:?}", vsync);
 
         // setup shader stuff
-        let shader_layout = ShaderLayout::new(&device)?;
-        let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy)?;
+        let shader_layout = ShaderLayout::new(&device);
+        let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy);
 
         // setup framebuffers
         let window_framebuffers =
-            CoreFramebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa)?;
+            CoreFramebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa);
 
         // setup storage
         let mut storage = Storage::new();
@@ -171,8 +171,8 @@ impl Context {
                 right: &[255, 255, 255, 255],
                 size: 1,
             },
-        )?;
-        image_uniform.set_skybox(skybox.add_view()?);
+        );
+        image_uniform.set_skybox(skybox.add_view());
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
@@ -218,43 +218,37 @@ impl Context {
         })
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) -> Result<()> {
-        self.device.wait_for_idle()?;
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.device.wait_idle();
         self.surface.resize(width, height);
 
         let gpu_properties = self
             .instance
-            .gpu_properties(&self.surface)?
+            .gpu_properties(&self.surface)
             .remove(self.gpu_index);
         self.swapchain
-            .recreate(&self.surface, &gpu_properties, self.vsync)?;
+            .recreate(&self.surface, &gpu_properties, self.vsync);
 
         self.window_framebuffers = CoreFramebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
             self.msaa,
-        )?;
+        );
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.storage, &mut self.image_uniform, width, height)?;
+            ui.resize(&mut self.storage, &mut self.image_uniform, width, height);
         }
-
-        Ok(())
     }
 
-    pub fn draw_on_window(
-        &mut self,
-        camera: &Camera,
-        draw_callback: impl Fn(&mut Target<'_>),
-    ) -> Result<()> {
+    pub fn draw_on_window(&mut self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw()?;
+            self.begin_draw();
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins)?;
+        let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
         #[cfg(feature = "ui")]
         if let Some(ui) = &self.ui {
@@ -270,10 +264,9 @@ impl Context {
             &mut self.storage,
             &self.shader_layout,
             target,
-        )?;
+        );
 
-        self.end_draw()?;
-        Ok(())
+        self.end_draw();
     }
 
     pub fn draw(
@@ -281,13 +274,13 @@ impl Context {
         framebuffer: &Framebuffer,
         camera: &Camera,
         draw_callback: impl Fn(&mut Target<'_>),
-    ) -> Result<()> {
+    ) {
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw()?;
+            self.begin_draw();
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins)?;
+        let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
         // draw
@@ -297,12 +290,10 @@ impl Context {
             &mut self.storage,
             &self.shader_layout,
             target,
-        )?;
-
-        Ok(())
+        );
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Result<Texture> {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Texture {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -317,11 +308,11 @@ impl Context {
                 width,
                 data,
             },
-        )?);
-        Ok(Texture::new(index))
+        ));
+        Texture::new(index)
     }
 
-    pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) -> Result<()> {
+    pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) {
         let mut cubemap = Cubemap::new(
             &self.device,
             CubemapOptions {
@@ -334,21 +325,19 @@ impl Context {
                 right: pixels[5],
                 size,
             },
-        )?;
+        );
 
-        self.image_uniform.set_skybox(cubemap.add_view()?);
+        self.image_uniform.set_skybox(cubemap.add_view());
         self.skybox = cubemap;
-
-        Ok(())
     }
 
-    pub fn create_mesh(&mut self) -> Result<Mesh> {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
-        Ok(Mesh::new(index, updater))
+    pub fn create_mesh(&mut self) -> Mesh {
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
+        Mesh::new(index, updater)
     }
 
-    pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Result<Mesh> {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
+    pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Mesh {
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
         let mut result = Mesh::new(index, updater);
         result.vertices = mesh.vertices.clone();
         result.normals = mesh.normals.clone();
@@ -356,23 +345,23 @@ impl Context {
         result.uvs = mesh.uvs.clone();
         result.indices = mesh.indices.clone();
         result.update();
-        Ok(result)
+        result
     }
 
-    pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Result<Mesh> {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device)?);
-        Ok(Mesh::combine(index, updater, meshes))
+    pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Mesh {
+        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
+        Mesh::combine(index, updater, meshes)
     }
 
-    pub fn create_material(&mut self) -> Result<Material> {
+    pub fn create_material(&mut self) -> Material {
         let (index, updater) = self
             .storage
             .materials
-            .add(CoreMaterial::new(&self.device, &self.shader_layout)?);
-        Ok(Material::new(index, updater))
+            .add(CoreMaterial::new(&self.device, &self.shader_layout));
+        Material::new(index, updater)
     }
 
-    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Framebuffer> {
+    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Framebuffer {
         let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
@@ -384,11 +373,11 @@ impl Context {
                 width,
                 height,
             },
-        )?);
+        ));
         let mut framebuffer = Framebuffer::new(index, updater);
         framebuffer.width = width;
         framebuffer.height = height;
-        Ok(framebuffer)
+        framebuffer
     }
 
     pub fn create_shader(&mut self, source: &[u8]) -> Result<Shader> {
@@ -418,11 +407,11 @@ impl Context {
         self.fps
     }
 
-    fn begin_draw(&mut self) -> Result<()> {
+    fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
-        self.device.next_frame(&mut self.swapchain)?;
+        self.device.next_frame(&mut self.swapchain);
         self.storage.clean_unused(&mut self.image_uniform);
-        self.storage.update_if_needed(&mut self.image_uniform)?;
+        self.storage.update_if_needed(&mut self.image_uniform);
 
         // hot-reload shaders
         for (pointer, path) in self.hot_reload_receiver.try_iter() {
@@ -448,14 +437,12 @@ impl Context {
         if let Some(ui) = &mut self.ui {
             ui.reset();
         }
-
-        Ok(())
     }
 
-    fn end_draw(&mut self) -> Result<()> {
+    fn end_draw(&mut self) {
         self.render_stage = RenderStage::Before;
-        self.device.submit()?;
-        self.device.present(&self.swapchain)?;
+        self.device.submit();
+        self.device.present(&self.swapchain);
 
         // update delta time
         let delta_time = self.frame_time.elapsed();
@@ -466,8 +453,6 @@ impl Context {
         self.frame_count += 1;
         self.fps =
             (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
-
-        Ok(())
     }
 
     #[cfg(feature = "window")]
@@ -564,7 +549,7 @@ impl Context {
     }
 
     #[cfg(feature = "window")]
-    pub fn poll_events(&mut self, window: &mut Window) -> Result<()> {
+    pub fn poll_events(&mut self, window: &mut Window) {
         use glfw::WindowEvent;
         use std::time::Duration;
 
@@ -600,7 +585,7 @@ impl Context {
             if let Some(last) = window.last_resize() {
                 if Instant::now().duration_since(last) >= Duration::from_millis(100) {
                     let (w, h) = window.raw_size();
-                    self.resize(w as u32, h as u32)?;
+                    self.resize(w as u32, h as u32);
                     window.handle_resize(w as u32, h as u32);
                     window.reset_resize();
 
@@ -611,8 +596,6 @@ impl Context {
             // pause if just resized
             polling = window.raw_size() == (0, 0) || window.last_resize().is_some();
         }
-
-        Ok(())
     }
 
     pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
@@ -634,7 +617,7 @@ impl Context {
     pub fn set_skybox_from_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
         let data = fs::read(path.as_ref())?;
         let mut cubemap = Cubemap::from_file(&self.device, data)?;
-        self.image_uniform.set_skybox(cubemap.add_view()?);
+        self.image_uniform.set_skybox(cubemap.add_view());
         self.skybox = cubemap;
         Ok(())
     }
@@ -644,22 +627,21 @@ impl Context {
         use crate::error::ErrorKind;
 
         if let RenderStage::Before = self.render_stage {
-            self.begin_draw()?;
+            self.begin_draw();
         }
 
         self.ui.as_mut().ok_or(ErrorKind::UnitializedUi)?.draw(
             &self.shader_layout,
             &mut self.storage,
             draw_fn,
-        )?;
-
+        );
         Ok(())
     }
 }
 
 impl Drop for Context {
     fn drop(&mut self) {
-        self.device.wait_for_idle().expect("bad wait");
+        self.device.wait_idle();
     }
 }
 

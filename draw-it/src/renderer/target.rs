@@ -4,7 +4,6 @@
 // Target - struct that collects draw calls to be used in a renderer
 
 use crate::color::Color;
-use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::image::TextureFilter;
@@ -90,8 +89,8 @@ struct Cache {
 }
 
 impl<'b> Target<'b> {
-    pub(crate) fn new(builtins: &'b Builtins) -> Result<Self> {
-        Ok(Self {
+    pub(crate) fn new(builtins: &'b Builtins) -> Self {
+        Self {
             orders_by_shader: vec![],
             text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
@@ -118,7 +117,7 @@ impl<'b> Target<'b> {
             line_width: 1.0,
             bias: 0.002,
             builtins,
-        })
+        }
     }
 
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {

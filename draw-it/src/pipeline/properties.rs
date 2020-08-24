@@ -3,7 +3,7 @@
 
 // enums for possible pipeline properties
 
-use ash::vk;
+use crate::vk;
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum CullMode {
@@ -30,9 +30,9 @@ pub(crate) enum DepthMode {
 impl CullMode {
     pub(crate) const fn flag(&self) -> vk::CullModeFlags {
         match *self {
-            Self::Back => vk::CullModeFlags::BACK,
-            Self::Front => vk::CullModeFlags::FRONT,
-            Self::Disabled => vk::CullModeFlags::NONE,
+            Self::Back => vk::CULL_MODE_BACK_BIT,
+            Self::Front => vk::CULL_MODE_FRONT_BIT,
+            Self::Disabled => vk::CULL_MODE_NONE,
         }
     }
 }
@@ -40,28 +40,36 @@ impl CullMode {
 impl ShapeMode {
     pub(crate) const fn polygon(&self) -> vk::PolygonMode {
         match *self {
-            Self::FilledTriangles => vk::PolygonMode::FILL,
-            Self::LinedTriangles => vk::PolygonMode::LINE,
-            Self::Lines => vk::PolygonMode::LINE,
+            Self::FilledTriangles => vk::POLYGON_MODE_FILL,
+            Self::LinedTriangles => vk::POLYGON_MODE_LINE,
+            Self::Lines => vk::POLYGON_MODE_LINE,
         }
     }
 
     pub(crate) const fn topology(&self) -> vk::PrimitiveTopology {
         match *self {
-            Self::FilledTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
-            Self::LinedTriangles => vk::PrimitiveTopology::TRIANGLE_LIST,
-            Self::Lines => vk::PrimitiveTopology::LINE_LIST,
+            Self::FilledTriangles => vk::PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            Self::LinedTriangles => vk::PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            Self::Lines => vk::PRIMITIVE_TOPOLOGY_LINE_LIST,
         }
     }
 }
 
 impl DepthMode {
-    pub(crate) const fn test(&self) -> bool {
-        matches!(*self, Self::Test | Self::TestAndWrite)
+    pub(crate) const fn test(&self) -> vk::Bool32 {
+        if matches!(*self, Self::Test | Self::TestAndWrite) {
+            vk::TRUE
+        } else {
+            vk::FALSE
+        }
     }
 
-    pub(crate) const fn write(&self) -> bool {
-        matches!(*self, Self::Write | Self::TestAndWrite)
+    pub(crate) const fn write(&self) -> vk::Bool32 {
+        if matches!(*self, Self::Write | Self::TestAndWrite) {
+            vk::TRUE
+        } else {
+            vk::FALSE
+        }
     }
 }
 

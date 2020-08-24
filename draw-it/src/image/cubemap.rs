@@ -3,7 +3,6 @@
 
 // Cubemap - image with 6 layers to render a skybox
 
-use ash::vk;
 use serde::Deserialize;
 use std::rc::Rc;
 
@@ -18,6 +17,7 @@ use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
 use crate::error::Result;
+use crate::vk;
 
 pub(crate) struct Cubemap {
     memory: ImageMemory,
@@ -56,7 +56,7 @@ impl Cubemap {
             _ => unreachable!(),
         };
 
-        Self::new(
+        Ok(Self::new(
             device,
             CubemapOptions {
                 top: &cubemap_file.top,
@@ -68,10 +68,10 @@ impl Cubemap {
                 size: cubemap_file.width,
                 format,
             },
-        )
+        ))
     }
 
-    pub(crate) fn new(device: &Rc<Device>, options: CubemapOptions<'_>) -> Result<Self> {
+    pub(crate) fn new(device: &Rc<Device>, options: CubemapOptions<'_>) -> Self {
         let pixel_size = match options.format {
             ImageFormat::Srgba | ImageFormat::Rgba => 4,
             _ => panic!("unsupported cubemap format {:?}", options.format),
@@ -81,28 +81,28 @@ impl Cubemap {
 
         // create staging buffers
         let top_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        top_staging_memory.copy_from_data(options.top, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        top_staging_memory.copy_from_data(options.top, size);
 
         let bottom_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        bottom_staging_memory.copy_from_data(options.bottom, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        bottom_staging_memory.copy_from_data(options.bottom, size);
 
         let front_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        front_staging_memory.copy_from_data(options.front, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        front_staging_memory.copy_from_data(options.front, size);
 
         let back_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        back_staging_memory.copy_from_data(options.back, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        back_staging_memory.copy_from_data(options.back, size);
 
         let left_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        left_staging_memory.copy_from_data(options.left, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        left_staging_memory.copy_from_data(options.left, size);
 
         let right_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size)?;
-        right_staging_memory.copy_from_data(options.right, size)?;
+            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
+        right_staging_memory.copy_from_data(options.right, size);
 
         // create image
         let mut memory = ImageMemory::new(
@@ -120,22 +120,22 @@ impl Cubemap {
                 cubemap: true,
                 ..Default::default()
             },
-        )?;
+        );
 
         // copy images from staging memory
-        memory.change_layout(ImageLayout::TransferDst)?;
-        memory.copy_from_memory(&right_staging_memory, 0)?;
-        memory.copy_from_memory(&left_staging_memory, 1)?;
-        memory.copy_from_memory(&top_staging_memory, 2)?;
-        memory.copy_from_memory(&bottom_staging_memory, 3)?;
-        memory.copy_from_memory(&front_staging_memory, 4)?;
-        memory.copy_from_memory(&back_staging_memory, 5)?;
-        memory.change_layout(ImageLayout::ShaderColor)?;
+        memory.change_layout(ImageLayout::TransferDst);
+        memory.copy_from_memory(&right_staging_memory, 0);
+        memory.copy_from_memory(&left_staging_memory, 1);
+        memory.copy_from_memory(&top_staging_memory, 2);
+        memory.copy_from_memory(&bottom_staging_memory, 3);
+        memory.copy_from_memory(&front_staging_memory, 4);
+        memory.copy_from_memory(&back_staging_memory, 5);
+        memory.change_layout(ImageLayout::ShaderColor);
 
-        Ok(Self { memory })
+        Self { memory }
     }
 
-    pub(crate) fn add_view(&mut self) -> Result<vk::ImageView> {
+    pub(crate) fn add_view(&mut self) -> vk::ImageView {
         self.memory.add_view()
     }
 }
