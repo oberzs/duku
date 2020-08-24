@@ -31,10 +31,10 @@ fn main() -> Result<()> {
 
     let camera = Camera::orthographic(width as f32, height as f32);
 
-    let mut material_1 = context.create_material()?;
+    let mut material_1 = context.create_material();
     material_1.set_font_color(Color::RED);
     material_1.update();
-    let mut material_2 = context.create_material()?;
+    let mut material_2 = context.create_material();
     material_2.set_font_color(Color::BLUE);
     material_2.set_font_border_color(Color::WHITE);
     material_2.set_font_width(0.5);
@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     let left = -250.0;
 
     while window.is_open() {
-        context.poll_events(&mut window)?;
+        context.poll_events(&mut window);
 
         let size_mut = (start_time.elapsed().as_secs_f32().sin() * 0.5 + 0.5) * 10.0;
         let sdf_size = 40 + size_mut.round() as u32;
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
                 ..Default::default()
             };
             target.draw_text("Dynamic\n-text-", transform);
-        })?;
+        });
     }
 
     Ok(())

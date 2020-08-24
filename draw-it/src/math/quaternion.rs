@@ -86,7 +86,7 @@ impl Quaternion {
         result
     }
 
-    pub const fn inverse_rotation(self) -> Quaternion {
+    pub fn inverse_rotation(self) -> Quaternion {
         let mut result = self;
         result.w = -result.w;
         result

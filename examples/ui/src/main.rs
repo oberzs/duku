@@ -23,11 +23,11 @@ fn main() -> Result<()> {
     let mut show_demo = true;
 
     while window.is_open() {
-        context.poll_events(&mut window)?;
+        context.poll_events(&mut window);
         context.draw_ui(|ui| {
             ui.frame.show_demo_window(&mut show_demo);
         })?;
-        context.draw_on_window(&camera, |_| {})?;
+        context.draw_on_window(&camera, |_| {});
     }
 
     Ok(())

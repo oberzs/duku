@@ -1214,7 +1214,7 @@ pub struct PhysicalDeviceFeatures {
     pub multi_viewport: Bool32,
     pub sampler_anisotropy: Bool32,
     pub texture_compression_etc2: Bool32,
-    pub texture_compression_astc__ldr: Bool32,
+    pub texture_compression_astc_ldr: Bool32,
     pub texture_compression_bc: Bool32,
     pub occlusion_query_precise: Bool32,
     pub pipeline_statistics_query: Bool32,
@@ -4835,7 +4835,7 @@ pub struct RenderPassAttachmentBeginInfoKHR {}
 pub struct PhysicalDeviceTextureCompressionASTCHDRFeaturesEXT {
     pub s_type: StructureType,
     pub p_next: *const c_void,
-    pub texture_compression_astc__hdr: Bool32,
+    pub texture_compression_astc_hdr: Bool32,
 }
 
 #[repr(C)]
@@ -7250,7 +7250,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyInstance"]
-    #[must_use]
     pub fn destroy_instance(instance: Instance, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkEnumeratePhysicalDevices"]
@@ -7270,14 +7269,12 @@ extern "C" {
     pub fn get_instance_proc_addr(instance: Instance, p_name: *const c_char) -> VoidFunction;
 
     #[link_name = "vkGetPhysicalDeviceProperties"]
-    #[must_use]
     pub fn get_physical_device_properties(
         physical_device: PhysicalDevice,
         p_properties: *mut PhysicalDeviceProperties,
     );
 
     #[link_name = "vkGetPhysicalDeviceQueueFamilyProperties"]
-    #[must_use]
     pub fn get_physical_device_queue_family_properties(
         physical_device: PhysicalDevice,
         p_queue_family_property_count: *mut u32,
@@ -7285,21 +7282,18 @@ extern "C" {
     );
 
     #[link_name = "vkGetPhysicalDeviceMemoryProperties"]
-    #[must_use]
     pub fn get_physical_device_memory_properties(
         physical_device: PhysicalDevice,
         p_memory_properties: *mut PhysicalDeviceMemoryProperties,
     );
 
     #[link_name = "vkGetPhysicalDeviceFeatures"]
-    #[must_use]
     pub fn get_physical_device_features(
         physical_device: PhysicalDevice,
         p_features: *mut PhysicalDeviceFeatures,
     );
 
     #[link_name = "vkGetPhysicalDeviceFormatProperties"]
-    #[must_use]
     pub fn get_physical_device_format_properties(
         physical_device: PhysicalDevice,
         format: Format,
@@ -7328,7 +7322,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDevice"]
-    #[must_use]
     pub fn destroy_device(device: Device, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkEnumerateInstanceVersion"]
@@ -7368,7 +7361,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetDeviceQueue"]
-    #[must_use]
     pub fn get_device_queue(
         device: Device,
         queue_family_index: u32,
@@ -7403,7 +7395,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkFreeMemory"]
-    #[must_use]
     pub fn free_memory(
         device: Device,
         memory: DeviceMemory,
@@ -7422,7 +7413,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkUnmapMemory"]
-    #[must_use]
     pub fn unmap_memory(device: Device, memory: DeviceMemory);
 
     #[link_name = "vkFlushMappedMemoryRanges"]
@@ -7442,7 +7432,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetDeviceMemoryCommitment"]
-    #[must_use]
     pub fn get_device_memory_commitment(
         device: Device,
         memory: DeviceMemory,
@@ -7450,7 +7439,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetBufferMemoryRequirements"]
-    #[must_use]
     pub fn get_buffer_memory_requirements(
         device: Device,
         buffer: Buffer,
@@ -7467,7 +7455,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetImageMemoryRequirements"]
-    #[must_use]
     pub fn get_image_memory_requirements(
         device: Device,
         image: Image,
@@ -7484,7 +7471,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetImageSparseMemoryRequirements"]
-    #[must_use]
     pub fn get_image_sparse_memory_requirements(
         device: Device,
         image: Image,
@@ -7493,7 +7479,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetPhysicalDeviceSparseImageFormatProperties"]
-    #[must_use]
     pub fn get_physical_device_sparse_image_format_properties(
         physical_device: PhysicalDevice,
         format: Format,
@@ -7524,7 +7509,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyFence"]
-    #[must_use]
     pub fn destroy_fence(device: Device, fence: Fence, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkResetFences"]
@@ -7555,7 +7539,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroySemaphore"]
-    #[must_use]
     pub fn destroy_semaphore(
         device: Device,
         semaphore: Semaphore,
@@ -7572,7 +7555,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyEvent"]
-    #[must_use]
     pub fn destroy_event(device: Device, event: Event, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkGetEventStatus"]
@@ -7597,7 +7579,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyQueryPool"]
-    #[must_use]
     pub fn destroy_query_pool(
         device: Device,
         query_pool: QueryPool,
@@ -7618,7 +7599,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkResetQueryPool"]
-    #[must_use]
     pub fn reset_query_pool(
         device: Device,
         query_pool: QueryPool,
@@ -7636,7 +7616,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyBuffer"]
-    #[must_use]
     pub fn destroy_buffer(device: Device, buffer: Buffer, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkCreateBufferView"]
@@ -7649,7 +7628,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyBufferView"]
-    #[must_use]
     pub fn destroy_buffer_view(
         device: Device,
         buffer_view: BufferView,
@@ -7666,11 +7644,9 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyImage"]
-    #[must_use]
     pub fn destroy_image(device: Device, image: Image, p_allocator: *const AllocationCallbacks);
 
     #[link_name = "vkGetImageSubresourceLayout"]
-    #[must_use]
     pub fn get_image_subresource_layout(
         device: Device,
         image: Image,
@@ -7688,7 +7664,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyImageView"]
-    #[must_use]
     pub fn destroy_image_view(
         device: Device,
         image_view: ImageView,
@@ -7705,7 +7680,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyShaderModule"]
-    #[must_use]
     pub fn destroy_shader_module(
         device: Device,
         shader_module: ShaderModule,
@@ -7722,7 +7696,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyPipelineCache"]
-    #[must_use]
     pub fn destroy_pipeline_cache(
         device: Device,
         pipeline_cache: PipelineCache,
@@ -7770,7 +7743,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyPipeline"]
-    #[must_use]
     pub fn destroy_pipeline(
         device: Device,
         pipeline: Pipeline,
@@ -7787,7 +7759,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyPipelineLayout"]
-    #[must_use]
     pub fn destroy_pipeline_layout(
         device: Device,
         pipeline_layout: PipelineLayout,
@@ -7804,7 +7775,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroySampler"]
-    #[must_use]
     pub fn destroy_sampler(
         device: Device,
         sampler: Sampler,
@@ -7821,7 +7791,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDescriptorSetLayout"]
-    #[must_use]
     pub fn destroy_descriptor_set_layout(
         device: Device,
         descriptor_set_layout: DescriptorSetLayout,
@@ -7838,7 +7807,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDescriptorPool"]
-    #[must_use]
     pub fn destroy_descriptor_pool(
         device: Device,
         descriptor_pool: DescriptorPool,
@@ -7871,7 +7839,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkUpdateDescriptorSets"]
-    #[must_use]
     pub fn update_descriptor_sets(
         device: Device,
         descriptor_write_count: u32,
@@ -7890,7 +7857,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyFramebuffer"]
-    #[must_use]
     pub fn destroy_framebuffer(
         device: Device,
         framebuffer: Framebuffer,
@@ -7907,7 +7873,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyRenderPass"]
-    #[must_use]
     pub fn destroy_render_pass(
         device: Device,
         render_pass: RenderPass,
@@ -7915,7 +7880,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetRenderAreaGranularity"]
-    #[must_use]
     pub fn get_render_area_granularity(
         device: Device,
         render_pass: RenderPass,
@@ -7932,7 +7896,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyCommandPool"]
-    #[must_use]
     pub fn destroy_command_pool(
         device: Device,
         command_pool: CommandPool,
@@ -7956,7 +7919,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkFreeCommandBuffers"]
-    #[must_use]
     pub fn free_command_buffers(
         device: Device,
         command_pool: CommandPool,
@@ -7983,7 +7945,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdBindPipeline"]
-    #[must_use]
     pub fn cmd_bind_pipeline(
         command_buffer: CommandBuffer,
         pipeline_bind_point: PipelineBindPoint,
@@ -7991,7 +7952,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetViewport"]
-    #[must_use]
     pub fn cmd_set_viewport(
         command_buffer: CommandBuffer,
         first_viewport: u32,
@@ -8000,7 +7960,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetScissor"]
-    #[must_use]
     pub fn cmd_set_scissor(
         command_buffer: CommandBuffer,
         first_scissor: u32,
@@ -8009,11 +7968,9 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetLineWidth"]
-    #[must_use]
     pub fn cmd_set_line_width(command_buffer: CommandBuffer, line_width: f32);
 
     #[link_name = "vkCmdSetDepthBias"]
-    #[must_use]
     pub fn cmd_set_depth_bias(
         command_buffer: CommandBuffer,
         depth_bias_constant_factor: f32,
@@ -8022,11 +7979,9 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetBlendConstants"]
-    #[must_use]
     pub fn cmd_set_blend_constants(command_buffer: CommandBuffer, blend_constants: f32);
 
     #[link_name = "vkCmdSetDepthBounds"]
-    #[must_use]
     pub fn cmd_set_depth_bounds(
         command_buffer: CommandBuffer,
         min_depth_bounds: f32,
@@ -8034,7 +7989,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetStencilCompareMask"]
-    #[must_use]
     pub fn cmd_set_stencil_compare_mask(
         command_buffer: CommandBuffer,
         face_mask: StencilFaceFlags,
@@ -8042,7 +7996,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetStencilWriteMask"]
-    #[must_use]
     pub fn cmd_set_stencil_write_mask(
         command_buffer: CommandBuffer,
         face_mask: StencilFaceFlags,
@@ -8050,7 +8003,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetStencilReference"]
-    #[must_use]
     pub fn cmd_set_stencil_reference(
         command_buffer: CommandBuffer,
         face_mask: StencilFaceFlags,
@@ -8058,7 +8010,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindDescriptorSets"]
-    #[must_use]
     pub fn cmd_bind_descriptor_sets(
         command_buffer: CommandBuffer,
         pipeline_bind_point: PipelineBindPoint,
@@ -8071,7 +8022,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindIndexBuffer"]
-    #[must_use]
     pub fn cmd_bind_index_buffer(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -8080,7 +8030,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindVertexBuffers"]
-    #[must_use]
     pub fn cmd_bind_vertex_buffers(
         command_buffer: CommandBuffer,
         first_binding: u32,
@@ -8090,7 +8039,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDraw"]
-    #[must_use]
     pub fn cmd_draw(
         command_buffer: CommandBuffer,
         vertex_count: u32,
@@ -8100,7 +8048,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawIndexed"]
-    #[must_use]
     pub fn cmd_draw_indexed(
         command_buffer: CommandBuffer,
         index_count: u32,
@@ -8111,7 +8058,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawIndirect"]
-    #[must_use]
     pub fn cmd_draw_indirect(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -8121,7 +8067,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawIndexedIndirect"]
-    #[must_use]
     pub fn cmd_draw_indexed_indirect(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -8131,7 +8076,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDispatch"]
-    #[must_use]
     pub fn cmd_dispatch(
         command_buffer: CommandBuffer,
         group_count_x: u32,
@@ -8140,11 +8084,9 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDispatchIndirect"]
-    #[must_use]
     pub fn cmd_dispatch_indirect(command_buffer: CommandBuffer, buffer: Buffer, offset: DeviceSize);
 
     #[link_name = "vkCmdCopyBuffer"]
-    #[must_use]
     pub fn cmd_copy_buffer(
         command_buffer: CommandBuffer,
         src_buffer: Buffer,
@@ -8154,7 +8096,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdCopyImage"]
-    #[must_use]
     pub fn cmd_copy_image(
         command_buffer: CommandBuffer,
         src_image: Image,
@@ -8166,7 +8107,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBlitImage"]
-    #[must_use]
     pub fn cmd_blit_image(
         command_buffer: CommandBuffer,
         src_image: Image,
@@ -8179,7 +8119,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdCopyBufferToImage"]
-    #[must_use]
     pub fn cmd_copy_buffer_to_image(
         command_buffer: CommandBuffer,
         src_buffer: Buffer,
@@ -8190,7 +8129,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdCopyImageToBuffer"]
-    #[must_use]
     pub fn cmd_copy_image_to_buffer(
         command_buffer: CommandBuffer,
         src_image: Image,
@@ -8201,7 +8139,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdUpdateBuffer"]
-    #[must_use]
     pub fn cmd_update_buffer(
         command_buffer: CommandBuffer,
         dst_buffer: Buffer,
@@ -8211,7 +8148,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdFillBuffer"]
-    #[must_use]
     pub fn cmd_fill_buffer(
         command_buffer: CommandBuffer,
         dst_buffer: Buffer,
@@ -8221,7 +8157,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdClearColorImage"]
-    #[must_use]
     pub fn cmd_clear_color_image(
         command_buffer: CommandBuffer,
         image: Image,
@@ -8232,7 +8167,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdClearDepthStencilImage"]
-    #[must_use]
     pub fn cmd_clear_depth_stencil_image(
         command_buffer: CommandBuffer,
         image: Image,
@@ -8243,7 +8177,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdClearAttachments"]
-    #[must_use]
     pub fn cmd_clear_attachments(
         command_buffer: CommandBuffer,
         attachment_count: u32,
@@ -8253,7 +8186,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdResolveImage"]
-    #[must_use]
     pub fn cmd_resolve_image(
         command_buffer: CommandBuffer,
         src_image: Image,
@@ -8265,7 +8197,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetEvent"]
-    #[must_use]
     pub fn cmd_set_event(
         command_buffer: CommandBuffer,
         event: Event,
@@ -8273,7 +8204,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdResetEvent"]
-    #[must_use]
     pub fn cmd_reset_event(
         command_buffer: CommandBuffer,
         event: Event,
@@ -8281,7 +8211,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdWaitEvents"]
-    #[must_use]
     pub fn cmd_wait_events(
         command_buffer: CommandBuffer,
         event_count: u32,
@@ -8297,7 +8226,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdPipelineBarrier"]
-    #[must_use]
     pub fn cmd_pipeline_barrier(
         command_buffer: CommandBuffer,
         src_stage_mask: PipelineStageFlags,
@@ -8312,7 +8240,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBeginQuery"]
-    #[must_use]
     pub fn cmd_begin_query(
         command_buffer: CommandBuffer,
         query_pool: QueryPool,
@@ -8321,22 +8248,18 @@ extern "C" {
     );
 
     #[link_name = "vkCmdEndQuery"]
-    #[must_use]
     pub fn cmd_end_query(command_buffer: CommandBuffer, query_pool: QueryPool, query: u32);
 
     #[link_name = "vkCmdBeginConditionalRenderingEXT"]
-    #[must_use]
     pub fn cmd_begin_conditional_rendering_ext(
         command_buffer: CommandBuffer,
         p_conditional_rendering_begin: *const ConditionalRenderingBeginInfoEXT,
     );
 
     #[link_name = "vkCmdEndConditionalRenderingEXT"]
-    #[must_use]
     pub fn cmd_end_conditional_rendering_ext(command_buffer: CommandBuffer);
 
     #[link_name = "vkCmdResetQueryPool"]
-    #[must_use]
     pub fn cmd_reset_query_pool(
         command_buffer: CommandBuffer,
         query_pool: QueryPool,
@@ -8345,7 +8268,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdWriteTimestamp"]
-    #[must_use]
     pub fn cmd_write_timestamp(
         command_buffer: CommandBuffer,
         pipeline_stage: PipelineStageFlagBits,
@@ -8354,7 +8276,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdCopyQueryPoolResults"]
-    #[must_use]
     pub fn cmd_copy_query_pool_results(
         command_buffer: CommandBuffer,
         query_pool: QueryPool,
@@ -8367,7 +8288,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdPushConstants"]
-    #[must_use]
     pub fn cmd_push_constants(
         command_buffer: CommandBuffer,
         layout: PipelineLayout,
@@ -8378,7 +8298,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBeginRenderPass"]
-    #[must_use]
     pub fn cmd_begin_render_pass(
         command_buffer: CommandBuffer,
         p_render_pass_begin: *const RenderPassBeginInfo,
@@ -8386,15 +8305,12 @@ extern "C" {
     );
 
     #[link_name = "vkCmdNextSubpass"]
-    #[must_use]
     pub fn cmd_next_subpass(command_buffer: CommandBuffer, contents: SubpassContents);
 
     #[link_name = "vkCmdEndRenderPass"]
-    #[must_use]
     pub fn cmd_end_render_pass(command_buffer: CommandBuffer);
 
     #[link_name = "vkCmdExecuteCommands"]
-    #[must_use]
     pub fn cmd_execute_commands(
         command_buffer: CommandBuffer,
         command_buffer_count: u32,
@@ -8483,7 +8399,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroySurfaceKHR"]
-    #[must_use]
     pub fn destroy_surface_khr(
         instance: Instance,
         surface: SurfaceKHR,
@@ -8535,7 +8450,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroySwapchainKHR"]
-    #[must_use]
     pub fn destroy_swapchain_khr(
         device: Device,
         swapchain: SwapchainKHR,
@@ -8689,7 +8603,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDebugReportCallbackEXT"]
-    #[must_use]
     pub fn destroy_debug_report_callback_ext(
         instance: Instance,
         callback: DebugReportCallbackEXT,
@@ -8697,7 +8610,6 @@ extern "C" {
     );
 
     #[link_name = "vkDebugReportMessageEXT"]
-    #[must_use]
     pub fn debug_report_message_ext(
         instance: Instance,
         flags: DebugReportFlagsEXT,
@@ -8724,18 +8636,15 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdDebugMarkerBeginEXT"]
-    #[must_use]
     pub fn cmd_debug_marker_begin_ext(
         command_buffer: CommandBuffer,
         p_marker_info: *const DebugMarkerMarkerInfoEXT,
     );
 
     #[link_name = "vkCmdDebugMarkerEndEXT"]
-    #[must_use]
     pub fn cmd_debug_marker_end_ext(command_buffer: CommandBuffer);
 
     #[link_name = "vkCmdDebugMarkerInsertEXT"]
-    #[must_use]
     pub fn cmd_debug_marker_insert_ext(
         command_buffer: CommandBuffer,
         p_marker_info: *const DebugMarkerMarkerInfoEXT,
@@ -8764,7 +8673,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdExecuteGeneratedCommandsNV"]
-    #[must_use]
     pub fn cmd_execute_generated_commands_nv(
         command_buffer: CommandBuffer,
         is_preprocessed: Bool32,
@@ -8772,14 +8680,12 @@ extern "C" {
     );
 
     #[link_name = "vkCmdPreprocessGeneratedCommandsNV"]
-    #[must_use]
     pub fn cmd_preprocess_generated_commands_nv(
         command_buffer: CommandBuffer,
         p_generated_commands_info: *const GeneratedCommandsInfoNV,
     );
 
     #[link_name = "vkCmdBindPipelineShaderGroupNV"]
-    #[must_use]
     pub fn cmd_bind_pipeline_shader_group_nv(
         command_buffer: CommandBuffer,
         pipeline_bind_point: PipelineBindPoint,
@@ -8788,7 +8694,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetGeneratedCommandsMemoryRequirementsNV"]
-    #[must_use]
     pub fn get_generated_commands_memory_requirements_nv(
         device: Device,
         p_info: *const GeneratedCommandsMemoryRequirementsInfoNV,
@@ -8805,7 +8710,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyIndirectCommandsLayoutNV"]
-    #[must_use]
     pub fn destroy_indirect_commands_layout_nv(
         device: Device,
         indirect_commands_layout: IndirectCommandsLayoutNV,
@@ -8813,21 +8717,18 @@ extern "C" {
     );
 
     #[link_name = "vkGetPhysicalDeviceFeatures2"]
-    #[must_use]
     pub fn get_physical_device_features2(
         physical_device: PhysicalDevice,
         p_features: *mut PhysicalDeviceFeatures2,
     );
 
     #[link_name = "vkGetPhysicalDeviceProperties2"]
-    #[must_use]
     pub fn get_physical_device_properties2(
         physical_device: PhysicalDevice,
         p_properties: *mut PhysicalDeviceProperties2,
     );
 
     #[link_name = "vkGetPhysicalDeviceFormatProperties2"]
-    #[must_use]
     pub fn get_physical_device_format_properties2(
         physical_device: PhysicalDevice,
         format: Format,
@@ -8843,7 +8744,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetPhysicalDeviceQueueFamilyProperties2"]
-    #[must_use]
     pub fn get_physical_device_queue_family_properties2(
         physical_device: PhysicalDevice,
         p_queue_family_property_count: *mut u32,
@@ -8851,14 +8751,12 @@ extern "C" {
     );
 
     #[link_name = "vkGetPhysicalDeviceMemoryProperties2"]
-    #[must_use]
     pub fn get_physical_device_memory_properties2(
         physical_device: PhysicalDevice,
         p_memory_properties: *mut PhysicalDeviceMemoryProperties2,
     );
 
     #[link_name = "vkGetPhysicalDeviceSparseImageFormatProperties2"]
-    #[must_use]
     pub fn get_physical_device_sparse_image_format_properties2(
         physical_device: PhysicalDevice,
         p_format_info: *const PhysicalDeviceSparseImageFormatInfo2,
@@ -8867,7 +8765,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdPushDescriptorSetKHR"]
-    #[must_use]
     pub fn cmd_push_descriptor_set_khr(
         command_buffer: CommandBuffer,
         pipeline_bind_point: PipelineBindPoint,
@@ -8878,7 +8775,6 @@ extern "C" {
     );
 
     #[link_name = "vkTrimCommandPool"]
-    #[must_use]
     pub fn trim_command_pool(
         device: Device,
         command_pool: CommandPool,
@@ -8886,7 +8782,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetPhysicalDeviceExternalBufferProperties"]
-    #[must_use]
     pub fn get_physical_device_external_buffer_properties(
         physical_device: PhysicalDevice,
         p_external_buffer_info: *const PhysicalDeviceExternalBufferInfo,
@@ -8928,7 +8823,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetPhysicalDeviceExternalSemaphoreProperties"]
-    #[must_use]
     pub fn get_physical_device_external_semaphore_properties(
         physical_device: PhysicalDevice,
         p_external_semaphore_info: *const PhysicalDeviceExternalSemaphoreInfo,
@@ -8966,7 +8860,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetPhysicalDeviceExternalFenceProperties"]
-    #[must_use]
     pub fn get_physical_device_external_fence_properties(
         physical_device: PhysicalDevice,
         p_external_fence_info: *const PhysicalDeviceExternalFenceInfo,
@@ -9077,7 +8970,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetDeviceGroupPeerMemoryFeatures"]
-    #[must_use]
     pub fn get_device_group_peer_memory_features(
         device: Device,
         heap_index: u32,
@@ -9103,7 +8995,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdSetDeviceMask"]
-    #[must_use]
     pub fn cmd_set_device_mask(command_buffer: CommandBuffer, device_mask: u32);
 
     #[link_name = "vkGetDeviceGroupPresentCapabilitiesKHR"]
@@ -9130,7 +9021,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdDispatchBase"]
-    #[must_use]
     pub fn cmd_dispatch_base(
         command_buffer: CommandBuffer,
         base_group_x: u32,
@@ -9160,7 +9050,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDescriptorUpdateTemplate"]
-    #[must_use]
     pub fn destroy_descriptor_update_template(
         device: Device,
         descriptor_update_template: DescriptorUpdateTemplate,
@@ -9168,7 +9057,6 @@ extern "C" {
     );
 
     #[link_name = "vkUpdateDescriptorSetWithTemplate"]
-    #[must_use]
     pub fn update_descriptor_set_with_template(
         device: Device,
         descriptor_set: DescriptorSet,
@@ -9177,7 +9065,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdPushDescriptorSetWithTemplateKHR"]
-    #[must_use]
     pub fn cmd_push_descriptor_set_with_template_khr(
         command_buffer: CommandBuffer,
         descriptor_update_template: DescriptorUpdateTemplate,
@@ -9187,7 +9074,6 @@ extern "C" {
     );
 
     #[link_name = "vkSetHdrMetadataEXT"]
-    #[must_use]
     pub fn set_hdr_metadata_ext(
         device: Device,
         swapchain_count: u32,
@@ -9244,7 +9130,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdSetViewportWScalingNV"]
-    #[must_use]
     pub fn cmd_set_viewport_wscaling_nv(
         command_buffer: CommandBuffer,
         first_viewport: u32,
@@ -9253,7 +9138,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetDiscardRectangleEXT"]
-    #[must_use]
     pub fn cmd_set_discard_rectangle_ext(
         command_buffer: CommandBuffer,
         first_discard_rectangle: u32,
@@ -9262,14 +9146,12 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetSampleLocationsEXT"]
-    #[must_use]
     pub fn cmd_set_sample_locations_ext(
         command_buffer: CommandBuffer,
         p_sample_locations_info: *const SampleLocationsInfoEXT,
     );
 
     #[link_name = "vkGetPhysicalDeviceMultisamplePropertiesEXT"]
-    #[must_use]
     pub fn get_physical_device_multisample_properties_ext(
         physical_device: PhysicalDevice,
         samples: SampleCountFlagBits,
@@ -9327,7 +9209,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetBufferMemoryRequirements2"]
-    #[must_use]
     pub fn get_buffer_memory_requirements2(
         device: Device,
         p_info: *const BufferMemoryRequirementsInfo2,
@@ -9335,7 +9216,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetImageMemoryRequirements2"]
-    #[must_use]
     pub fn get_image_memory_requirements2(
         device: Device,
         p_info: *const ImageMemoryRequirementsInfo2,
@@ -9343,7 +9223,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetImageSparseMemoryRequirements2"]
-    #[must_use]
     pub fn get_image_sparse_memory_requirements2(
         device: Device,
         p_info: *const ImageSparseMemoryRequirementsInfo2,
@@ -9361,7 +9240,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroySamplerYcbcrConversion"]
-    #[must_use]
     pub fn destroy_sampler_ycbcr_conversion(
         device: Device,
         ycbcr_conversion: SamplerYcbcrConversion,
@@ -9369,7 +9247,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetDeviceQueue2"]
-    #[must_use]
     pub fn get_device_queue2(
         device: Device,
         p_queue_info: *const DeviceQueueInfo2,
@@ -9386,7 +9263,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyValidationCacheEXT"]
-    #[must_use]
     pub fn destroy_validation_cache_ext(
         device: Device,
         validation_cache: ValidationCacheEXT,
@@ -9412,7 +9288,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetDescriptorSetLayoutSupport"]
-    #[must_use]
     pub fn get_descriptor_set_layout_support(
         device: Device,
         p_create_info: *const DescriptorSetLayoutCreateInfo,
@@ -9471,7 +9346,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkSetLocalDimmingAMD"]
-    #[must_use]
     pub fn set_local_dimming_amd(
         device: Device,
         swap_chain: SwapchainKHR,
@@ -9511,33 +9385,27 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkQueueBeginDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn queue_begin_debug_utils_label_ext(queue: Queue, p_label_info: *const DebugUtilsLabelEXT);
 
     #[link_name = "vkQueueEndDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn queue_end_debug_utils_label_ext(queue: Queue);
 
     #[link_name = "vkQueueInsertDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn queue_insert_debug_utils_label_ext(
         queue: Queue,
         p_label_info: *const DebugUtilsLabelEXT,
     );
 
     #[link_name = "vkCmdBeginDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn cmd_begin_debug_utils_label_ext(
         command_buffer: CommandBuffer,
         p_label_info: *const DebugUtilsLabelEXT,
     );
 
     #[link_name = "vkCmdEndDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn cmd_end_debug_utils_label_ext(command_buffer: CommandBuffer);
 
     #[link_name = "vkCmdInsertDebugUtilsLabelEXT"]
-    #[must_use]
     pub fn cmd_insert_debug_utils_label_ext(
         command_buffer: CommandBuffer,
         p_label_info: *const DebugUtilsLabelEXT,
@@ -9553,7 +9421,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDebugUtilsMessengerEXT"]
-    #[must_use]
     pub fn destroy_debug_utils_messenger_ext(
         instance: Instance,
         messenger: DebugUtilsMessengerEXT,
@@ -9561,7 +9428,6 @@ extern "C" {
     );
 
     #[link_name = "vkSubmitDebugUtilsMessageEXT"]
-    #[must_use]
     pub fn submit_debug_utils_message_ext(
         instance: Instance,
         message_severity: DebugUtilsMessageSeverityFlagBitsEXT,
@@ -9579,7 +9445,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdWriteBufferMarkerAMD"]
-    #[must_use]
     pub fn cmd_write_buffer_marker_amd(
         command_buffer: CommandBuffer,
         pipeline_stage: PipelineStageFlagBits,
@@ -9598,7 +9463,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdBeginRenderPass2"]
-    #[must_use]
     pub fn cmd_begin_render_pass2(
         command_buffer: CommandBuffer,
         p_render_pass_begin: *const RenderPassBeginInfo,
@@ -9606,7 +9470,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdNextSubpass2"]
-    #[must_use]
     pub fn cmd_next_subpass2(
         command_buffer: CommandBuffer,
         p_subpass_begin_info: *const SubpassBeginInfo,
@@ -9614,7 +9477,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdEndRenderPass2"]
-    #[must_use]
     pub fn cmd_end_render_pass2(
         command_buffer: CommandBuffer,
         p_subpass_end_info: *const SubpassEndInfo,
@@ -9657,7 +9519,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdDrawIndirectCount"]
-    #[must_use]
     pub fn cmd_draw_indirect_count(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -9669,7 +9530,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawIndexedIndirectCount"]
-    #[must_use]
     pub fn cmd_draw_indexed_indirect_count(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -9681,11 +9541,9 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetCheckpointNV"]
-    #[must_use]
     pub fn cmd_set_checkpoint_nv(command_buffer: CommandBuffer, p_checkpoint_marker: *const c_void);
 
     #[link_name = "vkGetQueueCheckpointDataNV"]
-    #[must_use]
     pub fn get_queue_checkpoint_data_nv(
         queue: Queue,
         p_checkpoint_data_count: *mut u32,
@@ -9693,7 +9551,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindTransformFeedbackBuffersEXT"]
-    #[must_use]
     pub fn cmd_bind_transform_feedback_buffers_ext(
         command_buffer: CommandBuffer,
         first_binding: u32,
@@ -9704,7 +9561,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBeginTransformFeedbackEXT"]
-    #[must_use]
     pub fn cmd_begin_transform_feedback_ext(
         command_buffer: CommandBuffer,
         first_counter_buffer: u32,
@@ -9714,7 +9570,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdEndTransformFeedbackEXT"]
-    #[must_use]
     pub fn cmd_end_transform_feedback_ext(
         command_buffer: CommandBuffer,
         first_counter_buffer: u32,
@@ -9724,7 +9579,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBeginQueryIndexedEXT"]
-    #[must_use]
     pub fn cmd_begin_query_indexed_ext(
         command_buffer: CommandBuffer,
         query_pool: QueryPool,
@@ -9734,7 +9588,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdEndQueryIndexedEXT"]
-    #[must_use]
     pub fn cmd_end_query_indexed_ext(
         command_buffer: CommandBuffer,
         query_pool: QueryPool,
@@ -9743,7 +9596,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawIndirectByteCountEXT"]
-    #[must_use]
     pub fn cmd_draw_indirect_byte_count_ext(
         command_buffer: CommandBuffer,
         instance_count: u32,
@@ -9755,7 +9607,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetExclusiveScissorNV"]
-    #[must_use]
     pub fn cmd_set_exclusive_scissor_nv(
         command_buffer: CommandBuffer,
         first_exclusive_scissor: u32,
@@ -9764,7 +9615,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindShadingRateImageNV"]
-    #[must_use]
     pub fn cmd_bind_shading_rate_image_nv(
         command_buffer: CommandBuffer,
         image_view: ImageView,
@@ -9772,7 +9622,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetViewportShadingRatePaletteNV"]
-    #[must_use]
     pub fn cmd_set_viewport_shading_rate_palette_nv(
         command_buffer: CommandBuffer,
         first_viewport: u32,
@@ -9781,7 +9630,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetCoarseSampleOrderNV"]
-    #[must_use]
     pub fn cmd_set_coarse_sample_order_nv(
         command_buffer: CommandBuffer,
         sample_order_type: CoarseSampleOrderTypeNV,
@@ -9790,11 +9638,9 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawMeshTasksNV"]
-    #[must_use]
     pub fn cmd_draw_mesh_tasks_nv(command_buffer: CommandBuffer, task_count: u32, first_task: u32);
 
     #[link_name = "vkCmdDrawMeshTasksIndirectNV"]
-    #[must_use]
     pub fn cmd_draw_mesh_tasks_indirect_nv(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -9804,7 +9650,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdDrawMeshTasksIndirectCountNV"]
-    #[must_use]
     pub fn cmd_draw_mesh_tasks_indirect_count_nv(
         command_buffer: CommandBuffer,
         buffer: Buffer,
@@ -9829,7 +9674,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyAccelerationStructureKHR"]
-    #[must_use]
     pub fn destroy_acceleration_structure_khr(
         device: Device,
         acceleration_structure: AccelerationStructureKHR,
@@ -9837,7 +9681,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetAccelerationStructureMemoryRequirementsKHR"]
-    #[must_use]
     pub fn get_acceleration_structure_memory_requirements_khr(
         device: Device,
         p_info: *const AccelerationStructureMemoryRequirementsInfoKHR,
@@ -9845,7 +9688,6 @@ extern "C" {
     );
 
     #[link_name = "vkGetAccelerationStructureMemoryRequirementsNV"]
-    #[must_use]
     pub fn get_acceleration_structure_memory_requirements_nv(
         device: Device,
         p_info: *const AccelerationStructureMemoryRequirementsInfoNV,
@@ -9861,7 +9703,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdCopyAccelerationStructureNV"]
-    #[must_use]
     pub fn cmd_copy_acceleration_structure_nv(
         command_buffer: CommandBuffer,
         dst: AccelerationStructureKHR,
@@ -9870,7 +9711,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdCopyAccelerationStructureKHR"]
-    #[must_use]
     pub fn cmd_copy_acceleration_structure_khr(
         command_buffer: CommandBuffer,
         p_info: *const CopyAccelerationStructureInfoKHR,
@@ -9884,7 +9724,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdCopyAccelerationStructureToMemoryKHR"]
-    #[must_use]
     pub fn cmd_copy_acceleration_structure_to_memory_khr(
         command_buffer: CommandBuffer,
         p_info: *const CopyAccelerationStructureToMemoryInfoKHR,
@@ -9898,7 +9737,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdCopyMemoryToAccelerationStructureKHR"]
-    #[must_use]
     pub fn cmd_copy_memory_to_acceleration_structure_khr(
         command_buffer: CommandBuffer,
         p_info: *const CopyMemoryToAccelerationStructureInfoKHR,
@@ -9912,7 +9750,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdWriteAccelerationStructuresPropertiesKHR"]
-    #[must_use]
     pub fn cmd_write_acceleration_structures_properties_khr(
         command_buffer: CommandBuffer,
         acceleration_structure_count: u32,
@@ -9923,7 +9760,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBuildAccelerationStructureNV"]
-    #[must_use]
     pub fn cmd_build_acceleration_structure_nv(
         command_buffer: CommandBuffer,
         p_info: *const AccelerationStructureInfoNV,
@@ -9949,7 +9785,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdTraceRaysKHR"]
-    #[must_use]
     pub fn cmd_trace_rays_khr(
         command_buffer: CommandBuffer,
         p_raygen_shader_binding_table: *const StridedBufferRegionKHR,
@@ -9962,7 +9797,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdTraceRaysNV"]
-    #[must_use]
     pub fn cmd_trace_rays_nv(
         command_buffer: CommandBuffer,
         raygen_shader_binding_table_buffer: Buffer,
@@ -10043,7 +9877,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdTraceRaysIndirectKHR"]
-    #[must_use]
     pub fn cmd_trace_rays_indirect_khr(
         command_buffer: CommandBuffer,
         p_raygen_shader_binding_table: *const StridedBufferRegionKHR,
@@ -10115,7 +9948,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetPhysicalDeviceQueueFamilyPerformanceQueryPassesKHR"]
-    #[must_use]
     pub fn get_physical_device_queue_family_performance_query_passes_khr(
         physical_device: PhysicalDevice,
         p_performance_query_create_info: *const QueryPoolPerformanceCreateInfoKHR,
@@ -10130,7 +9962,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkReleaseProfilingLockKHR"]
-    #[must_use]
     pub fn release_profiling_lock_khr(device: Device);
 
     #[link_name = "vkGetImageDrmFormatModifierPropertiesEXT"]
@@ -10180,7 +10011,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkUninitializePerformanceApiINTEL"]
-    #[must_use]
     pub fn uninitialize_performance_api_intel(device: Device);
 
     #[link_name = "vkCmdSetPerformanceMarkerINTEL"]
@@ -10269,7 +10099,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdSetLineStippleEXT"]
-    #[must_use]
     pub fn cmd_set_line_stipple_ext(
         command_buffer: CommandBuffer,
         line_stipple_factor: u32,
@@ -10294,7 +10123,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkCmdBuildAccelerationStructureKHR"]
-    #[must_use]
     pub fn cmd_build_acceleration_structure_khr(
         command_buffer: CommandBuffer,
         info_count: u32,
@@ -10303,7 +10131,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBuildAccelerationStructureIndirectKHR"]
-    #[must_use]
     pub fn cmd_build_acceleration_structure_indirect_khr(
         command_buffer: CommandBuffer,
         p_info: *const AccelerationStructureBuildGeometryInfoKHR,
@@ -10337,7 +10164,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyDeferredOperationKHR"]
-    #[must_use]
     pub fn destroy_deferred_operation_khr(
         device: Device,
         operation: DeferredOperationKHR,
@@ -10363,22 +10189,18 @@ extern "C" {
     pub fn deferred_operation_join_khr(device: Device, operation: DeferredOperationKHR) -> Result;
 
     #[link_name = "vkCmdSetCullModeEXT"]
-    #[must_use]
     pub fn cmd_set_cull_mode_ext(command_buffer: CommandBuffer, cull_mode: CullModeFlags);
 
     #[link_name = "vkCmdSetFrontFaceEXT"]
-    #[must_use]
     pub fn cmd_set_front_face_ext(command_buffer: CommandBuffer, front_face: FrontFace);
 
     #[link_name = "vkCmdSetPrimitiveTopologyEXT"]
-    #[must_use]
     pub fn cmd_set_primitive_topology_ext(
         command_buffer: CommandBuffer,
         primitive_topology: PrimitiveTopology,
     );
 
     #[link_name = "vkCmdSetViewportWithCountEXT"]
-    #[must_use]
     pub fn cmd_set_viewport_with_count_ext(
         command_buffer: CommandBuffer,
         viewport_count: u32,
@@ -10386,7 +10208,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetScissorWithCountEXT"]
-    #[must_use]
     pub fn cmd_set_scissor_with_count_ext(
         command_buffer: CommandBuffer,
         scissor_count: u32,
@@ -10394,7 +10215,6 @@ extern "C" {
     );
 
     #[link_name = "vkCmdBindVertexBuffers2EXT"]
-    #[must_use]
     pub fn cmd_bind_vertex_buffers2_ext(
         command_buffer: CommandBuffer,
         first_binding: u32,
@@ -10406,36 +10226,30 @@ extern "C" {
     );
 
     #[link_name = "vkCmdSetDepthTestEnableEXT"]
-    #[must_use]
     pub fn cmd_set_depth_test_enable_ext(command_buffer: CommandBuffer, depth_test_enable: Bool32);
 
     #[link_name = "vkCmdSetDepthWriteEnableEXT"]
-    #[must_use]
     pub fn cmd_set_depth_write_enable_ext(
         command_buffer: CommandBuffer,
         depth_write_enable: Bool32,
     );
 
     #[link_name = "vkCmdSetDepthCompareOpEXT"]
-    #[must_use]
     pub fn cmd_set_depth_compare_op_ext(command_buffer: CommandBuffer, depth_compare_op: CompareOp);
 
     #[link_name = "vkCmdSetDepthBoundsTestEnableEXT"]
-    #[must_use]
     pub fn cmd_set_depth_bounds_test_enable_ext(
         command_buffer: CommandBuffer,
         depth_bounds_test_enable: Bool32,
     );
 
     #[link_name = "vkCmdSetStencilTestEnableEXT"]
-    #[must_use]
     pub fn cmd_set_stencil_test_enable_ext(
         command_buffer: CommandBuffer,
         stencil_test_enable: Bool32,
     );
 
     #[link_name = "vkCmdSetStencilOpEXT"]
-    #[must_use]
     pub fn cmd_set_stencil_op_ext(
         command_buffer: CommandBuffer,
         face_mask: StencilFaceFlags,
@@ -10455,7 +10269,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkDestroyPrivateDataSlotEXT"]
-    #[must_use]
     pub fn destroy_private_data_slot_ext(
         device: Device,
         private_data_slot: PrivateDataSlotEXT,
@@ -10473,7 +10286,6 @@ extern "C" {
     ) -> Result;
 
     #[link_name = "vkGetPrivateDataEXT"]
-    #[must_use]
     pub fn get_private_data_ext(
         device: Device,
         object_type: ObjectType,

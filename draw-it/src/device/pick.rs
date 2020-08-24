@@ -11,7 +11,6 @@ use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::instance::GPUProperties;
 use crate::instance::Version;
-use crate::surface::ColorSpace;
 use crate::surface::VSync;
 use crate::vk;
 
@@ -56,15 +55,12 @@ pub(crate) fn pick_gpu(
             if !props.supports_msaa(msaa) {
                 score = 0;
             }
-            if props
-                .formats
-                .iter()
-                .find(|f| {
-                    f.color_space == ColorSpace::Srgb.flag()
-                        && f.format == ImageFormat::Sbgra.flag()
-                })
-                .is_none()
-            {
+
+            let format = props.formats.iter().find(|f| {
+                f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
+                    && f.format == ImageFormat::Sbgra.flag()
+            });
+            if format.is_none() {
                 score = 0;
             }
 

@@ -147,8 +147,8 @@ impl From<[f32; 4]> for Color {
     }
 }
 
-const fn to_norm(value: u8) -> f32 {
-    value as f32 / 255.0
+fn to_norm(value: u8) -> f32 {
+    f32::from(value) / 255.0
 }
 
 fn to_byte(value: f32) -> u8 {

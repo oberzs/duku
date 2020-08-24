@@ -136,10 +136,30 @@ impl Device {
             flags: 0,
         };
         unsafe {
-            vk::create_semaphore(handle, &sem_info, ptr::null(), &mut sync_acquire[0]);
-            vk::create_semaphore(handle, &sem_info, ptr::null(), &mut sync_acquire[1]);
-            vk::create_semaphore(handle, &sem_info, ptr::null(), &mut sync_release[0]);
-            vk::create_semaphore(handle, &sem_info, ptr::null(), &mut sync_release[1]);
+            vk::check(vk::create_semaphore(
+                handle,
+                &sem_info,
+                ptr::null(),
+                &mut sync_acquire[0],
+            ));
+            vk::check(vk::create_semaphore(
+                handle,
+                &sem_info,
+                ptr::null(),
+                &mut sync_acquire[1],
+            ));
+            vk::check(vk::create_semaphore(
+                handle,
+                &sem_info,
+                ptr::null(),
+                &mut sync_release[0],
+            ));
+            vk::check(vk::create_semaphore(
+                handle,
+                &sem_info,
+                ptr::null(),
+                &mut sync_release[1],
+            ));
         }
 
         // create synchronization fences
@@ -150,8 +170,18 @@ impl Device {
             flags: vk::FENCE_CREATE_SIGNALED_BIT,
         };
         unsafe {
-            vk::create_fence(handle, &fence_info, ptr::null(), &mut sync_submit[0]);
-            vk::create_fence(handle, &fence_info, ptr::null(), &mut sync_submit[1]);
+            vk::check(vk::create_fence(
+                handle,
+                &fence_info,
+                ptr::null(),
+                &mut sync_submit[0],
+            ));
+            vk::check(vk::create_fence(
+                handle,
+                &fence_info,
+                ptr::null(),
+                &mut sync_submit[1],
+            ));
         }
 
         // create command pools and buffers
@@ -163,8 +193,18 @@ impl Device {
         };
         let mut command_pools = [0; FRAMES_IN_FLIGHT];
         unsafe {
-            vk::create_command_pool(handle, &pool_info, ptr::null(), &mut command_pools[0]);
-            vk::create_command_pool(handle, &pool_info, ptr::null(), &mut command_pools[1]);
+            vk::check(vk::create_command_pool(
+                handle,
+                &pool_info,
+                ptr::null(),
+                &mut command_pools[0],
+            ));
+            vk::check(vk::create_command_pool(
+                handle,
+                &pool_info,
+                ptr::null(),
+                &mut command_pools[1],
+            ));
         }
 
         let mut command_buffers = [0; FRAMES_IN_FLIGHT];
@@ -183,8 +223,16 @@ impl Device {
             command_buffer_count: 1,
         };
         unsafe {
-            vk::allocate_command_buffers(handle, &buffer_info_0, &mut command_buffers[0]);
-            vk::allocate_command_buffers(handle, &buffer_info_1, &mut command_buffers[1]);
+            vk::check(vk::allocate_command_buffers(
+                handle,
+                &buffer_info_0,
+                &mut command_buffers[0],
+            ));
+            vk::check(vk::allocate_command_buffers(
+                handle,
+                &buffer_info_1,
+                &mut command_buffers[1],
+            ));
         }
 
         // create destroyed resource storage
@@ -222,8 +270,14 @@ impl Device {
         let wait = self.sync_submit[current];
         unsafe {
             let fences = [wait];
-            vk::wait_for_fences(self.handle, 1, fences.as_ptr(), vk::TRUE, u64::max_value());
-            vk::reset_fences(self.handle, 1, fences.as_ptr());
+            vk::check(vk::wait_for_fences(
+                self.handle,
+                1,
+                fences.as_ptr(),
+                vk::TRUE,
+                u64::max_value(),
+            ));
+            vk::check(vk::reset_fences(self.handle, 1, fences.as_ptr()));
         }
 
         // reset command buffer
@@ -269,8 +323,8 @@ impl Device {
         }];
 
         unsafe {
-            vk::queue_submit(self.queue.1, 1, infos.as_ptr(), 0);
-            vk::device_wait_idle(self.handle);
+            vk::check(vk::queue_submit(self.queue.1, 1, infos.as_ptr(), 0));
+            vk::check(vk::device_wait_idle(self.handle));
         }
     }
 
@@ -301,7 +355,7 @@ impl Device {
         }];
 
         unsafe {
-            vk::queue_submit(self.queue.1, 1, infos.as_ptr(), done);
+            vk::check(vk::queue_submit(self.queue.1, 1, infos.as_ptr(), done));
         }
     }
 
@@ -323,7 +377,7 @@ impl Device {
         };
 
         unsafe {
-            vk::queue_present_khr(self.queue.1, &info);
+            vk::check(vk::queue_present_khr(self.queue.1, &info));
         }
     }
 
@@ -333,14 +387,19 @@ impl Device {
 
     pub(crate) fn wait_idle(&self) {
         unsafe {
-            vk::device_wait_idle(self.handle);
+            vk::check(vk::device_wait_idle(self.handle));
         }
     }
 
     pub(crate) fn create_swapchain(&self, info: &vk::SwapchainCreateInfoKHR) -> vk::SwapchainKHR {
         let mut swapchain = 0;
         unsafe {
-            vk::create_swapchain_khr(self.handle, info, ptr::null(), &mut swapchain);
+            vk::check(vk::create_swapchain_khr(
+                self.handle,
+                info,
+                ptr::null(),
+                &mut swapchain,
+            ));
         }
         swapchain
     }
@@ -354,9 +413,19 @@ impl Device {
     pub(crate) fn get_swapchain_images(&self, swapchain: vk::SwapchainKHR) -> Vec<vk::Image> {
         unsafe {
             let mut count = 0;
-            vk::get_swapchain_images_khr(self.handle, swapchain, &mut count, ptr::null_mut());
+            vk::check(vk::get_swapchain_images_khr(
+                self.handle,
+                swapchain,
+                &mut count,
+                ptr::null_mut(),
+            ));
             let mut images: Vec<vk::Image> = Vec::with_capacity(count as usize);
-            vk::get_swapchain_images_khr(self.handle, swapchain, &mut count, images.as_mut_ptr());
+            vk::check(vk::get_swapchain_images_khr(
+                self.handle,
+                swapchain,
+                &mut count,
+                images.as_mut_ptr(),
+            ));
             images.set_len(count as usize);
             images
         }
@@ -369,14 +438,14 @@ impl Device {
     ) -> usize {
         let mut index = 0;
         unsafe {
-            vk::acquire_next_image_khr(
+            vk::check(vk::acquire_next_image_khr(
                 self.handle,
                 swapchain,
                 u64::max_value(),
                 signal,
                 0,
                 &mut index,
-            );
+            ));
         }
         index as usize
     }
@@ -397,7 +466,12 @@ impl Device {
         // create buffer handle
         let mut buffer = 0;
         unsafe {
-            vk::create_buffer(self.handle, info, ptr::null(), &mut buffer);
+            vk::check(vk::create_buffer(
+                self.handle,
+                info,
+                ptr::null(),
+                &mut buffer,
+            ));
         }
 
         // get memory type
@@ -416,8 +490,13 @@ impl Device {
         };
         let mut memory = 0;
         unsafe {
-            vk::allocate_memory(self.handle, &alloc_info, ptr::null(), &mut memory);
-            vk::bind_buffer_memory(self.handle, buffer, memory, 0);
+            vk::check(vk::allocate_memory(
+                self.handle,
+                &alloc_info,
+                ptr::null(),
+                &mut memory,
+            ));
+            vk::check(vk::bind_buffer_memory(self.handle, buffer, memory, 0));
         }
 
         (buffer, memory)
@@ -434,7 +513,7 @@ impl Device {
         // create image handle
         let mut image = 0;
         unsafe {
-            vk::create_image(self.handle, info, ptr::null(), &mut image);
+            vk::check(vk::create_image(self.handle, info, ptr::null(), &mut image));
         }
 
         // get memory type
@@ -453,8 +532,13 @@ impl Device {
         };
         let mut memory = 0;
         unsafe {
-            vk::allocate_memory(self.handle, &alloc_info, ptr::null(), &mut memory);
-            vk::bind_image_memory(self.handle, image, memory, 0);
+            vk::check(vk::allocate_memory(
+                self.handle,
+                &alloc_info,
+                ptr::null(),
+                &mut memory,
+            ));
+            vk::check(vk::bind_image_memory(self.handle, image, memory, 0));
         }
 
         (image, memory)
@@ -470,7 +554,12 @@ impl Device {
     pub(crate) fn create_image_view(&self, info: &vk::ImageViewCreateInfo) -> vk::ImageView {
         let mut view = 0;
         unsafe {
-            vk::create_image_view(self.handle, info, ptr::null(), &mut view);
+            vk::check(vk::create_image_view(
+                self.handle,
+                info,
+                ptr::null(),
+                &mut view,
+            ));
         }
         view
     }
@@ -489,7 +578,14 @@ impl Device {
     ) {
         let mut data = ptr::null_mut();
         unsafe {
-            vk::map_memory(self.handle, memory, 0, size as u64, 0, &mut data);
+            vk::check(vk::map_memory(
+                self.handle,
+                memory,
+                0,
+                size as u64,
+                0,
+                &mut data,
+            ));
             fun(data);
             vk::unmap_memory(self.handle, memory);
         }
@@ -498,7 +594,12 @@ impl Device {
     pub(crate) fn create_framebuffer(&self, info: &vk::FramebufferCreateInfo) -> vk::Framebuffer {
         let mut framebuffer = 0;
         unsafe {
-            vk::create_framebuffer(self.handle, info, ptr::null(), &mut framebuffer);
+            vk::check(vk::create_framebuffer(
+                self.handle,
+                info,
+                ptr::null(),
+                &mut framebuffer,
+            ));
         }
         framebuffer
     }
@@ -522,11 +623,11 @@ impl Device {
         };
         let mut layout = 0;
         unsafe {
-            vk_check!(vk::create_descriptor_set_layout(
+            vk::check(vk::create_descriptor_set_layout(
                 self.handle,
                 &info,
                 ptr::null(),
-                &mut layout
+                &mut layout,
             ));
         }
         layout
@@ -553,7 +654,12 @@ impl Device {
         };
         let mut pool = 0;
         unsafe {
-            vk::create_descriptor_pool(self.handle, &info, ptr::null(), &mut pool);
+            vk::check(vk::create_descriptor_pool(
+                self.handle,
+                &info,
+                ptr::null(),
+                &mut pool,
+            ));
         }
         pool
     }
@@ -570,7 +676,12 @@ impl Device {
     ) -> vk::PipelineLayout {
         let mut layout = 0;
         unsafe {
-            vk::create_pipeline_layout(self.handle, info, ptr::null(), &mut layout);
+            vk::check(vk::create_pipeline_layout(
+                self.handle,
+                info,
+                ptr::null(),
+                &mut layout,
+            ));
         }
         layout
     }
@@ -596,7 +707,7 @@ impl Device {
         };
         let mut set = 0;
         unsafe {
-            vk::allocate_descriptor_sets(self.handle, &info, &mut set);
+            vk::check(vk::allocate_descriptor_sets(self.handle, &info, &mut set));
         }
         set
     }
@@ -616,11 +727,11 @@ impl Device {
     pub(crate) fn create_render_pass(&self, info: &vk::RenderPassCreateInfo) -> vk::RenderPass {
         let mut pass = 0;
         unsafe {
-            vk_check!(vk::create_render_pass(
+            vk::check(vk::create_render_pass(
                 self.handle,
                 info,
                 ptr::null(),
-                &mut pass
+                &mut pass,
             ));
         }
         pass
@@ -635,11 +746,11 @@ impl Device {
     pub(crate) fn create_sampler(&self, info: &vk::SamplerCreateInfo) -> vk::Sampler {
         let mut sampler = 0;
         unsafe {
-            vk_check!(vk::create_sampler(
+            vk::check(vk::create_sampler(
                 self.handle,
                 info,
                 ptr::null(),
-                &mut sampler
+                &mut sampler,
             ));
         }
         sampler
@@ -655,13 +766,13 @@ impl Device {
         let infos = [info];
         let mut pipeline = 0;
         unsafe {
-            vk_check!(vk::create_graphics_pipelines(
+            vk::check(vk::create_graphics_pipelines(
                 self.handle,
                 0,
                 1,
                 infos.as_ptr(),
                 ptr::null(),
-                &mut pipeline
+                &mut pipeline,
             ));
         }
         pipeline
@@ -718,11 +829,11 @@ impl Device {
         };
         let mut module = 0;
         unsafe {
-            vk_check!(vk::create_shader_module(
+            vk::check(vk::create_shader_module(
                 self.handle,
                 &info,
                 ptr::null(),
-                &mut module
+                &mut module,
             ));
         }
         module
@@ -750,11 +861,11 @@ impl Device {
         };
         let mut command_pool = 0;
         unsafe {
-            vk_check!(vk::create_command_pool(
+            vk::check(vk::create_command_pool(
                 self.handle,
                 &pool_info,
                 ptr::null(),
-                &mut command_pool
+                &mut command_pool,
             ));
         }
 
@@ -768,10 +879,10 @@ impl Device {
         };
         let mut buffer = 0;
         unsafe {
-            vk_check!(vk::allocate_command_buffers(
+            vk::check(vk::allocate_command_buffers(
                 self.handle,
                 &buffer_info,
-                &mut buffer
+                &mut buffer,
             ));
         }
 
@@ -786,11 +897,11 @@ impl Device {
     pub(crate) fn free_command_buffer(&self, pool: vk::CommandPool, buffer: vk::CommandBuffer) {
         let buffers = [buffer];
         unsafe {
-            vk::reset_command_pool(
+            vk::check(vk::reset_command_pool(
                 self.handle,
                 pool,
                 vk::COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT,
-            );
+            ));
             vk::free_command_buffers(self.handle, pool, 1, buffers.as_ptr());
         }
     }
@@ -803,13 +914,13 @@ impl Device {
             p_inheritance_info: ptr::null(),
         };
         unsafe {
-            vk::begin_command_buffer(buffer, &info);
+            vk::check(vk::begin_command_buffer(buffer, &info));
         }
     }
 
     pub(crate) fn end_command_buffer(&self, buffer: vk::CommandBuffer) {
         unsafe {
-            vk::end_command_buffer(buffer);
+            vk::check(vk::end_command_buffer(buffer));
         }
     }
 

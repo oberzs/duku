@@ -18,7 +18,7 @@ pub struct QualityOptions {
 }
 
 impl Quality {
-    pub(crate) const fn options(&self) -> QualityOptions {
+    pub(crate) fn options(&self) -> QualityOptions {
         match *self {
             Self::Custom(o) => o,
             Self::Low => QualityOptions {

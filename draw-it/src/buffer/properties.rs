@@ -25,7 +25,7 @@ impl BufferUsage {
         usages.iter().fold(0, |acc, usage| acc | usage.flag())
     }
 
-    pub(crate) const fn flag(&self) -> vk::BufferUsageFlags {
+    pub(crate) fn flag(&self) -> vk::BufferUsageFlags {
         match *self {
             Self::Vertex => vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
             Self::Index => vk::BUFFER_USAGE_INDEX_BUFFER_BIT,

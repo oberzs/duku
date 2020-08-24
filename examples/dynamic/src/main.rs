@@ -31,14 +31,14 @@ fn main() -> Result<()> {
     camera.transform.move_backward(10.0);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
-    let mut square = context.create_mesh()?;
+    let mut square = context.create_mesh();
     square.vertices = square_vertices(square_size, 0.0);
     square.indices = square_indices(square_size);
     square.update();
     let time = Instant::now();
 
     while window.is_open() {
-        context.poll_events(&mut window)?;
+        context.poll_events(&mut window);
         controller.update(&mut camera, &mut window, context.delta_time());
 
         // update square mesh
@@ -53,7 +53,7 @@ fn main() -> Result<()> {
             // draw square
             let offset = -(square_size as f32 / 2.0);
             target.draw(&square, [offset, offset, 0.0]);
-        })?;
+        });
     }
 
     Ok(())

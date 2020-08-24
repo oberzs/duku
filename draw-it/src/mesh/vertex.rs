@@ -20,7 +20,7 @@ pub(crate) struct Vertex {
 }
 
 impl Vertex {
-    pub(crate) fn binding_description() -> vk::VertexInputBindingDescription {
+    pub(crate) const fn binding_description() -> vk::VertexInputBindingDescription {
         vk::VertexInputBindingDescription {
             binding: 0,
             stride: mem::size_of::<Self>() as u32,
@@ -28,7 +28,7 @@ impl Vertex {
         }
     }
 
-    pub(crate) fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 4] {
+    pub(crate) const fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 4] {
         let size2 = mem::size_of::<Vector2>() as u32;
         let size3 = mem::size_of::<Vector3>() as u32;
 

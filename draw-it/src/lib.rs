@@ -3,7 +3,6 @@
 
 // Draw-it is a Vulkan rendering engine
 
-#![feature(drain_filter, const_fn, const_cstr_unchecked)]
 #![warn(
     rust_2018_idioms,
     unused,
