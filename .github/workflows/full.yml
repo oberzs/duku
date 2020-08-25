@@ -39,16 +39,3 @@ jobs:
 
       - name: Test
         run: cargo test
-
-  macos:
-    name: "Mac OS"
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Build
-        run: cargo build
-
-      - name: Test
-        run: cargo test
