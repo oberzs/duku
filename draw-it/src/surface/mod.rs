@@ -95,7 +95,7 @@ impl Surface {
             s_type: vk::STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
             p_next: ptr::null(),
             flags: 0,
-            p_layer: ptr::null(), // TODO: implement
+            p_view: ptr::null(), // TODO: implement
         };
 
         let handle = instance.create_macos_surface(&info);
