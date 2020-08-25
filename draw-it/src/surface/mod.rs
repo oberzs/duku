@@ -71,7 +71,7 @@ impl Surface {
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Result<Self> {
+    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
         use cocoa::appkit::NSView;
         use cocoa::appkit::NSWindow;
         use cocoa::base::id as cocoa_id;
@@ -92,16 +92,21 @@ impl Surface {
         unsafe { view.setLayer(mem::transmute(layer.as_ref())) };
         unsafe { view.setWantsLayer(1) };
 
-        let info = vk::MacOSSurfaceCreateInfoMVK::builder();
+        let info = vk::MacOsSurfaceCreateInfoMVK {
+            s_type: vk::STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
+            p_next: ptr::null(),
+            flags: 0,
+            p_layer: ptr::null(), // TODO: implement
+        };
 
-        let handle = instance.create_surface(&info)?;
+        let handle = instance.create_surface(&info);
 
-        Ok(Self {
+        Self {
             handle,
             width: window.width,
             height: window.height,
             instance: Rc::clone(instance),
-        })
+        }
     }
 
     pub(crate) fn resize(&mut self, width: u32, height: u32) {
