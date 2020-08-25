@@ -40,7 +40,7 @@ impl Surface {
             hinstance,
         };
 
-        let handle = instance.create_surface(&info);
+        let handle = instance.create_win32_surface(&info);
 
         Self {
             handle,
@@ -60,7 +60,7 @@ impl Surface {
             window: window.xlib_window as u64,
         };
 
-        let handle = instance.create_surface(&info);
+        let handle = instance.create_linux_surface(&info);
 
         Self {
             handle,
@@ -77,7 +77,6 @@ impl Surface {
         use cocoa::base::id as cocoa_id;
         use metal::CoreAnimationLayer;
         use std::mem;
-        use std::os::raw::c_void;
 
         let wnd: cocoa_id = unsafe { mem::transmute(window.ns_window) };
         let layer = CoreAnimationLayer::new();
@@ -92,14 +91,14 @@ impl Surface {
         unsafe { view.setLayer(mem::transmute(layer.as_ref())) };
         unsafe { view.setWantsLayer(1) };
 
-        let info = vk::MacOsSurfaceCreateInfoMVK {
+        let info = vk::MacOSSurfaceCreateInfoMVK {
             s_type: vk::STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK,
             p_next: ptr::null(),
             flags: 0,
             p_layer: ptr::null(), // TODO: implement
         };
 
-        let handle = instance.create_surface(&info);
+        let handle = instance.create_macos_surface(&info);
 
         Self {
             handle,

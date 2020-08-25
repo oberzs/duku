@@ -293,7 +293,10 @@ impl Instance {
     }
 
     #[cfg(target_os = "windows")]
-    pub(crate) fn create_surface(&self, info: &vk::Win32SurfaceCreateInfoKHR) -> vk::SurfaceKHR {
+    pub(crate) fn create_win32_surface(
+        &self,
+        info: &vk::Win32SurfaceCreateInfoKHR,
+    ) -> vk::SurfaceKHR {
         let mut surface = 0;
         unsafe {
             vk::check(vk::create_win32_surface_khr(
@@ -307,7 +310,10 @@ impl Instance {
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn create_surface(&self, info: &vk::XlibSurfaceCreateInfoKHR) -> vk::SurfaceKHR {
+    pub(crate) fn create_linux_surface(
+        &self,
+        info: &vk::XlibSurfaceCreateInfoKHR,
+    ) -> vk::SurfaceKHR {
         let mut surface = 0;
         unsafe {
             vk::check(vk::create_xlib_surface_khr(
@@ -321,13 +327,13 @@ impl Instance {
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn create_surface(
+    pub(crate) fn create_macos_surface(
         &self,
         info: &vk::MacOSSurfaceCreateInfoMVK,
-    ) -> Result<vk::SurfaceKHR> {
+    ) -> vk::SurfaceKHR {
         let mut surface = 0;
         unsafe {
-            vk::check(vk::create_mac_os_surface_khr(
+            vk::check(vk::create_mac_ossurface_mvk(
                 self.handle,
                 info,
                 ptr::null(),
