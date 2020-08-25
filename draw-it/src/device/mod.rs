@@ -177,56 +177,6 @@ impl Device {
         }
 
         // create command pools and buffers
-        let pool_info = vk::CommandPoolCreateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            p_next: ptr::null(),
-            flags: vk::COMMAND_POOL_CREATE_TRANSIENT_BIT,
-            queue_family_index: queue_index,
-        };
-        let mut command_pools = [0; FRAMES_IN_FLIGHT];
-        unsafe {
-            vk::check(vk::create_command_pool(
-                handle,
-                &pool_info,
-                ptr::null(),
-                &mut command_pools[0],
-            ));
-            vk::check(vk::create_command_pool(
-                handle,
-                &pool_info,
-                ptr::null(),
-                &mut command_pools[1],
-            ));
-        }
-
-        let mut command_buffers = [0; FRAMES_IN_FLIGHT];
-        let buffer_info_0 = vk::CommandBufferAllocateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            p_next: ptr::null(),
-            command_pool: command_pools[0],
-            level: vk::COMMAND_BUFFER_LEVEL_PRIMARY,
-            command_buffer_count: 1,
-        };
-        let buffer_info_1 = vk::CommandBufferAllocateInfo {
-            s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            p_next: ptr::null(),
-            command_pool: command_pools[1],
-            level: vk::COMMAND_BUFFER_LEVEL_PRIMARY,
-            command_buffer_count: 1,
-        };
-        unsafe {
-            vk::check(vk::allocate_command_buffers(
-                handle,
-                &buffer_info_0,
-                &mut command_buffers[0],
-            ));
-            vk::check(vk::allocate_command_buffers(
-                handle,
-                &buffer_info_1,
-                &mut command_buffers[1],
-            ));
-        }
-
         let commands = [
             Commands::new(handle, queue_index),
             Commands::new(handle, queue_index),

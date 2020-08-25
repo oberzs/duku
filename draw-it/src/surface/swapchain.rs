@@ -113,7 +113,7 @@ fn swapchain_info(
         queue_family_index_count: 1,
         p_queue_family_indices: indices.as_ptr(),
         pre_transform: transform,
-        composite_alpha: vk::COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        composite_alpha: vk::COMPOSITE_ALPHA_INHERIT_BIT_KHR,
         present_mode: vsync.flag(),
         clipped: vk::TRUE,
         old_swapchain: 0,

@@ -55,6 +55,11 @@ pub(crate) fn pick_gpu(
             if !props.supports_msaa(msaa) {
                 score = 0;
             }
+            if (props.capabilities.supported_composite_alpha & vk::COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+                == 0
+            {
+                score = 0;
+            }
 
             let format = props.formats.iter().find(|f| {
                 f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR

@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// "Hello, World!" example to open a rainbow window
+// "Hello, World!" example to open a transparent rainbow window
 
 use draw_it::window::WindowOptions;
 use draw_it::Camera;
@@ -26,9 +26,11 @@ fn main() -> Result<()> {
         context.poll_events(&mut window);
 
         hue = (hue + 1) % 360;
+        let mut color = Color::hsv(hue, 255, 255);
+        color.a = 50;
 
         context.draw_on_window(&camera, |target| {
-            target.clear = Color::hsv(hue, 255, 255);
+            target.clear = color;
         });
     }
 
