@@ -121,6 +121,16 @@ impl Commands {
         self.buffer.get()
     }
 
+    pub(crate) fn reset_stats(&self) {
+        self.stats.set(Stats::default());
+        self.used_materials.borrow_mut().clear();
+        self.used_shaders.borrow_mut().clear();
+    }
+
+    pub(crate) fn stats(&self) -> Stats {
+        self.stats.get()
+    }
+
     pub(crate) fn begin(&self) {
         let info = vk::CommandBufferBeginInfo {
             s_type: vk::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

@@ -8,7 +8,6 @@ mod pick;
 
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::ffi::c_void;
 use std::ffi::CString;
 use std::io::Cursor;
@@ -20,6 +19,7 @@ use std::ptr;
 use std::slice;
 
 pub(crate) use commands::Commands;
+pub use commands::Stats;
 pub(crate) use pick::pick_gpu;
 
 use crate::buffer::BufferAccess;
@@ -28,7 +28,6 @@ use crate::error::Result;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
-use crate::pipeline::Descriptor;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -49,20 +48,6 @@ pub(crate) struct Device {
     destroyed_pipelines: RefCell<[Vec<vk::Pipeline>; FRAMES_IN_FLIGHT]>,
     destroyed_buffers: RefCell<[Vec<(vk::Buffer, vk::DeviceMemory)>; FRAMES_IN_FLIGHT]>,
     destroyed_images: RefCell<[Vec<(vk::Image, vk::DeviceMemory)>; FRAMES_IN_FLIGHT]>,
-
-    stats: Cell<Stats>,
-    used_materials: RefCell<HashSet<Descriptor>>,
-    used_shaders: RefCell<HashSet<vk::Pipeline>>,
-}
-
-#[derive(Copy, Clone, Default)]
-pub struct Stats {
-    pub drawn_indices: u32,
-    pub shaders_used: u32,
-    pub shader_rebinds: u32,
-    pub materials_used: u32,
-    pub material_rebinds: u32,
-    pub draw_calls: u32,
 }
 
 impl Device {
@@ -193,9 +178,6 @@ impl Device {
             destroyed_images: RefCell::new(destroyed_images),
             queue: (queue_index, queue),
             current_frame: Cell::new(0),
-            stats: Cell::new(Stats::default()),
-            used_materials: RefCell::new(HashSet::new()),
-            used_shaders: RefCell::new(HashSet::new()),
             commands,
             memory_types,
             sync_release,
@@ -231,13 +213,9 @@ impl Device {
         // cleanup destroyed storage
         self.cleanup_resources(current);
 
-        // reset stats
-        self.stats.set(Stats::default());
-        self.used_materials.borrow_mut().clear();
-        self.used_shaders.borrow_mut().clear();
-
         // create new command buffer
         self.commands[current].recreate(self.handle);
+        self.commands[current].reset_stats();
 
         // begin new command buffer
         self.commands[current].begin();
@@ -391,7 +369,7 @@ impl Device {
     }
 
     pub(crate) fn stats(&self) -> Stats {
-        self.stats.get()
+        self.commands[self.current_frame()].stats()
     }
 
     pub(crate) fn allocate_buffer(
