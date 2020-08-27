@@ -67,7 +67,7 @@ fn main() -> Result<()> {
 
     while window.is_open() {
         context.poll_events(&mut window);
-        context.draw_on_window(&camera, |target| {
+        context.draw_on_window(Some(&camera), |target| {
             target.clear = Color::SKY_BLUE;
             target.draw_cube([0.0, 0.0, 0.0]);
         });

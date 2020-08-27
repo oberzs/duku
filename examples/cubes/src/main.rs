@@ -73,7 +73,7 @@ fn main() -> Result<()> {
             ui.stats_window(stats, fps, delta_time);
         })?;
 
-        context.draw_on_window(&camera, |target| {
+        context.draw_on_window(Some(&camera), |target| {
             target.skybox = true;
             target.lights[0] = main_light;
             // target.draw_grid();

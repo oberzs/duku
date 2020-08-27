@@ -5,7 +5,6 @@
 // https://github.com/Gekkio/imgui-rs
 
 use draw_it::window::WindowOptions;
-use draw_it::Camera;
 use draw_it::Context;
 use draw_it::Result;
 
@@ -14,11 +13,10 @@ fn main() -> Result<()> {
         Default::default(),
         WindowOptions {
             title: "Draw-it example: UI",
+            resizable: true,
             ..Default::default()
         },
     )?;
-
-    let camera = Camera::orthographic(500.0, 500.0);
 
     let mut show_demo = true;
 
@@ -27,7 +25,7 @@ fn main() -> Result<()> {
         context.draw_ui(|ui| {
             ui.frame.show_demo_window(&mut show_demo);
         })?;
-        context.draw_on_window(&camera, |_| {});
+        context.draw_on_window(None, |_| {});
     }
 
     Ok(())

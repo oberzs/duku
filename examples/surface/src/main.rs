@@ -4,19 +4,17 @@
 // example that draws a framebuffer with a custom ray-marching shader
 
 use draw_it::window::WindowOptions;
-use draw_it::Camera;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (width, height) = (900, 900);
     let (mut context, mut window) = Context::with_window(
         Default::default(),
         WindowOptions {
             title: "Draw-it example: Surface",
-            width,
-            height,
-            ..Default::default()
+            resizable: true,
+            width: 900,
+            height: 900,
         },
     )?;
 
@@ -28,8 +26,6 @@ fn main() -> Result<()> {
         context.create_shader_from_file_watch("examples/surface/shaders/raymarch.shader")?;
     #[cfg(not(debug_assertions))]
     let shader = context.create_shader(include_bytes!("../shaders/raymarch.shader"))?;
-
-    let camera = Camera::orthographic(width as f32, height as f32);
 
     while window.is_open() {
         // poll events
@@ -44,7 +40,7 @@ fn main() -> Result<()> {
         })?;
 
         // draw other stuff
-        context.draw_on_window(&camera, |target| {
+        context.draw_on_window(None, |target| {
             target.set_shader(&shader);
             target.draw_surface();
         });

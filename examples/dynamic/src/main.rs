@@ -46,7 +46,7 @@ fn main() -> Result<()> {
         square.vertices = square_vertices(square_size, elapsed);
         square.update();
 
-        context.draw_on_window(&camera, |target| {
+        context.draw_on_window(Some(&camera), |target| {
             target.wireframes = true;
             target.clear = Color::ORANGE;
 

@@ -242,7 +242,11 @@ impl Context {
         }
     }
 
-    pub fn draw_on_window(&mut self, camera: &Camera, draw_callback: impl Fn(&mut Target<'_>)) {
+    pub fn draw_on_window(
+        &mut self,
+        camera: Option<&Camera>,
+        draw_callback: impl Fn(&mut Target<'_>),
+    ) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
@@ -257,10 +261,18 @@ impl Context {
             }
         }
 
+        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
+
+        let cam = match camera {
+            Some(c) => c.clone(),
+            // create default camera if not supplied
+            None => Camera::orthographic(framebuffer.width() as f32, framebuffer.height() as f32),
+        };
+
         // draw
         self.forward_renderer.draw_core(
-            &mut self.window_framebuffers[self.swapchain.current()],
-            camera,
+            framebuffer,
+            &cam,
             &mut self.storage,
             &self.shader_layout,
             target,
@@ -272,7 +284,7 @@ impl Context {
     pub fn draw(
         &mut self,
         framebuffer: &Framebuffer,
-        camera: &Camera,
+        camera: Option<&Camera>,
         draw_callback: impl Fn(&mut Target<'_>),
     ) {
         if let RenderStage::Before = self.render_stage {
@@ -283,10 +295,16 @@ impl Context {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
+        let cam = match camera {
+            Some(c) => c.clone(),
+            // create default camera if not supplied
+            None => Camera::orthographic(framebuffer.width as f32, framebuffer.height as f32),
+        };
+
         // draw
         self.forward_renderer.draw(
             &framebuffer.index,
-            camera,
+            &cam,
             &mut self.storage,
             &self.shader_layout,
             target,
