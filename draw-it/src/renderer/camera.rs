@@ -11,6 +11,7 @@ use crate::math::Vector3;
 #[derive(Clone)]
 pub struct Camera {
     pub transform: Transform,
+    pub autosize: bool,
     pub fov: u32,
     pub width: f32,
     pub height: f32,
@@ -29,6 +30,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             projection: Projection::Perspective,
+            autosize: false,
             depth: 100.0,
             width,
             height,
@@ -40,6 +42,7 @@ impl Camera {
         Self {
             transform: Transform::default(),
             projection: Projection::Orthographic,
+            autosize: false,
             depth: 100.0,
             fov: 0,
             width,
@@ -47,9 +50,34 @@ impl Camera {
         }
     }
 
+    pub fn perspective_autosized(fov: u32) -> Self {
+        Self {
+            transform: Transform::default(),
+            projection: Projection::Perspective,
+            autosize: true,
+            depth: 100.0,
+            width: -1.0,
+            height: -1.0,
+            fov,
+        }
+    }
+
+    pub fn orthographic_autosized() -> Self {
+        Self {
+            transform: Transform::default(),
+            projection: Projection::Orthographic,
+            autosize: true,
+            depth: 100.0,
+            width: -1.0,
+            height: -1.0,
+            fov: 0,
+        }
+    }
+
     pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
+            autosize: false,
             fov,
             depth,
             projection,

@@ -263,11 +263,7 @@ impl Context {
 
         let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
 
-        let cam = match camera {
-            Some(c) => c.clone(),
-            // create default camera if not supplied
-            None => Camera::orthographic(framebuffer.width() as f32, framebuffer.height() as f32),
-        };
+        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
 
         // draw
         self.forward_renderer.draw_core(
@@ -295,11 +291,7 @@ impl Context {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let cam = match camera {
-            Some(c) => c.clone(),
-            // create default camera if not supplied
-            None => Camera::orthographic(framebuffer.width as f32, framebuffer.height as f32),
-        };
+        let cam = get_camera(camera, framebuffer.width, framebuffer.height);
 
         // draw
         self.forward_renderer.draw(
@@ -485,6 +477,7 @@ impl Context {
             width,
             height,
             resizable,
+            transparent,
         } = w_options;
 
         // create glfw window
@@ -492,7 +485,7 @@ impl Context {
 
         glfw.window_hint(WindowHint::Resizable(resizable));
         glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-        glfw.window_hint(WindowHint::TransparentFramebuffer(true));
+        glfw.window_hint(WindowHint::TransparentFramebuffer(transparent));
 
         let (mut window, event_receiver) = glfw
             .create_window(width, height, title, WindowMode::Windowed)
@@ -668,5 +661,22 @@ impl Default for ContextOptions {
             quality: Quality::Medium,
             vsync: VSync::On,
         }
+    }
+}
+
+fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
+    match camera {
+        Some(c) => {
+            if c.autosize {
+                let mut cam =
+                    Camera::new(c.projection, width as f32, height as f32, c.depth, c.fov);
+                cam.transform = c.transform;
+                cam
+            } else {
+                c.clone()
+            }
+        }
+        // create default camera if not supplied
+        None => Camera::orthographic(width as f32, height as f32),
     }
 }

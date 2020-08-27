@@ -14,6 +14,7 @@ fn main() -> Result<()> {
         WindowOptions {
             title: "Draw-it example: Hello",
             resizable: true,
+            transparent: true,
             ..Default::default()
         },
     )?;

@@ -4,7 +4,6 @@
 // Mesh drawing example
 
 use draw_it::window::Controller;
-use draw_it::window::Event;
 use draw_it::window::WindowOptions;
 use draw_it::Camera;
 use draw_it::Color;
@@ -20,8 +19,6 @@ use draw_it::Vector2;
 use draw_it::Vector3;
 
 fn main() -> Result<()> {
-    let (width, height) = (720, 640);
-
     let (mut context, mut window) = Context::with_window(
         ContextOptions {
             vsync: VSync::Off,
@@ -30,12 +27,13 @@ fn main() -> Result<()> {
         WindowOptions {
             title: "Draw-it example: Cubes",
             resizable: true,
-            width,
-            height,
+            width: 720,
+            height: 640,
+            ..Default::default()
         },
     )?;
 
-    let mut camera = Camera::perspective(width as f32, height as f32, 90);
+    let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);
     camera.transform.look_dir(Vector3::FORWARD);
 
@@ -56,12 +54,6 @@ fn main() -> Result<()> {
     while window.is_open() {
         // update
         context.poll_events(&mut window);
-
-        for event in window.events() {
-            let Event::Resize(w, h) = event;
-            camera.width = w as f32;
-            camera.height = h as f32;
-        }
 
         let delta_time = context.delta_time();
         controller.update(&mut camera, &mut window, delta_time);

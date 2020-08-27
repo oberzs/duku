@@ -44,6 +44,7 @@ pub struct Window {
 #[derive(Debug, Copy, Clone)]
 pub struct WindowOptions<'title> {
     pub title: &'title str,
+    pub transparent: bool,
     pub resizable: bool,
     pub width: u32,
     pub height: u32,
@@ -250,6 +251,7 @@ impl Default for WindowOptions<'_> {
             width: 500,
             height: 500,
             resizable: false,
+            transparent: false,
         }
     }
 }
