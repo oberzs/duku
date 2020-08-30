@@ -3,7 +3,6 @@
 
 // Cubemap - image with 6 layers to render a skybox
 
-use serde::Deserialize;
 use std::rc::Rc;
 
 use super::ImageFormat;
@@ -24,102 +23,92 @@ pub(crate) struct Cubemap {
     memory: ImageMemory,
 }
 
-pub(crate) struct CubemapOptions<'side> {
-    pub(crate) top: &'side [u8],
-    pub(crate) bottom: &'side [u8],
-    pub(crate) front: &'side [u8],
-    pub(crate) back: &'side [u8],
-    pub(crate) left: &'side [u8],
-    pub(crate) right: &'side [u8],
-    pub(crate) size: u32,
-    pub(crate) format: ImageFormat,
-}
-
-#[derive(Deserialize)]
-struct CubemapFile {
-    top: Vec<u8>,
-    bottom: Vec<u8>,
-    front: Vec<u8>,
-    back: Vec<u8>,
-    left: Vec<u8>,
-    right: Vec<u8>,
-    width: u32,
-    _height: u32,
-    channels: u8,
+pub struct CubemapSides<T> {
+    pub top: T,
+    pub bottom: T,
+    pub front: T,
+    pub back: T,
+    pub left: T,
+    pub right: T,
 }
 
 impl Cubemap {
-    pub(crate) fn from_file(device: &Rc<Device>, data: Vec<u8>) -> Result<Self> {
-        let cubemap_file: CubemapFile =
-            bincode::deserialize(&data).map_err(|_| Error::InvalidFile)?;
-
-        let format = match cubemap_file.channels {
-            4 => ImageFormat::Srgba,
-            _ => unreachable!(),
-        };
-
-        Ok(Self::new(
-            device,
-            CubemapOptions {
-                top: &cubemap_file.top,
-                bottom: &cubemap_file.bottom,
-                front: &cubemap_file.front,
-                back: &cubemap_file.back,
-                left: &cubemap_file.left,
-                right: &cubemap_file.right,
-                size: cubemap_file.width,
-                format,
-            },
-        ))
-    }
-
-    pub(crate) fn new(device: &Rc<Device>, options: CubemapOptions<'_>) -> Self {
-        let pixel_size = match options.format {
+    pub(crate) fn new(
+        device: &Rc<Device>,
+        size: u32,
+        format: ImageFormat,
+        sides: CubemapSides<Vec<u8>>,
+    ) -> Self {
+        let pixel_size = match format {
             ImageFormat::Srgba | ImageFormat::Rgba => 4,
-            _ => panic!("unsupported cubemap format {:?}", options.format),
+            _ => panic!("unsupported cubemap format {:?}", format),
         };
 
-        let size = (options.size * options.size) as usize * pixel_size;
+        let data_size = (size * size) as usize * pixel_size;
 
         // create staging buffers
-        let top_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        top_staging_memory.copy_from_data(options.top, size);
+        let top_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        top_staging_memory.copy_from_data(&sides.top, data_size);
 
-        let bottom_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        bottom_staging_memory.copy_from_data(options.bottom, size);
+        let bottom_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        bottom_staging_memory.copy_from_data(&sides.bottom, data_size);
 
-        let front_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        front_staging_memory.copy_from_data(options.front, size);
+        let front_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        front_staging_memory.copy_from_data(&sides.front, data_size);
 
-        let back_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        back_staging_memory.copy_from_data(options.back, size);
+        let back_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        back_staging_memory.copy_from_data(&sides.back, data_size);
 
-        let left_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        left_staging_memory.copy_from_data(options.left, size);
+        let left_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        left_staging_memory.copy_from_data(&sides.left, data_size);
 
-        let right_staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        right_staging_memory.copy_from_data(options.right, size);
+        let right_staging_memory = BufferMemory::new(
+            device,
+            &[BufferUsage::TransferSrc],
+            BufferAccess::Cpu,
+            data_size,
+        );
+        right_staging_memory.copy_from_data(&sides.right, data_size);
 
         // create image
         let mut memory = ImageMemory::new(
             device,
             ImageMemoryOptions {
-                width: options.size,
-                height: options.size,
+                width: size,
+                height: size,
                 mips: ImageMips::Log2,
                 usage: &[
                     ImageUsage::Sampled,
                     ImageUsage::TransferSrc,
                     ImageUsage::TransferDst,
                 ],
-                format: options.format,
                 cubemap: true,
+                format,
                 ..Default::default()
             },
         );
@@ -135,6 +124,61 @@ impl Cubemap {
         memory.change_layout(ImageLayout::ShaderColor);
 
         Self { memory }
+    }
+
+    #[cfg(feature = "png")]
+    pub(crate) fn from_png_bytes(
+        device: &Rc<Device>,
+        sides: CubemapSides<Vec<u8>>,
+    ) -> Result<Self> {
+        use png::ColorType;
+        use png::Decoder;
+
+        let (format, size) = {
+            let decoder = Decoder::new(sides.top.as_slice());
+            let (info, _) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
+
+            let f = match info.color_type {
+                ColorType::RGBA => ImageFormat::Srgba,
+                ColorType::RGB => ImageFormat::Srgb,
+                ColorType::Grayscale => ImageFormat::Gray,
+                _ => return Err(Error::UnsupportedColorType),
+            };
+            (f, info.width)
+        };
+
+        let mut side_data: Vec<_> = [
+            sides.top,
+            sides.bottom,
+            sides.front,
+            sides.back,
+            sides.left,
+            sides.right,
+        ]
+        .iter()
+        .map(|side| {
+            let decoder = Decoder::new(side.as_slice());
+            let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
+
+            let mut data = vec![0; info.buffer_size()];
+            reader.next_frame(&mut data).expect("bad read");
+            Ok(data)
+        })
+        .collect::<Result<_>>()?;
+
+        Ok(Self::new(
+            device,
+            size,
+            format,
+            CubemapSides {
+                top: side_data.remove(0),
+                bottom: side_data.remove(0),
+                front: side_data.remove(0),
+                back: side_data.remove(0),
+                left: side_data.remove(0),
+                right: side_data.remove(0),
+            },
+        ))
     }
 
     pub(crate) fn add_view(&mut self) -> vk::ImageView {

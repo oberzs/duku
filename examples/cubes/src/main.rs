@@ -9,6 +9,7 @@ use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::ContextOptions;
+use draw_it::CubemapSides;
 use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
@@ -41,7 +42,14 @@ fn main() -> Result<()> {
 
     let texture = context.create_texture_png("examples/cubes/textures/Orange/texture_01.png")?;
 
-    context.set_skybox_from_file("examples/cubes/textures/Skybox/glacier_up.cubemap")?;
+    context.set_skybox_png(CubemapSides {
+        top: "examples/cubes/textures/Skybox/glacier_up.png",
+        bottom: "examples/cubes/textures/Skybox/glacier_down.png",
+        front: "examples/cubes/textures/Skybox/glacier_front.png",
+        back: "examples/cubes/textures/Skybox/glacier_back.png",
+        left: "examples/cubes/textures/Skybox/glacier_left.png",
+        right: "examples/cubes/textures/Skybox/glacier_right.png",
+    })?;
 
     let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0]);
 

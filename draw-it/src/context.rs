@@ -21,7 +21,7 @@ use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::Cubemap;
-use crate::image::CubemapOptions;
+use crate::image::CubemapSides;
 use crate::image::Framebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
@@ -161,15 +161,15 @@ impl Context {
         )?;
         let mut skybox = Cubemap::new(
             &device,
-            CubemapOptions {
-                format: ImageFormat::Rgba,
-                top: &[255, 255, 255, 255],
-                bottom: &[255, 255, 255, 255],
-                front: &[255, 255, 255, 255],
-                back: &[255, 255, 255, 255],
-                left: &[255, 255, 255, 255],
-                right: &[255, 255, 255, 255],
-                size: 1,
+            1,
+            ImageFormat::Rgba,
+            CubemapSides {
+                top: vec![255, 255, 255, 255],
+                bottom: vec![255, 255, 255, 255],
+                front: vec![255, 255, 255, 255],
+                back: vec![255, 255, 255, 255],
+                left: vec![255, 255, 255, 255],
+                right: vec![255, 255, 255, 255],
             },
         );
         image_uniform.set_skybox(skybox.add_view());
@@ -318,25 +318,6 @@ impl Context {
             ImageFormat::Rgba,
         ));
         Texture::new(index)
-    }
-
-    pub fn set_skybox(&mut self, pixels: [&[u8]; 6], size: u32) {
-        let mut cubemap = Cubemap::new(
-            &self.device,
-            CubemapOptions {
-                format: ImageFormat::Rgba,
-                top: pixels[0],
-                bottom: pixels[1],
-                front: pixels[2],
-                back: pixels[3],
-                left: pixels[4],
-                right: pixels[5],
-                size,
-            },
-        );
-
-        self.image_uniform.set_skybox(cubemap.add_view());
-        self.skybox = cubemap;
     }
 
     pub fn create_mesh(&mut self) -> Mesh {
@@ -628,9 +609,19 @@ impl Context {
         self.create_texture_png_bytes(bytes)
     }
 
-    pub fn set_skybox_from_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        let data = fs::read(path.as_ref())?;
-        let mut cubemap = Cubemap::from_file(&self.device, data)?;
+    #[cfg(feature = "png")]
+    pub fn set_skybox_png(&mut self, sides: CubemapSides<impl AsRef<Path>>) -> Result<()> {
+        let mut cubemap = Cubemap::from_png_bytes(
+            &self.device,
+            CubemapSides {
+                top: fs::read(sides.top)?,
+                bottom: fs::read(sides.bottom)?,
+                front: fs::read(sides.front)?,
+                back: fs::read(sides.back)?,
+                left: fs::read(sides.left)?,
+                right: fs::read(sides.right)?,
+            },
+        )?;
         self.image_uniform.set_skybox(cubemap.add_view());
         self.skybox = cubemap;
         Ok(())
