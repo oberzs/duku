@@ -28,7 +28,7 @@ pub(crate) struct AttachmentOptions {
 }
 
 impl Attachment {
-    pub(crate) fn new(options: AttachmentOptions) -> Self {
+    pub(crate) const fn new(options: AttachmentOptions) -> Self {
         let layout = match options.layout {
             ImageLayout::Present => ImageLayout::Color,
             ImageLayout::ShaderColor => ImageLayout::Color,

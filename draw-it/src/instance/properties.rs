@@ -24,7 +24,7 @@ pub(crate) struct GPUProperties {
 }
 
 impl GPUProperties {
-    pub(crate) fn supports_msaa(&self, msaa: Msaa) -> bool {
+    pub(crate) const fn supports_msaa(&self, msaa: Msaa) -> bool {
         let counts = self.properties.limits.framebuffer_color_sample_counts
             & self.properties.limits.framebuffer_depth_sample_counts;
         (counts & msaa.flag()) != 0
