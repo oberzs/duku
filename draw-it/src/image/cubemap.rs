@@ -16,6 +16,7 @@ use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
+use crate::error::Error;
 use crate::error::Result;
 use crate::vk;
 
@@ -49,7 +50,8 @@ struct CubemapFile {
 
 impl Cubemap {
     pub(crate) fn from_file(device: &Rc<Device>, data: Vec<u8>) -> Result<Self> {
-        let cubemap_file: CubemapFile = bincode::deserialize(&data)?;
+        let cubemap_file: CubemapFile =
+            bincode::deserialize(&data).map_err(|_| Error::InvalidFile)?;
 
         let format = match cubemap_file.channels {
             4 => ImageFormat::Srgba,

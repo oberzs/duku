@@ -13,6 +13,7 @@ use super::DepthMode;
 use super::ShaderLayout;
 use super::ShapeMode;
 use crate::device::Device;
+use crate::error::Error;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::mesh::Vertex;
@@ -53,7 +54,7 @@ impl CoreShader {
         layout: &ShaderLayout,
         source: &[u8],
     ) -> Result<Self> {
-        let data: ShaderFile = bincode::deserialize(source)?;
+        let data: ShaderFile = bincode::deserialize(source).map_err(|_| Error::InvalidFile)?;
 
         let depth_mode = DepthMode::from(&data.depth_mode);
         let shape_mode = ShapeMode::from(&data.shape_mode);

@@ -39,6 +39,8 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
+    let texture = context.create_texture_png("examples/cubes/textures/Orange/texture_01.png")?;
+
     context.set_skybox_from_file("examples/cubes/textures/Skybox/glacier_up.cubemap")?;
 
     let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0]);
@@ -72,8 +74,9 @@ fn main() -> Result<()> {
             target.draw_cube(floor_transform);
             target.draw(&cube, [2.0, 1.0, 0.0]);
             target.draw_cube([0.0, 0.0, 0.0]);
-            target.draw_cube([-2.0, 1.0, 0.0]);
             target.draw_sphere([-4.0, 1.0, 0.0]);
+            target.set_albedo(&texture);
+            target.draw_cube([-2.0, 1.0, 0.0]);
         });
     }
 

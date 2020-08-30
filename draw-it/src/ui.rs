@@ -36,7 +36,6 @@ use crate::image::FramebufferOptions;
 use crate::image::FramebufferUpdateData;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
-use crate::image::TextureOptions;
 use crate::image::WorldUpdateData;
 use crate::math::Matrix4;
 use crate::math::Vector2;
@@ -131,12 +130,10 @@ impl Ui {
             CoreTexture::new(
                 device,
                 image_uniform,
-                TextureOptions {
-                    format: ImageFormat::Gray,
-                    data: ui_texture.data.to_vec(),
-                    width: ui_texture.width,
-                    height: ui_texture.height,
-                },
+                ui_texture.data.to_vec(),
+                ui_texture.width,
+                ui_texture.height,
+                ImageFormat::Gray,
             )
         };
 

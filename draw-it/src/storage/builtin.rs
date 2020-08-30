@@ -17,7 +17,6 @@ use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::ImageFormat;
 use crate::image::Texture;
-use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
@@ -63,12 +62,10 @@ impl Builtins {
             let (index, _) = storage.textures.add(CoreTexture::new(
                 device,
                 uniform,
-                TextureOptions {
-                    data: vec![255, 255, 255, 255],
-                    format: ImageFormat::Rgba,
-                    width: 1,
-                    height: 1,
-                },
+                vec![255, 255, 255, 255],
+                1,
+                1,
+                ImageFormat::Rgba,
             ));
             Texture::new(index)
         };

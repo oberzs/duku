@@ -3,7 +3,6 @@
 
 // Texture - simple image that can be used for rendering
 
-use serde::Deserialize;
 use std::rc::Rc;
 
 use super::with_alpha;
@@ -17,6 +16,7 @@ use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
+use crate::error::Error;
 use crate::error::Result;
 use crate::pipeline::ImageUniform;
 use crate::storage::Index;
@@ -33,21 +33,6 @@ pub(crate) struct CoreTexture {
     image_index: i32,
 }
 
-pub(crate) struct TextureOptions {
-    pub(crate) data: Vec<u8>,
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) format: ImageFormat,
-}
-
-#[derive(Deserialize)]
-struct ImageFile {
-    data: Vec<u8>,
-    width: u32,
-    height: u32,
-    channels: u8,
-}
-
 impl Texture {
     pub(crate) const fn new(index: Index) -> Self {
         Self { index }
@@ -55,71 +40,49 @@ impl Texture {
 }
 
 impl CoreTexture {
-    pub(crate) fn from_file(
-        device: &Rc<Device>,
-        uniform: &mut ImageUniform,
-        data: Vec<u8>,
-    ) -> Result<Self> {
-        let image_file: ImageFile = bincode::deserialize(&data)?;
-
-        let format = match image_file.channels {
-            1 => ImageFormat::Gray,
-            4 => ImageFormat::Srgba,
-            _ => unreachable!(),
-        };
-
-        Ok(Self::new(
-            device,
-            uniform,
-            TextureOptions {
-                data: image_file.data,
-                width: image_file.width,
-                height: image_file.height,
-                format,
-            },
-        ))
-    }
-
     pub(crate) fn new(
         device: &Rc<Device>,
         uniform: &mut ImageUniform,
-        options: TextureOptions,
+        data: Vec<u8>,
+        width: u32,
+        height: u32,
+        format: ImageFormat,
     ) -> Self {
         // get byte count based on format
-        let pixel_size = match options.format {
+        let pixel_size = match format {
             ImageFormat::Srgba | ImageFormat::Rgba | ImageFormat::Srgb | ImageFormat::Rgb => 4,
             ImageFormat::Gray => 1,
-            _ => panic!("unsupported texture format {:?}", options.format),
+            _ => panic!("unsupported texture format {:?}", format),
         };
 
         // convert 3-byte data to 4-byte data
-        let data = match options.format {
-            ImageFormat::Srgb | ImageFormat::Rgb => with_alpha(options.data),
-            _ => options.data,
+        let image_data = match format {
+            ImageFormat::Srgb | ImageFormat::Rgb => with_alpha(data),
+            _ => data,
         };
-        let format = match options.format {
+        let format = match format {
             ImageFormat::Srgb => ImageFormat::Srgba,
             ImageFormat::Rgb => ImageFormat::Rgba,
             f => f,
         };
 
-        let size = (options.width * options.height) as usize * pixel_size;
+        let size = (width * height) as usize * pixel_size;
 
         let staging_memory =
             BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        staging_memory.copy_from_data(&data, size);
+        staging_memory.copy_from_data(&image_data, size);
 
         let mut memory = ImageMemory::new(
             device,
             ImageMemoryOptions {
-                width: options.width,
-                height: options.height,
                 mips: ImageMips::Log2,
                 usage: &[
                     ImageUsage::Sampled,
                     ImageUsage::TransferSrc,
                     ImageUsage::TransferDst,
                 ],
+                width,
+                height,
                 format,
                 ..Default::default()
             },
@@ -136,6 +99,38 @@ impl CoreTexture {
             _memory: memory,
             image_index,
         }
+    }
+
+    #[cfg(feature = "png")]
+    pub(crate) fn from_png_bytes(
+        device: &Rc<Device>,
+        uniform: &mut ImageUniform,
+        bytes: Vec<u8>,
+    ) -> Result<Self> {
+        use png::ColorType;
+        use png::Decoder;
+
+        let decoder = Decoder::new(bytes.as_slice());
+        let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
+
+        let mut data = vec![0; info.buffer_size()];
+        reader.next_frame(&mut data).expect("bad read");
+
+        let format = match info.color_type {
+            ColorType::RGBA => ImageFormat::Srgba,
+            ColorType::RGB => ImageFormat::Srgb,
+            ColorType::Grayscale => ImageFormat::Gray,
+            _ => return Err(Error::UnsupportedColorType),
+        };
+
+        Ok(Self::new(
+            device,
+            uniform,
+            data,
+            info.width,
+            info.height,
+            format,
+        ))
     }
 
     pub(crate) const fn image_index(&self) -> i32 {
