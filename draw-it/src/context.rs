@@ -48,7 +48,6 @@ use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
-use crate::watch::watch_file;
 
 #[cfg(feature = "ui")]
 use crate::ui::Ui;
@@ -96,7 +95,9 @@ pub struct Context {
     vsync: VSync,
 
     // Hot Reload
+    #[cfg(feature = "glsl")]
     hot_reload_sender: Sender<(u32, PathBuf)>,
+    #[cfg(feature = "glsl")]
     hot_reload_receiver: Receiver<(u32, PathBuf)>,
 
     // Window
@@ -181,8 +182,9 @@ impl Context {
             &mut image_uniform,
             shadow_map_size,
             pcf,
-        )?;
+        );
 
+        #[cfg(feature = "glsl")]
         let (hot_reload_sender, hot_reload_receiver) = mpsc::channel();
 
         Ok(Self {
@@ -193,8 +195,6 @@ impl Context {
             delta_time: 0.0,
             frame_count: 0,
             window_framebuffers,
-            hot_reload_receiver,
-            hot_reload_sender,
             forward_renderer,
             image_uniform,
             shader_layout,
@@ -209,6 +209,10 @@ impl Context {
             msaa,
             vsync,
 
+            #[cfg(feature = "glsl")]
+            hot_reload_sender,
+            #[cfg(feature = "glsl")]
+            hot_reload_receiver,
             #[cfg(feature = "ui")]
             ui: None,
             #[cfg(feature = "window")]
@@ -369,19 +373,14 @@ impl Context {
         framebuffer
     }
 
-    pub fn create_shader(&mut self, source: &[u8]) -> Result<Shader> {
-        let (index, _) = self.storage.shaders.add(CoreShader::new(
+    pub fn create_shader_spirv(&mut self, source: &[u8]) -> Result<Shader> {
+        let (index, _) = self.storage.shaders.add(CoreShader::from_spirv_bytes(
             &self.device,
             &self.window_framebuffers[0],
             &self.shader_layout,
             source,
         )?);
         Ok(Shader::new(index))
-    }
-
-    pub fn create_shader_from_file(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
-        let source = fs::read(path.as_ref())?;
-        self.create_shader(&source)
     }
 
     pub fn stats(&self) -> Stats {
@@ -403,13 +402,14 @@ impl Context {
         self.storage.update_if_needed(&mut self.image_uniform);
 
         // hot-reload shaders
+        #[cfg(feature = "glsl")]
         for (pointer, path) in self.hot_reload_receiver.try_iter() {
-            let source = fs::read(&path).expect("bad read");
-            *self.storage.shaders.get_mut(&Index::new(pointer)) = CoreShader::new(
+            let source = fs::read_to_string(&path).expect("bad read");
+            *self.storage.shaders.get_mut(&Index::new(pointer)) = CoreShader::from_glsl_string(
                 &self.device,
                 &self.window_framebuffers[0],
                 &self.shader_layout,
-                &source,
+                source,
             )
             .expect("bad shader recreation");
             info!("shader {:?} was reloaded", path);
@@ -507,7 +507,7 @@ impl Context {
 
         // create ui renderer
         #[cfg(feature = "ui")]
-        context.attach_ui(width, height)?;
+        context.attach_ui(width, height);
 
         Ok((context, Window::new(window)))
     }
@@ -523,18 +523,15 @@ impl Context {
     }
 
     #[cfg(feature = "ui")]
-    pub(crate) fn attach_ui(&mut self, width: u32, height: u32) -> Result<()> {
-        let ui = Ui::new(
+    pub(crate) fn attach_ui(&mut self, width: u32, height: u32) {
+        self.ui = Some(Ui::new(
             &self.device,
             &self.shader_layout,
             &mut self.image_uniform,
             &mut self.storage,
             width,
             height,
-        )?;
-        self.ui = Some(ui);
-
-        Ok(())
+        ));
     }
 
     #[cfg(feature = "window")]
@@ -587,10 +584,23 @@ impl Context {
         }
     }
 
-    pub fn create_shader_from_file_watch(&mut self, path: impl AsRef<Path>) -> Result<Shader> {
-        let shader = self.create_shader_from_file(&path)?;
-        watch_file(path, shader.index.pointer(), self.hot_reload_sender.clone());
-        Ok(shader)
+    #[cfg(feature = "glsl")]
+    pub fn create_shader_glsl(&mut self, path: impl AsRef<Path>, watch: bool) -> Result<Shader> {
+        use crate::watch::watch_file;
+
+        let source = fs::read_to_string(&path)?;
+        let (index, _) = self.storage.shaders.add(CoreShader::from_glsl_string(
+            &self.device,
+            &self.window_framebuffers[0],
+            &self.shader_layout,
+            source,
+        )?);
+
+        if watch {
+            watch_file(path, index.pointer(), self.hot_reload_sender.clone());
+        }
+
+        Ok(Shader::new(index))
     }
 
     #[cfg(feature = "png")]

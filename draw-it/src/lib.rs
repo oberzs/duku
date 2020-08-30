@@ -44,6 +44,9 @@ mod surface;
 mod vk;
 mod watch;
 
+#[cfg(feature = "glsl")]
+mod glsl;
+
 // normal exports
 pub use color::Color;
 pub use context::Context;

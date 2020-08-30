@@ -13,11 +13,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     Io(String),
-    UnsupportedColorType,
-    InvalidPng,
     InvalidSpirv,
     InvalidFile,
     NoSuitableGpu,
+
+    #[cfg(feature = "png")]
+    UnsupportedColorType,
+    InvalidPng,
+
+    #[cfg(feature = "glsl")]
+    InvalidGlsl(String),
 
     #[cfg(feature = "window")]
     InternalGlfw,
