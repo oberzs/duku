@@ -23,7 +23,7 @@ pub use commands::Stats;
 pub(crate) use pick::pick_gpu;
 
 use crate::buffer::BufferAccess;
-use crate::error::ErrorKind;
+use crate::error::Error;
 use crate::error::Result;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
@@ -702,10 +702,10 @@ impl Device {
         // check data size
         let size = cursor.seek(SeekFrom::End(0)).expect("bad index");
         if size % 4 != 0 {
-            return Err(ErrorKind::InvalidShader.into());
+            return Err(Error::InvalidSpirv);
         }
         if size > usize::max_value() as u64 {
-            return Err(ErrorKind::InvalidShader.into());
+            return Err(Error::InvalidSpirv);
         }
 
         // read data
@@ -730,7 +730,7 @@ impl Device {
             }
         }
         if code.is_empty() || code[0] != magic_number {
-            return Err(ErrorKind::InvalidShader.into());
+            return Err(Error::InvalidSpirv);
         }
 
         // create module

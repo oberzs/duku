@@ -24,7 +24,6 @@ pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageMips;
 pub(crate) use properties::ImageUsage;
 pub(crate) use texture::CoreTexture;
-pub(crate) use texture::TextureOptions;
 
 pub use framebuffer::Framebuffer;
 pub use properties::Msaa;

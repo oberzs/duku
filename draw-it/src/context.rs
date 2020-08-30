@@ -16,6 +16,7 @@ use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
+use crate::error::Error;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -26,7 +27,6 @@ use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Texture;
-use crate::image::TextureOptions;
 use crate::instance::Instance;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
@@ -303,7 +303,7 @@ impl Context {
         );
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32) -> Texture {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32, height: u32) -> Texture {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -312,12 +312,10 @@ impl Context {
         let (index, _) = self.storage.textures.add(CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
-            TextureOptions {
-                format: ImageFormat::Rgba,
-                height: pixels.len() as u32 / width,
-                width,
-                data,
-            },
+            data,
+            width,
+            height,
+            ImageFormat::Rgba,
         ));
         Texture::new(index)
     }
@@ -481,7 +479,7 @@ impl Context {
         } = w_options;
 
         // create glfw window
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
+        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).map_err(|_| Error::InternalGlfw)?;
 
         glfw.window_hint(WindowHint::Resizable(resizable));
         glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
@@ -614,14 +612,20 @@ impl Context {
         Ok(shader)
     }
 
-    pub fn create_texture_from_file(&mut self, path: impl AsRef<Path>) -> Result<Texture> {
-        let data = fs::read(path.as_ref())?;
-        let (index, _) = self.storage.textures.add(CoreTexture::from_file(
+    #[cfg(feature = "png")]
+    pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Texture> {
+        let (index, _) = self.storage.textures.add(CoreTexture::from_png_bytes(
             &self.device,
             &mut self.image_uniform,
-            data,
+            bytes,
         )?);
         Ok(Texture::new(index))
+    }
+
+    #[cfg(feature = "png")]
+    pub fn create_texture_png(&mut self, path: impl AsRef<Path>) -> Result<Texture> {
+        let bytes = fs::read(path.as_ref())?;
+        self.create_texture_png_bytes(bytes)
     }
 
     pub fn set_skybox_from_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
@@ -634,13 +638,11 @@ impl Context {
 
     #[cfg(feature = "ui")]
     pub fn draw_ui(&mut self, draw_fn: impl FnMut(&UiFrame<'_>)) -> Result<()> {
-        use crate::error::ErrorKind;
-
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
-        self.ui.as_mut().ok_or(ErrorKind::UnitializedUi)?.draw(
+        self.ui.as_mut().ok_or(Error::UnitializedUi)?.draw(
             &self.shader_layout,
             &mut self.storage,
             draw_fn,

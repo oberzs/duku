@@ -10,10 +10,10 @@ use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
+use crate::error::Error;
 use crate::error::Result;
 use crate::image::CoreTexture;
 use crate::image::ImageFormat;
-use crate::image::TextureOptions;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
@@ -63,7 +63,7 @@ impl CoreFont {
         let FontFile {
             sdf_font,
             bitmap_fonts,
-        } = bincode::deserialize(source)?;
+        } = bincode::deserialize(source).map_err(|_| Error::InvalidFile)?;
 
         let mut bitmap_data = HashMap::new();
         for font in bitmap_fonts {
@@ -154,12 +154,10 @@ fn create_font(
     let texture = CoreTexture::new(
         device,
         uniform,
-        TextureOptions {
-            data: bitmap,
-            width: bitmap_size,
-            height: bitmap_size,
-            format: ImageFormat::Gray,
-        },
+        bitmap,
+        bitmap_size,
+        bitmap_size,
+        ImageFormat::Gray,
     );
 
     let mut vertices = vec![];

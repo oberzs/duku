@@ -5,7 +5,7 @@
 
 use std::ffi::CStr;
 
-use crate::error::ErrorKind;
+use crate::error::Error;
 use crate::error::Result;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
@@ -77,7 +77,7 @@ pub(crate) fn pick_gpu(
     scores.retain(|s| s.1 > 0);
 
     match scores.first() {
-        None => Err(ErrorKind::NoSuitableGpu.into()),
+        None => Err(Error::NoSuitableGpu),
         Some((picked, _)) => {
             // log picked GPU information
             let info = &gpu_properties[*picked].properties;
