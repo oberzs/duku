@@ -10,7 +10,6 @@ mod properties;
 mod texture;
 
 pub(crate) use cubemap::Cubemap;
-pub(crate) use cubemap::CubemapOptions;
 pub(crate) use framebuffer::CoreFramebuffer;
 pub(crate) use framebuffer::FramebufferOptions;
 pub(crate) use framebuffer::FramebufferUpdateData;
@@ -25,6 +24,7 @@ pub(crate) use properties::ImageMips;
 pub(crate) use properties::ImageUsage;
 pub(crate) use texture::CoreTexture;
 
+pub use cubemap::CubemapSides;
 pub use framebuffer::Framebuffer;
 pub use properties::Msaa;
 pub use properties::TextureFilter;

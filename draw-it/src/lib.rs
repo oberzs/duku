@@ -50,6 +50,7 @@ pub use context::Context;
 pub use context::ContextOptions;
 pub use device::Stats;
 pub use error::Result;
+pub use image::CubemapSides;
 pub use image::Framebuffer;
 pub use image::Texture;
 pub use image::TextureFilter;
