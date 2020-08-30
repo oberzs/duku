@@ -3,6 +3,10 @@
 
 // enums for possible pipeline properties
 
+use std::convert::TryFrom;
+
+use crate::error;
+use crate::error::Result;
 use crate::vk;
 
 #[derive(Debug, Copy, Clone)]
@@ -73,36 +77,42 @@ impl DepthMode {
     }
 }
 
-impl From<&String> for CullMode {
-    fn from(s: &String) -> Self {
-        match s.as_str() {
-            "back" => Self::Back,
-            "front" => Self::Front,
-            "disabled" => Self::Disabled,
-            _ => unreachable!(),
+impl TryFrom<u8> for CullMode {
+    type Error = error::Error;
+
+    fn try_from(byte: u8) -> Result<Self> {
+        match byte {
+            0 => Ok(Self::Back),
+            1 => Ok(Self::Front),
+            2 => Ok(Self::Disabled),
+            _ => Err(error::Error::InvalidSpirv),
         }
     }
 }
 
-impl From<&String> for ShapeMode {
-    fn from(s: &String) -> Self {
-        match s.as_str() {
-            "lined_triangles" => Self::LinedTriangles,
-            "filled_triangles" => Self::FilledTriangles,
-            "lines" => Self::Lines,
-            _ => unreachable!(),
+impl TryFrom<u8> for ShapeMode {
+    type Error = error::Error;
+
+    fn try_from(byte: u8) -> Result<Self> {
+        match byte {
+            0 => Ok(Self::LinedTriangles),
+            1 => Ok(Self::FilledTriangles),
+            2 => Ok(Self::Lines),
+            _ => Err(error::Error::InvalidSpirv),
         }
     }
 }
 
-impl From<&String> for DepthMode {
-    fn from(s: &String) -> Self {
-        match s.as_str() {
-            "test" => Self::Test,
-            "write" => Self::Write,
-            "test_and_write" => Self::TestAndWrite,
-            "disabled" => Self::Disabled,
-            _ => unreachable!(),
+impl TryFrom<u8> for DepthMode {
+    type Error = error::Error;
+
+    fn try_from(byte: u8) -> Result<Self> {
+        match byte {
+            0 => Ok(Self::Test),
+            1 => Ok(Self::Write),
+            2 => Ok(Self::TestAndWrite),
+            3 => Ok(Self::Disabled),
+            _ => Err(error::Error::InvalidSpirv),
         }
     }
 }

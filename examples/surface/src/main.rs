@@ -20,13 +20,7 @@ fn main() -> Result<()> {
     )?;
 
     // read custom shader
-    // in debug mode, read from file with hot-reload
-    // in release mode, embed in executable
-    #[cfg(debug_assertions)]
-    let shader =
-        context.create_shader_from_file_watch("examples/surface/shaders/raymarch.shader")?;
-    #[cfg(not(debug_assertions))]
-    let shader = context.create_shader(include_bytes!("../shaders/raymarch.shader"))?;
+    let shader = context.create_shader_glsl("examples/surface/shaders/raymarch.glsl", true)?;
 
     while window.is_open() {
         // poll events

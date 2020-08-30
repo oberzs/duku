@@ -14,7 +14,6 @@ use super::Target;
 use super::TextOrder;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
-use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::Msaa;
@@ -61,26 +60,27 @@ impl ForwardRenderer {
         image_uniform: &mut ImageUniform,
         shadow_map_size: u32,
         pcf: Pcf,
-    ) -> Result<Self> {
+    ) -> Self {
         let shadow_frames = [
             ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
             ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
         ];
 
-        let shadow_shader = CoreShader::new(
+        let shadow_shader = CoreShader::from_spirv_bytes(
             device,
             &shadow_frames[0].framebuffers[0],
             shader_layout,
-            include_bytes!("../../shaders/shadow.shader"),
-        )?;
+            include_bytes!("../../shaders/shadow.spirv"),
+        )
+        .expect("bad shader");
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             start_time: Instant::now(),
             shadow_frames,
             shadow_shader,
             pcf,
-        })
+        }
     }
 
     pub(crate) fn draw(

@@ -3,8 +3,10 @@
 
 // Shader - GPU program for execution in the renderer
 
-use serde::Deserialize;
+use std::convert::TryInto;
 use std::ffi::CString;
+use std::io::Cursor;
+use std::io::Read;
 use std::ptr;
 use std::rc::Rc;
 
@@ -32,13 +34,10 @@ pub(crate) struct CoreShader {
     device: Rc<Device>,
 }
 
-#[derive(Deserialize)]
-struct ShaderFile {
-    vert: Vec<u8>,
-    frag: Vec<u8>,
-    depth_mode: String,
-    shape_mode: String,
-    cull_mode: String,
+pub(crate) struct ShaderModes {
+    pub(crate) depth: DepthMode,
+    pub(crate) shape: ShapeMode,
+    pub(crate) cull: CullMode,
 }
 
 impl Shader {
@@ -48,20 +47,77 @@ impl Shader {
 }
 
 impl CoreShader {
-    pub(crate) fn new(
+    pub(crate) fn from_spirv_bytes(
         device: &Rc<Device>,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
-        source: &[u8],
+        bytes: &[u8],
     ) -> Result<Self> {
-        let data: ShaderFile = bincode::deserialize(source).map_err(|_| Error::InvalidFile)?;
+        let mut cursor = Cursor::new(&bytes[..]);
 
-        let depth_mode = DepthMode::from(&data.depth_mode);
-        let shape_mode = ShapeMode::from(&data.shape_mode);
-        let cull_mode = CullMode::from(&data.cull_mode);
+        let magic = read_u32(&mut cursor)?;
+        if magic != 0x5a45ffff {
+            return Err(Error::InvalidSpirv);
+        }
 
-        let vert_module = device.create_shader_module(&data.vert)?;
-        let frag_module = device.create_shader_module(&data.frag)?;
+        let depth_byte = read_u8(&mut cursor)?;
+        let shape_byte = read_u8(&mut cursor)?;
+        let cull_byte = read_u8(&mut cursor)?;
+        let vert_size = read_u32(&mut cursor)? as usize;
+        let frag_size = read_u32(&mut cursor)? as usize;
+
+        let mut vert_source = vec![0; vert_size];
+        cursor
+            .read_exact(&mut vert_source)
+            .map_err(|_| Error::InvalidSpirv)?;
+        let mut frag_source = vec![0; frag_size];
+        cursor
+            .read_exact(&mut frag_source)
+            .map_err(|_| Error::InvalidSpirv)?;
+
+        Self::new(
+            device,
+            framebuffer,
+            layout,
+            &vert_source,
+            &frag_source,
+            ShaderModes {
+                depth: depth_byte.try_into()?,
+                shape: shape_byte.try_into()?,
+                cull: cull_byte.try_into()?,
+            },
+        )
+    }
+
+    #[cfg(feature = "glsl")]
+    pub(crate) fn from_glsl_string(
+        device: &Rc<Device>,
+        framebuffer: &CoreFramebuffer,
+        layout: &ShaderLayout,
+        source: String,
+    ) -> Result<Self> {
+        use crate::glsl::compile_glsl;
+
+        let (vert, frag, mode_bytes) = compile_glsl(&source)?;
+        let modes = ShaderModes {
+            depth: mode_bytes[0].try_into()?,
+            shape: mode_bytes[1].try_into()?,
+            cull: mode_bytes[2].try_into()?,
+        };
+
+        Self::new(device, framebuffer, layout, &vert, &frag, modes)
+    }
+
+    fn new(
+        device: &Rc<Device>,
+        framebuffer: &CoreFramebuffer,
+        layout: &ShaderLayout,
+        vert_source: &[u8],
+        frag_source: &[u8],
+        modes: ShaderModes,
+    ) -> Result<Self> {
+        let vert_module = device.create_shader_module(vert_source)?;
+        let frag_module = device.create_shader_module(frag_source)?;
         let entry_point = CString::new("main").expect("bad code");
 
         // configure stages
@@ -106,7 +162,7 @@ impl CoreShader {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: 0,
-            topology: shape_mode.topology(),
+            topology: modes.shape.topology(),
             primitive_restart_enable: vk::FALSE,
         };
 
@@ -145,8 +201,8 @@ impl CoreShader {
             flags: 0,
             depth_clamp_enable: vk::FALSE,
             rasterizer_discard_enable: vk::FALSE,
-            polygon_mode: shape_mode.polygon(),
-            cull_mode: cull_mode.flag(),
+            polygon_mode: modes.shape.polygon(),
+            cull_mode: modes.cull.flag(),
             front_face: vk::FRONT_FACE_CLOCKWISE,
             depth_bias_enable: vk::FALSE,
             depth_bias_constant_factor: 0.0,
@@ -173,8 +229,8 @@ impl CoreShader {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: 0,
-            depth_test_enable: depth_mode.test(),
-            depth_write_enable: depth_mode.write(),
+            depth_test_enable: modes.depth.test(),
+            depth_write_enable: modes.depth.write(),
             depth_compare_op: vk::COMPARE_OP_LESS_OR_EQUAL,
             depth_bounds_test_enable: vk::FALSE,
             stencil_test_enable: vk::FALSE,
@@ -289,4 +345,24 @@ impl PartialEq for CoreShader {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
     }
+}
+
+fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
+    let mut byte = [0; 1];
+    cursor
+        .read_exact(&mut byte)
+        .map_err(|_| Error::InvalidSpirv)?;
+    Ok(byte[0])
+}
+
+fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
+    let mut bytes = [0; 4];
+    cursor
+        .read_exact(&mut bytes)
+        .map_err(|_| Error::InvalidSpirv)?;
+    let number = (u32::from(bytes[0]) << 24)
+        | (u32::from(bytes[1]) << 16)
+        | (u32::from(bytes[2]) << 8)
+        | u32::from(bytes[3]);
+    Ok(number)
 }

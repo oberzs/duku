@@ -98,81 +98,81 @@ impl Builtins {
 
         // shaders
         let phong_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/phong.shader"),
+                include_bytes!("../../shaders/phong.spirv"),
             )?);
             Shader::new(index)
         };
 
         let sdf_font_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/sdf-font.shader"),
+                include_bytes!("../../shaders/sdf-font.spirv"),
             )?);
             Shader::new(index)
         };
 
         let bitmap_font_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/bitmap-font.shader"),
+                include_bytes!("../../shaders/bitmap-font.spirv"),
             )?);
             Shader::new(index)
         };
 
         let blit_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/blit.shader"),
+                include_bytes!("../../shaders/blit.spirv"),
             )?);
             Shader::new(index)
         };
 
         let wireframe_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/wireframe.shader"),
+                include_bytes!("../../shaders/wireframe.spirv"),
             )?);
             Shader::new(index)
         };
 
         let line_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/lines.shader"),
+                include_bytes!("../../shaders/lines.spirv"),
             )?);
             Shader::new(index)
         };
 
         let unshaded_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/unshaded.shader"),
+                include_bytes!("../../shaders/unshaded.spirv"),
             )?);
             Shader::new(index)
         };
 
         let skybox_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::new(
+            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/skybox.shader"),
+                include_bytes!("../../shaders/skybox.spirv"),
             )?);
             Shader::new(index)
         };

@@ -28,7 +28,6 @@ use std::rc::Rc;
 use crate::color::Color;
 use crate::device::Device;
 use crate::device::Stats;
-use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::Framebuffer;
@@ -77,7 +76,7 @@ impl Ui {
         storage: &mut Storage,
         width: u32,
         height: u32,
-    ) -> Result<Self> {
+    ) -> Self {
         // create imgui context
         let mut imgui = ImContext::create();
         imgui.set_ini_filename(None);
@@ -152,12 +151,13 @@ impl Ui {
 
         let camera = Camera::orthographic(width as f32, height as f32);
 
-        let shader = CoreShader::new(
+        let shader = CoreShader::from_spirv_bytes(
             device,
             &core_framebuffer,
             shader_layout,
-            include_bytes!("../shaders/ui.shader"),
-        )?;
+            include_bytes!("../shaders/ui.spirv"),
+        )
+        .expect("bad shader");
 
         let (index, updater) = storage.framebuffers.add(core_framebuffer);
         let mut framebuffer = Framebuffer::new(index, updater);
@@ -166,7 +166,7 @@ impl Ui {
 
         let mesh = CoreMesh::new(device);
 
-        Ok(Self {
+        Self {
             device: Rc::clone(device),
             drawn: false,
             framebuffer,
@@ -175,7 +175,7 @@ impl Ui {
             shader,
             mesh,
             imgui,
-        })
+        }
     }
 
     pub(crate) fn draw(

@@ -173,6 +173,7 @@ dependencies = [
  "metal",
  "png",
  "serde",
+ "shaderc",
  "winapi",
 ]
 
