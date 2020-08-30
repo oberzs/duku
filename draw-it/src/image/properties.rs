@@ -80,7 +80,7 @@ impl ImageUsage {
         usages.iter().fold(0, |acc, usage| acc | usage.flag())
     }
 
-    pub(crate) fn flag(&self) -> vk::ImageUsageFlags {
+    pub(crate) const fn flag(&self) -> vk::ImageUsageFlags {
         match *self {
             Self::Color => vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             Self::Depth => vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -93,7 +93,7 @@ impl ImageUsage {
 }
 
 impl ImageFormat {
-    pub(crate) fn flag(&self) -> vk::Format {
+    pub(crate) const fn flag(&self) -> vk::Format {
         match *self {
             Self::Rgb => vk::FORMAT_R8G8B8_UNORM,
             Self::Rgba => vk::FORMAT_R8G8B8A8_UNORM,
@@ -107,7 +107,7 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) fn aspect(&self) -> vk::ImageAspectFlags {
+    pub(crate) const fn aspect(&self) -> vk::ImageAspectFlags {
         match *self {
             Self::Sbgra
             | Self::Rgb
@@ -121,7 +121,7 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) fn all_aspects(&self) -> vk::ImageAspectFlags {
+    pub(crate) const fn all_aspects(&self) -> vk::ImageAspectFlags {
         let aspect = self.aspect();
         if aspect == vk::IMAGE_ASPECT_DEPTH_BIT {
             aspect | vk::IMAGE_ASPECT_STENCIL_BIT
@@ -130,7 +130,7 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) fn is_color(&self) -> bool {
+    pub(crate) const fn is_color(&self) -> bool {
         matches!(
             *self,
             Self::Float2
@@ -142,15 +142,10 @@ impl ImageFormat {
                 | Self::Srgba
         )
     }
-
-    // probably will some day be needed
-    pub(crate) fn _is_depth(&self) -> bool {
-        matches!(*self, Self::Depth | Self::DepthStencil)
-    }
 }
 
 impl ImageLayout {
-    pub(crate) fn flag(&self) -> vk::ImageLayout {
+    pub(crate) const fn flag(&self) -> vk::ImageLayout {
         match *self {
             Self::Undefined => vk::IMAGE_LAYOUT_UNDEFINED,
             Self::Color => vk::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -163,7 +158,7 @@ impl ImageLayout {
         }
     }
 
-    pub(crate) fn access_flag(&self) -> vk::AccessFlags {
+    pub(crate) const fn access_flag(&self) -> vk::AccessFlags {
         match *self {
             Self::TransferSrc => vk::ACCESS_TRANSFER_READ_BIT,
             Self::TransferDst => vk::ACCESS_TRANSFER_WRITE_BIT,
@@ -175,7 +170,7 @@ impl ImageLayout {
         }
     }
 
-    pub(crate) fn stage_flag(&self) -> vk::PipelineStageFlags {
+    pub(crate) const fn stage_flag(&self) -> vk::PipelineStageFlags {
         match *self {
             Self::TransferSrc => vk::PIPELINE_STAGE_TRANSFER_BIT,
             Self::TransferDst => vk::PIPELINE_STAGE_TRANSFER_BIT,
@@ -192,7 +187,7 @@ impl ImageLayout {
 }
 
 impl Msaa {
-    pub(crate) fn flag(&self) -> vk::SampleCountFlags {
+    pub(crate) const fn flag(&self) -> vk::SampleCountFlags {
         match *self {
             Self::Disabled => vk::SAMPLE_COUNT_1_BIT,
             Self::X4 => vk::SAMPLE_COUNT_4_BIT,
@@ -203,7 +198,7 @@ impl Msaa {
 }
 
 impl TextureWrap {
-    pub(crate) fn flag(&self) -> vk::SamplerAddressMode {
+    pub(crate) const fn flag(&self) -> vk::SamplerAddressMode {
         match *self {
             Self::ClampBorder => vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             Self::ClampEdge => vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -213,7 +208,7 @@ impl TextureWrap {
 }
 
 impl TextureFilter {
-    pub(crate) fn flag(&self) -> vk::Filter {
+    pub(crate) const fn flag(&self) -> vk::Filter {
         match *self {
             Self::Linear => vk::FILTER_LINEAR,
             Self::Nearest => vk::FILTER_NEAREST,

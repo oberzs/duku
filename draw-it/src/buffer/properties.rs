@@ -25,7 +25,7 @@ impl BufferUsage {
         usages.iter().fold(0, |acc, usage| acc | usage.flag())
     }
 
-    pub(crate) fn flag(&self) -> vk::BufferUsageFlags {
+    pub(crate) const fn flag(&self) -> vk::BufferUsageFlags {
         match *self {
             Self::Vertex => vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
             Self::Index => vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -37,7 +37,7 @@ impl BufferUsage {
 }
 
 impl BufferAccess {
-    pub(crate) fn flag(&self) -> vk::MemoryPropertyFlags {
+    pub(crate) const fn flag(&self) -> vk::MemoryPropertyFlags {
         match *self {
             Self::Gpu => vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             Self::Cpu => {

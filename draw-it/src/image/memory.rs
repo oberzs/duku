@@ -242,7 +242,7 @@ impl ImageMemory {
         self.format == ImageFormat::Depth || self.format == ImageFormat::DepthStencil
     }
 
-    pub(crate) fn all_aspects(&self) -> vk::ImageAspectFlags {
+    pub(crate) const fn all_aspects(&self) -> vk::ImageAspectFlags {
         self.format.all_aspects()
     }
 

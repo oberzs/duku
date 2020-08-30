@@ -12,7 +12,7 @@ pub enum VSync {
 }
 
 impl VSync {
-    pub(crate) fn flag(&self) -> vk::PresentModeKHR {
+    pub(crate) const fn flag(&self) -> vk::PresentModeKHR {
         match *self {
             Self::On => vk::PRESENT_MODE_FIFO_KHR,
             Self::Off => vk::PRESENT_MODE_IMMEDIATE_KHR,
