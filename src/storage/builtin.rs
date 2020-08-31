@@ -109,7 +109,7 @@ impl Builtins {
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/bitmap-font.spirv"),
+                include_bytes!("../../shaders/font.spirv"),
             )?);
             Shader::new(index)
         };
