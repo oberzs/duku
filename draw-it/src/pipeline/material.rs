@@ -85,35 +85,6 @@ impl Material {
         self.arg_1.z = c.z;
     }
 
-    pub fn set_font_width(&mut self, width: f32) {
-        self.arg_1.w = width;
-    }
-
-    pub fn set_font_border_color(&mut self, color: impl Into<Color>) {
-        let c = color.into().to_rgb_norm_vec();
-        self.arg_2.x = c.x;
-        self.arg_2.y = c.y;
-        self.arg_2.z = c.z;
-    }
-
-    pub fn set_font_edge(&mut self, edge: f32) {
-        self.arg_2.w = edge;
-    }
-
-    pub fn set_font_border_offset(&mut self, offset: impl Into<Vector2>) {
-        let v = offset.into();
-        self.arg_3.x = v.x;
-        self.arg_3.y = v.y;
-    }
-
-    pub fn set_font_border_width(&mut self, width: f32) {
-        self.arg_3.z = width;
-    }
-
-    pub fn set_font_border_edge(&mut self, edge: f32) {
-        self.arg_3.w = edge;
-    }
-
     pub fn set_arg_1(&mut self, arg: impl Into<Arg>) {
         self.arg_1 = arg.into().0;
     }

@@ -305,35 +305,23 @@ impl ForwardRenderer {
     ) {
         let cmd = self.device.commands();
 
+        // bind shader
+        let shader = storage.shaders.get(&target.builtins.font_shader.index);
+        cmd.bind_shader(shader);
+
         for order in orders {
             let font = storage.fonts.get(&order.font);
-
-            let font_size = order.size;
-
-            let shader_index = if font.is_bitmap(font_size) {
-                target.builtins.bitmap_font_shader.index.clone()
-            } else {
-                target.builtins.sdf_font_shader.index.clone()
-            };
-            let sampler_index = if font.is_bitmap(font_size) { 7 } else { 1 };
-
-            // bind shader
-            let shader = storage.shaders.get(&shader_index);
-            cmd.bind_shader(shader);
 
             // bind material
             let material = storage.materials.get(&order.material);
             cmd.bind_material(shader_layout, material);
 
-            let albedo_index = font.texture(font_size).image_index();
-            let mesh = font.mesh(font_size);
-            let margin = font.margin(font_size);
-            cmd.bind_mesh(mesh);
+            // bind mesh
+            cmd.bind_mesh(font.mesh());
 
             let mut transform = order.transform;
             let start_x = transform.position.x;
-            transform.scale *= font_size as f32;
-            transform.position.x -= margin * font_size as f32;
+            transform.scale *= order.size as f32;
 
             for c in order.text.chars() {
                 // handle whitespace
@@ -347,17 +335,22 @@ impl ForwardRenderer {
                     continue;
                 }
 
+                let data = font.char_data(c);
+
+                let mut local_transform = transform;
+                local_transform.position.x += data.x_offset * transform.scale.x;
+                local_transform.position.y -= data.y_offset * transform.scale.y;
+
                 cmd.push_constants(
                     shader_layout,
                     PushConstants {
-                        model_matrix: transform.as_matrix(),
-                        sampler_index,
-                        albedo_index,
+                        model_matrix: local_transform.as_matrix(),
+                        albedo_index: font.texture().image_index(),
+                        sampler_index: 7,
                     },
                 );
 
-                let data = font.char_data(font_size, c);
-                cmd.draw(6, data.offset);
+                cmd.draw(6, data.index_offset);
 
                 transform.position.x += data.advance * transform.scale.x;
             }
