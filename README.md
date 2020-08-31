@@ -17,7 +17,7 @@
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
-    <img src="https://img.shields.io/badge/rust-1.45.2-orange?style=flat-square" alt="Rust Version" />
+    <img src="https://img.shields.io/badge/rust-1.46.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
   <a href="https://github.com/OllieBerzs/draw-it/blob/develop/LICENSE">
@@ -40,6 +40,7 @@
 - **shadows:** uses PCF shadow maps
 - **windowing agnostic:** can be used with any OS window
 - **hot-reload:** shaders can be reloaded while the app is running
+- **minimal dependencies:** all Rust dependencies are optional
 
 ## Support
 
