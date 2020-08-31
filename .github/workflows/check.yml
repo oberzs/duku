@@ -18,4 +18,4 @@ jobs:
           override: true
 
       - name: Check
-        run: cargo check --no-default-features
+        run: cargo check --lib --no-default-features

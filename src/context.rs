@@ -3,20 +3,13 @@
 
 // Context - draw-it application entrypoint
 
-use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
 use std::time::Instant;
 
 use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
-use crate::error::Error;
 use crate::error::Result;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -42,7 +35,6 @@ use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::storage::Builtins;
-use crate::storage::Index;
 use crate::storage::Storage;
 use crate::surface::Surface;
 use crate::surface::Swapchain;
@@ -71,7 +63,7 @@ pub struct Context {
 
     // Resources
     storage: Storage,
-    skybox: Cubemap,
+    _skybox: Cubemap, // TODO: set skybox from colors
     builtins: Builtins,
 
     // Vulkan
@@ -96,15 +88,15 @@ pub struct Context {
 
     // Hot Reload
     #[cfg(feature = "glsl")]
-    hot_reload_sender: Sender<(u32, PathBuf)>,
+    hot_reload_sender: std::sync::mpsc::Sender<(u32, std::path::PathBuf)>,
     #[cfg(feature = "glsl")]
-    hot_reload_receiver: Receiver<(u32, PathBuf)>,
+    hot_reload_receiver: std::sync::mpsc::Receiver<(u32, std::path::PathBuf)>,
 
     // Window
     #[cfg(feature = "window")]
     glfw: Option<glfw::Glfw>,
     #[cfg(feature = "window")]
-    event_receiver: Option<Receiver<(f64, glfw::WindowEvent)>>,
+    event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -185,7 +177,7 @@ impl Context {
         );
 
         #[cfg(feature = "glsl")]
-        let (hot_reload_sender, hot_reload_receiver) = mpsc::channel();
+        let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
 
         Ok(Self {
             fps_samples: [0; FPS_SAMPLE_COUNT],
@@ -204,7 +196,7 @@ impl Context {
             builtins,
             instance,
             surface,
-            skybox,
+            _skybox: skybox,
             device,
             msaa,
             vsync,
@@ -404,7 +396,7 @@ impl Context {
         // hot-reload shaders
         #[cfg(feature = "glsl")]
         for (pointer, path) in self.hot_reload_receiver.try_iter() {
-            let source = fs::read_to_string(&path).expect("bad read");
+            let source = std::fs::read_to_string(&path).expect("bad read");
 
             match CoreShader::from_glsl_string(
                 &self.device,
@@ -413,7 +405,10 @@ impl Context {
                 source,
             ) {
                 Ok(new_shader) => {
-                    *self.storage.shaders.get_mut(&Index::new(pointer)) = new_shader;
+                    *self
+                        .storage
+                        .shaders
+                        .get_mut(&crate::storage::Index::new(pointer)) = new_shader;
                     info!("shader {:?} was reloaded", path);
                 }
                 Err(err) => warn!("{}", err),
@@ -455,6 +450,8 @@ impl Context {
         use glfw::ClientApiHint;
         use glfw::WindowHint;
         use glfw::WindowMode;
+
+        use crate::error::Error;
 
         let WindowOptions {
             title,
@@ -519,7 +516,7 @@ impl Context {
     pub(crate) fn attach_glfw(
         &mut self,
         glfw: glfw::Glfw,
-        event_receiver: Receiver<(f64, glfw::WindowEvent)>,
+        event_receiver: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
     ) {
         self.glfw = Some(glfw);
         self.event_receiver = Some(event_receiver);
@@ -588,10 +585,14 @@ impl Context {
     }
 
     #[cfg(feature = "glsl")]
-    pub fn create_shader_glsl(&mut self, path: impl AsRef<Path>, watch: bool) -> Result<Shader> {
+    pub fn create_shader_glsl(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        watch: bool,
+    ) -> Result<Shader> {
         use crate::watch::watch_file;
 
-        let source = fs::read_to_string(&path)?;
+        let source = std::fs::read_to_string(&path)?;
         let (index, _) = self.storage.shaders.add(CoreShader::from_glsl_string(
             &self.device,
             &self.window_framebuffers[0],
@@ -617,31 +618,36 @@ impl Context {
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png(&mut self, path: impl AsRef<Path>) -> Result<Texture> {
-        let bytes = fs::read(path.as_ref())?;
+    pub fn create_texture_png(&mut self, path: impl AsRef<std::path::Path>) -> Result<Texture> {
+        let bytes = std::fs::read(path.as_ref())?;
         self.create_texture_png_bytes(bytes)
     }
 
     #[cfg(feature = "png")]
-    pub fn set_skybox_png(&mut self, sides: CubemapSides<impl AsRef<Path>>) -> Result<()> {
+    pub fn set_skybox_png(
+        &mut self,
+        sides: CubemapSides<impl AsRef<std::path::Path>>,
+    ) -> Result<()> {
         let mut cubemap = Cubemap::from_png_bytes(
             &self.device,
             CubemapSides {
-                top: fs::read(sides.top)?,
-                bottom: fs::read(sides.bottom)?,
-                front: fs::read(sides.front)?,
-                back: fs::read(sides.back)?,
-                left: fs::read(sides.left)?,
-                right: fs::read(sides.right)?,
+                top: std::fs::read(sides.top)?,
+                bottom: std::fs::read(sides.bottom)?,
+                front: std::fs::read(sides.front)?,
+                back: std::fs::read(sides.back)?,
+                left: std::fs::read(sides.left)?,
+                right: std::fs::read(sides.right)?,
             },
         )?;
         self.image_uniform.set_skybox(cubemap.add_view());
-        self.skybox = cubemap;
+        self._skybox = cubemap;
         Ok(())
     }
 
     #[cfg(feature = "ui")]
     pub fn draw_ui(&mut self, draw_fn: impl FnMut(&UiFrame<'_>)) -> Result<()> {
+        use crate::error::Error;
+
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }

@@ -15,8 +15,7 @@ use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
-use crate::error::Error;
-use crate::error::Result;
+
 use crate::vk;
 
 pub(crate) struct Cubemap {
@@ -130,9 +129,11 @@ impl Cubemap {
     pub(crate) fn from_png_bytes(
         device: &Rc<Device>,
         sides: CubemapSides<Vec<u8>>,
-    ) -> Result<Self> {
+    ) -> crate::error::Result<Self> {
         use png::ColorType;
         use png::Decoder;
+
+        use crate::error::Error;
 
         let (format, size) = {
             let decoder = Decoder::new(sides.top.as_slice());
@@ -164,7 +165,7 @@ impl Cubemap {
             reader.next_frame(&mut data).expect("bad read");
             Ok(data)
         })
-        .collect::<Result<_>>()?;
+        .collect::<crate::error::Result<_>>()?;
 
         Ok(Self::new(
             device,

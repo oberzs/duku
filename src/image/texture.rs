@@ -16,8 +16,6 @@ use crate::buffer::BufferAccess;
 use crate::buffer::BufferMemory;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
-use crate::error::Error;
-use crate::error::Result;
 use crate::pipeline::ImageUniform;
 use crate::storage::Index;
 
@@ -106,9 +104,11 @@ impl CoreTexture {
         device: &Rc<Device>,
         uniform: &mut ImageUniform,
         bytes: Vec<u8>,
-    ) -> Result<Self> {
+    ) -> crate::error::Result<Self> {
         use png::ColorType;
         use png::Decoder;
+
+        use crate::error::Error;
 
         let decoder = Decoder::new(bytes.as_slice());
         let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;

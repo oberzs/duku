@@ -42,6 +42,8 @@ mod renderer;
 mod storage;
 mod surface;
 mod vk;
+
+#[cfg(feature = "glsl")]
 mod watch;
 
 #[cfg(feature = "glsl")]

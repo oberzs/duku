@@ -21,6 +21,7 @@ impl Index {
         Rc::strong_count(&self.0)
     }
 
+    #[cfg(feature = "glsl")]
     pub(crate) fn pointer(&self) -> u32 {
         *self.0
     }
