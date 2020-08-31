@@ -35,7 +35,11 @@ impl error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{:?}", self)
+        match self {
+            #[cfg(feature = "glsl")]
+            Self::InvalidGlsl(s) => write!(fmt, "{}", s),
+            e => write!(fmt, "{:?}", e),
+        }
     }
 }
 

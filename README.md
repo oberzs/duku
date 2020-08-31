@@ -37,7 +37,6 @@
 - **easy to use:** written with a goal to be as easy to use as possible
 - **2D/3D:** can be used for both
 - **shaders:** write custom shaders in a modified GLSL
-- **SDF fonts:** signed distance field font support
 - **shadows:** uses PCF shadow maps
 - **windowing agnostic:** can be used with any OS window
 - **hot-reload:** shaders can be reloaded while the app is running
@@ -84,15 +83,16 @@ Want more? Check out these other [examples](https://github.com/OllieBerzs/draw-i
 This library uses these open source projects:
 
 - [Vulkan SDK](https://vulkan.lunarg.com/) - Vulkan API support
-- [Serde](https://github.com/serde-rs/serde) - Deserialize assets
-- [Bincode](https://github.com/servo/bincode) - Serde helper for binary
 
 Assets
 
 - [Kenney](https://www.kenney.nl/assets) - Assets for examples and fonts
+- [Fira Mono](https://fonts.google.com/specimen/Fira+Mono?query=fira) - Builtin font
 - [Skybox](https://www.moddb.com/addons/cc0-skybox-pack-1) - Skybox for Cube example
 
 Optional projects for extra functionality:
 
+- [Png](https://github.com/image-rs/image-png) - Png image loading
+- [Shaderc](https://github.com/google/shaderc-rs) - Glsl shader loading
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
 - [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
