@@ -405,14 +405,19 @@ impl Context {
         #[cfg(feature = "glsl")]
         for (pointer, path) in self.hot_reload_receiver.try_iter() {
             let source = fs::read_to_string(&path).expect("bad read");
-            *self.storage.shaders.get_mut(&Index::new(pointer)) = CoreShader::from_glsl_string(
+
+            match CoreShader::from_glsl_string(
                 &self.device,
                 &self.window_framebuffers[0],
                 &self.shader_layout,
                 source,
-            )
-            .expect("bad shader recreation");
-            info!("shader {:?} was reloaded", path);
+            ) {
+                Ok(new_shader) => {
+                    *self.storage.shaders.get_mut(&Index::new(pointer)) = new_shader;
+                    info!("shader {:?} was reloaded", path);
+                }
+                Err(err) => warn!("{}", err),
+            }
         }
 
         self.image_uniform.update_if_needed();
