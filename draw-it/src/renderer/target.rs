@@ -104,7 +104,7 @@ impl<'b> Target<'b> {
             current_material: builtins.white_material.index.clone(),
             current_font_material: builtins.font_material.index.clone(),
             current_albedo: Albedo::Texture(builtins.white_texture.index.clone()),
-            current_font: builtins.kenney_font.index.clone(),
+            current_font: builtins.fira_font.index.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
             texture_mipmaps: true,

@@ -39,14 +39,13 @@ pub struct Builtins {
     pub sphere_mesh: Mesh,
     pub grid_mesh: Mesh,
     pub phong_shader: Shader,
-    pub sdf_font_shader: Shader,
-    pub bitmap_font_shader: Shader,
+    pub font_shader: Shader,
     pub blit_shader: Shader,
     pub wireframe_shader: Shader,
     pub line_shader: Shader,
     pub unshaded_shader: Shader,
     pub skybox_shader: Shader,
-    pub kenney_font: Font,
+    pub fira_font: Font,
 }
 
 impl Builtins {
@@ -83,8 +82,6 @@ impl Builtins {
             let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
             let mut mat = Material::new(index, updater);
             mat.set_font_color([0, 0, 0]);
-            mat.set_font_width(0.5);
-            mat.set_font_edge(0.1);
             mat.update();
             mat
         };
@@ -107,17 +104,7 @@ impl Builtins {
             Shader::new(index)
         };
 
-        let sdf_font_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
-                device,
-                framebuffer,
-                layout,
-                include_bytes!("../../shaders/sdf-font.spirv"),
-            )?);
-            Shader::new(index)
-        };
-
-        let bitmap_font_shader = {
+        let font_shader = {
             let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
                 device,
                 framebuffer,
@@ -178,12 +165,8 @@ impl Builtins {
         };
 
         // fonts
-        let kenney_font = {
-            let (index, _) = storage.fonts.add(CoreFont::new(
-                device,
-                uniform,
-                include_bytes!("../../fonts/kenney-future.font"),
-            )?);
+        let fira_font = {
+            let (index, _) = storage.fonts.add(CoreFont::fira_mono(device, uniform));
             Font::new(index)
         };
 
@@ -197,14 +180,13 @@ impl Builtins {
             sphere_mesh,
             grid_mesh,
             phong_shader,
-            sdf_font_shader,
-            bitmap_font_shader,
+            font_shader,
             blit_shader,
             wireframe_shader,
             line_shader,
             unshaded_shader,
             skybox_shader,
-            kenney_font,
+            fira_font,
         })
     }
 }

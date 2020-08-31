@@ -23,7 +23,7 @@ impl Quality {
             Self::Custom(o) => o,
             Self::Low => QualityOptions {
                 shadow_map_size: 1024,
-                anisotropy: 0.0,
+                anisotropy: 1.0,
                 msaa: Msaa::Disabled,
                 pcf: Pcf::Disabled,
             },

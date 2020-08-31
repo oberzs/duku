@@ -1,17 +1,15 @@
 // Oliver Berzs
 // https://github.com/OllieBerzs/draw-it
 
-// Font - struct for a renderable SDF font
+// Font - struct for a renderable font
 
-mod format;
+mod fira_mono;
 
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
-use crate::error::Error;
-use crate::error::Result;
 use crate::image::CoreTexture;
 use crate::image::ImageFormat;
 use crate::math::Vector2;
@@ -20,8 +18,6 @@ use crate::mesh::CoreMesh;
 use crate::mesh::MeshUpdateData;
 use crate::pipeline::ImageUniform;
 use crate::storage::Index;
-use format::CharMetrics;
-use format::FontFile;
 
 // user facing framebuffer data
 #[derive(Debug)]
@@ -29,23 +25,19 @@ pub struct Font {
     pub(crate) index: Index,
 }
 
-// GPU data storage for a font
+// data storage for a font
 pub(crate) struct CoreFont {
-    bitmap_data: HashMap<u32, FontData>,
-    sdf_data: FontData,
-}
-
-#[derive(Copy, Clone)]
-pub(crate) struct CharData {
-    pub(crate) advance: f32,
-    pub(crate) offset: usize,
-}
-
-struct FontData {
-    texture: CoreTexture,
-    mesh: CoreMesh,
-    margin: f32,
     char_data: HashMap<char, CharData>,
+    mesh: CoreMesh,
+    texture: CoreTexture,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct CharData {
+    pub(crate) index_offset: usize,
+    pub(crate) x_offset: f32,
+    pub(crate) y_offset: f32,
+    pub(crate) advance: f32,
 }
 
 impl Font {
@@ -55,167 +47,98 @@ impl Font {
 }
 
 impl CoreFont {
-    pub(crate) fn new(
-        device: &Rc<Device>,
-        uniform: &mut ImageUniform,
-        source: &[u8],
-    ) -> Result<Self> {
-        let FontFile {
-            sdf_font,
-            bitmap_fonts,
-        } = bincode::deserialize(source).map_err(|_| Error::InvalidFile)?;
+    pub(crate) fn fira_mono(device: &Rc<Device>, uniform: &mut ImageUniform) -> Self {
+        let atlas_width = fira_mono::ATLAS_WIDTH;
+        let atlas_height = fira_mono::ATLAS_HEIGHT;
+        let line_height = fira_mono::LINE_HEIGHT;
 
-        let mut bitmap_data = HashMap::new();
-        for font in bitmap_fonts {
-            bitmap_data.insert(
-                font.font_size,
-                create_font(
-                    device,
-                    uniform,
-                    font.bitmap,
-                    font.bitmap_size,
-                    font.font_size,
-                    0,
-                    &font.char_metrics,
-                ),
-            );
-        }
-
-        let sdf_data = create_font(
+        let texture = CoreTexture::new(
             device,
             uniform,
-            sdf_font.bitmap,
-            sdf_font.bitmap_size,
-            sdf_font.font_size,
-            sdf_font.margin,
-            &sdf_font.char_metrics,
+            fira_mono::DATA.to_vec(),
+            atlas_width,
+            atlas_height,
+            ImageFormat::Gray,
         );
 
-        Ok(Self {
-            bitmap_data,
-            sdf_data,
-        })
+        let mut char_data = HashMap::new();
+        let mut vertices = vec![];
+        let mut indices = vec![];
+        let mut uvs = vec![];
+        let mut offset = 0;
+        for (c, metrics) in fira_mono::metrics() {
+            let u_min = metrics.x as f32 / atlas_width as f32;
+            let v_min = metrics.y as f32 / atlas_height as f32;
+            let u_max = u_min + (metrics.width as f32 / atlas_width as f32);
+            let v_max = v_min + (metrics.height as f32 / atlas_height as f32);
+
+            let width = metrics.width as f32 / line_height as f32;
+            let height = metrics.height as f32 / line_height as f32;
+
+            let x_offset = metrics.xo as f32 / line_height as f32;
+            let y_offset = metrics.yo as f32 / line_height as f32;
+            let advance = metrics.advance as f32 / line_height as f32;
+
+            let o = vertices.len() as u16;
+
+            vertices.extend(&[
+                Vector3::new(0.0, 0.0, 0.0),
+                Vector3::new(width, 0.0, 0.0),
+                Vector3::new(width, -height, 0.0),
+                Vector3::new(0.0, -height, 0.0),
+            ]);
+            uvs.extend(&[
+                Vector2::new(u_min, v_min),
+                Vector2::new(u_max, v_min),
+                Vector2::new(u_max, v_max),
+                Vector2::new(u_min, v_max),
+            ]);
+            indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
+
+            char_data.insert(
+                c,
+                CharData {
+                    index_offset: offset,
+                    x_offset,
+                    y_offset,
+                    advance,
+                },
+            );
+            offset += 6;
+        }
+
+        let vertex_count = vertices.len();
+        let normals = vec![Vector3::ZERO; vertex_count];
+        let colors = vec![Color::WHITE; vertex_count];
+
+        let mut mesh = CoreMesh::new(device);
+        mesh.update(MeshUpdateData {
+            vertices,
+            normals,
+            colors,
+            uvs,
+            indices,
+        });
+
+        Self {
+            char_data,
+            mesh,
+            texture,
+        }
     }
 
-    pub(crate) fn is_bitmap(&self, font_size: u32) -> bool {
-        self.bitmap_data.contains_key(&font_size)
+    pub(crate) const fn texture(&self) -> &CoreTexture {
+        &self.texture
     }
 
-    pub(crate) fn char_data(&self, font_size: u32, c: char) -> CharData {
-        // if has bitmap font of that size, choose bitmap
-        // otherwise choose sdf font
-        let char_data = match self.bitmap_data.get(&font_size) {
-            Some(data) => &data.char_data,
-            None => &self.sdf_data.char_data,
-        };
-        match char_data.get(&c) {
+    pub(crate) const fn mesh(&self) -> &CoreMesh {
+        &self.mesh
+    }
+
+    pub(crate) fn char_data(&self, c: char) -> CharData {
+        match self.char_data.get(&c) {
             Some(data) => *data,
-            None => *char_data.get(&'?').expect("bad default"),
+            None => *self.char_data.get(&'?').expect("bad default"),
         }
-    }
-
-    pub(crate) fn texture(&self, font_size: u32) -> &CoreTexture {
-        // if has bitmap font of that size, choose bitmap
-        // otherwise choose sdf font
-        match self.bitmap_data.get(&font_size) {
-            Some(data) => &data.texture,
-            None => &self.sdf_data.texture,
-        }
-    }
-
-    pub(crate) fn mesh(&self, font_size: u32) -> &CoreMesh {
-        // if has bitmap font of that size, choose bitmap
-        // otherwise choose sdf font
-        match self.bitmap_data.get(&font_size) {
-            Some(data) => &data.mesh,
-            None => &self.sdf_data.mesh,
-        }
-    }
-
-    pub(crate) fn margin(&self, font_size: u32) -> f32 {
-        // if has bitmap font of that size, choose bitmap
-        // otherwise choose sdf font
-        match self.bitmap_data.get(&font_size) {
-            Some(data) => data.margin,
-            None => self.sdf_data.margin,
-        }
-    }
-}
-
-fn create_font(
-    device: &Rc<Device>,
-    uniform: &mut ImageUniform,
-    bitmap: Vec<u8>,
-    bitmap_size: u32,
-    font_size: u32,
-    margin: u32,
-    char_metrics: &HashMap<char, CharMetrics>,
-) -> FontData {
-    let texture = CoreTexture::new(
-        device,
-        uniform,
-        bitmap,
-        bitmap_size,
-        bitmap_size,
-        ImageFormat::Gray,
-    );
-
-    let mut vertices = vec![];
-    let mut uvs = vec![];
-    let mut indices = vec![];
-    let mut offset = 0;
-
-    let norm_margin = margin as f32 / font_size as f32;
-
-    let mut char_data = HashMap::new();
-    for (c, metrics) in char_metrics {
-        // UV relative metrics
-        let size_norm = font_size as f32 / bitmap_size as f32;
-        let u_min = metrics.x as f32 / bitmap_size as f32;
-        let v_min = (metrics.y as f32 + margin as f32) / bitmap_size as f32;
-        let u_max = u_min + size_norm;
-        let v_max = v_min + size_norm;
-
-        // vertex relative metrics
-        let advance = metrics.advance as f32 / font_size as f32;
-
-        let o = vertices.len() as u16;
-
-        vertices.extend(&[
-            Vector3::new(0.0, 0.0, 0.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(1.0, -1.0, 0.0),
-            Vector3::new(0.0, -1.0, 0.0),
-        ]);
-        uvs.extend(&[
-            Vector2::new(u_min, v_min),
-            Vector2::new(u_max, v_min),
-            Vector2::new(u_max, v_max),
-            Vector2::new(u_min, v_max),
-        ]);
-        indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
-
-        char_data.insert(*c, CharData { advance, offset });
-        offset += 6;
-    }
-
-    let vertex_count = vertices.len();
-    let normals = vec![Vector3::ZERO; vertex_count];
-    let colors = vec![Color::WHITE; vertex_count];
-
-    let mut mesh = CoreMesh::new(device);
-    mesh.update(MeshUpdateData {
-        vertices,
-        normals,
-        colors,
-        uvs,
-        indices,
-    });
-
-    FontData {
-        margin: norm_margin,
-        char_data,
-        texture,
-        mesh,
     }
 }
