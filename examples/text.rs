@@ -21,7 +21,6 @@ fn main() -> Result<()> {
             width: 600,
             height: 400,
             resizable: true,
-            ..Default::default()
         },
     )?;
 

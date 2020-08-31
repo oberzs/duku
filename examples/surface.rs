@@ -13,8 +13,6 @@ fn main() -> Result<()> {
         WindowOptions {
             title: "Draw-it example: Surface",
             resizable: true,
-            width: 900,
-            height: 900,
             ..Default::default()
         },
     )?;

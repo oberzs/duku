@@ -461,7 +461,6 @@ impl Context {
             width,
             height,
             resizable,
-            transparent,
         } = w_options;
 
         // create glfw window
@@ -469,7 +468,6 @@ impl Context {
 
         glfw.window_hint(WindowHint::Resizable(resizable));
         glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-        glfw.window_hint(WindowHint::TransparentFramebuffer(transparent));
 
         let (mut window, event_receiver) = glfw
             .create_window(width, height, title, WindowMode::Windowed)

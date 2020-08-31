@@ -22,7 +22,7 @@ pub(crate) fn pick_gpu(
     info!("looking for suitable GPU");
 
     // score each GPU based on properties
-    let mut scores = gpu_properties
+    let mut scores: Vec<_> = gpu_properties
         .iter()
         .enumerate()
         .map(|(i, props)| {
@@ -55,11 +55,6 @@ pub(crate) fn pick_gpu(
             if !props.supports_msaa(msaa) {
                 score = 0;
             }
-            if (props.capabilities.supported_composite_alpha & vk::COMPOSITE_ALPHA_INHERIT_BIT_KHR)
-                == 0
-            {
-                score = 0;
-            }
 
             let format = props.formats.iter().find(|f| {
                 f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
@@ -71,7 +66,7 @@ pub(crate) fn pick_gpu(
 
             (i, score)
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     scores.sort_by(|a, b| b.1.cmp(&a.1));
     scores.retain(|s| s.1 > 0);

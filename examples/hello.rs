@@ -14,7 +14,6 @@ fn main() -> Result<()> {
         WindowOptions {
             title: "Draw-it example: Hello",
             resizable: true,
-            transparent: true,
             ..Default::default()
         },
     )?;
@@ -25,11 +24,9 @@ fn main() -> Result<()> {
         context.poll_events(&mut window);
 
         hue = (hue + 1) % 360;
-        let mut color = Color::hsv(hue, 255, 255);
-        color.a = 50;
 
         context.draw_on_window(None, |target| {
-            target.clear = color;
+            target.clear = Color::hsv(hue, 255, 255);
         });
     }
 

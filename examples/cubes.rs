@@ -30,7 +30,6 @@ fn main() -> Result<()> {
             resizable: true,
             width: 720,
             height: 640,
-            ..Default::default()
         },
     )?;
 

@@ -21,6 +21,7 @@ macro_rules! info {
 }
 
 // prints warning in debug mode
+#[cfg(feature = "glsl")]
 macro_rules! warn {
     ($($arg:expr),*) => {{
         #[cfg(debug_assertions)]
