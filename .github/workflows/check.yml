@@ -12,9 +12,4 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Check
-        working-directory: ./draw-it
         run: cargo check --no-default-features
-
-      - name: Test
-        working-directory: ./draw-it
-        run: cargo test --no-default-features
