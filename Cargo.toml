@@ -1,6 +1,31 @@
-[workspace]
-members = [
-  "draw-it",
-  "dai",
-  "examples/*"
-]
+[package]
+name = "draw-it"
+version = "0.1.0"
+authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
+edition = "2018"
+
+[[bin]]
+name = "dic"
+path = "src/dic.rs"
+
+[features]
+default = ["ui", "png", "glsl"]
+glsl = ["shaderc"]
+window = ["glfw"]
+ui = ["window", "imgui"]
+
+# optional dependencies
+[dependencies]
+glfw = { version = "0.39.1", optional = true }
+imgui = { version = "0.4.0", optional = true }
+png = { version = "0.16.7", default-features = false, optional = true }
+shaderc = { version = "0.6.2", optional = true }
+
+# Windows dependencies
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3.9", features = ["libloaderapi"] }
+
+# MacOS dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.23.0"
+metal = "0.20.0"

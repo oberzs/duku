@@ -40,15 +40,15 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
-    let texture = context.create_texture_png("examples/cubes/textures/Orange/texture_01.png")?;
+    let texture = context.create_texture_png("examples/textures/Orange/texture_01.png")?;
 
     context.set_skybox_png(CubemapSides {
-        top: "examples/cubes/textures/Skybox/glacier_up.png",
-        bottom: "examples/cubes/textures/Skybox/glacier_down.png",
-        front: "examples/cubes/textures/Skybox/glacier_front.png",
-        back: "examples/cubes/textures/Skybox/glacier_back.png",
-        left: "examples/cubes/textures/Skybox/glacier_left.png",
-        right: "examples/cubes/textures/Skybox/glacier_right.png",
+        top: "examples/textures/Skybox/glacier_up.png",
+        bottom: "examples/textures/Skybox/glacier_down.png",
+        front: "examples/textures/Skybox/glacier_front.png",
+        back: "examples/textures/Skybox/glacier_back.png",
+        left: "examples/textures/Skybox/glacier_left.png",
+        right: "examples/textures/Skybox/glacier_right.png",
     })?;
 
     let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0]);

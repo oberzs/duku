@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     )?;
 
     // read custom shader
-    let shader = context.create_shader_glsl("examples/surface/shaders/raymarch.glsl", true)?;
+    let shader = context.create_shader_glsl("examples/shaders/raymarch.glsl", true)?;
 
     while window.is_open() {
         // poll events
