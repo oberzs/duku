@@ -37,7 +37,7 @@ fn main() -> Result<()> {
         context.poll_events(&mut window);
 
         context.draw_on_window(None, |target| {
-            target.clear = Color::ORANGE;
+            target.clear = Color::WHITE;
             target.draw_text("Bitmap 24p text", [left, 190.0, 1.0]);
 
             // render with custom material
