@@ -87,7 +87,7 @@ impl CoreTexture {
         );
 
         // copy image from staging memory
-        memory.change_layout(ImageLayout::TransferDst);
+        memory.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
         memory.copy_from_memory(&staging_memory, 0);
         memory.generate_mipmaps();
 

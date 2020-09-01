@@ -21,7 +21,6 @@ use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::Uniform;
 use crate::vk;
 
 pub(crate) struct Commands {
@@ -246,10 +245,6 @@ impl Commands {
                 ptr::null(),
             );
         }
-    }
-
-    pub(crate) fn bind_uniform(&self, layout: &ShaderLayout, uniform: &impl Uniform) {
-        self.bind_descriptor(layout, uniform.descriptor());
     }
 
     pub(crate) fn bind_mesh(&self, mesh: &CoreMesh) {

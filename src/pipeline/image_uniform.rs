@@ -25,14 +25,6 @@ pub(crate) struct ImageUniform {
     device: Rc<Device>,
 }
 
-pub(crate) struct ShadowMapUniform {
-    descriptor: Descriptor,
-}
-
-pub(crate) trait Uniform {
-    fn descriptor(&self) -> Descriptor;
-}
-
 impl ImageUniform {
     pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
         let descriptor = layout.image_set();
@@ -191,23 +183,8 @@ impl ImageUniform {
             self.should_update = false;
         }
     }
-}
 
-impl Uniform for ImageUniform {
-    fn descriptor(&self) -> Descriptor {
-        self.descriptor
-    }
-}
-
-impl ShadowMapUniform {
-    pub(crate) fn new(layout: &ShaderLayout, views: [vk::ImageView; 4]) -> Self {
-        let descriptor = layout.shadow_map_set(views);
-        Self { descriptor }
-    }
-}
-
-impl Uniform for ShadowMapUniform {
-    fn descriptor(&self) -> Descriptor {
+    pub(crate) const fn descriptor(&self) -> Descriptor {
         self.descriptor
     }
 }

@@ -14,13 +14,13 @@ use std::sync::mpsc::Sender;
 use crate::font::CoreFont;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
-use crate::image::FramebufferUpdateData;
+use crate::image::FramebufferData;
 use crate::mesh::CoreMesh;
-use crate::mesh::MeshUpdateData;
+use crate::mesh::MeshData;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
-use crate::pipeline::MaterialUpdateData;
+use crate::pipeline::MaterialData;
 
 pub(crate) use builtin::Builtins;
 pub(crate) use index::Index;
@@ -29,9 +29,9 @@ pub(crate) struct Storage {
     pub(crate) shaders: Store<CoreShader>,
     pub(crate) fonts: Store<CoreFont>,
     pub(crate) textures: Store<CoreTexture>,
-    pub(crate) framebuffers: Store<CoreFramebuffer, FramebufferUpdateData>,
-    pub(crate) materials: Store<CoreMaterial, MaterialUpdateData>,
-    pub(crate) meshes: Store<CoreMesh, MeshUpdateData>,
+    pub(crate) framebuffers: Store<CoreFramebuffer, FramebufferData>,
+    pub(crate) materials: Store<CoreMaterial, MaterialData>,
+    pub(crate) meshes: Store<CoreMesh, MeshData>,
 }
 
 pub(crate) struct Store<T, U = ()> {

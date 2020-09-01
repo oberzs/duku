@@ -31,7 +31,7 @@ pub struct Material {
 
     pub(crate) index: Index,
 
-    updater: Sender<(Index, MaterialUpdateData)>,
+    updater: Sender<(Index, MaterialData)>,
 }
 
 pub struct Arg(Vector4);
@@ -39,12 +39,12 @@ pub struct Arg(Vector4);
 // GPU data storage for a material
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
-    buffer: DynamicBuffer,
+    buffer: DynamicBuffer<MaterialData>,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub(crate) struct MaterialUpdateData {
+pub(crate) struct MaterialData {
     pub(crate) arg_1: Vector4,
     pub(crate) arg_2: Vector4,
     pub(crate) arg_3: Vector4,
@@ -56,7 +56,7 @@ pub(crate) struct MaterialUpdateData {
 }
 
 impl Material {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, MaterialUpdateData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, MaterialData)>) -> Self {
         Self {
             arg_1: Vector4::ZERO,
             arg_2: Vector4::ZERO,
@@ -118,7 +118,7 @@ impl Material {
     }
 
     pub fn update(&self) {
-        let data = MaterialUpdateData {
+        let data = MaterialData {
             arg_1: self.arg_1,
             arg_2: self.arg_2,
             arg_3: self.arg_3,
@@ -136,13 +136,13 @@ impl Material {
 
 impl CoreMaterial {
     pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Self {
-        let buffer = DynamicBuffer::new::<MaterialUpdateData>(device, BufferUsage::Uniform, 1);
+        let buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
         let descriptor = shader_layout.material_set(&buffer);
 
         Self { buffer, descriptor }
     }
 
-    pub(crate) fn update(&mut self, data: MaterialUpdateData) {
+    pub(crate) fn update(&mut self, data: MaterialData) {
         self.buffer.update_data(&[data]);
     }
 

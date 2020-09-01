@@ -17,17 +17,16 @@ use crate::device::FRAMES_IN_FLIGHT;
 use crate::image::CoreFramebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::Msaa;
-use crate::image::WorldUpdateData;
+use crate::image::WorldData;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::CoreShader;
+use crate::pipeline::Descriptor;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
 use crate::pipeline::ShaderLayout;
-use crate::pipeline::ShadowMapUniform;
-use crate::storage::Index;
 use crate::storage::Storage;
 
 pub(crate) struct ForwardRenderer {
@@ -47,7 +46,7 @@ pub enum Pcf {
 
 struct ShadowMapSet {
     framebuffers: [CoreFramebuffer; 4],
-    uniform: ShadowMapUniform,
+    uniform: Descriptor,
     matrices: [Matrix4; 4],
     cascades: [f32; 4],
     map_size: u32,
@@ -85,9 +84,9 @@ impl ForwardRenderer {
 
     pub(crate) fn draw(
         &mut self,
-        framebuffer: &Index,
+        framebuffer: &CoreFramebuffer,
         camera: &Camera,
-        storage: &mut Storage,
+        storage: &Storage,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
     ) {
@@ -108,7 +107,7 @@ impl ForwardRenderer {
         cmd.set_line_width(target.line_width);
 
         // bind current shadow map set
-        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
+        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].uniform);
 
         let pcf = match self.pcf {
             Pcf::Disabled => 2.0,
@@ -124,90 +123,7 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        storage
-            .framebuffers
-            .get_mut(framebuffer)
-            .world_buffer()
-            .update_data(&[WorldUpdateData {
-                cascade_splits: self.shadow_frames[current].cascades,
-                light_matrices: self.shadow_frames[current].matrices,
-                bias: target.bias,
-                time: self.start_time.elapsed().as_secs_f32(),
-                camera_position: camera.transform.position,
-                world_matrix: camera.matrix(),
-                lights,
-                pcf,
-            }]);
-
-        // do render pass
-        {
-            let framebuffer = storage.framebuffers.get(framebuffer);
-            cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
-            cmd.set_view(framebuffer.width(), framebuffer.height());
-            cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
-        }
-
-        // skybox rendering
-        if target.skybox {
-            self.skybox_pass(&target, storage, shader_layout, camera);
-        }
-
-        // normal mesh rendering
-        self.normal_pass(&target.orders_by_shader, storage, shader_layout);
-
-        // text rendering
-        self.text_pass(&target.text_orders, storage, &target, shader_layout);
-
-        // end rendering
-        cmd.end_render_pass();
-        storage
-            .framebuffers
-            .get_mut(framebuffer)
-            .blit_to_texture(cmd);
-    }
-
-    pub(crate) fn draw_core(
-        &mut self,
-        framebuffer: &mut CoreFramebuffer,
-        camera: &Camera,
-        storage: &mut Storage,
-        shader_layout: &ShaderLayout,
-        target: Target<'_>,
-    ) {
-        let current = self.device.current_frame();
-
-        // reset current matrices and cascades
-        self.shadow_frames[current].matrices = [Matrix4::identity(); 4];
-        self.shadow_frames[current].cascades = [0.0; 4];
-
-        // shadow mapping
-        if target.has_shadow_casters {
-            let mut view = camera.clone();
-            view.depth = 50.0;
-            self.shadow_pass(shader_layout, storage, &target, &view);
-        }
-
-        let cmd = self.device.commands();
-        cmd.set_line_width(target.line_width);
-
-        // bind current shadow map set
-        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
-
-        let pcf = match self.pcf {
-            Pcf::Disabled => 2.0,
-            Pcf::X4 => 0.0,
-            Pcf::X16 => 1.0,
-        };
-
-        let lights = [
-            target.lights[0].data(),
-            target.lights[1].data(),
-            target.lights[2].data(),
-            target.lights[3].data(),
-        ];
-
-        // update world uniform
-        framebuffer.world_buffer().update_data(&[WorldUpdateData {
+        framebuffer.world_buffer().update_data(&[WorldData {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             bias: target.bias,
@@ -375,7 +291,7 @@ impl ForwardRenderer {
         let current = self.device.current_frame();
 
         // bind temp shadow map set so we can write to main one
-        cmd.bind_uniform(shader_layout, &self.shadow_frames[current].uniform);
+        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].uniform);
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
@@ -415,7 +331,7 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.world_buffer().update_data(&[WorldUpdateData {
+            framebuffer.world_buffer().update_data(&[WorldData {
                 light_matrices: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 lights: [Default::default(); 4],
@@ -479,15 +395,12 @@ impl ShadowMapSet {
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
         ];
-        let uniform = ShadowMapUniform::new(
-            shader_layout,
-            [
-                framebuffers[0].stored_view(),
-                framebuffers[1].stored_view(),
-                framebuffers[2].stored_view(),
-                framebuffers[3].stored_view(),
-            ],
-        );
+        let uniform = shader_layout.shadow_map_set([
+            framebuffers[0].stored_view(),
+            framebuffers[1].stored_view(),
+            framebuffers[2].stored_view(),
+            framebuffers[3].stored_view(),
+        ]);
 
         Self {
             matrices: [Matrix4::identity(); 4],

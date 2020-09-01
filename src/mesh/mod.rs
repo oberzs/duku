@@ -29,17 +29,16 @@ pub struct Mesh {
 
     pub(crate) index: Index,
 
-    updater: Sender<(Index, MeshUpdateData)>,
+    updater: Sender<(Index, MeshData)>,
 }
 
 // GPU data storage for a mesh
 pub(crate) struct CoreMesh {
-    vertex_buffer: DynamicBuffer,
-    index_buffer: DynamicBuffer,
-    index_count: usize,
+    vertex_buffer: DynamicBuffer<Vertex>,
+    index_buffer: DynamicBuffer<u16>,
 }
 
-pub(crate) struct MeshUpdateData {
+pub(crate) struct MeshData {
     pub(crate) vertices: Vec<Vector3>,
     pub(crate) normals: Vec<Vector3>,
     pub(crate) colors: Vec<Color>,
@@ -48,7 +47,7 @@ pub(crate) struct MeshUpdateData {
 }
 
 impl Mesh {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, MeshUpdateData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, MeshData)>) -> Self {
         Self {
             vertices: vec![Vector3::ZERO; 1],
             normals: vec![Vector3::ZERO; 1],
@@ -62,7 +61,7 @@ impl Mesh {
 
     pub(crate) fn combine(
         index: Index,
-        updater: Sender<(Index, MeshUpdateData)>,
+        updater: Sender<(Index, MeshData)>,
         meshes: &[Self],
     ) -> Self {
         let mut offset = 0;
@@ -113,7 +112,7 @@ impl Mesh {
     }
 
     pub fn update(&self) {
-        let data = MeshUpdateData {
+        let data = MeshData {
             vertices: self.vertices.clone(),
             normals: self.normals.clone(),
             colors: self.colors.clone(),
@@ -128,17 +127,16 @@ impl Mesh {
 
 impl CoreMesh {
     pub(crate) fn new(device: &Rc<Device>) -> Self {
-        let vertex_buffer = DynamicBuffer::new::<Vertex>(device, BufferUsage::Vertex, 1);
-        let index_buffer = DynamicBuffer::new::<u16>(device, BufferUsage::Index, 3);
+        let vertex_buffer = DynamicBuffer::new(device, BufferUsage::Vertex, 1);
+        let index_buffer = DynamicBuffer::new(device, BufferUsage::Index, 3);
 
         Self {
-            index_count: 3,
             vertex_buffer,
             index_buffer,
         }
     }
 
-    pub(crate) fn update(&mut self, data: MeshUpdateData) {
+    pub(crate) fn update(&mut self, data: MeshData) {
         let vertices: Vec<_> = data
             .vertices
             .iter()
@@ -153,20 +151,27 @@ impl CoreMesh {
             })
             .collect();
 
+        // resize buffers if needed
+        if vertices.len() > self.vertex_buffer.size() {
+            self.vertex_buffer.resize(vertices.len());
+        }
+        if data.indices.len() > self.index_buffer.size() {
+            self.index_buffer.resize(data.indices.len());
+        }
+
         self.vertex_buffer.update_data(&vertices);
         self.index_buffer.update_data(&data.indices);
-        self.index_count = data.indices.len();
     }
 
-    pub(crate) const fn vertex_buffer(&self) -> vk::Buffer {
+    pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
         self.vertex_buffer.handle()
     }
 
-    pub(crate) const fn index_buffer(&self) -> vk::Buffer {
+    pub(crate) fn index_buffer(&self) -> vk::Buffer {
         self.index_buffer.handle()
     }
 
-    pub(crate) const fn index_count(&self) -> usize {
-        self.index_count
+    pub(crate) fn index_count(&self) -> usize {
+        self.index_buffer.size()
     }
 }

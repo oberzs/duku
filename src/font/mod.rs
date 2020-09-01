@@ -15,7 +15,7 @@ use crate::image::ImageFormat;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
-use crate::mesh::MeshUpdateData;
+use crate::mesh::MeshData;
 use crate::pipeline::ImageUniform;
 use crate::storage::Index;
 
@@ -112,7 +112,7 @@ impl CoreFont {
         let colors = vec![Color::WHITE; vertex_count];
 
         let mut mesh = CoreMesh::new(device);
-        mesh.update(MeshUpdateData {
+        mesh.update(MeshData {
             vertices,
             normals,
             colors,

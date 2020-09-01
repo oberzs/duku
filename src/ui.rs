@@ -31,17 +31,17 @@ use crate::device::Stats;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::Framebuffer;
+use crate::image::FramebufferData;
 use crate::image::FramebufferOptions;
-use crate::image::FramebufferUpdateData;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
-use crate::image::WorldUpdateData;
+use crate::image::WorldData;
 use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::mesh::CoreMesh;
-use crate::mesh::MeshUpdateData;
+use crate::mesh::MeshData;
 use crate::pipeline::CoreShader;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::PushConstants;
@@ -218,7 +218,7 @@ impl Ui {
         }
 
         // update mesh
-        self.mesh.update(MeshUpdateData {
+        self.mesh.update(MeshData {
             vertices,
             normals,
             colors,
@@ -233,7 +233,7 @@ impl Ui {
         // update world uniform
         let world_matrix = self.camera.matrix();
         let camera_position = self.camera.transform.position;
-        framebuffer.world_buffer().update_data(&[WorldUpdateData {
+        framebuffer.world_buffer().update_data(&[WorldData {
             light_matrices: [Matrix4::identity(); 4],
             lights: [Default::default(); 4],
             cascade_splits: [0.0; 4],
@@ -326,7 +326,7 @@ impl Ui {
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(image_uniform, FramebufferUpdateData { width, height });
+            .update(image_uniform, FramebufferData { width, height });
     }
 
     pub(crate) const fn drawn(&self) -> bool {

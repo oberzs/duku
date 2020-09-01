@@ -95,7 +95,7 @@ impl Cubemap {
         right_staging_memory.copy_from_data(&sides.right, data_size);
 
         // create image
-        let mut memory = ImageMemory::new(
+        let memory = ImageMemory::new(
             device,
             ImageMemoryOptions {
                 width: size,
@@ -113,14 +113,14 @@ impl Cubemap {
         );
 
         // copy images from staging memory
-        memory.change_layout(ImageLayout::TransferDst);
+        memory.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
         memory.copy_from_memory(&right_staging_memory, 0);
         memory.copy_from_memory(&left_staging_memory, 1);
         memory.copy_from_memory(&top_staging_memory, 2);
         memory.copy_from_memory(&bottom_staging_memory, 3);
         memory.copy_from_memory(&front_staging_memory, 4);
         memory.copy_from_memory(&back_staging_memory, 5);
-        memory.change_layout(ImageLayout::ShaderColor);
+        memory.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
 
         Self { memory }
     }

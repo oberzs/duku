@@ -11,10 +11,10 @@ mod texture;
 
 pub(crate) use cubemap::Cubemap;
 pub(crate) use framebuffer::CoreFramebuffer;
+pub(crate) use framebuffer::FramebufferData;
 pub(crate) use framebuffer::FramebufferOptions;
-pub(crate) use framebuffer::FramebufferUpdateData;
-pub(crate) use framebuffer::LightUpdateData;
-pub(crate) use framebuffer::WorldUpdateData;
+pub(crate) use framebuffer::LightData;
+pub(crate) use framebuffer::WorldData;
 pub(crate) use memory::ImageMemory;
 pub(crate) use memory::ImageMemoryOptions;
 pub(crate) use properties::with_alpha;

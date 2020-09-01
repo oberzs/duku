@@ -7,9 +7,11 @@ use std::mem;
 use std::ptr;
 use std::rc::Rc;
 
+use super::MaterialData;
 use crate::buffer::DynamicBuffer;
 use crate::device::Device;
 use crate::image::ImageLayout;
+use crate::image::WorldData;
 use crate::math::Matrix4;
 use crate::vk;
 
@@ -161,7 +163,7 @@ impl ShaderLayout {
         }
     }
 
-    pub(crate) fn world_set(&self, buffer: &DynamicBuffer) -> Descriptor {
+    pub(crate) fn world_set(&self, buffer: &DynamicBuffer<WorldData>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.world_layout, self.descriptor_pool);
@@ -189,7 +191,7 @@ impl ShaderLayout {
         Descriptor(0, set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &DynamicBuffer) -> Descriptor {
+    pub(crate) fn material_set(&self, buffer: &DynamicBuffer<MaterialData>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.material_layout, self.descriptor_pool);

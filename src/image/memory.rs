@@ -26,7 +26,6 @@ pub(crate) struct ImageMemory {
     mip_count: u32,
     layer_count: u32,
     format: ImageFormat,
-    layout: ImageLayout,
     device: Rc<Device>,
 }
 
@@ -54,9 +53,6 @@ impl ImageMemory {
                     + 1
             }
         };
-
-        // initial layout
-        let layout = ImageLayout::Undefined;
 
         // cubemap info
         let array_layers = if options.cubemap { 6 } else { 1 };
@@ -89,7 +85,7 @@ impl ImageMemory {
                     sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
                     queue_family_index_count: 0,
                     p_queue_family_indices: ptr::null(),
-                    initial_layout: layout.flag(),
+                    initial_layout: ImageLayout::Undefined.flag(),
                     array_layers,
                     flags,
                 };
@@ -108,7 +104,6 @@ impl ImageMemory {
             layer_count: array_layers,
             handle,
             mip_count,
-            layout,
             memory,
         }
     }
@@ -175,28 +170,14 @@ impl ImageMemory {
         });
     }
 
-    pub(crate) fn change_layout(&mut self, new_layout: ImageLayout) {
+    pub(crate) fn change_layout(&self, from: ImageLayout, to: ImageLayout) {
         self.device.do_commands(|cmd| {
-            cmd.change_image_layout(
-                self,
-                self.layout,
-                new_layout,
-                0..self.mip_count,
-                0..self.layer_count,
-            );
+            cmd.change_image_layout(self, from, to, 0..self.mip_count, 0..self.layer_count);
         });
-        self.layout = new_layout;
     }
 
-    pub(crate) fn change_layout_sync(&mut self, cmd: &Commands, new_layout: ImageLayout) {
-        cmd.change_image_layout(
-            self,
-            self.layout,
-            new_layout,
-            0..self.mip_count,
-            0..self.layer_count,
-        );
-        self.layout = new_layout;
+    pub(crate) fn change_layout_sync(&self, cmd: &Commands, from: ImageLayout, to: ImageLayout) {
+        cmd.change_image_layout(self, from, to, 0..self.mip_count, 0..self.layer_count);
     }
 
     pub(crate) fn generate_mipmaps(&self) {

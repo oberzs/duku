@@ -3,6 +3,7 @@
 
 // DynamicBuffer - buffer struct thats memory will change
 
+use std::marker::PhantomData;
 use std::mem;
 use std::rc::Rc;
 
@@ -12,24 +13,26 @@ use super::BufferUsage;
 use crate::device::Device;
 use crate::vk;
 
-pub(crate) struct DynamicBuffer {
+pub(crate) struct DynamicBuffer<T: Copy> {
     memory: BufferMemory,
     usage: BufferUsage,
     access: BufferAccess,
     size: usize,
+    marker: PhantomData<*const T>,
     device: Rc<Device>,
 }
 
-impl DynamicBuffer {
-    pub(crate) fn new<T: Copy>(device: &Rc<Device>, usage: BufferUsage, capacity: usize) -> Self {
-        let size = mem::size_of::<T>() * capacity;
+impl<T: Copy> DynamicBuffer<T> {
+    pub(crate) fn new(device: &Rc<Device>, usage: BufferUsage, size: usize) -> Self {
+        let real_size = mem::size_of::<T>() * size;
 
         // on CPU accessible memory, so we can copy to it
         let access = BufferAccess::Cpu;
-        let memory = BufferMemory::new(device, &[usage], access, size);
+        let memory = BufferMemory::new(device, &[usage], access, real_size);
 
         Self {
             device: Rc::clone(device),
+            marker: PhantomData,
             memory,
             usage,
             access,
@@ -37,29 +40,31 @@ impl DynamicBuffer {
         }
     }
 
-    pub(crate) fn update_data<T: Copy>(&mut self, data: &[T]) {
-        let size = mem::size_of::<T>() * data.len();
-
-        if size <= self.size {
-            self.memory.copy_from_data(data, size);
-        } else {
-            // reallocate memory if data is too big
-            self.memory = BufferMemory::new(&self.device, &[self.usage], self.access, size);
-            self.memory.copy_from_data(data, size);
-            self.size = size;
-        }
+    pub(crate) fn update_data(&self, data: &[T]) {
+        let real_size = mem::size_of::<T>() * data.len();
+        debug_assert!(
+            self.size >= data.len(),
+            "dynamic buffer needs to be resized before"
+        );
+        self.memory.copy_from_data(data, real_size);
     }
 
-    pub(crate) const fn size(&self) -> usize {
+    pub(crate) fn resize(&mut self, size: usize) {
+        let real_size = mem::size_of::<T>() * size;
+        self.memory = BufferMemory::new(&self.device, &[self.usage], self.access, real_size);
+        self.size = size;
+    }
+
+    pub(crate) fn size(&self) -> usize {
         self.size
     }
 
-    pub(crate) const fn handle(&self) -> vk::Buffer {
+    pub(crate) fn handle(&self) -> vk::Buffer {
         self.memory.handle()
     }
 }
 
-impl PartialEq for DynamicBuffer {
+impl<T: Copy> PartialEq for DynamicBuffer<T> {
     fn eq(&self, other: &Self) -> bool {
         self.memory == other.memory
     }

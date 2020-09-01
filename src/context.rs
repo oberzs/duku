@@ -257,15 +257,15 @@ impl Context {
             }
         }
 
-        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
+        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
 
         let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
 
         // draw
-        self.forward_renderer.draw_core(
+        self.forward_renderer.draw(
             framebuffer,
             &cam,
-            &mut self.storage,
+            &self.storage,
             &self.shader_layout,
             target,
         );
@@ -291,9 +291,9 @@ impl Context {
 
         // draw
         self.forward_renderer.draw(
-            &framebuffer.index,
+            self.storage.framebuffers.get(&framebuffer.index),
             &cam,
-            &mut self.storage,
+            &self.storage,
             &self.shader_layout,
             target,
         );
@@ -418,7 +418,7 @@ impl Context {
         self.image_uniform.update_if_needed();
         self.device
             .commands()
-            .bind_uniform(&self.shader_layout, &self.image_uniform);
+            .bind_descriptor(&self.shader_layout, self.image_uniform.descriptor());
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {

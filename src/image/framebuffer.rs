@@ -38,7 +38,7 @@ pub struct Framebuffer {
 
     pub(crate) index: Index,
 
-    updater: Sender<(Index, FramebufferUpdateData)>,
+    updater: Sender<(Index, FramebufferData)>,
 }
 
 // GPU data storage for a framebuffer
@@ -51,7 +51,7 @@ pub(crate) struct CoreFramebuffer {
     texture_index: Option<i32>,
 
     world_descriptor: Descriptor,
-    world_buffer: DynamicBuffer,
+    world_buffer: DynamicBuffer<WorldData>,
 
     msaa: Msaa,
     width: u32,
@@ -60,16 +60,16 @@ pub(crate) struct CoreFramebuffer {
     device: Rc<Device>,
 }
 
-pub(crate) struct FramebufferUpdateData {
+pub(crate) struct FramebufferData {
     pub(crate) width: u32,
     pub(crate) height: u32,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub(crate) struct WorldUpdateData {
+pub(crate) struct WorldData {
     pub(crate) world_matrix: Matrix4,
-    pub(crate) lights: [LightUpdateData; 4],
+    pub(crate) lights: [LightData; 4],
     pub(crate) camera_position: Vector3,
     pub(crate) time: f32,
     pub(crate) light_matrices: [Matrix4; 4],
@@ -80,7 +80,7 @@ pub(crate) struct WorldUpdateData {
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
-pub(crate) struct LightUpdateData {
+pub(crate) struct LightData {
     pub(crate) coords: Vector3,
     pub(crate) light_type: i32,
     pub(crate) color: Vector4,
@@ -95,7 +95,7 @@ pub(crate) struct FramebufferOptions<'formats> {
 }
 
 impl Framebuffer {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, FramebufferUpdateData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, FramebufferData)>) -> Self {
         Self {
             width: 1,
             height: 1,
@@ -105,7 +105,7 @@ impl Framebuffer {
     }
 
     pub fn update(&self) {
-        let data = FramebufferUpdateData {
+        let data = FramebufferData {
             width: self.width,
             height: self.height,
         };
@@ -160,8 +160,7 @@ impl CoreFramebuffer {
 
                 let handle = device.create_framebuffer(&info);
 
-                let world_buffer =
-                    DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1);
+                let world_buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
                 let world_descriptor = shader_layout.world_set(&world_buffer);
 
                 Self {
@@ -230,7 +229,7 @@ impl CoreFramebuffer {
 
         let handle = device.create_framebuffer(&info);
 
-        let world_buffer = DynamicBuffer::new::<WorldUpdateData>(device, BufferUsage::Uniform, 1);
+        let world_buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
         let mut texture_image = ImageMemory::new(
@@ -250,11 +249,14 @@ impl CoreFramebuffer {
         let texture_index = image_uniform.add(texture_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::ShaderColor);
-        images[stored_index].change_layout(match stored_format {
-            Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
-            _ => ImageLayout::ShaderColor,
-        });
+        texture_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        images[stored_index].change_layout(
+            ImageLayout::Undefined,
+            match stored_format {
+                Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                _ => ImageLayout::ShaderColor,
+            },
+        );
 
         Self {
             texture_image: Some(texture_image),
@@ -272,13 +274,13 @@ impl CoreFramebuffer {
         }
     }
 
-    pub(crate) fn update(&mut self, image_uniform: &mut ImageUniform, data: FramebufferUpdateData) {
+    pub(crate) fn update(&mut self, image_uniform: &mut ImageUniform, data: FramebufferData) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
         );
 
-        let FramebufferUpdateData { width, height } = data;
+        let FramebufferData { width, height } = data;
 
         // recreate framebuffer images
         let mut stored_format = None;
@@ -331,11 +333,14 @@ impl CoreFramebuffer {
         let texture_index = image_uniform.add(texture_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::ShaderColor);
-        images[stored_index].change_layout(match stored_format {
-            Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
-            _ => ImageLayout::ShaderColor,
-        });
+        texture_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        images[stored_index].change_layout(
+            ImageLayout::Undefined,
+            match stored_format {
+                Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                _ => ImageLayout::ShaderColor,
+            },
+        );
 
         // reassign new values
         self.device.destroy_framebuffer(self.handle);
@@ -348,20 +353,20 @@ impl CoreFramebuffer {
         self.height = height;
     }
 
-    pub(crate) fn blit_to_texture(&mut self, cmd: &Commands) {
-        if let Some(texture_image) = &mut self.texture_image {
-            let stored_image = &mut self.images[self.stored_index];
+    pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
+        if let Some(dst) = &self.texture_image {
+            let src = &self.images[self.stored_index];
 
             // prepare images for transfer
-            stored_image.change_layout_sync(cmd, ImageLayout::TransferSrc);
-            texture_image.change_layout_sync(cmd, ImageLayout::TransferDst);
+            src.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferSrc);
+            dst.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferDst);
 
             // blit to shader image
-            cmd.blit_image(stored_image, texture_image);
+            cmd.blit_image(src, dst);
 
             // set images back to initial state
-            stored_image.change_layout_sync(cmd, ImageLayout::ShaderColor);
-            texture_image.change_layout_sync(cmd, ImageLayout::ShaderColor);
+            src.change_layout_sync(cmd, ImageLayout::TransferSrc, ImageLayout::ShaderColor);
+            dst.change_layout_sync(cmd, ImageLayout::TransferDst, ImageLayout::ShaderColor);
         }
     }
 
@@ -397,8 +402,8 @@ impl CoreFramebuffer {
         self.texture_index.expect("bad framebuffer")
     }
 
-    pub(crate) fn world_buffer(&mut self) -> &mut DynamicBuffer {
-        &mut self.world_buffer
+    pub(crate) const fn world_buffer(&self) -> &DynamicBuffer<WorldData> {
+        &self.world_buffer
     }
 
     pub(crate) const fn world_descriptor(&self) -> Descriptor {
