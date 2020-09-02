@@ -46,7 +46,7 @@ pub enum Pcf {
 
 struct ShadowMapSet {
     framebuffers: [CoreFramebuffer; 4],
-    uniform: Descriptor,
+    descriptor: Descriptor,
     matrices: [Matrix4; 4],
     cascades: [f32; 4],
     map_size: u32,
@@ -107,7 +107,7 @@ impl ForwardRenderer {
         cmd.set_line_width(target.line_width);
 
         // bind current shadow map set
-        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].uniform);
+        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
 
         let pcf = match self.pcf {
             Pcf::Disabled => 2.0,
@@ -291,7 +291,7 @@ impl ForwardRenderer {
         let current = self.device.current_frame();
 
         // bind temp shadow map set so we can write to main one
-        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].uniform);
+        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
@@ -395,7 +395,7 @@ impl ShadowMapSet {
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
             Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
         ];
-        let uniform = shader_layout.shadow_map_set([
+        let descriptor = shader_layout.shadow_map_set([
             framebuffers[0].stored_view(),
             framebuffers[1].stored_view(),
             framebuffers[2].stored_view(),
@@ -406,7 +406,7 @@ impl ShadowMapSet {
             matrices: [Matrix4::identity(); 4],
             cascades: [0.0; 4],
             framebuffers,
-            uniform,
+            descriptor,
             map_size,
         }
     }

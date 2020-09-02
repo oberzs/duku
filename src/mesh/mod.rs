@@ -152,10 +152,10 @@ impl CoreMesh {
             .collect();
 
         // resize buffers if needed
-        if vertices.len() > self.vertex_buffer.size() {
+        if vertices.len() > self.vertex_buffer.len() {
             self.vertex_buffer.resize(vertices.len());
         }
-        if data.indices.len() > self.index_buffer.size() {
+        if data.indices.len() > self.index_buffer.len() {
             self.index_buffer.resize(data.indices.len());
         }
 
@@ -172,6 +172,6 @@ impl CoreMesh {
     }
 
     pub(crate) fn index_count(&self) -> usize {
-        self.index_buffer.size()
+        self.index_buffer.len()
     }
 }

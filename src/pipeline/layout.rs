@@ -171,7 +171,7 @@ impl ShaderLayout {
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
             offset: 0,
-            range: buffer.size() as u64,
+            range: buffer.bytes(),
         }];
         let write = [vk::WriteDescriptorSet {
             s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -199,7 +199,7 @@ impl ShaderLayout {
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
             offset: 0,
-            range: buffer.size() as u64,
+            range: buffer.bytes(),
         }];
         let write = [vk::WriteDescriptorSet {
             s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
