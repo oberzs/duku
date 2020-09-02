@@ -6,7 +6,6 @@
 use std::rc::Rc;
 use std::time::Instant;
 
-use super::Albedo;
 use super::Camera;
 use super::Order;
 use super::OrdersByShader;
@@ -205,7 +204,6 @@ impl ForwardRenderer {
             shader_layout,
             PushConstants {
                 sampler_index: 0,
-                albedo_index: 0,
                 model_matrix,
             },
         );
@@ -261,7 +259,6 @@ impl ForwardRenderer {
                     shader_layout,
                     PushConstants {
                         model_matrix: local_transform.as_matrix(),
-                        albedo_index: font.texture().image_index(),
                         sampler_index: 7,
                     },
                 );
@@ -363,10 +360,6 @@ impl ForwardRenderer {
 
     fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
         let cmd = self.device.commands();
-        let albedo_index = match &order.albedo {
-            Albedo::Texture(tex) => storage.textures.get(tex).image_index(),
-            Albedo::Framebuffer(fra) => storage.framebuffers.get(fra).texture_index(),
-        };
         let mesh = storage.meshes.get(&order.mesh);
 
         cmd.push_constants(
@@ -374,7 +367,6 @@ impl ForwardRenderer {
             PushConstants {
                 model_matrix: order.model,
                 sampler_index: order.sampler_index,
-                albedo_index,
             },
         );
         cmd.bind_mesh(mesh);

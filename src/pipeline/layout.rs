@@ -29,7 +29,6 @@ pub(crate) struct ShaderLayout {
 #[repr(C)]
 pub(crate) struct PushConstants {
     pub(crate) model_matrix: Matrix4,
-    pub(crate) albedo_index: i32,
     pub(crate) sampler_index: i32,
 }
 

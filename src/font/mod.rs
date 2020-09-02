@@ -29,7 +29,7 @@ pub struct Font {
 pub(crate) struct CoreFont {
     char_data: HashMap<char, CharData>,
     mesh: CoreMesh,
-    texture: CoreTexture,
+    _texture: CoreTexture,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -123,13 +123,13 @@ impl CoreFont {
         Self {
             char_data,
             mesh,
-            texture,
+            _texture: texture,
         }
     }
 
-    pub(crate) const fn texture(&self) -> &CoreTexture {
-        &self.texture
-    }
+    // pub(crate) const fn texture(&self) -> &CoreTexture {
+    //     &self.texture
+    // }
 
     pub(crate) const fn mesh(&self) -> &CoreMesh {
         &self.mesh

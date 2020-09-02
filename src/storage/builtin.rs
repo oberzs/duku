@@ -58,15 +58,17 @@ impl Builtins {
     ) -> Result<Self> {
         // textures
         let white_texture = {
-            let (index, _) = storage.textures.add(CoreTexture::new(
+            let tex = CoreTexture::new(
                 device,
                 uniform,
                 vec![255, 255, 255, 255],
                 1,
                 1,
                 ImageFormat::Rgba,
-            ));
-            Texture::new(index)
+            );
+            let image_index = tex.image_index();
+            let (index, _) = storage.textures.add(tex);
+            Texture::new(index, image_index)
         };
 
         // materials

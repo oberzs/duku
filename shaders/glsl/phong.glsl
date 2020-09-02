@@ -13,6 +13,7 @@ layout(location = 0) out vec4 out_color;
 
 void fragment() {
     vec4 albedo_color = vec4(material.arg_1.rgb, 1.0);
+    int albedo_index = int(material.arg_1.w);
 
     Light light = world.lights[0];
     vec3 normal = normalize(in_normal);
@@ -36,7 +37,7 @@ void fragment() {
 
     // combine results
     vec4 lighting = vec4(ambient + (diffuse) * shadow, 1.0);
-    vec4 color_mix = tex(object.albedo_index, in_uv) * albedo_color * in_color;
+    vec4 color_mix = tex(albedo_index, in_uv) * albedo_color * in_color;
 
     out_color = lighting * color_mix;
 }

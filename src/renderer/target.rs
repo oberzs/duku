@@ -4,8 +4,6 @@
 // Target - struct that collects draw calls to be used in a renderer
 
 use crate::color::Color;
-use crate::image::Framebuffer;
-use crate::image::Texture;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
 use crate::math::Matrix4;
@@ -39,7 +37,6 @@ pub struct Target<'b> {
     current_shader: Index,
     current_material: Index,
     current_font_material: Index,
-    current_albedo: Albedo,
     current_font: Index,
 }
 
@@ -56,7 +53,6 @@ pub(crate) struct OrdersByMaterial {
 #[derive(Clone)]
 pub(crate) struct Order {
     pub(crate) mesh: Index,
-    pub(crate) albedo: Albedo,
     pub(crate) model: Matrix4,
     pub(crate) cast_shadows: bool,
     pub(crate) sampler_index: i32,
@@ -70,17 +66,10 @@ pub(crate) struct TextOrder {
     pub(crate) transform: Transform,
 }
 
-#[derive(Clone)]
-pub(crate) enum Albedo {
-    Texture(Index),
-    Framebuffer(Index),
-}
-
 struct Cache {
     current_shader: Index,
     current_material: Index,
     current_font_material: Index,
-    current_albedo: Albedo,
     current_font: Index,
     texture_filter: TextureFilter,
     texture_wrap: TextureWrap,
@@ -103,7 +92,6 @@ impl<'b> Target<'b> {
             current_shader: builtins.phong_shader.index.clone(),
             current_material: builtins.white_material.index.clone(),
             current_font_material: builtins.font_material.index.clone(),
-            current_albedo: Albedo::Texture(builtins.white_texture.index.clone()),
             current_font: builtins.fira_font.index.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
@@ -123,33 +111,10 @@ impl<'b> Target<'b> {
     pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
         self.add_order(Order {
             mesh: mesh.index.clone(),
-            albedo: self.current_albedo.clone(),
             model: transform.into().as_matrix(),
             cast_shadows: self.cast_shadows,
             sampler_index: self.sampler_index(),
         });
-    }
-
-    pub fn draw_debug_cube(&mut self, transform: impl Into<Transform>) {
-        let cache = self.store();
-        self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.index.clone();
-        self.cast_shadows = false;
-
-        self.draw(&self.builtins.cube_mesh, transform);
-
-        self.restore(cache);
-    }
-
-    pub fn draw_debug_sphere(&mut self, transform: impl Into<Transform>) {
-        let cache = self.store();
-        self.current_albedo = Albedo::Texture(self.builtins.white_texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.index.clone();
-        self.cast_shadows = false;
-
-        self.draw(&self.builtins.sphere_mesh, transform);
-
-        self.restore(cache);
     }
 
     pub fn draw_cube(&mut self, transform: impl Into<Transform>) {
@@ -160,32 +125,11 @@ impl<'b> Target<'b> {
         self.draw(&self.builtins.sphere_mesh, transform);
     }
 
-    pub fn draw_texture(&mut self, texture: &Texture, transform: impl Into<Transform>) {
-        let cache = self.store();
-        self.current_albedo = Albedo::Texture(texture.index.clone());
-        self.current_shader = self.builtins.unshaded_shader.index.clone();
-        self.cast_shadows = false;
-
-        self.draw(&self.builtins.quad_mesh, transform);
-
-        self.restore(cache);
-    }
-
     pub fn draw_surface(&mut self) {
         let cache = self.store();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.surface_mesh, [0.0, 0.0, 0.0]);
-
-        self.restore(cache);
-    }
-
-    pub fn blit_framebuffer(&mut self, framebuffer: &Framebuffer) {
-        let cache = self.store();
-        self.current_shader = self.builtins.blit_shader.index.clone();
-        self.current_albedo = Albedo::Framebuffer(framebuffer.index.clone());
-
-        self.draw_surface();
 
         self.restore(cache);
     }
@@ -216,14 +160,6 @@ impl<'b> Target<'b> {
 
     pub fn set_font_material(&mut self, material: &Material) {
         self.current_font_material = material.index.clone();
-    }
-
-    pub fn set_albedo(&mut self, texture: &Texture) {
-        self.current_albedo = Albedo::Texture(texture.index.clone());
-    }
-
-    pub fn set_albedo_framebuffer(&mut self, framebuffer: &Framebuffer) {
-        self.current_albedo = Albedo::Framebuffer(framebuffer.index.clone());
     }
 
     pub fn set_shader(&mut self, shader: &Shader) {
@@ -307,7 +243,6 @@ impl<'b> Target<'b> {
             current_shader: self.current_shader.clone(),
             current_material: self.current_material.clone(),
             current_font_material: self.current_font_material.clone(),
-            current_albedo: self.current_albedo.clone(),
             current_font: self.current_font.clone(),
             texture_filter: self.texture_filter,
             texture_wrap: self.texture_wrap,
@@ -320,7 +255,6 @@ impl<'b> Target<'b> {
         self.current_shader = cache.current_shader;
         self.current_material = cache.current_material;
         self.current_font_material = cache.current_font_material;
-        self.current_albedo = cache.current_albedo;
         self.current_font = cache.current_font;
         self.texture_filter = cache.texture_filter;
         self.texture_wrap = cache.texture_wrap;

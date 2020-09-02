@@ -23,6 +23,7 @@ use crate::storage::Index;
 #[derive(Debug)]
 pub struct Texture {
     pub(crate) index: Index,
+    pub(crate) image_index: i32,
 }
 
 // GPU data storage for a texture
@@ -32,8 +33,12 @@ pub(crate) struct CoreTexture {
 }
 
 impl Texture {
-    pub(crate) const fn new(index: Index) -> Self {
-        Self { index }
+    pub(crate) const fn new(index: Index, image_index: i32) -> Self {
+        Self { index, image_index }
+    }
+
+    pub const fn index(&self) -> i32 {
+        self.image_index
     }
 }
 

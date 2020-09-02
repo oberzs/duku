@@ -56,7 +56,7 @@ pub(crate) struct Ui {
     camera: Camera,
     shader: CoreShader,
     mesh: CoreMesh,
-    texture: CoreTexture,
+    _texture: CoreTexture,
     drawn: bool,
 
     imgui: ImContext,
@@ -171,7 +171,7 @@ impl Ui {
             drawn: false,
             framebuffer,
             camera,
-            texture,
+            _texture: texture,
             shader,
             mesh,
             imgui,
@@ -257,7 +257,6 @@ impl Ui {
         cmd.push_constants(
             shader_layout,
             PushConstants {
-                albedo_index: self.texture.image_index(),
                 model_matrix: Matrix4::identity(),
                 sampler_index: 0,
             },
@@ -337,9 +336,9 @@ impl Ui {
         self.drawn = false;
     }
 
-    pub(crate) const fn framebuffer(&self) -> &Framebuffer {
-        &self.framebuffer
-    }
+    // pub(crate) const fn framebuffer(&self) -> &Framebuffer {
+    //     &self.framebuffer
+    // }
 }
 
 impl UiFrame<'_> {

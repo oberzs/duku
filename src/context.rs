@@ -253,7 +253,7 @@ impl Context {
         #[cfg(feature = "ui")]
         if let Some(ui) = &self.ui {
             if ui.drawn() {
-                target.blit_framebuffer(ui.framebuffer());
+                // target.blit_framebuffer(ui.framebuffer());
             }
         }
 
@@ -305,15 +305,17 @@ impl Context {
             .map(|p| vec![p.r, p.g, p.b, p.a])
             .flatten()
             .collect::<Vec<_>>();
-        let (index, _) = self.storage.textures.add(CoreTexture::new(
+        let tex = CoreTexture::new(
             &self.device,
             &mut self.image_uniform,
             data,
             width,
             height,
             ImageFormat::Rgba,
-        ));
-        Texture::new(index)
+        );
+        let image_index = tex.image_index();
+        let (index, _) = self.storage.textures.add(tex);
+        Texture::new(index, image_index)
     }
 
     pub fn create_mesh(&mut self) -> Mesh {
@@ -609,12 +611,10 @@ impl Context {
 
     #[cfg(feature = "png")]
     pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Texture> {
-        let (index, _) = self.storage.textures.add(CoreTexture::from_png_bytes(
-            &self.device,
-            &mut self.image_uniform,
-            bytes,
-        )?);
-        Ok(Texture::new(index))
+        let tex = CoreTexture::from_png_bytes(&self.device, &mut self.image_uniform, bytes)?;
+        let image_index = tex.image_index();
+        let (index, _) = self.storage.textures.add(tex);
+        Ok(Texture::new(index, image_index))
     }
 
     #[cfg(feature = "png")]

@@ -12,8 +12,7 @@ use crate::buffer::BufferUsage;
 use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::image::Texture;
 use crate::math::Vector4;
 use crate::storage::Index;
 
@@ -34,9 +33,7 @@ pub struct Material {
     updater: Sender<(Index, MaterialData)>,
 }
 
-pub struct Arg(Vector4);
-
-// GPU data storage for a material
+// data storage for a material
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
     buffer: DynamicBuffer<MaterialData>,
@@ -78,43 +75,15 @@ impl Material {
         self.arg_1.z = c.z;
     }
 
+    pub fn set_phong_texture(&mut self, texture: &Texture) {
+        self.arg_1.w = texture.image_index as f32;
+    }
+
     pub fn set_font_color(&mut self, color: impl Into<Color>) {
         let c = color.into().to_rgb_norm_vec();
         self.arg_1.x = c.x;
         self.arg_1.y = c.y;
         self.arg_1.z = c.z;
-    }
-
-    pub fn set_arg_1(&mut self, arg: impl Into<Arg>) {
-        self.arg_1 = arg.into().0;
-    }
-
-    pub fn set_arg_2(&mut self, arg: impl Into<Arg>) {
-        self.arg_2 = arg.into().0;
-    }
-
-    pub fn set_arg_3(&mut self, arg: impl Into<Arg>) {
-        self.arg_3 = arg.into().0;
-    }
-
-    pub fn set_arg_4(&mut self, arg: impl Into<Arg>) {
-        self.arg_4 = arg.into().0;
-    }
-
-    pub fn set_arg_5(&mut self, arg: impl Into<Arg>) {
-        self.arg_5 = arg.into().0;
-    }
-
-    pub fn set_arg_6(&mut self, arg: impl Into<Arg>) {
-        self.arg_6 = arg.into().0;
-    }
-
-    pub fn set_arg_7(&mut self, arg: impl Into<Arg>) {
-        self.arg_7 = arg.into().0;
-    }
-
-    pub fn set_arg_8(&mut self, arg: impl Into<Arg>) {
-        self.arg_8 = arg.into().0;
     }
 
     pub fn update(&self) {
@@ -154,29 +123,5 @@ impl CoreMaterial {
 impl PartialEq for CoreMaterial {
     fn eq(&self, other: &Self) -> bool {
         self.buffer == other.buffer
-    }
-}
-
-impl From<i32> for Arg {
-    fn from(i: i32) -> Self {
-        Self(Vector4::new(i as f32, 0.0, 0.0, 0.0))
-    }
-}
-
-impl From<Color> for Arg {
-    fn from(color: Color) -> Self {
-        Self(color.to_rgba_norm_vec())
-    }
-}
-
-impl From<Vector2> for Arg {
-    fn from(v: Vector2) -> Self {
-        Self(v.extend(0.0).extend(0.0))
-    }
-}
-
-impl From<Vector3> for Arg {
-    fn from(v: Vector3) -> Self {
-        Self(v.extend(0.0))
     }
 }
