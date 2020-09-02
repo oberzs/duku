@@ -37,14 +37,16 @@ fn main() -> Result<()> {
         context.poll_events(&mut window);
 
         context.draw_on_window(None, |target| {
-            target.clear = Color::WHITE;
-            target.draw_text("Bitmap 24p text", [left, 190.0, 1.0]);
+            target.clear = Color::BLACK;
+            target.text.draw("Bitmap 24p text", [left, 190.0, 1.0]);
 
             // render with custom material
-            target.set_font_material(&material_1);
-            target.draw_text("Red text!", [left, 160.0, 1.0]);
-            target.set_font_material(&material_2);
-            target.draw_text("Blue text\n.. on multiple lines", [left, 130.0, 1.0]);
+            target.text.color = Color::RED;
+            target.text.draw("Red text!", [left, 160.0, 1.0]);
+            target.text.color = Color::BLUE;
+            target
+                .text
+                .draw("Blue text\n.. on multiple lines", [left, 130.0, 1.0]);
         });
     }
 

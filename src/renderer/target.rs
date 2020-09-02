@@ -23,7 +23,6 @@ pub struct Target<'b> {
     pub clear: Color,
     pub skybox: bool,
     pub wireframes: bool,
-    pub font_size: u32,
     pub line_width: f32,
     pub cascade_splits: [f32; 4],
     pub cast_shadows: bool,
@@ -33,14 +32,11 @@ pub struct Target<'b> {
     pub texture_mipmaps: bool,
 
     pub(crate) orders_by_shader: Vec<OrdersByShader>,
-    pub(crate) text_orders: Vec<TextOrder>,
     pub(crate) has_shadow_casters: bool,
     pub(crate) builtins: &'b Builtins,
 
     current_shader: Index,
     current_material: Index,
-    current_font_material: Index,
-    current_font: Index,
 }
 
 pub(crate) struct OrdersByShader {
@@ -61,19 +57,9 @@ pub(crate) struct Order {
     pub(crate) sampler_index: i32,
 }
 
-pub(crate) struct TextOrder {
-    pub(crate) font: Index,
-    pub(crate) size: u32,
-    pub(crate) material: Index,
-    pub(crate) text: String,
-    pub(crate) transform: Transform,
-}
-
 struct Cache {
     current_shader: Index,
     current_material: Index,
-    current_font_material: Index,
-    current_font: Index,
     texture_filter: TextureFilter,
     texture_wrap: TextureWrap,
     texture_mipmaps: bool,
@@ -83,9 +69,8 @@ struct Cache {
 impl<'b> Target<'b> {
     pub(crate) fn new(builtins: &'b Builtins) -> Self {
         Self {
-            text: TextTarget::new(),
+            text: TextTarget::new(builtins),
             orders_by_shader: vec![],
-            text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             lights: [
                 Light::directional([-1.0, -1.0, 1.0], Color::WHITE, true),
@@ -95,12 +80,9 @@ impl<'b> Target<'b> {
             ],
             current_shader: builtins.phong_shader.index.clone(),
             current_material: builtins.white_material.index.clone(),
-            current_font_material: builtins.font_material.index.clone(),
-            current_font: builtins.fira_font.index.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
             texture_mipmaps: true,
-            font_size: 24,
             cast_shadows: true,
             wireframes: false,
             skybox: false,
@@ -148,22 +130,8 @@ impl<'b> Target<'b> {
         self.restore(cache);
     }
 
-    pub fn draw_text(&mut self, text: impl AsRef<str>, transform: impl Into<Transform>) {
-        self.text_orders.push(TextOrder {
-            font: self.current_font.clone(),
-            size: self.font_size,
-            text: text.as_ref().to_string(),
-            transform: transform.into(),
-            material: self.current_font_material.clone(),
-        });
-    }
-
     pub fn set_material(&mut self, material: &Material) {
         self.current_material = material.index.clone();
-    }
-
-    pub fn set_font_material(&mut self, material: &Material) {
-        self.current_font_material = material.index.clone();
     }
 
     pub fn set_shader(&mut self, shader: &Shader) {
@@ -246,8 +214,6 @@ impl<'b> Target<'b> {
         Cache {
             current_shader: self.current_shader.clone(),
             current_material: self.current_material.clone(),
-            current_font_material: self.current_font_material.clone(),
-            current_font: self.current_font.clone(),
             texture_filter: self.texture_filter,
             texture_wrap: self.texture_wrap,
             texture_mipmaps: self.texture_mipmaps,
@@ -258,8 +224,6 @@ impl<'b> Target<'b> {
     fn restore(&mut self, cache: Cache) {
         self.current_shader = cache.current_shader;
         self.current_material = cache.current_material;
-        self.current_font_material = cache.current_font_material;
-        self.current_font = cache.current_font;
         self.texture_filter = cache.texture_filter;
         self.texture_wrap = cache.texture_wrap;
         self.texture_mipmaps = cache.texture_mipmaps;

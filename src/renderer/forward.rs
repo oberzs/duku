@@ -10,7 +10,6 @@ use super::Camera;
 use super::Order;
 use super::OrdersByShader;
 use super::Target;
-use super::TextOrder;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
 use crate::image::CoreFramebuffer;
@@ -147,7 +146,7 @@ impl ForwardRenderer {
         self.normal_pass(&target.orders_by_shader, storage, shader_layout);
 
         // text rendering
-        self.text_pass(&target.text_orders, storage, &target, shader_layout);
+        self.text_pass(&target, storage, shader_layout);
 
         // end rendering
         cmd.end_render_pass();
@@ -210,32 +209,28 @@ impl ForwardRenderer {
         cmd.draw(mesh.index_count(), 0);
     }
 
-    fn text_pass(
-        &self,
-        orders: &[TextOrder],
-        storage: &Storage,
-        target: &Target<'_>,
-        shader_layout: &ShaderLayout,
-    ) {
+    fn text_pass(&self, target: &Target<'_>, storage: &Storage, shader_layout: &ShaderLayout) {
+        let Target { text, builtins, .. } = &target;
+
         let cmd = self.device.commands();
 
         // bind shader
-        let shader = storage.shaders.get(&target.builtins.font_shader.index);
+        let shader = storage.shaders.get(&builtins.font_shader.index);
         cmd.bind_shader(shader);
 
-        for order in orders {
-            let font = storage.fonts.get(&order.font);
+        // bind material
+        let material = storage.materials.get(&builtins.white_material.index);
+        cmd.bind_material(shader_layout, material);
 
-            // bind material
-            let material = storage.materials.get(&order.material);
-            cmd.bind_material(shader_layout, material);
+        for order in text.orders() {
+            let font = storage.fonts.get(&order.font);
 
             // bind mesh
             cmd.bind_mesh(font.mesh());
 
             let mut transform = order.transform;
             let start_x = transform.position.x;
-            transform.scale *= order.size as f32;
+            transform.scale *= order.font_size as f32;
 
             for c in order.text.chars() {
                 // handle whitespace
