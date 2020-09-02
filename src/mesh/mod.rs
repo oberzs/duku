@@ -25,6 +25,7 @@ pub struct Mesh {
     pub uvs: Vec<Vector2>,
     pub normals: Vec<Vector3>,
     pub colors: Vec<Color>,
+    pub textures: Vec<i32>,
     pub indices: Vec<u16>,
 
     pub(crate) index: Index,
@@ -43,6 +44,7 @@ pub(crate) struct MeshData {
     pub(crate) normals: Vec<Vector3>,
     pub(crate) colors: Vec<Color>,
     pub(crate) uvs: Vec<Vector2>,
+    pub(crate) textures: Vec<i32>,
     pub(crate) indices: Vec<u16>,
 }
 
@@ -53,6 +55,7 @@ impl Mesh {
             normals: vec![Vector3::ZERO; 1],
             colors: vec![Color::WHITE; 1],
             uvs: vec![Vector2::ZERO; 1],
+            textures: vec![0; 1],
             indices: vec![0; 3],
             updater,
             index,
@@ -70,6 +73,7 @@ impl Mesh {
         let mut normals = vec![];
         let mut uvs = vec![];
         let mut colors = vec![];
+        let mut textures = vec![];
 
         for mesh in meshes {
             indices.extend(mesh.indices.iter().map(|t| t + offset));
@@ -77,6 +81,7 @@ impl Mesh {
             normals.extend(&mesh.normals);
             uvs.extend(&mesh.uvs);
             colors.extend(&mesh.colors);
+            textures.extend(&mesh.textures);
             offset = vertices.len() as u16;
         }
 
@@ -85,6 +90,7 @@ impl Mesh {
         result.normals = normals;
         result.colors = colors;
         result.uvs = uvs;
+        result.textures = textures;
         result.indices = indices;
         result.update();
         result
@@ -117,6 +123,7 @@ impl Mesh {
             normals: self.normals.clone(),
             colors: self.colors.clone(),
             uvs: self.uvs.clone(),
+            textures: self.textures.clone(),
             indices: self.indices.clone(),
         };
         self.updater
@@ -143,11 +150,13 @@ impl CoreMesh {
             .zip(data.uvs.iter().chain([Vector2::ZERO].iter().cycle()))
             .zip(data.normals.iter().chain([Vector3::ZERO].iter().cycle()))
             .zip(data.colors.iter().chain([Color::WHITE].iter().cycle()))
-            .map(|(((pos, uv), normal), col)| Vertex {
+            .zip(data.textures.iter().chain([0].iter().cycle()))
+            .map(|((((pos, uv), normal), col), tex)| Vertex {
                 pos: *pos,
                 uv: *uv,
                 norm: *normal,
                 col: col.to_rgba_norm_vec(),
+                tex: *tex,
             })
             .collect();
 

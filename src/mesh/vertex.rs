@@ -17,6 +17,7 @@ pub(crate) struct Vertex {
     pub(crate) norm: Vector3,
     pub(crate) uv: Vector2,
     pub(crate) col: Vector4,
+    pub(crate) tex: i32,
 }
 
 impl Vertex {
@@ -28,9 +29,10 @@ impl Vertex {
         }
     }
 
-    pub(crate) const fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 4] {
+    pub(crate) const fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 5] {
         let size2 = mem::size_of::<Vector2>() as u32;
         let size3 = mem::size_of::<Vector3>() as u32;
+        let size4 = mem::size_of::<Vector4>() as u32;
 
         [
             // position
@@ -60,6 +62,13 @@ impl Vertex {
                 binding: 0,
                 format: vk::FORMAT_R32G32B32A32_SFLOAT,
                 offset: size3 * 2 + size2,
+            },
+            // texture
+            vk::VertexInputAttributeDescription {
+                location: 4,
+                binding: 0,
+                format: vk::FORMAT_R32_SINT,
+                offset: size3 * 2 + size2 + size4,
             },
         ]
     }

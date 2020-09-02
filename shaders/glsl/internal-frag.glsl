@@ -25,10 +25,11 @@ layout(set = 3, binding = 0) uniform texture2D shadow_maps[4];
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in vec4 in_color;
-layout(location = 3) in vec3 in_modelspace_position;
-layout(location = 4) in vec3 in_worldspace_position;
-layout(location = 5) in vec4 in_screenspace_position;
-layout(location = 6) in vec4 in_lightspace_position[4];
+layout(location = 3) flat in int in_texture;
+layout(location = 4) in vec3 in_modelspace_position;
+layout(location = 5) in vec3 in_worldspace_position;
+layout(location = 6) in vec4 in_screenspace_position;
+layout(location = 7) in vec4 in_lightspace_position[4];
 
 // texture lookup
 vec4 tex(int index, vec2 uv) {

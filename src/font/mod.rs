@@ -110,9 +110,11 @@ impl CoreFont {
         let vertex_count = vertices.len();
         let normals = vec![Vector3::ZERO; vertex_count];
         let colors = vec![Color::WHITE; vertex_count];
+        let textures = vec![texture.image_index(); vertex_count];
 
         let mut mesh = CoreMesh::new(device);
         mesh.update(MeshData {
+            textures,
             vertices,
             normals,
             colors,

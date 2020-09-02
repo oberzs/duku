@@ -11,7 +11,7 @@ layout(location = 0) out vec4 out_color;
 
 void fragment() {
     vec3 tint = material.arg_1.rgb;
-    float alpha = tex(0, in_uv).r;
+    float alpha = tex(in_texture, in_uv).r;
 
     out_color = vec4(tint, alpha);
 }

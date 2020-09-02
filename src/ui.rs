@@ -56,7 +56,7 @@ pub(crate) struct Ui {
     camera: Camera,
     shader: CoreShader,
     mesh: CoreMesh,
-    _texture: CoreTexture,
+    texture: CoreTexture,
     drawn: bool,
 
     imgui: ImContext,
@@ -171,7 +171,7 @@ impl Ui {
             drawn: false,
             framebuffer,
             camera,
-            _texture: texture,
+            texture,
             shader,
             mesh,
             imgui,
@@ -216,9 +216,11 @@ impl Ui {
             }
             to = vertices.len() as u16;
         }
+        let textures = vec![self.texture.image_index(); vertices.len()];
 
         // update mesh
         self.mesh.update(MeshData {
+            textures,
             vertices,
             normals,
             colors,
