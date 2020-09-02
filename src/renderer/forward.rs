@@ -13,16 +13,17 @@ use super::Target;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
 use crate::image::CoreFramebuffer;
-use crate::image::FramebufferOptions;
+use crate::image::ImageFormat;
 use crate::image::Msaa;
+use crate::image::Size;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
-use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderConstants;
+use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
 use crate::storage::Storage;
@@ -134,7 +135,7 @@ impl ForwardRenderer {
 
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
-        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.set_view(framebuffer.size());
         cmd.bind_descriptor(shader_layout, framebuffer.world());
 
         // skybox rendering
@@ -336,7 +337,7 @@ impl ForwardRenderer {
 
             // do render pass
             cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
-            cmd.set_view(framebuffer.width(), framebuffer.height());
+            cmd.set_view(framebuffer.size());
             cmd.bind_descriptor(shader_layout, framebuffer.world());
             cmd.bind_shader(&self.shadow_shader);
 
@@ -408,13 +409,9 @@ impl ShadowMapSet {
             device,
             shader_layout,
             shader_images,
-            FramebufferOptions {
-                attachment_formats: &[],
-                msaa: Msaa::Disabled,
-                depth: true,
-                width: size,
-                height: size,
-            },
+            &[ImageFormat::Depth],
+            Msaa::Disabled,
+            Size::new(size, size),
         )
     }
 }

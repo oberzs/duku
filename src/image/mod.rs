@@ -6,6 +6,7 @@
 mod cubemap;
 mod framebuffer;
 mod properties;
+mod size;
 mod texture;
 
 use std::cmp;
@@ -20,12 +21,10 @@ use crate::vk;
 
 pub(crate) use cubemap::Cubemap;
 pub(crate) use framebuffer::CoreFramebuffer;
-pub(crate) use framebuffer::FramebufferData;
-pub(crate) use framebuffer::FramebufferOptions;
-pub(crate) use properties::with_alpha;
 pub(crate) use properties::ImageFormat;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
+pub(crate) use size::Size;
 pub(crate) use texture::CoreTexture;
 
 pub use cubemap::CubemapSides;
@@ -39,8 +38,7 @@ pub(crate) struct Image {
     handle: vk::Image,
     memory: Option<vk::DeviceMemory>,
     views: Vec<vk::ImageView>,
-    width: u32,
-    height: u32,
+    size: Size,
     mip_count: u32,
     layer_count: u32,
     format: ImageFormat,
@@ -51,12 +49,11 @@ impl Image {
     pub(crate) fn texture(
         device: &Rc<Device>,
         format: ImageFormat,
-        width: u32,
-        height: u32,
+        size: Size,
         cubemap: bool,
     ) -> Self {
         // calculate mip count
-        let mip_count = (cmp::max(width, height) as f32).log2().floor() as u32 + 1;
+        let mip_count = (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1;
 
         // cubemap info
         let layer_count = if cubemap { 6 } else { 1 };
@@ -72,11 +69,7 @@ impl Image {
             p_next: ptr::null(),
             image_type: vk::IMAGE_TYPE_2D,
             format: format.flag(),
-            extent: vk::Extent3D {
-                width,
-                height,
-                depth: 1,
-            },
+            extent: size.into(),
             mip_levels: mip_count,
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -103,12 +96,11 @@ impl Image {
             handle,
             mip_count,
             format,
-            width,
-            height,
+            size,
         }
     }
 
-    pub(crate) fn shader(device: &Rc<Device>, width: u32, height: u32) -> Self {
+    pub(crate) fn shader(device: &Rc<Device>, size: Size) -> Self {
         let format = ImageFormat::Sbgra;
 
         // create image
@@ -117,11 +109,7 @@ impl Image {
             p_next: ptr::null(),
             image_type: vk::IMAGE_TYPE_2D,
             format: format.flag(),
-            extent: vk::Extent3D {
-                width,
-                height,
-                depth: 1,
-            },
+            extent: size.into(),
             mip_levels: 1,
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -148,16 +136,14 @@ impl Image {
             mip_count: 1,
             format,
             handle,
-            width,
-            height,
+            size,
         }
     }
 
     pub(crate) fn attachment(
         device: &Rc<Device>,
         attachment: &Attachment,
-        width: u32,
-        height: u32,
+        size: Size,
         external: Option<vk::Image>,
     ) -> Self {
         // configure usage
@@ -196,11 +182,7 @@ impl Image {
                     p_next: ptr::null(),
                     image_type: vk::IMAGE_TYPE_2D,
                     format: format.flag(),
-                    extent: vk::Extent3D {
-                        width,
-                        height,
-                        depth: 1,
-                    },
+                    extent: size.into(),
                     mip_levels: 1,
                     samples: attachment.msaa().flag(),
                     tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -226,8 +208,7 @@ impl Image {
             memory,
             format,
             handle,
-            width,
-            height,
+            size,
         }
     }
 
@@ -282,11 +263,7 @@ impl Image {
                 buffer_image_height: 0,
                 image_subresource: subresource,
                 image_offset: vk::Offset3D { x: 0, y: 0, z: 0 },
-                image_extent: vk::Extent3D {
-                    width: self.width,
-                    height: self.height,
-                    depth: 1,
-                },
+                image_extent: self.size.into(),
             };
 
             cmd.copy_buffer_to_image(buffer.handle(), self.handle, region);
@@ -354,12 +331,8 @@ impl Image {
         self.layer_count
     }
 
-    pub(crate) const fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub(crate) const fn height(&self) -> u32 {
-        self.height
+    pub(crate) const fn size(&self) -> Size {
+        self.size
     }
 }
 

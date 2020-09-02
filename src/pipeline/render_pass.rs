@@ -25,12 +25,13 @@ impl RenderPass {
         device: &Rc<Device>,
         attachment_formats: &[ImageFormat],
         msaa: Msaa,
-        depth: bool,
         present: bool,
     ) -> Self {
+        let depth = attachment_formats.contains(&ImageFormat::Depth);
+
         debug_assert!(
-            !present || attachment_formats.len() == 1,
-            "present render pass should only have 1 attachment"
+            !present || attachment_formats.len() == 2,
+            "present render pass should only have 2 attachment"
         );
         debug_assert!(
             depth || !attachment_formats.is_empty(),
@@ -47,7 +48,7 @@ impl RenderPass {
 
         // add depth attachment if needed
         if depth {
-            let layout = if attachment_formats.is_empty() {
+            let layout = if attachment_formats.len() == 1 {
                 ImageLayout::ShaderDepth
             } else {
                 ImageLayout::Depth
@@ -55,7 +56,7 @@ impl RenderPass {
 
             let a = Attachment::new(AttachmentOptions {
                 format: ImageFormat::Depth,
-                store: attachment_formats.is_empty(),
+                store: attachment_formats.len() == 1,
                 index: attachments.len() as u32,
                 clear: true,
                 msaa,
@@ -69,10 +70,9 @@ impl RenderPass {
 
         // add color and resolve attachments
         for format in attachment_formats {
-            debug_assert!(
-                format.is_color(),
-                "attachment format must be a color format"
-            );
+            if format.is_depth() {
+                continue;
+            }
 
             // base color attachment
             let layout = if present {
@@ -116,7 +116,7 @@ impl RenderPass {
         }
 
         // create subpass dependency
-        let dependencies = if attachment_formats.is_empty() {
+        let dependencies = if depth && attachment_formats.len() == 1 {
             // depth pass
             [
                 // start of render pass dependency

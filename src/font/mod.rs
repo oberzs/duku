@@ -12,6 +12,7 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::image::CoreTexture;
 use crate::image::ImageFormat;
+use crate::image::Size;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
@@ -56,8 +57,7 @@ impl CoreFont {
             device,
             shader_images,
             fira_mono::DATA.to_vec(),
-            atlas_width,
-            atlas_height,
+            Size::new(atlas_width, atlas_height),
             ImageFormat::Gray,
         );
 

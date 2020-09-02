@@ -14,7 +14,7 @@ use std::sync::mpsc::Sender;
 use crate::font::CoreFont;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
-use crate::image::FramebufferData;
+use crate::image::Size;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshData;
 use crate::pipeline::CoreMaterial;
@@ -29,7 +29,7 @@ pub(crate) struct Storage {
     pub(crate) shaders: Store<CoreShader>,
     pub(crate) fonts: Store<CoreFont>,
     pub(crate) textures: Store<CoreTexture>,
-    pub(crate) framebuffers: Store<CoreFramebuffer, FramebufferData>,
+    pub(crate) framebuffers: Store<CoreFramebuffer, Size>,
     pub(crate) materials: Store<CoreMaterial, ShaderMaterial>,
     pub(crate) meshes: Store<CoreMesh, MeshData>,
 }

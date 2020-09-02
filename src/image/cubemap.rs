@@ -8,6 +8,7 @@ use std::rc::Rc;
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
+use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
 
@@ -42,7 +43,7 @@ impl Cubemap {
         let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
-        let image = Image::texture(device, format, size, size, true);
+        let image = Image::texture(device, format, Size::new(size, size), true);
 
         // copy images from staging buffer
         image.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);

@@ -11,11 +11,12 @@ use std::sync::mpsc::Sender;
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
+use super::Msaa;
+use super::Size;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::image::Msaa;
 use crate::pipeline::Descriptor;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderImages;
@@ -33,7 +34,7 @@ pub struct Framebuffer {
 
     pub(crate) index: Index,
 
-    updater: Sender<(Index, FramebufferData)>,
+    updater: Sender<(Index, Size)>,
 }
 
 // data storage for a framebuffer
@@ -51,27 +52,13 @@ pub(crate) struct CoreFramebuffer {
     world_buffer: Buffer<ShaderWorld>,
 
     msaa: Msaa,
-    width: u32,
-    height: u32,
+    size: Size,
 
     device: Rc<Device>,
 }
 
-pub(crate) struct FramebufferData {
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-}
-
-pub(crate) struct FramebufferOptions<'formats> {
-    pub(crate) attachment_formats: &'formats [ImageFormat],
-    pub(crate) msaa: Msaa,
-    pub(crate) depth: bool,
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-}
-
 impl Framebuffer {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, FramebufferData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, Size)>) -> Self {
         Self {
             width: 1,
             height: 1,
@@ -81,10 +68,7 @@ impl Framebuffer {
     }
 
     pub fn update(&self) {
-        let data = FramebufferData {
-            width: self.width,
-            height: self.height,
-        };
+        let data = Size::new(self.width, self.height);
         self.updater
             .send((self.index.clone(), data))
             .expect("bad receiver");
@@ -98,15 +82,14 @@ impl CoreFramebuffer {
         shader_layout: &ShaderLayout,
         msaa: Msaa,
     ) -> Vec<Self> {
-        let width = swapchain.width();
-        let height = swapchain.height();
-        let attachment_formats = &[ImageFormat::Sbgra];
+        let size = swapchain.size();
+        let attachment_formats = &[ImageFormat::Depth, ImageFormat::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         swapchain
             .iter_images()
             .map(|img| {
-                let render_pass = RenderPass::new(device, attachment_formats, msaa, true, true);
+                let render_pass = RenderPass::new(device, attachment_formats, msaa, true);
                 let mut images: Vec<_> = render_pass
                     .attachments()
                     .map(|attachment| {
@@ -116,7 +99,7 @@ impl CoreFramebuffer {
                             None
                         };
 
-                        Image::attachment(device, &attachment, width, height, handle)
+                        Image::attachment(device, &attachment, size, handle)
                     })
                     .collect();
 
@@ -130,8 +113,8 @@ impl CoreFramebuffer {
                     attachment_count: views.len() as u32,
                     p_attachments: views.as_ptr(),
                     layers: 1,
-                    width,
-                    height,
+                    width: size.width,
+                    height: size.height,
                 };
 
                 let handle = device.create_framebuffer(&info);
@@ -148,8 +131,7 @@ impl CoreFramebuffer {
                     world_descriptor,
                     render_pass,
                     handle,
-                    width,
-                    height,
+                    size,
                     images,
                     msaa,
                 }
@@ -161,17 +143,11 @@ impl CoreFramebuffer {
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
-        options: FramebufferOptions<'_>,
+        attachment_formats: &[ImageFormat],
+        msaa: Msaa,
+        size: Size,
     ) -> Self {
-        let FramebufferOptions {
-            width,
-            height,
-            attachment_formats,
-            msaa,
-            depth,
-        } = options;
-
-        let render_pass = RenderPass::new(device, attachment_formats, msaa, depth, false);
+        let render_pass = RenderPass::new(device, attachment_formats, msaa, false);
 
         let mut stored_format = None;
         let mut stored_index = 0;
@@ -185,7 +161,7 @@ impl CoreFramebuffer {
                     stored_index = i;
                 }
 
-                Image::attachment(device, &attachment, width, height, None)
+                Image::attachment(device, &attachment, size, None)
             })
             .collect();
 
@@ -199,8 +175,8 @@ impl CoreFramebuffer {
             attachment_count: views.len() as u32,
             p_attachments: views.as_ptr(),
             layers: 1,
-            width,
-            height,
+            width: size.width,
+            height: size.height,
         };
 
         let handle = device.create_framebuffer(&info);
@@ -208,7 +184,7 @@ impl CoreFramebuffer {
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
-        let mut shader_image = Image::shader(device, width, height);
+        let mut shader_image = Image::shader(device, size);
         let shader_index = shader_images.add(shader_image.add_view());
 
         // ready image layouts
@@ -230,20 +206,17 @@ impl CoreFramebuffer {
             stored_index,
             render_pass,
             handle,
-            width,
-            height,
+            size,
             images,
             msaa,
         }
     }
 
-    pub(crate) fn update(&mut self, shader_images: &mut ShaderImages, data: FramebufferData) {
+    pub(crate) fn update(&mut self, shader_images: &mut ShaderImages, size: Size) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
         );
-
-        let FramebufferData { width, height } = data;
 
         // recreate framebuffer images
         let mut stored_format = None;
@@ -259,7 +232,7 @@ impl CoreFramebuffer {
                     stored_index = i;
                 }
 
-                Image::attachment(&self.device, attachment, width, height, None)
+                Image::attachment(&self.device, attachment, size, None)
             })
             .collect();
 
@@ -273,13 +246,13 @@ impl CoreFramebuffer {
             attachment_count: views.len() as u32,
             p_attachments: views.as_ptr(),
             layers: 1,
-            width,
-            height,
+            width: size.width,
+            height: size.height,
         };
 
         shader_images.remove(self.shader_index.expect("bad texture index"));
 
-        let mut shader_image = Image::shader(&self.device, width, height);
+        let mut shader_image = Image::shader(&self.device, size);
         let shader_index = shader_images.add(shader_image.add_view());
 
         // ready image layouts
@@ -299,8 +272,7 @@ impl CoreFramebuffer {
         self.stored_index = stored_index;
         self.shader_image = Some(shader_image);
         self.shader_index = Some(shader_index);
-        self.width = width;
-        self.height = height;
+        self.size = size;
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
@@ -332,12 +304,8 @@ impl CoreFramebuffer {
         self.msaa
     }
 
-    pub(crate) const fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub(crate) const fn height(&self) -> u32 {
-        self.height
+    pub(crate) const fn size(&self) -> Size {
+        self.size
     }
 
     pub(crate) fn stored_view(&self) -> vk::ImageView {

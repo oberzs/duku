@@ -11,14 +11,14 @@ use super::VSync;
 use crate::device::Device;
 use crate::image::ImageFormat;
 use crate::image::ImageUsage;
+use crate::image::Size;
 use crate::instance::GPUProperties;
 use crate::vk;
 
 pub(crate) struct Swapchain {
     handle: vk::SwapchainKHR,
     current_image: usize,
-    width: u32,
-    height: u32,
+    size: Size,
     device: Rc<Device>,
 }
 
@@ -31,15 +31,12 @@ impl Swapchain {
     ) -> Self {
         let info = swapchain_info(surface, &gpu_properties, vsync);
         let handle = device.create_swapchain(&info);
-        let width = gpu_properties.extent.width;
-        let height = gpu_properties.extent.height;
 
         Self {
             device: Rc::clone(device),
+            size: gpu_properties.extent.into(),
             current_image: 0,
             handle,
-            width,
-            height,
         }
     }
 
@@ -52,8 +49,7 @@ impl Swapchain {
         self.device.destroy_swapchain(self.handle);
         let info = swapchain_info(surface, gpu_properties, vsync);
         self.handle = self.device.create_swapchain(&info);
-        self.width = gpu_properties.extent.width;
-        self.height = gpu_properties.extent.height;
+        self.size = gpu_properties.extent.into();
         self.current_image = 0;
     }
 
@@ -69,12 +65,8 @@ impl Swapchain {
         self.current_image
     }
 
-    pub(crate) const fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub(crate) const fn height(&self) -> u32 {
-        self.height
+    pub(crate) const fn size(&self) -> Size {
+        self.size
     }
 
     pub(crate) const fn handle(&self) -> vk::SwapchainKHR {

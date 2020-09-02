@@ -16,6 +16,7 @@ use crate::font::Font;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::ImageFormat;
+use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -62,8 +63,7 @@ impl Builtins {
                 device,
                 shader_images,
                 vec![255, 255, 255, 255],
-                1,
-                1,
+                Size::new(1, 1),
                 ImageFormat::Rgba,
             );
             let shader_index = tex.shader_index();

@@ -5,10 +5,10 @@
 
 use std::rc::Rc;
 
-use super::with_alpha;
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
+use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::pipeline::ShaderImages;
@@ -45,8 +45,7 @@ impl CoreTexture {
         device: &Rc<Device>,
         shader_images: &mut ShaderImages,
         data: Vec<u8>,
-        width: u32,
-        height: u32,
+        size: Size,
         format: ImageFormat,
     ) -> Self {
         // convert 3-byte data to 4-byte data
@@ -61,7 +60,7 @@ impl CoreTexture {
         };
 
         let staging_buffer = Buffer::staging(device, &image_data);
-        let mut image = Image::texture(device, format, width, height, false);
+        let mut image = Image::texture(device, format, size, false);
 
         // copy image from staging buffer
         image.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
@@ -89,6 +88,7 @@ impl CoreTexture {
 
         let decoder = Decoder::new(bytes.as_slice());
         let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
+        let size = Size::new(info.width, info.height);
 
         let mut data = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).expect("bad read");
@@ -100,17 +100,18 @@ impl CoreTexture {
             _ => return Err(Error::UnsupportedColorType),
         };
 
-        Ok(Self::new(
-            device,
-            shader_images,
-            data,
-            info.width,
-            info.height,
-            format,
-        ))
+        Ok(Self::new(device, shader_images, data, size, format))
     }
 
     pub(crate) const fn shader_index(&self) -> i32 {
         self.shader_index
     }
+}
+
+pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
+    let mut new_data = Vec::with_capacity(4 * data.len() / 3);
+    for pixel in data.chunks(3) {
+        new_data.extend(&[pixel[0], pixel[1], pixel[2], 255]);
+    }
+    new_data
 }

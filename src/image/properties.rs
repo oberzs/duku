@@ -61,14 +61,6 @@ pub enum TextureWrap {
     Repeat,
 }
 
-pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
-    let mut new_data = Vec::with_capacity(4 * data.len() / 3);
-    for pixel in data.chunks(3) {
-        new_data.extend(&[pixel[0], pixel[1], pixel[2], 255]);
-    }
-    new_data
-}
-
 impl ImageUsage {
     pub(crate) fn combine(usages: &[Self]) -> vk::ImageUsageFlags {
         usages.iter().fold(0, |acc, usage| acc | usage.flag())
@@ -124,17 +116,8 @@ impl ImageFormat {
         }
     }
 
-    pub(crate) const fn is_color(&self) -> bool {
-        matches!(
-            *self,
-            Self::Float2
-                | Self::Gray
-                | Self::Rgb
-                | Self::Rgba
-                | Self::Sbgra
-                | Self::Srgb
-                | Self::Srgba
-        )
+    pub(crate) const fn is_depth(&self) -> bool {
+        matches!(*self, Self::Depth | Self::DepthStencil)
     }
 }
 

@@ -15,6 +15,7 @@ use std::slice;
 use crate::image::CoreFramebuffer;
 use crate::image::Image;
 use crate::image::ImageLayout;
+use crate::image::Size;
 use crate::mesh::CoreMesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
@@ -175,10 +176,7 @@ impl Commands {
             framebuffer: framebuffer.handle(),
             render_area: vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },
-                extent: vk::Extent2D {
-                    width: framebuffer.width(),
-                    height: framebuffer.height(),
-                },
+                extent: framebuffer.size().into(),
             },
             clear_value_count: clear_values.len() as u32,
             p_clear_values: clear_values.as_ptr(),
@@ -322,18 +320,18 @@ impl Commands {
         }
     }
 
-    pub(crate) fn set_view(&self, width: u32, height: u32) {
+    pub(crate) fn set_view(&self, size: Size) {
         let viewport = [vk::Viewport {
             x: 0.0,
-            y: height as f32,
-            width: width as f32,
-            height: -(height as f32),
+            y: size.height as f32,
+            width: size.width as f32,
+            height: -(size.height as f32),
             min_depth: 0.0,
             max_depth: 1.0,
         }];
         let scissor = [vk::Rect2D {
             offset: vk::Offset2D { x: 0, y: 0 },
-            extent: vk::Extent2D { width, height },
+            extent: size.into(),
         }];
 
         unsafe {
@@ -350,8 +348,8 @@ impl Commands {
 
     pub(crate) fn blit_image_mip(&self, image: &Image, src: u32, dst: u32) {
         fn mip_offsets(image: &Image, mip: u32) -> [vk::Offset3D; 2] {
-            let orig_width = image.width();
-            let orig_height = image.height();
+            let orig_width = image.size().width;
+            let orig_height = image.size().height;
             let scale = 2u32.pow(mip);
             let width = cmp::max(orig_width / scale, 1);
             let height = cmp::max(orig_height / scale, 1);
@@ -403,7 +401,7 @@ impl Commands {
 
     pub(crate) fn blit_image(&self, src: &Image, dst: &Image) {
         debug_assert!(
-            src.width() == dst.width() && src.height() == dst.height(),
+            src.size() == dst.size(),
             "cannot blit image, sizes are different"
         );
         debug_assert!(
@@ -428,22 +426,8 @@ impl Commands {
                 base_array_layer: 0,
                 layer_count: src.layer_count(),
             },
-            src_offsets: [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: src.width() as i32,
-                    y: src.height() as i32,
-                    z: 1,
-                },
-            ],
-            dst_offsets: [
-                vk::Offset3D { x: 0, y: 0, z: 0 },
-                vk::Offset3D {
-                    x: src.width() as i32,
-                    y: src.height() as i32,
-                    z: 1,
-                },
-            ],
+            src_offsets: [vk::Offset3D { x: 0, y: 0, z: 0 }, src.size().into()],
+            dst_offsets: [vk::Offset3D { x: 0, y: 0, z: 0 }, dst.size().into()],
         }];
 
         unsafe {

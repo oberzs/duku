@@ -16,9 +16,9 @@ use crate::image::CoreTexture;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Framebuffer;
-use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
+use crate::image::Size;
 use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::CoreMesh;
@@ -234,7 +234,11 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.storage, &mut self.shader_images, width, height);
+            ui.resize(
+                &mut self.storage,
+                &mut self.shader_images,
+                Size::new(width, height),
+            );
         }
     }
 
@@ -259,7 +263,7 @@ impl Context {
 
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
 
-        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
+        let cam = get_camera(camera, framebuffer.size());
 
         // draw
         self.forward_renderer.draw(
@@ -287,7 +291,7 @@ impl Context {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let cam = get_camera(camera, framebuffer.width, framebuffer.height);
+        let cam = get_camera(camera, Size::new(framebuffer.width, framebuffer.height));
 
         // draw
         self.forward_renderer.draw(
@@ -309,8 +313,7 @@ impl Context {
             &self.device,
             &mut self.shader_images,
             data,
-            width,
-            height,
+            Size::new(width, height),
             ImageFormat::Rgba,
         );
         let shader_index = tex.shader_index();
@@ -353,13 +356,9 @@ impl Context {
             &self.device,
             &self.shader_layout,
             &mut self.shader_images,
-            FramebufferOptions {
-                attachment_formats: &[ImageFormat::Sbgra],
-                msaa: self.msaa,
-                depth: true,
-                width,
-                height,
-            },
+            &[ImageFormat::Depth, ImageFormat::Sbgra],
+            self.msaa,
+            Size::new(width, height),
         ));
         let mut framebuffer = Framebuffer::new(index, updater);
         framebuffer.width = width;
@@ -531,8 +530,7 @@ impl Context {
             &self.shader_layout,
             &mut self.shader_images,
             &mut self.storage,
-            width,
-            height,
+            Size::new(width, height),
         ));
     }
 
@@ -676,12 +674,17 @@ impl Default for ContextOptions {
     }
 }
 
-fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
+fn get_camera(camera: Option<&Camera>, size: Size) -> Camera {
     match camera {
         Some(c) => {
             if c.autosize {
-                let mut cam =
-                    Camera::new(c.projection, width as f32, height as f32, c.depth, c.fov);
+                let mut cam = Camera::new(
+                    c.projection,
+                    size.width as f32,
+                    size.height as f32,
+                    c.depth,
+                    c.fov,
+                );
                 cam.transform = c.transform;
                 cam
             } else {
@@ -689,6 +692,6 @@ fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
             }
         }
         // create default camera if not supplied
-        None => Camera::orthographic(width as f32, height as f32),
+        None => Camera::orthographic(size.width as f32, size.height as f32),
     }
 }

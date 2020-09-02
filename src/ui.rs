@@ -31,10 +31,9 @@ use crate::device::Stats;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
 use crate::image::Framebuffer;
-use crate::image::FramebufferData;
-use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
+use crate::image::Size;
 use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -74,8 +73,7 @@ impl Ui {
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
         storage: &mut Storage,
-        width: u32,
-        height: u32,
+        size: Size,
     ) -> Self {
         // create imgui context
         let mut imgui = ImContext::create();
@@ -83,7 +81,7 @@ impl Ui {
         {
             // setup imgui backend
             let io = imgui.io_mut();
-            io.display_size = [width as f32, height as f32];
+            io.display_size = [size.width as f32, size.height as f32];
             io.display_framebuffer_scale = [1.0, 1.0];
             io.backend_flags.insert(BackendFlags::HAS_MOUSE_CURSORS);
             io.backend_flags.insert(BackendFlags::HAS_SET_MOUSE_POS);
@@ -130,8 +128,7 @@ impl Ui {
                 device,
                 shader_images,
                 ui_texture.data.to_vec(),
-                ui_texture.width,
-                ui_texture.height,
+                Size::new(ui_texture.width, ui_texture.height),
                 ImageFormat::Gray,
             )
         };
@@ -140,16 +137,12 @@ impl Ui {
             device,
             shader_layout,
             shader_images,
-            FramebufferOptions {
-                attachment_formats: &[ImageFormat::Sbgra],
-                msaa: Msaa::Disabled,
-                depth: false,
-                width,
-                height,
-            },
+            &[ImageFormat::Sbgra],
+            Msaa::Disabled,
+            size,
         );
 
-        let camera = Camera::orthographic(width as f32, height as f32);
+        let camera = Camera::orthographic(size.width as f32, size.height as f32);
 
         let shader = CoreShader::from_spirv_bytes(
             device,
@@ -161,8 +154,8 @@ impl Ui {
 
         let (index, updater) = storage.framebuffers.add(core_framebuffer);
         let mut framebuffer = Framebuffer::new(index, updater);
-        framebuffer.width = width;
-        framebuffer.height = height;
+        framebuffer.width = size.width;
+        framebuffer.height = size.height;
 
         let mesh = CoreMesh::new(device);
 
@@ -248,7 +241,7 @@ impl Ui {
 
         // begin render pass
         cmd.begin_render_pass(framebuffer, [0.0, 0.0, 0.0, 0.0]);
-        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.set_view(framebuffer.size());
         cmd.set_line_width(1.0);
 
         // bind storage
@@ -316,18 +309,17 @@ impl Ui {
         &mut self,
         storage: &mut Storage,
         shader_images: &mut ShaderImages,
-        width: u32,
-        height: u32,
+        size: Size,
     ) {
-        self.imgui.io_mut().display_size = [width as f32, height as f32];
-        self.framebuffer.width = width;
-        self.framebuffer.height = height;
-        self.camera.width = width as f32;
-        self.camera.height = height as f32;
+        self.imgui.io_mut().display_size = [size.width as f32, size.height as f32];
+        self.framebuffer.width = size.width;
+        self.framebuffer.height = size.height;
+        self.camera.width = size.width as f32;
+        self.camera.height = size.height as f32;
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(shader_images, FramebufferData { width, height });
+            .update(shader_images, size);
     }
 
     pub(crate) const fn drawn(&self) -> bool {
