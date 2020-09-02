@@ -313,9 +313,9 @@ impl Context {
             height,
             ImageFormat::Rgba,
         );
-        let image_index = tex.image_index();
+        let shader_index = tex.shader_index();
         let (index, _) = self.storage.textures.add(tex);
-        Texture::new(index, image_index)
+        Texture::new(index, shader_index)
     }
 
     pub fn create_mesh(&mut self) -> Mesh {
@@ -612,9 +612,9 @@ impl Context {
     #[cfg(feature = "png")]
     pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Texture> {
         let tex = CoreTexture::from_png_bytes(&self.device, &mut self.image_uniform, bytes)?;
-        let image_index = tex.image_index();
+        let shader_index = tex.shader_index();
         let (index, _) = self.storage.textures.add(tex);
-        Ok(Texture::new(index, image_index))
+        Ok(Texture::new(index, shader_index))
     }
 
     #[cfg(feature = "png")]

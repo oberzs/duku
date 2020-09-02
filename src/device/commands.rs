@@ -13,8 +13,8 @@ use std::ptr;
 use std::slice;
 
 use crate::image::CoreFramebuffer;
+use crate::image::Image;
 use crate::image::ImageLayout;
-use crate::image::ImageMemory;
 use crate::mesh::CoreMesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
@@ -348,8 +348,8 @@ impl Commands {
         }
     }
 
-    pub(crate) fn blit_image_mip(&self, image: &ImageMemory, src: u32, dst: u32) {
-        fn mip_offsets(image: &ImageMemory, mip: u32) -> [vk::Offset3D; 2] {
+    pub(crate) fn blit_image_mip(&self, image: &Image, src: u32, dst: u32) {
+        fn mip_offsets(image: &Image, mip: u32) -> [vk::Offset3D; 2] {
             let orig_width = image.width();
             let orig_height = image.height();
             let scale = 2u32.pow(mip);
@@ -401,7 +401,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn blit_image(&self, src: &ImageMemory, dst: &ImageMemory) {
+    pub(crate) fn blit_image(&self, src: &Image, dst: &Image) {
         debug_assert!(
             src.width() == dst.width() && src.height() == dst.height(),
             "cannot blit image, sizes are different"
@@ -462,7 +462,7 @@ impl Commands {
 
     pub(crate) fn change_image_layout(
         &self,
-        image: &ImageMemory,
+        image: &Image,
         old_layout: ImageLayout,
         new_layout: ImageLayout,
         mips: Range<u32>,

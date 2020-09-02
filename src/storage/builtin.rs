@@ -66,9 +66,9 @@ impl Builtins {
                 1,
                 ImageFormat::Rgba,
             );
-            let image_index = tex.image_index();
+            let shader_index = tex.shader_index();
             let (index, _) = storage.textures.add(tex);
-            Texture::new(index, image_index)
+            Texture::new(index, shader_index)
         };
 
         // materials

@@ -5,19 +5,16 @@
 
 use std::rc::Rc;
 
+use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
-use super::ImageMemory;
-use super::ImageMemoryOptions;
-use super::ImageMips;
-use super::ImageUsage;
 use crate::buffer::Buffer;
 use crate::device::Device;
 
 use crate::vk;
 
 pub(crate) struct Cubemap {
-    memory: ImageMemory,
+    image: Image,
 }
 
 pub struct CubemapSides<T> {
@@ -45,34 +42,19 @@ impl Cubemap {
         let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
-        let memory = ImageMemory::new(
-            device,
-            ImageMemoryOptions {
-                width: size,
-                height: size,
-                mips: ImageMips::Log2,
-                usage: &[
-                    ImageUsage::Sampled,
-                    ImageUsage::TransferSrc,
-                    ImageUsage::TransferDst,
-                ],
-                cubemap: true,
-                format,
-                ..Default::default()
-            },
-        );
+        let image = Image::texture(device, format, size, size, true);
 
-        // copy images from staging memory
-        memory.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
-        memory.copy_from_buffer(&right_staging_buffer, 0);
-        memory.copy_from_buffer(&left_staging_buffer, 1);
-        memory.copy_from_buffer(&top_staging_buffer, 2);
-        memory.copy_from_buffer(&bottom_staging_buffer, 3);
-        memory.copy_from_buffer(&front_staging_buffer, 4);
-        memory.copy_from_buffer(&back_staging_buffer, 5);
-        memory.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
+        // copy images from staging buffer
+        image.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
+        image.copy_from_buffer(&right_staging_buffer, 0);
+        image.copy_from_buffer(&left_staging_buffer, 1);
+        image.copy_from_buffer(&top_staging_buffer, 2);
+        image.copy_from_buffer(&bottom_staging_buffer, 3);
+        image.copy_from_buffer(&front_staging_buffer, 4);
+        image.copy_from_buffer(&back_staging_buffer, 5);
+        image.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
 
-        Self { memory }
+        Self { image }
     }
 
     #[cfg(feature = "png")]
@@ -133,6 +115,6 @@ impl Cubemap {
     }
 
     pub(crate) fn add_view(&mut self) -> vk::ImageView {
-        self.memory.add_view()
+        self.image.add_view()
     }
 }

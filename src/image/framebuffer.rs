@@ -8,11 +8,9 @@ use std::ptr;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
+use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
-use super::ImageMemory;
-use super::ImageMemoryOptions;
-use super::ImageUsage;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Commands;
@@ -21,7 +19,6 @@ use crate::image::Msaa;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::pipeline::Attachment;
 use crate::pipeline::Descriptor;
 use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
@@ -45,10 +42,10 @@ pub struct Framebuffer {
 pub(crate) struct CoreFramebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
-    images: Vec<ImageMemory>,
+    images: Vec<Image>,
     stored_index: usize,
-    texture_image: Option<ImageMemory>,
-    texture_index: Option<i32>,
+    shader_image: Option<Image>,
+    shader_index: Option<i32>,
 
     // resources needed for each
     // framebuffer in rendering
@@ -142,7 +139,7 @@ impl CoreFramebuffer {
                             None
                         };
 
-                        create_attachment_image(device, &attachment, width, height, handle)
+                        Image::attachment(device, &attachment, width, height, handle)
                     })
                     .collect();
 
@@ -167,8 +164,8 @@ impl CoreFramebuffer {
 
                 Self {
                     device: Rc::clone(device),
-                    texture_image: None,
-                    texture_index: None,
+                    shader_image: None,
+                    shader_index: None,
                     stored_index: 0,
                     world_buffer,
                     world_descriptor,
@@ -211,7 +208,7 @@ impl CoreFramebuffer {
                     stored_index = i;
                 }
 
-                create_attachment_image(device, &attachment, width, height, None)
+                Image::attachment(device, &attachment, width, height, None)
             })
             .collect();
 
@@ -234,24 +231,11 @@ impl CoreFramebuffer {
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
-        let mut texture_image = ImageMemory::new(
-            device,
-            ImageMemoryOptions {
-                usage: &[
-                    ImageUsage::TransferDst,
-                    ImageUsage::Sampled,
-                    ImageUsage::Color,
-                ],
-                format: ImageFormat::Sbgra,
-                width,
-                height,
-                ..Default::default()
-            },
-        );
-        let texture_index = image_uniform.add(texture_image.add_view());
+        let mut shader_image = Image::shader(device, width, height);
+        let shader_index = image_uniform.add(shader_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
         images[stored_index].change_layout(
             ImageLayout::Undefined,
             match stored_format {
@@ -261,8 +245,8 @@ impl CoreFramebuffer {
         );
 
         Self {
-            texture_image: Some(texture_image),
-            texture_index: Some(texture_index),
+            shader_image: Some(shader_image),
+            shader_index: Some(shader_index),
             device: Rc::clone(device),
             world_buffer,
             world_descriptor,
@@ -298,7 +282,7 @@ impl CoreFramebuffer {
                     stored_index = i;
                 }
 
-                create_attachment_image(&self.device, attachment, width, height, None)
+                Image::attachment(&self.device, attachment, width, height, None)
             })
             .collect();
 
@@ -316,26 +300,13 @@ impl CoreFramebuffer {
             height,
         };
 
-        image_uniform.remove(self.texture_index.expect("bad texture index"));
+        image_uniform.remove(self.shader_index.expect("bad texture index"));
 
-        let mut texture_image = ImageMemory::new(
-            &self.device,
-            ImageMemoryOptions {
-                usage: &[
-                    ImageUsage::TransferDst,
-                    ImageUsage::Sampled,
-                    ImageUsage::Color,
-                ],
-                format: ImageFormat::Sbgra,
-                width,
-                height,
-                ..Default::default()
-            },
-        );
-        let texture_index = image_uniform.add(texture_image.add_view());
+        let mut shader_image = Image::shader(&self.device, width, height);
+        let shader_index = image_uniform.add(shader_image.add_view());
 
         // ready image layouts
-        texture_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
         images[stored_index].change_layout(
             ImageLayout::Undefined,
             match stored_format {
@@ -349,14 +320,14 @@ impl CoreFramebuffer {
         self.handle = self.device.create_framebuffer(&info);
         self.images = images;
         self.stored_index = stored_index;
-        self.texture_image = Some(texture_image);
-        self.texture_index = Some(texture_index);
+        self.shader_image = Some(shader_image);
+        self.shader_index = Some(shader_index);
         self.width = width;
         self.height = height;
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
-        if let Some(dst) = &self.texture_image {
+        if let Some(dst) = &self.shader_image {
             let src = &self.images[self.stored_index];
 
             // prepare images for transfer
@@ -396,12 +367,12 @@ impl CoreFramebuffer {
         self.images[self.stored_index].get_view(0)
     }
 
-    pub(crate) fn iter_images(&self) -> impl Iterator<Item = &ImageMemory> {
+    pub(crate) fn iter_images(&self) -> impl Iterator<Item = &Image> {
         self.images.iter()
     }
 
-    pub(crate) fn texture_index(&self) -> i32 {
-        self.texture_index.expect("bad framebuffer")
+    pub(crate) fn shader_index(&self) -> i32 {
+        self.shader_index.expect("bad framebuffer")
     }
 
     pub(crate) fn update_world(&self, data: WorldData) {
@@ -417,47 +388,4 @@ impl Drop for CoreFramebuffer {
     fn drop(&mut self) {
         self.device.destroy_framebuffer(self.handle);
     }
-}
-
-fn create_attachment_image(
-    device: &Rc<Device>,
-    attachment: &Attachment,
-    width: u32,
-    height: u32,
-    handle: Option<vk::Image>,
-) -> ImageMemory {
-    let mut usage = vec![];
-
-    match attachment.layout() {
-        ImageLayout::Color => usage.push(ImageUsage::Color),
-        ImageLayout::Depth => usage.push(ImageUsage::Depth),
-        ImageLayout::ShaderColor => usage.push(ImageUsage::Color),
-        ImageLayout::ShaderDepth => usage.push(ImageUsage::Depth),
-        _ => (),
-    }
-
-    // attachments that stay in memory can be read from
-    if attachment.is_stored() {
-        usage.push(ImageUsage::Sampled);
-
-        if handle.is_none() {
-            // swapchain images don't need to be transfered
-            usage.push(ImageUsage::TransferSrc);
-        }
-    } else {
-        usage.push(ImageUsage::Transient);
-    }
-
-    ImageMemory::new(
-        device,
-        ImageMemoryOptions {
-            msaa: attachment.msaa(),
-            format: attachment.format(),
-            usage: &usage,
-            handle,
-            width,
-            height,
-            ..Default::default()
-        },
-    )
 }

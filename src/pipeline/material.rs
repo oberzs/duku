@@ -76,7 +76,7 @@ impl Material {
     }
 
     pub fn set_phong_texture(&mut self, texture: &Texture) {
-        self.arg_1.w = texture.image_index as f32;
+        self.arg_1.w = texture.shader_index as f32;
     }
 
     pub fn set_font_color(&mut self, color: impl Into<Color>) {

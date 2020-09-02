@@ -60,13 +60,13 @@ impl Storage {
         self.shaders.stored.retain(|i, _| i.count() > 1);
         self.framebuffers.stored.retain(|i, f| {
             if i.count() == 1 {
-                image_uniform.remove(f.texture_index());
+                image_uniform.remove(f.shader_index());
             }
             i.count() > 1
         });
         self.textures.stored.retain(|i, t| {
             if i.count() == 1 {
-                image_uniform.remove(t.image_index());
+                image_uniform.remove(t.shader_index());
             }
             i.count() > 1
         });

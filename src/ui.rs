@@ -216,7 +216,7 @@ impl Ui {
             }
             to = vertices.len() as u16;
         }
-        let textures = vec![self.texture.image_index(); vertices.len()];
+        let textures = vec![self.texture.shader_index(); vertices.len()];
 
         // update mesh
         self.mesh.update(MeshData {

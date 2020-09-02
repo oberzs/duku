@@ -40,12 +40,6 @@ pub(crate) enum ImageLayout {
     TransferDst,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub(crate) enum ImageMips {
-    Log2,
-    One,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Msaa {
     X4,
