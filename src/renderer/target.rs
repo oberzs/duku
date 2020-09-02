@@ -3,6 +3,7 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
+use super::TextTarget;
 use crate::color::Color;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
@@ -16,6 +17,8 @@ use crate::storage::Builtins;
 use crate::storage::Index;
 
 pub struct Target<'b> {
+    pub text: TextTarget,
+
     pub bias: f32,
     pub clear: Color,
     pub skybox: bool,
@@ -80,6 +83,7 @@ struct Cache {
 impl<'b> Target<'b> {
     pub(crate) fn new(builtins: &'b Builtins) -> Self {
         Self {
+            text: TextTarget::new(),
             orders_by_shader: vec![],
             text_orders: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),

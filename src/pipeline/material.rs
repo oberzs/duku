@@ -8,8 +8,8 @@ use std::sync::mpsc::Sender;
 
 use super::Descriptor;
 use super::ShaderLayout;
+use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
-use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
 use crate::image::Texture;
@@ -36,7 +36,7 @@ pub struct Material {
 // data storage for a material
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
-    buffer: DynamicBuffer<MaterialData>,
+    buffer: Buffer<MaterialData>,
 }
 
 #[derive(Copy, Clone)]
@@ -105,14 +105,14 @@ impl Material {
 
 impl CoreMaterial {
     pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Self {
-        let buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
+        let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let descriptor = shader_layout.material_set(&buffer);
 
         Self { buffer, descriptor }
     }
 
     pub(crate) fn update(&mut self, data: MaterialData) {
-        self.buffer.update_data(&[data]);
+        self.buffer.copy_from_data(&[data]);
     }
 
     pub(crate) const fn descriptor(&self) -> Descriptor {

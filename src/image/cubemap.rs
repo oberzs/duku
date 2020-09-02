@@ -11,9 +11,7 @@ use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageMips;
 use super::ImageUsage;
-use crate::buffer::BufferAccess;
-use crate::buffer::BufferMemory;
-use crate::buffer::BufferUsage;
+use crate::buffer::Buffer;
 use crate::device::Device;
 
 use crate::vk;
@@ -38,61 +36,13 @@ impl Cubemap {
         format: ImageFormat,
         sides: CubemapSides<Vec<u8>>,
     ) -> Self {
-        let pixel_size = match format {
-            ImageFormat::Srgba | ImageFormat::Rgba => 4,
-            _ => panic!("unsupported cubemap format {:?}", format),
-        };
-
-        let data_size = (size * size) as usize * pixel_size;
-
         // create staging buffers
-        let top_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        top_staging_memory.copy_from_data(&sides.top, data_size);
-
-        let bottom_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        bottom_staging_memory.copy_from_data(&sides.bottom, data_size);
-
-        let front_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        front_staging_memory.copy_from_data(&sides.front, data_size);
-
-        let back_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        back_staging_memory.copy_from_data(&sides.back, data_size);
-
-        let left_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        left_staging_memory.copy_from_data(&sides.left, data_size);
-
-        let right_staging_memory = BufferMemory::new(
-            device,
-            &[BufferUsage::TransferSrc],
-            BufferAccess::Cpu,
-            data_size,
-        );
-        right_staging_memory.copy_from_data(&sides.right, data_size);
+        let top_staging_buffer = Buffer::staging(device, &sides.top);
+        let bottom_staging_buffer = Buffer::staging(device, &sides.bottom);
+        let front_staging_buffer = Buffer::staging(device, &sides.front);
+        let back_staging_buffer = Buffer::staging(device, &sides.back);
+        let left_staging_buffer = Buffer::staging(device, &sides.left);
+        let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
         let memory = ImageMemory::new(
@@ -114,12 +64,12 @@ impl Cubemap {
 
         // copy images from staging memory
         memory.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
-        memory.copy_from_memory(&right_staging_memory, 0);
-        memory.copy_from_memory(&left_staging_memory, 1);
-        memory.copy_from_memory(&top_staging_memory, 2);
-        memory.copy_from_memory(&bottom_staging_memory, 3);
-        memory.copy_from_memory(&front_staging_memory, 4);
-        memory.copy_from_memory(&back_staging_memory, 5);
+        memory.copy_from_buffer(&right_staging_buffer, 0);
+        memory.copy_from_buffer(&left_staging_buffer, 1);
+        memory.copy_from_buffer(&top_staging_buffer, 2);
+        memory.copy_from_buffer(&bottom_staging_buffer, 3);
+        memory.copy_from_buffer(&front_staging_buffer, 4);
+        memory.copy_from_buffer(&back_staging_buffer, 5);
         memory.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
 
         Self { memory }

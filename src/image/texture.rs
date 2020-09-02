@@ -12,9 +12,7 @@ use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageMips;
 use super::ImageUsage;
-use crate::buffer::BufferAccess;
-use crate::buffer::BufferMemory;
-use crate::buffer::BufferUsage;
+use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::pipeline::ImageUniform;
 use crate::storage::Index;
@@ -51,13 +49,6 @@ impl CoreTexture {
         height: u32,
         format: ImageFormat,
     ) -> Self {
-        // get byte count based on format
-        let pixel_size = match format {
-            ImageFormat::Srgba | ImageFormat::Rgba | ImageFormat::Srgb | ImageFormat::Rgb => 4,
-            ImageFormat::Gray => 1,
-            _ => panic!("unsupported texture format {:?}", format),
-        };
-
         // convert 3-byte data to 4-byte data
         let image_data = match format {
             ImageFormat::Srgb | ImageFormat::Rgb => with_alpha(data),
@@ -69,11 +60,7 @@ impl CoreTexture {
             f => f,
         };
 
-        let size = (width * height) as usize * pixel_size;
-
-        let staging_memory =
-            BufferMemory::new(device, &[BufferUsage::TransferSrc], BufferAccess::Cpu, size);
-        staging_memory.copy_from_data(&image_data, size);
+        let staging_buffer = Buffer::staging(device, &image_data);
 
         let mut memory = ImageMemory::new(
             device,
@@ -93,7 +80,7 @@ impl CoreTexture {
 
         // copy image from staging memory
         memory.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
-        memory.copy_from_memory(&staging_memory, 0);
+        memory.copy_from_buffer(&staging_buffer, 0);
         memory.generate_mipmaps();
 
         let image_index = uniform.add(memory.add_view());

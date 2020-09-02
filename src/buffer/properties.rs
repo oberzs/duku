@@ -5,13 +5,12 @@
 
 use crate::vk;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum BufferUsage {
     Vertex,
     Index,
     Uniform,
     TransferSrc,
-    TransferDst,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -21,17 +20,12 @@ pub(crate) enum BufferAccess {
 }
 
 impl BufferUsage {
-    pub(crate) fn combine(usages: &[Self]) -> vk::BufferUsageFlags {
-        usages.iter().fold(0, |acc, usage| acc | usage.flag())
-    }
-
     pub(crate) const fn flag(&self) -> vk::BufferUsageFlags {
         match *self {
             Self::Vertex => vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
             Self::Index => vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
             Self::Uniform => vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             Self::TransferSrc => vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-            Self::TransferDst => vk::BUFFER_USAGE_TRANSFER_DST_BIT,
         }
     }
 }

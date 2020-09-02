@@ -8,7 +8,7 @@ use std::ptr;
 use std::rc::Rc;
 
 use super::MaterialData;
-use crate::buffer::DynamicBuffer;
+use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::image::ImageLayout;
 use crate::image::WorldData;
@@ -162,7 +162,7 @@ impl ShaderLayout {
         }
     }
 
-    pub(crate) fn world_set(&self, buffer: &DynamicBuffer<WorldData>) -> Descriptor {
+    pub(crate) fn world_set(&self, buffer: &Buffer<WorldData>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.world_layout, self.descriptor_pool);
@@ -170,7 +170,7 @@ impl ShaderLayout {
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
             offset: 0,
-            range: buffer.bytes(),
+            range: buffer.size() as u64,
         }];
         let write = [vk::WriteDescriptorSet {
             s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -190,7 +190,7 @@ impl ShaderLayout {
         Descriptor(0, set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &DynamicBuffer<MaterialData>) -> Descriptor {
+    pub(crate) fn material_set(&self, buffer: &Buffer<MaterialData>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.material_layout, self.descriptor_pool);
@@ -198,7 +198,7 @@ impl ShaderLayout {
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
             offset: 0,
-            range: buffer.bytes(),
+            range: buffer.size() as u64,
         }];
         let write = [vk::WriteDescriptorSet {
             s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

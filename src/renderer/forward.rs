@@ -122,7 +122,7 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        framebuffer.world_buffer().update_data(&[WorldData {
+        framebuffer.update_world(WorldData {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             bias: target.bias,
@@ -131,12 +131,12 @@ impl ForwardRenderer {
             world_matrix: camera.matrix(),
             lights,
             pcf,
-        }]);
+        });
 
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
         cmd.set_view(framebuffer.width(), framebuffer.height());
-        cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
+        cmd.bind_descriptor(shader_layout, framebuffer.world());
 
         // skybox rendering
         if target.skybox {
@@ -328,7 +328,7 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.world_buffer().update_data(&[WorldData {
+            framebuffer.update_world(WorldData {
                 light_matrices: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 lights: [Default::default(); 4],
@@ -337,12 +337,12 @@ impl ForwardRenderer {
                 bias: 0.0,
                 time: 0.0,
                 pcf: 0.0,
-            }]);
+            });
 
             // do render pass
             cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
             cmd.set_view(framebuffer.width(), framebuffer.height());
-            cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
+            cmd.bind_descriptor(shader_layout, framebuffer.world());
             cmd.bind_shader(&self.shadow_shader);
 
             for s_order in &target.orders_by_shader {

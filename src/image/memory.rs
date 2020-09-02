@@ -12,7 +12,7 @@ use super::ImageLayout;
 use super::ImageMips;
 use super::ImageUsage;
 use super::Msaa;
-use crate::buffer::BufferMemory;
+use crate::buffer::Buffer;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::vk;
@@ -143,7 +143,7 @@ impl ImageMemory {
         view
     }
 
-    pub(crate) fn copy_from_memory(&self, memory: &BufferMemory, layer: u32) {
+    pub(crate) fn copy_from_buffer(&self, buffer: &Buffer<u8>, layer: u32) {
         debug_assert!(layer < self.layer_count, "layer out of bounds");
 
         self.device.do_commands(|cmd| {
@@ -166,7 +166,7 @@ impl ImageMemory {
                 },
             };
 
-            cmd.copy_buffer_to_image(memory.handle(), self.handle, region);
+            cmd.copy_buffer_to_image(buffer.handle(), self.handle, region);
         });
     }
 

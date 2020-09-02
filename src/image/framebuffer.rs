@@ -13,8 +13,8 @@ use super::ImageLayout;
 use super::ImageMemory;
 use super::ImageMemoryOptions;
 use super::ImageUsage;
+use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
-use crate::buffer::DynamicBuffer;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::image::Msaa;
@@ -41,7 +41,7 @@ pub struct Framebuffer {
     updater: Sender<(Index, FramebufferData)>,
 }
 
-// GPU data storage for a framebuffer
+// data storage for a framebuffer
 pub(crate) struct CoreFramebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
@@ -50,8 +50,10 @@ pub(crate) struct CoreFramebuffer {
     texture_image: Option<ImageMemory>,
     texture_index: Option<i32>,
 
+    // resources needed for each
+    // framebuffer in rendering
     world_descriptor: Descriptor,
-    world_buffer: DynamicBuffer<WorldData>,
+    world_buffer: Buffer<WorldData>,
 
     msaa: Msaa,
     width: u32,
@@ -160,7 +162,7 @@ impl CoreFramebuffer {
 
                 let handle = device.create_framebuffer(&info);
 
-                let world_buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
+                let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
                 let world_descriptor = shader_layout.world_set(&world_buffer);
 
                 Self {
@@ -229,7 +231,7 @@ impl CoreFramebuffer {
 
         let handle = device.create_framebuffer(&info);
 
-        let world_buffer = DynamicBuffer::new(device, BufferUsage::Uniform, 1);
+        let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
         let mut texture_image = ImageMemory::new(
@@ -402,11 +404,11 @@ impl CoreFramebuffer {
         self.texture_index.expect("bad framebuffer")
     }
 
-    pub(crate) const fn world_buffer(&self) -> &DynamicBuffer<WorldData> {
-        &self.world_buffer
+    pub(crate) fn update_world(&self, data: WorldData) {
+        self.world_buffer.copy_from_data(&[data]);
     }
 
-    pub(crate) const fn world_descriptor(&self) -> Descriptor {
+    pub(crate) const fn world(&self) -> Descriptor {
         self.world_descriptor
     }
 }

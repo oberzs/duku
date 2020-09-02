@@ -235,7 +235,7 @@ impl Ui {
         // update world uniform
         let world_matrix = self.camera.matrix();
         let camera_position = self.camera.transform.position;
-        framebuffer.world_buffer().update_data(&[WorldData {
+        framebuffer.update_world(WorldData {
             light_matrices: [Matrix4::identity(); 4],
             lights: [Default::default(); 4],
             cascade_splits: [0.0; 4],
@@ -244,7 +244,7 @@ impl Ui {
             pcf: 0.0,
             camera_position,
             world_matrix,
-        }]);
+        });
 
         // begin render pass
         cmd.begin_render_pass(framebuffer, [0.0, 0.0, 0.0, 0.0]);
@@ -252,7 +252,7 @@ impl Ui {
         cmd.set_line_width(1.0);
 
         // bind storage
-        cmd.bind_descriptor(shader_layout, framebuffer.world_descriptor());
+        cmd.bind_descriptor(shader_layout, framebuffer.world());
         cmd.bind_shader(&self.shader);
 
         // render mesh

@@ -8,8 +8,8 @@ mod vertex;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
+use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
-use crate::buffer::DynamicBuffer;
 use crate::color::Color;
 use crate::device::Device;
 use crate::math::Vector2;
@@ -35,8 +35,8 @@ pub struct Mesh {
 
 // GPU data storage for a mesh
 pub(crate) struct CoreMesh {
-    vertex_buffer: DynamicBuffer<Vertex>,
-    index_buffer: DynamicBuffer<u16>,
+    vertex_buffer: Buffer<Vertex>,
+    index_buffer: Buffer<u16>,
 }
 
 pub(crate) struct MeshData {
@@ -134,8 +134,8 @@ impl Mesh {
 
 impl CoreMesh {
     pub(crate) fn new(device: &Rc<Device>) -> Self {
-        let vertex_buffer = DynamicBuffer::new(device, BufferUsage::Vertex, 1);
-        let index_buffer = DynamicBuffer::new(device, BufferUsage::Index, 3);
+        let vertex_buffer = Buffer::dynamic(device, BufferUsage::Vertex, 1);
+        let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
 
         Self {
             vertex_buffer,
@@ -168,8 +168,8 @@ impl CoreMesh {
             self.index_buffer.resize(data.indices.len());
         }
 
-        self.vertex_buffer.update_data(&vertices);
-        self.index_buffer.update_data(&data.indices);
+        self.vertex_buffer.copy_from_data(&vertices);
+        self.index_buffer.copy_from_data(&data.indices);
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {

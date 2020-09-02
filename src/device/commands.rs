@@ -303,17 +303,6 @@ impl Commands {
         }
     }
 
-    pub(crate) fn copy_buffer(&self, src: vk::Buffer, dst: vk::Buffer, size: usize) {
-        let region = [vk::BufferCopy {
-            src_offset: 0,
-            dst_offset: 0,
-            size: size as u64,
-        }];
-        unsafe {
-            vk::cmd_copy_buffer(self.buffer.get(), src, dst, 1, region.as_ptr());
-        }
-    }
-
     pub(crate) fn copy_buffer_to_image(
         &self,
         src: vk::Buffer,
