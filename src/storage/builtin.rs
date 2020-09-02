@@ -23,9 +23,9 @@ use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
-use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 
 #[derive(Debug)]
@@ -54,13 +54,13 @@ impl Builtins {
         storage: &mut Storage,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
-        uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
     ) -> Result<Self> {
         // textures
         let white_texture = {
             let tex = CoreTexture::new(
                 device,
-                uniform,
+                shader_images,
                 vec![255, 255, 255, 255],
                 1,
                 1,
@@ -168,7 +168,9 @@ impl Builtins {
 
         // fonts
         let fira_font = {
-            let (index, _) = storage.fonts.add(CoreFont::fira_mono(device, uniform));
+            let (index, _) = storage
+                .fonts
+                .add(CoreFont::fira_mono(device, shader_images));
             Font::new(index)
         };
 

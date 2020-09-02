@@ -35,7 +35,6 @@ use crate::image::FramebufferData;
 use crate::image::FramebufferOptions;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
-use crate::image::WorldData;
 use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -43,9 +42,10 @@ use crate::math::Vector4;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshData;
 use crate::pipeline::CoreShader;
-use crate::pipeline::ImageUniform;
-use crate::pipeline::PushConstants;
+use crate::pipeline::ShaderConstants;
+use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderWorld;
 use crate::renderer::Camera;
 use crate::storage::Storage;
 
@@ -72,7 +72,7 @@ impl Ui {
     pub(crate) fn new(
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         storage: &mut Storage,
         width: u32,
         height: u32,
@@ -128,7 +128,7 @@ impl Ui {
             let ui_texture = fonts.build_alpha8_texture();
             CoreTexture::new(
                 device,
-                image_uniform,
+                shader_images,
                 ui_texture.data.to_vec(),
                 ui_texture.width,
                 ui_texture.height,
@@ -139,7 +139,7 @@ impl Ui {
         let core_framebuffer = CoreFramebuffer::new(
             device,
             shader_layout,
-            image_uniform,
+            shader_images,
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
                 msaa: Msaa::Disabled,
@@ -235,7 +235,7 @@ impl Ui {
         // update world uniform
         let world_matrix = self.camera.matrix();
         let camera_position = self.camera.transform.position;
-        framebuffer.update_world(WorldData {
+        framebuffer.update_world(ShaderWorld {
             light_matrices: [Matrix4::identity(); 4],
             lights: [Default::default(); 4],
             cascade_splits: [0.0; 4],
@@ -258,7 +258,7 @@ impl Ui {
         // render mesh
         cmd.push_constants(
             shader_layout,
-            PushConstants {
+            ShaderConstants {
                 model_matrix: Matrix4::identity(),
                 sampler_index: 0,
             },
@@ -315,7 +315,7 @@ impl Ui {
     pub(crate) fn resize(
         &mut self,
         storage: &mut Storage,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         width: u32,
         height: u32,
     ) {
@@ -327,7 +327,7 @@ impl Ui {
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(image_uniform, FramebufferData { width, height });
+            .update(shader_images, FramebufferData { width, height });
     }
 
     pub(crate) const fn drawn(&self) -> bool {

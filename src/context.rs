@@ -25,9 +25,9 @@ use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
-use crate::pipeline::ImageUniform;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::quality::Quality;
 use crate::quality::QualityOptions;
@@ -68,7 +68,7 @@ pub struct Context {
 
     // Vulkan
     window_framebuffers: Vec<CoreFramebuffer>,
-    image_uniform: ImageUniform,
+    shader_images: ShaderImages,
     shader_layout: ShaderLayout,
     swapchain: Swapchain,
     device: Rc<Device>,
@@ -137,7 +137,7 @@ impl Context {
 
         // setup shader stuff
         let shader_layout = ShaderLayout::new(&device);
-        let mut image_uniform = ImageUniform::new(&device, &shader_layout, anisotropy);
+        let mut shader_images = ShaderImages::new(&device, &shader_layout, anisotropy);
 
         // setup framebuffers
         let window_framebuffers =
@@ -150,7 +150,7 @@ impl Context {
             &mut storage,
             &window_framebuffers[0],
             &shader_layout,
-            &mut image_uniform,
+            &mut shader_images,
         )?;
         let mut skybox = Cubemap::new(
             &device,
@@ -165,13 +165,13 @@ impl Context {
                 right: vec![255, 255, 255, 255],
             },
         );
-        image_uniform.set_skybox(skybox.add_view());
+        shader_images.set_skybox(skybox.add_view());
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
             &device,
             &shader_layout,
-            &mut image_uniform,
+            &mut shader_images,
             shadow_map_size,
             pcf,
         );
@@ -188,7 +188,7 @@ impl Context {
             frame_count: 0,
             window_framebuffers,
             forward_renderer,
-            image_uniform,
+            shader_images,
             shader_layout,
             storage,
             swapchain,
@@ -234,7 +234,7 @@ impl Context {
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
-            ui.resize(&mut self.storage, &mut self.image_uniform, width, height);
+            ui.resize(&mut self.storage, &mut self.shader_images, width, height);
         }
     }
 
@@ -307,7 +307,7 @@ impl Context {
             .collect::<Vec<_>>();
         let tex = CoreTexture::new(
             &self.device,
-            &mut self.image_uniform,
+            &mut self.shader_images,
             data,
             width,
             height,
@@ -352,7 +352,7 @@ impl Context {
         let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
             &self.device,
             &self.shader_layout,
-            &mut self.image_uniform,
+            &mut self.shader_images,
             FramebufferOptions {
                 attachment_formats: &[ImageFormat::Sbgra],
                 msaa: self.msaa,
@@ -392,8 +392,8 @@ impl Context {
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain);
-        self.storage.clean_unused(&mut self.image_uniform);
-        self.storage.update_if_needed(&mut self.image_uniform);
+        self.storage.clean_unused(&mut self.shader_images);
+        self.storage.update_if_needed(&mut self.shader_images);
 
         // hot-reload shaders
         #[cfg(feature = "glsl")]
@@ -417,10 +417,10 @@ impl Context {
             }
         }
 
-        self.image_uniform.update_if_needed();
+        self.shader_images.update_if_needed();
         self.device
             .commands()
-            .bind_descriptor(&self.shader_layout, self.image_uniform.descriptor());
+            .bind_descriptor(&self.shader_layout, self.shader_images.descriptor());
 
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
@@ -529,7 +529,7 @@ impl Context {
         self.ui = Some(Ui::new(
             &self.device,
             &self.shader_layout,
-            &mut self.image_uniform,
+            &mut self.shader_images,
             &mut self.storage,
             width,
             height,
@@ -611,7 +611,7 @@ impl Context {
 
     #[cfg(feature = "png")]
     pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Texture> {
-        let tex = CoreTexture::from_png_bytes(&self.device, &mut self.image_uniform, bytes)?;
+        let tex = CoreTexture::from_png_bytes(&self.device, &mut self.shader_images, bytes)?;
         let shader_index = tex.shader_index();
         let (index, _) = self.storage.textures.add(tex);
         Ok(Texture::new(index, shader_index))
@@ -639,7 +639,7 @@ impl Context {
                 right: std::fs::read(sides.right)?,
             },
         )?;
-        self.image_uniform.set_skybox(cubemap.add_view());
+        self.shader_images.set_skybox(cubemap.add_view());
         self._skybox = cubemap;
         Ok(())
     }

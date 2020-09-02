@@ -16,7 +16,7 @@ use crate::image::TextureFilter;
 use crate::image::TextureWrap;
 use crate::vk;
 
-pub(crate) struct ImageUniform {
+pub(crate) struct ShaderImages {
     descriptor: Descriptor,
     sampler_combinations: Vec<Sampler>,
     images: Vec<Option<vk::ImageView>>,
@@ -25,7 +25,7 @@ pub(crate) struct ImageUniform {
     device: Rc<Device>,
 }
 
-impl ImageUniform {
+impl ShaderImages {
     pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
         let descriptor = layout.image_set();
 

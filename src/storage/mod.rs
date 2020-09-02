@@ -19,8 +19,8 @@ use crate::mesh::CoreMesh;
 use crate::mesh::MeshData;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
-use crate::pipeline::ImageUniform;
-use crate::pipeline::MaterialData;
+use crate::pipeline::ShaderImages;
+use crate::pipeline::ShaderMaterial;
 
 pub(crate) use builtin::Builtins;
 pub(crate) use index::Index;
@@ -30,7 +30,7 @@ pub(crate) struct Storage {
     pub(crate) fonts: Store<CoreFont>,
     pub(crate) textures: Store<CoreTexture>,
     pub(crate) framebuffers: Store<CoreFramebuffer, FramebufferData>,
-    pub(crate) materials: Store<CoreMaterial, MaterialData>,
+    pub(crate) materials: Store<CoreMaterial, ShaderMaterial>,
     pub(crate) meshes: Store<CoreMesh, MeshData>,
 }
 
@@ -53,26 +53,26 @@ impl Storage {
         }
     }
 
-    pub(crate) fn clean_unused(&mut self, image_uniform: &mut ImageUniform) {
+    pub(crate) fn clean_unused(&mut self, shader_images: &mut ShaderImages) {
         self.fonts.stored.retain(|i, _| i.count() > 1);
         self.meshes.stored.retain(|i, _| i.count() > 1);
         self.materials.stored.retain(|i, _| i.count() > 1);
         self.shaders.stored.retain(|i, _| i.count() > 1);
         self.framebuffers.stored.retain(|i, f| {
             if i.count() == 1 {
-                image_uniform.remove(f.shader_index());
+                shader_images.remove(f.shader_index());
             }
             i.count() > 1
         });
         self.textures.stored.retain(|i, t| {
             if i.count() == 1 {
-                image_uniform.remove(t.shader_index());
+                shader_images.remove(t.shader_index());
             }
             i.count() > 1
         });
     }
 
-    pub(crate) fn update_if_needed(&mut self, image_uniform: &mut ImageUniform) {
+    pub(crate) fn update_if_needed(&mut self, shader_images: &mut ShaderImages) {
         // update meshes
         for (i, data) in self.meshes.receiver.try_iter() {
             self.meshes
@@ -97,7 +97,7 @@ impl Storage {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(image_uniform, data);
+                .update(shader_images, data);
         }
     }
 }

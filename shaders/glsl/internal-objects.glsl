@@ -9,7 +9,7 @@ struct Light {
     vec4 color;
 };
 
-layout(set = 0, binding = 0) uniform WorldObject {
+layout(set = 0, binding = 0) uniform World {
     mat4 world_matrix;
     Light lights[4];
     vec3 camera_position;
@@ -20,7 +20,7 @@ layout(set = 0, binding = 0) uniform WorldObject {
     float pcf;
 } world;
 
-layout(set = 1, binding = 0) uniform MaterialObject {
+layout(set = 1, binding = 0) uniform Material {
     vec4 arg_1;
     vec4 arg_2;
     vec4 arg_3;

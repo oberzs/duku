@@ -16,13 +16,11 @@ use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::image::Msaa;
-use crate::math::Matrix4;
-use crate::math::Vector3;
-use crate::math::Vector4;
 use crate::pipeline::Descriptor;
-use crate::pipeline::ImageUniform;
 use crate::pipeline::RenderPass;
+use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderWorld;
 use crate::storage::Index;
 use crate::surface::Swapchain;
 use crate::vk;
@@ -50,7 +48,7 @@ pub(crate) struct CoreFramebuffer {
     // resources needed for each
     // framebuffer in rendering
     world_descriptor: Descriptor,
-    world_buffer: Buffer<WorldData>,
+    world_buffer: Buffer<ShaderWorld>,
 
     msaa: Msaa,
     width: u32,
@@ -62,27 +60,6 @@ pub(crate) struct CoreFramebuffer {
 pub(crate) struct FramebufferData {
     pub(crate) width: u32,
     pub(crate) height: u32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub(crate) struct WorldData {
-    pub(crate) world_matrix: Matrix4,
-    pub(crate) lights: [LightData; 4],
-    pub(crate) camera_position: Vector3,
-    pub(crate) time: f32,
-    pub(crate) light_matrices: [Matrix4; 4],
-    pub(crate) cascade_splits: [f32; 4],
-    pub(crate) bias: f32,
-    pub(crate) pcf: f32,
-}
-
-#[derive(Default, Copy, Clone)]
-#[repr(C)]
-pub(crate) struct LightData {
-    pub(crate) coords: Vector3,
-    pub(crate) light_type: i32,
-    pub(crate) color: Vector4,
 }
 
 pub(crate) struct FramebufferOptions<'formats> {
@@ -183,7 +160,7 @@ impl CoreFramebuffer {
     pub(crate) fn new(
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         options: FramebufferOptions<'_>,
     ) -> Self {
         let FramebufferOptions {
@@ -232,7 +209,7 @@ impl CoreFramebuffer {
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
         let mut shader_image = Image::shader(device, width, height);
-        let shader_index = image_uniform.add(shader_image.add_view());
+        let shader_index = shader_images.add(shader_image.add_view());
 
         // ready image layouts
         shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -260,7 +237,7 @@ impl CoreFramebuffer {
         }
     }
 
-    pub(crate) fn update(&mut self, image_uniform: &mut ImageUniform, data: FramebufferData) {
+    pub(crate) fn update(&mut self, shader_images: &mut ShaderImages, data: FramebufferData) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
@@ -300,10 +277,10 @@ impl CoreFramebuffer {
             height,
         };
 
-        image_uniform.remove(self.shader_index.expect("bad texture index"));
+        shader_images.remove(self.shader_index.expect("bad texture index"));
 
         let mut shader_image = Image::shader(&self.device, width, height);
-        let shader_index = image_uniform.add(shader_image.add_view());
+        let shader_index = shader_images.add(shader_image.add_view());
 
         // ready image layouts
         shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -375,7 +352,7 @@ impl CoreFramebuffer {
         self.shader_index.expect("bad framebuffer")
     }
 
-    pub(crate) fn update_world(&self, data: WorldData) {
+    pub(crate) fn update_world(&self, data: ShaderWorld) {
         self.world_buffer.copy_from_data(&[data]);
     }
 

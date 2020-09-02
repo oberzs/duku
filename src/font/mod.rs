@@ -16,7 +16,7 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::CoreMesh;
 use crate::mesh::MeshData;
-use crate::pipeline::ImageUniform;
+use crate::pipeline::ShaderImages;
 use crate::storage::Index;
 
 // user facing framebuffer data
@@ -47,14 +47,14 @@ impl Font {
 }
 
 impl CoreFont {
-    pub(crate) fn fira_mono(device: &Rc<Device>, uniform: &mut ImageUniform) -> Self {
+    pub(crate) fn fira_mono(device: &Rc<Device>, shader_images: &mut ShaderImages) -> Self {
         let atlas_width = fira_mono::ATLAS_WIDTH;
         let atlas_height = fira_mono::ATLAS_HEIGHT;
         let line_height = fira_mono::LINE_HEIGHT;
 
         let texture = CoreTexture::new(
             device,
-            uniform,
+            shader_images,
             fira_mono::DATA.to_vec(),
             atlas_width,
             atlas_height,

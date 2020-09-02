@@ -8,6 +8,7 @@ use std::sync::mpsc::Sender;
 
 use super::Descriptor;
 use super::ShaderLayout;
+use super::ShaderMaterial;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
@@ -30,30 +31,17 @@ pub struct Material {
 
     pub(crate) index: Index,
 
-    updater: Sender<(Index, MaterialData)>,
+    updater: Sender<(Index, ShaderMaterial)>,
 }
 
 // data storage for a material
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
-    buffer: Buffer<MaterialData>,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub(crate) struct MaterialData {
-    pub(crate) arg_1: Vector4,
-    pub(crate) arg_2: Vector4,
-    pub(crate) arg_3: Vector4,
-    pub(crate) arg_4: Vector4,
-    pub(crate) arg_5: Vector4,
-    pub(crate) arg_6: Vector4,
-    pub(crate) arg_7: Vector4,
-    pub(crate) arg_8: Vector4,
+    buffer: Buffer<ShaderMaterial>,
 }
 
 impl Material {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, MaterialData)>) -> Self {
+    pub(crate) fn new(index: Index, updater: Sender<(Index, ShaderMaterial)>) -> Self {
         Self {
             arg_1: Vector4::ZERO,
             arg_2: Vector4::ZERO,
@@ -87,7 +75,7 @@ impl Material {
     }
 
     pub fn update(&self) {
-        let data = MaterialData {
+        let data = ShaderMaterial {
             arg_1: self.arg_1,
             arg_2: self.arg_2,
             arg_3: self.arg_3,
@@ -111,7 +99,7 @@ impl CoreMaterial {
         Self { buffer, descriptor }
     }
 
-    pub(crate) fn update(&mut self, data: MaterialData) {
+    pub(crate) fn update(&mut self, data: ShaderMaterial) {
         self.buffer.copy_from_data(&[data]);
     }
 

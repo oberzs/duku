@@ -15,16 +15,16 @@ use crate::device::FRAMES_IN_FLIGHT;
 use crate::image::CoreFramebuffer;
 use crate::image::FramebufferOptions;
 use crate::image::Msaa;
-use crate::image::WorldData;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
-use crate::pipeline::ImageUniform;
-use crate::pipeline::PushConstants;
+use crate::pipeline::ShaderImages;
+use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderLayout;
+use crate::pipeline::ShaderWorld;
 use crate::storage::Storage;
 
 pub(crate) struct ForwardRenderer {
@@ -54,13 +54,13 @@ impl ForwardRenderer {
     pub(crate) fn new(
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         shadow_map_size: u32,
         pcf: Pcf,
     ) -> Self {
         let shadow_frames = [
-            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
-            ShadowMapSet::new(device, shader_layout, image_uniform, shadow_map_size),
+            ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
+            ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
         ];
 
         let shadow_shader = CoreShader::from_spirv_bytes(
@@ -114,14 +114,14 @@ impl ForwardRenderer {
         };
 
         let lights = [
-            target.lights[0].data(),
-            target.lights[1].data(),
-            target.lights[2].data(),
-            target.lights[3].data(),
+            target.lights[0].shader(),
+            target.lights[1].shader(),
+            target.lights[2].shader(),
+            target.lights[3].shader(),
         ];
 
         // update world uniform
-        framebuffer.update_world(WorldData {
+        framebuffer.update_world(ShaderWorld {
             cascade_splits: self.shadow_frames[current].cascades,
             light_matrices: self.shadow_frames[current].matrices,
             bias: target.bias,
@@ -201,7 +201,7 @@ impl ForwardRenderer {
         .as_matrix();
         cmd.push_constants(
             shader_layout,
-            PushConstants {
+            ShaderConstants {
                 sampler_index: 0,
                 model_matrix,
             },
@@ -252,7 +252,7 @@ impl ForwardRenderer {
 
                 cmd.push_constants(
                     shader_layout,
-                    PushConstants {
+                    ShaderConstants {
                         model_matrix: local_transform.as_matrix(),
                         sampler_index: 7,
                     },
@@ -323,7 +323,7 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.update_world(WorldData {
+            framebuffer.update_world(ShaderWorld {
                 light_matrices: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 lights: [Default::default(); 4],
@@ -359,7 +359,7 @@ impl ForwardRenderer {
 
         cmd.push_constants(
             shader_layout,
-            PushConstants {
+            ShaderConstants {
                 model_matrix: order.model,
                 sampler_index: order.sampler_index,
             },
@@ -373,14 +373,14 @@ impl ShadowMapSet {
     pub(crate) fn new(
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         map_size: u32,
     ) -> Self {
         let framebuffers = [
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
-            Self::shadow_framebuffer(device, shader_layout, image_uniform, map_size),
+            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
+            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
+            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
+            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
         ];
         let descriptor = shader_layout.shadow_map_set([
             framebuffers[0].stored_view(),
@@ -401,13 +401,13 @@ impl ShadowMapSet {
     fn shadow_framebuffer(
         device: &Rc<Device>,
         shader_layout: &ShaderLayout,
-        image_uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         size: u32,
     ) -> CoreFramebuffer {
         CoreFramebuffer::new(
             device,
             shader_layout,
-            image_uniform,
+            shader_images,
             FramebufferOptions {
                 attachment_formats: &[],
                 msaa: Msaa::Disabled,

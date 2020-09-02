@@ -7,12 +7,12 @@ use std::mem;
 use std::ptr;
 use std::rc::Rc;
 
-use super::MaterialData;
+use super::ShaderConstants;
+use super::ShaderMaterial;
+use super::ShaderWorld;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::image::ImageLayout;
-use crate::image::WorldData;
-use crate::math::Matrix4;
 use crate::vk;
 
 pub(crate) struct ShaderLayout {
@@ -23,13 +23,6 @@ pub(crate) struct ShaderLayout {
     shadow_map_layout: vk::DescriptorSetLayout,
     descriptor_pool: vk::DescriptorPool,
     device: Rc<Device>,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub(crate) struct PushConstants {
-    pub(crate) model_matrix: Matrix4,
-    pub(crate) sampler_index: i32,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -129,7 +122,7 @@ impl ShaderLayout {
         let push_constant = vk::PushConstantRange {
             stage_flags: vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
             offset: 0,
-            size: mem::size_of::<PushConstants>() as u32,
+            size: mem::size_of::<ShaderConstants>() as u32,
         };
 
         // pipeline layout
@@ -162,7 +155,7 @@ impl ShaderLayout {
         }
     }
 
-    pub(crate) fn world_set(&self, buffer: &Buffer<WorldData>) -> Descriptor {
+    pub(crate) fn world_set(&self, buffer: &Buffer<ShaderWorld>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.world_layout, self.descriptor_pool);
@@ -190,7 +183,7 @@ impl ShaderLayout {
         Descriptor(0, set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &Buffer<MaterialData>) -> Descriptor {
+    pub(crate) fn material_set(&self, buffer: &Buffer<ShaderMaterial>) -> Descriptor {
         let set = self
             .device
             .allocate_descriptor_set(self.material_layout, self.descriptor_pool);

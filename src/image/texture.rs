@@ -11,7 +11,7 @@ use super::ImageFormat;
 use super::ImageLayout;
 use crate::buffer::Buffer;
 use crate::device::Device;
-use crate::pipeline::ImageUniform;
+use crate::pipeline::ShaderImages;
 use crate::storage::Index;
 
 // user facing texture data
@@ -43,7 +43,7 @@ impl Texture {
 impl CoreTexture {
     pub(crate) fn new(
         device: &Rc<Device>,
-        uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         data: Vec<u8>,
         width: u32,
         height: u32,
@@ -68,7 +68,7 @@ impl CoreTexture {
         image.copy_from_buffer(&staging_buffer, 0);
         image.generate_mipmaps();
 
-        let shader_index = uniform.add(image.add_view());
+        let shader_index = shader_images.add(image.add_view());
 
         Self {
             _image: image,
@@ -79,7 +79,7 @@ impl CoreTexture {
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
         device: &Rc<Device>,
-        uniform: &mut ImageUniform,
+        shader_images: &mut ShaderImages,
         bytes: Vec<u8>,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
@@ -102,7 +102,7 @@ impl CoreTexture {
 
         Ok(Self::new(
             device,
-            uniform,
+            shader_images,
             data,
             info.width,
             info.height,

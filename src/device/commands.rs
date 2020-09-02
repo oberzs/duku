@@ -19,7 +19,7 @@ use crate::mesh::CoreMesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
-use crate::pipeline::PushConstants;
+use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderLayout;
 use crate::vk;
 
@@ -272,11 +272,11 @@ impl Commands {
         }
     }
 
-    pub(crate) fn push_constants(&self, layout: &ShaderLayout, constants: PushConstants) {
+    pub(crate) fn push_constants(&self, layout: &ShaderLayout, constants: ShaderConstants) {
         unsafe {
             let data: &[u8] = slice::from_raw_parts(
-                &constants as *const PushConstants as *const u8,
-                mem::size_of::<PushConstants>(),
+                &constants as *const ShaderConstants as *const u8,
+                mem::size_of::<ShaderConstants>(),
             );
 
             vk::cmd_push_constants(
