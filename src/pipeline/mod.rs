@@ -13,14 +13,14 @@ mod sampler;
 mod shader;
 mod uniform;
 
+use properties::Clear;
 use properties::CullMode;
 use properties::DepthMode;
 use properties::ShapeMode;
+use properties::Store;
 use sampler::Sampler;
-use sampler::SamplerOptions;
 
 pub(crate) use attachment::Attachment;
-pub(crate) use attachment::AttachmentOptions;
 pub(crate) use images::ShaderImages;
 pub(crate) use layout::Descriptor;
 pub(crate) use layout::ShaderLayout;
@@ -33,4 +33,5 @@ pub(crate) use uniform::ShaderMaterial;
 pub(crate) use uniform::ShaderWorld;
 
 pub use material::Material;
+pub use material::MaterialBuilder;
 pub use shader::Shader;

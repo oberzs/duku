@@ -34,6 +34,10 @@ pub struct Material {
     updater: Sender<(Index, ShaderMaterial)>,
 }
 
+pub struct MaterialBuilder {
+    material: Material,
+}
+
 // data storage for a material
 pub(crate) struct CoreMaterial {
     descriptor: Descriptor,
@@ -67,13 +71,6 @@ impl Material {
         self.arg_1.w = texture.shader_index as f32;
     }
 
-    pub fn set_font_color(&mut self, color: impl Into<Color>) {
-        let c = color.into().to_rgb_norm_vec();
-        self.arg_1.x = c.x;
-        self.arg_1.y = c.y;
-        self.arg_1.z = c.z;
-    }
-
     pub fn update(&self) {
         let data = ShaderMaterial {
             arg_1: self.arg_1,
@@ -88,6 +85,30 @@ impl Material {
         self.updater
             .send((self.index.clone(), data))
             .expect("bad receiver");
+    }
+}
+
+impl MaterialBuilder {
+    pub(crate) fn new(material: Material) -> Self {
+        Self { material }
+    }
+
+    pub fn phong_color<C: Into<Color>>(mut self, color: C) -> Self {
+        let c = color.into().to_rgb_norm_vec();
+        self.material.arg_1.x = c.x;
+        self.material.arg_1.y = c.y;
+        self.material.arg_1.z = c.z;
+        self
+    }
+
+    pub fn phong_texture(mut self, texture: &Texture) -> Self {
+        self.material.arg_1.w = texture.shader_index as f32;
+        self
+    }
+
+    pub fn build(self) -> Material {
+        self.material.update();
+        self.material
     }
 }
 

@@ -4,19 +4,15 @@
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs
 
-use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(
-        Default::default(),
-        WindowOptions {
-            title: "Draw-it example: UI",
-            resizable: true,
-            ..Default::default()
-        },
-    )?;
+    let (mut context, mut window) = Context::builder()
+        .build_window(500, 500)
+        .title("Draw-it example: UI")
+        .resizable()
+        .build()?;
 
     let mut show_demo = true;
 

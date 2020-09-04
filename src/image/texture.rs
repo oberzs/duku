@@ -21,6 +21,13 @@ pub struct Texture {
     pub(crate) shader_index: i32,
 }
 
+// pub struct Texture {
+//     id: u32,
+//     updater: //bla bla bla
+// }
+
+// pub struct TextureRef(u32);
+
 // data storage for a texture
 pub(crate) struct CoreTexture {
     _image: Image,

@@ -31,6 +31,18 @@ pub(crate) enum DepthMode {
     Disabled,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum Store {
+    Enabled,
+    Disabled,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum Clear {
+    Enabled,
+    Disabled,
+}
+
 impl CullMode {
     pub(crate) const fn flag(&self) -> vk::CullModeFlags {
         match *self {
@@ -77,6 +89,24 @@ impl DepthMode {
     }
 }
 
+impl Store {
+    pub(crate) const fn flag(&self) -> vk::AttachmentStoreOp {
+        match *self {
+            Self::Enabled => vk::ATTACHMENT_STORE_OP_STORE,
+            Self::Disabled => vk::ATTACHMENT_STORE_OP_DONT_CARE,
+        }
+    }
+}
+
+impl Clear {
+    pub(crate) const fn flag(&self) -> vk::AttachmentLoadOp {
+        match *self {
+            Self::Enabled => vk::ATTACHMENT_LOAD_OP_CLEAR,
+            Self::Disabled => vk::ATTACHMENT_LOAD_OP_DONT_CARE,
+        }
+    }
+}
+
 impl TryFrom<u8> for CullMode {
     type Error = error::Error;
 
@@ -113,6 +143,26 @@ impl TryFrom<u8> for DepthMode {
             2 => Ok(Self::TestAndWrite),
             3 => Ok(Self::Disabled),
             _ => Err(error::Error::InvalidSpirv),
+        }
+    }
+}
+
+impl From<bool> for Store {
+    fn from(b: bool) -> Self {
+        if b {
+            Self::Enabled
+        } else {
+            Self::Disabled
+        }
+    }
+}
+
+impl From<bool> for Clear {
+    fn from(b: bool) -> Self {
+        if b {
+            Self::Enabled
+        } else {
+            Self::Disabled
         }
     }
 }

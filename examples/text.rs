@@ -3,33 +3,17 @@
 
 // example that draws text
 
-use draw_it::window::WindowOptions;
 use draw_it::Color;
 use draw_it::Context;
-use draw_it::ContextOptions;
-use draw_it::Quality;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(
-        ContextOptions {
-            quality: Quality::Low,
-            ..Default::default()
-        },
-        WindowOptions {
-            title: "Draw-it example: Text",
-            width: 600,
-            height: 400,
-            resizable: true,
-        },
-    )?;
-
-    let mut material_1 = context.create_material();
-    material_1.set_font_color(Color::RED);
-    material_1.update();
-    let mut material_2 = context.create_material();
-    material_2.set_font_color(Color::BLUE);
-    material_2.update();
+    let (mut context, mut window) = Context::builder()
+        .low_quality()
+        .build_window(600, 400)
+        .title("Draw-it example: Text")
+        .resizable()
+        .build()?;
 
     let left = -290.0;
 

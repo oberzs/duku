@@ -7,7 +7,8 @@ use std::ptr;
 use std::rc::Rc;
 
 use super::Attachment;
-use super::AttachmentOptions;
+use super::Clear;
+use super::Store;
 use crate::device::Device;
 use crate::image::ImageFormat;
 use crate::image::ImageLayout;
@@ -54,14 +55,14 @@ impl RenderPass {
                 ImageLayout::Depth
             };
 
-            let a = Attachment::new(AttachmentOptions {
-                format: ImageFormat::Depth,
-                store: attachment_formats.len() == 1,
-                index: attachments.len() as u32,
-                clear: true,
-                msaa,
+            let a = Attachment::new(
+                attachments.len() as u32,
                 layout,
-            });
+                ImageFormat::Depth,
+                msaa,
+                Clear::Enabled,
+                Store::from(attachment_formats.len() == 1),
+            );
 
             depth_attachment = Some(a.reference());
             attachment_descriptions.push(a.description());
@@ -81,14 +82,14 @@ impl RenderPass {
                 ImageLayout::ShaderColor
             };
 
-            let a = Attachment::new(AttachmentOptions {
-                index: attachments.len() as u32,
-                msaa: Msaa::Disabled,
-                clear: !multisampled,
-                format: *format,
-                store: true,
+            let a = Attachment::new(
+                attachments.len() as u32,
                 layout,
-            });
+                *format,
+                Msaa::Disabled,
+                Clear::from(!multisampled),
+                Store::Enabled,
+            );
 
             if multisampled {
                 resolve_attachments.push(a.reference());
@@ -100,14 +101,14 @@ impl RenderPass {
 
             // color multisampled attachment
             if multisampled {
-                let a_msaa = Attachment::new(AttachmentOptions {
-                    index: attachments.len() as u32,
-                    format: *format,
-                    layout: ImageLayout::Color,
-                    clear: true,
-                    store: false,
+                let a_msaa = Attachment::new(
+                    attachments.len() as u32,
+                    ImageLayout::Color,
+                    *format,
                     msaa,
-                });
+                    Clear::Enabled,
+                    Store::Disabled,
+                );
 
                 color_attachments.push(a_msaa.reference());
                 attachment_descriptions.push(a_msaa.description());

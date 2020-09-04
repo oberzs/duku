@@ -4,7 +4,6 @@
 // example with dynamicly changing mesh vertices
 
 use draw_it::window::Controller;
-use draw_it::window::WindowOptions;
 use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
@@ -14,20 +13,14 @@ use std::time::Instant;
 
 fn main() -> Result<()> {
     let square_size = 10;
-    let (width, height) = (720, 640);
 
-    let (mut context, mut window) = Context::with_window(
-        Default::default(),
-        WindowOptions {
-            title: "Draw-it example: Dynamic",
-            width,
-            height,
-            ..Default::default()
-        },
-    )?;
+    let (mut context, mut window) = Context::builder()
+        .build_window(720, 640)
+        .title("Draw-it example: Dynamic")
+        .build()?;
 
     let mut controller = Controller::fly();
-    let mut camera = Camera::perspective(width as f32, height as f32, 90);
+    let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_backward(10.0);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 

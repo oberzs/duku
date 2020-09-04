@@ -53,13 +53,12 @@
 
 ```rust
 use draw_it::Color;
-use draw_it::window::Window;
 use draw_it::Camera;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(Default::default(), Default::default())?;
+    let (mut context, mut window) = Context::builder().build_window(500, 500).build()?;
 
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_by([2.0, 1.5, 2.0]);

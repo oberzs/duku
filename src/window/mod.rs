@@ -42,14 +42,6 @@ pub struct Window {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct WindowOptions<'title> {
-    pub title: &'title str,
-    pub resizable: bool,
-    pub width: u32,
-    pub height: u32,
-}
-
-#[derive(Debug, Copy, Clone)]
 pub enum Event {
     Resize(u32, u32),
 }
@@ -240,16 +232,5 @@ impl Window {
         self.keys_typed.clear();
         self.mouse_delta = Vector2::new(0.0, 0.0);
         self.scroll_delta = Vector2::new(0.0, 0.0);
-    }
-}
-
-impl Default for WindowOptions<'_> {
-    fn default() -> Self {
-        Self {
-            title: "Draw-it window",
-            width: 500,
-            height: 500,
-            resizable: false,
-        }
     }
 }

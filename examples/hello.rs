@@ -3,20 +3,16 @@
 
 // "Hello, World!" example to open a transparent rainbow window
 
-use draw_it::window::WindowOptions;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(
-        Default::default(),
-        WindowOptions {
-            title: "Draw-it example: Hello",
-            resizable: true,
-            ..Default::default()
-        },
-    )?;
+    let (mut context, mut window) = Context::builder()
+        .build_window(500, 500)
+        .title("Draw-it example: Hello")
+        .resizable()
+        .build()?;
 
     let mut hue = 0;
 

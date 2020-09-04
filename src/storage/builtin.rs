@@ -33,7 +33,6 @@ use crate::pipeline::ShaderLayout;
 pub struct Builtins {
     pub white_texture: Texture,
     pub white_material: Material,
-    pub font_material: Material,
     pub surface_mesh: Mesh,
     pub quad_mesh: Mesh,
     pub cube_mesh: Mesh,
@@ -76,14 +75,6 @@ impl Builtins {
             let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
             let mut mat = Material::new(index, updater);
             mat.set_phong_color([255, 255, 255]);
-            mat.update();
-            mat
-        };
-
-        let font_material = {
-            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
-            let mut mat = Material::new(index, updater);
-            mat.set_font_color([0, 0, 0]);
             mat.update();
             mat
         };
@@ -177,7 +168,6 @@ impl Builtins {
         Ok(Self {
             white_texture,
             white_material,
-            font_material,
             surface_mesh,
             quad_mesh,
             cube_mesh,

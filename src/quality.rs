@@ -1,3 +1,8 @@
+// Oliver Berzs
+// https://github.com/OllieBerzs/draw-it
+
+// Quality - various renderer quality settings
+
 use crate::image::Msaa;
 use crate::renderer::Pcf;
 
@@ -6,11 +11,11 @@ pub enum Quality {
     Low,
     Medium,
     High,
-    Custom(QualityOptions),
+    Custom(QualitySettings),
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct QualityOptions {
+pub struct QualitySettings {
     pub shadow_map_size: u32,
     pub anisotropy: f32,
     pub msaa: Msaa,
@@ -18,22 +23,22 @@ pub struct QualityOptions {
 }
 
 impl Quality {
-    pub(crate) const fn options(&self) -> QualityOptions {
+    pub(crate) const fn settings(&self) -> QualitySettings {
         match *self {
             Self::Custom(o) => o,
-            Self::Low => QualityOptions {
+            Self::Low => QualitySettings {
                 shadow_map_size: 1024,
                 anisotropy: 1.0,
                 msaa: Msaa::Disabled,
                 pcf: Pcf::Disabled,
             },
-            Self::Medium => QualityOptions {
+            Self::Medium => QualitySettings {
                 shadow_map_size: 2048,
                 anisotropy: 4.0,
                 msaa: Msaa::X4,
                 pcf: Pcf::X16,
             },
-            Self::High => QualityOptions {
+            Self::High => QualitySettings {
                 shadow_map_size: 4096,
                 anisotropy: 16.0,
                 msaa: Msaa::X4,

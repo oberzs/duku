@@ -52,7 +52,6 @@ mod glsl;
 // normal exports
 pub use color::Color;
 pub use context::Context;
-pub use context::ContextOptions;
 pub use device::Stats;
 pub use error::Result;
 pub use image::CubemapSides;
@@ -69,7 +68,6 @@ pub use mesh::Mesh;
 pub use pipeline::Material;
 pub use pipeline::Shader;
 pub use quality::Quality;
-pub use quality::QualityOptions;
 pub use renderer::Camera;
 pub use renderer::Light;
 pub use renderer::LightType;

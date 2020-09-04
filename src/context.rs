@@ -26,11 +26,12 @@ use crate::mesh::Mesh;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
 use crate::pipeline::Material;
+use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::quality::Quality;
-use crate::quality::QualityOptions;
+use crate::quality::QualitySettings;
 use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
@@ -48,8 +49,6 @@ use crate::ui::UiFrame;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
-#[cfg(feature = "window")]
-use crate::window::WindowOptions;
 
 const FPS_SAMPLE_COUNT: usize = 64;
 
@@ -99,10 +98,21 @@ pub struct Context {
     event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct ContextOptions {
-    pub quality: Quality,
-    pub vsync: VSync,
+#[derive(Debug, Clone)]
+pub struct ContextBuilder {
+    quality: Quality,
+    vsync: VSync,
+    window: Option<WindowHandle>,
+}
+
+#[cfg(feature = "window")]
+#[derive(Debug, Clone)]
+pub struct WindowBuilder {
+    context: ContextBuilder,
+    title: String,
+    resizable: bool,
+    width: u32,
+    height: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -112,17 +122,20 @@ enum RenderStage {
 }
 
 impl Context {
-    pub fn new(window: WindowHandle, options: ContextOptions) -> Result<Self> {
+    pub fn builder() -> ContextBuilder {
+        ContextBuilder::default()
+    }
+
+    fn new(window: WindowHandle, quality: Quality, vsync: VSync) -> Result<Self> {
         let instance = Rc::new(Instance::new());
         let surface = Surface::new(&instance, window);
 
-        let QualityOptions {
+        let QualitySettings {
             anisotropy,
             msaa,
             pcf,
             shadow_map_size,
-        } = options.quality.options();
-        let vsync = options.vsync;
+        } = quality.settings();
 
         // setup device stuff
         let mut gpu_properties_list = instance.gpu_properties(&surface);
@@ -351,6 +364,10 @@ impl Context {
         Material::new(index, updater)
     }
 
+    pub fn build_material(&mut self) -> MaterialBuilder {
+        MaterialBuilder::new(self.create_material())
+    }
+
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Framebuffer {
         let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
             &self.device,
@@ -441,76 +458,6 @@ impl Context {
         self.frame_count += 1;
         self.fps =
             (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
-    }
-
-    #[cfg(feature = "window")]
-    pub fn with_window(
-        c_options: ContextOptions,
-        w_options: WindowOptions<'_>,
-    ) -> Result<(Self, Window)> {
-        use glfw::ClientApiHint;
-        use glfw::WindowHint;
-        use glfw::WindowMode;
-
-        use crate::error::Error;
-
-        let WindowOptions {
-            title,
-            width,
-            height,
-            resizable,
-        } = w_options;
-
-        // create glfw window
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).map_err(|_| Error::InternalGlfw)?;
-
-        glfw.window_hint(WindowHint::Resizable(resizable));
-        glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-
-        let (mut window, event_receiver) = glfw
-            .create_window(width, height, title, WindowMode::Windowed)
-            .expect("bad window");
-
-        window.set_key_polling(true);
-        window.set_scroll_polling(true);
-        window.set_size_polling(true);
-        window.set_cursor_pos_polling(true);
-        window.set_mouse_button_polling(true);
-        window.set_char_polling(true);
-
-        // create context
-        #[cfg(target_os = "windows")]
-        let handle = WindowHandle {
-            hwnd: window.get_win32_window(),
-            width,
-            height,
-        };
-
-        #[cfg(target_os = "linux")]
-        let handle = WindowHandle {
-            xlib_window: window.get_x11_window(),
-            xlib_display: glfw.get_x11_display(),
-            width,
-            height,
-        };
-
-        #[cfg(target_os = "macos")]
-        let handle = WindowHandle {
-            ns_window: window.get_cocoa_window(),
-            width,
-            height,
-        };
-
-        let mut context = Self::new(handle, c_options)?;
-
-        // attach glfw to context
-        context.attach_glfw(glfw, event_receiver);
-
-        // create ui renderer
-        #[cfg(feature = "ui")]
-        context.attach_ui(width, height);
-
-        Ok((context, Window::new(window)))
     }
 
     #[cfg(feature = "window")]
@@ -665,12 +612,141 @@ impl Drop for Context {
     }
 }
 
-impl Default for ContextOptions {
+impl ContextBuilder {
+    pub fn vsync(mut self, vsync: VSync) -> Self {
+        self.vsync = vsync;
+        self
+    }
+
+    pub fn no_vsync(mut self) -> Self {
+        self.vsync = VSync::Off;
+        self
+    }
+
+    pub fn quality(mut self, quality: Quality) -> Self {
+        self.quality = quality;
+        self
+    }
+
+    pub fn low_quality(mut self) -> Self {
+        self.quality = Quality::Low;
+        self
+    }
+
+    pub fn medium_quality(mut self) -> Self {
+        self.quality = Quality::Medium;
+        self
+    }
+
+    pub fn high_quality(mut self) -> Self {
+        self.quality = Quality::High;
+        self
+    }
+
+    pub fn attach_window(mut self, window: WindowHandle) -> Self {
+        self.window = Some(window);
+        self
+    }
+
+    pub fn build(self) -> Result<Context> {
+        let window = match self.window {
+            Some(w) => w,
+            None => unimplemented!(),
+        };
+        Context::new(window, self.quality, self.vsync)
+    }
+
+    #[cfg(feature = "window")]
+    pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {
+        WindowBuilder {
+            context: self,
+            title: "".to_string(),
+            resizable: false,
+            width,
+            height,
+        }
+    }
+}
+
+impl Default for ContextBuilder {
     fn default() -> Self {
         Self {
+            window: None,
             quality: Quality::Medium,
             vsync: VSync::On,
         }
+    }
+}
+
+#[cfg(feature = "window")]
+impl WindowBuilder {
+    pub fn resizable(mut self) -> Self {
+        self.resizable = true;
+        self
+    }
+
+    pub fn title<S: AsRef<str>>(mut self, title: S) -> Self {
+        self.title = title.as_ref().to_string();
+        self
+    }
+
+    pub fn build(self) -> Result<(Context, Window)> {
+        use glfw::ClientApiHint;
+        use glfw::WindowHint;
+        use glfw::WindowMode;
+
+        use crate::error::Error;
+
+        // create glfw window
+        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).map_err(|_| Error::InternalGlfw)?;
+
+        glfw.window_hint(WindowHint::Resizable(self.resizable));
+        glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
+
+        let (mut window, event_receiver) = glfw
+            .create_window(self.width, self.height, &self.title, WindowMode::Windowed)
+            .expect("bad window");
+
+        window.set_key_polling(true);
+        window.set_scroll_polling(true);
+        window.set_size_polling(true);
+        window.set_cursor_pos_polling(true);
+        window.set_mouse_button_polling(true);
+        window.set_char_polling(true);
+
+        // create context
+        #[cfg(target_os = "windows")]
+        let handle = WindowHandle {
+            hwnd: window.get_win32_window(),
+            width: self.width,
+            height: self.height,
+        };
+
+        #[cfg(target_os = "linux")]
+        let handle = WindowHandle {
+            xlib_window: window.get_x11_window(),
+            xlib_display: glfw.get_x11_display(),
+            width: self.width,
+            height: self.height,
+        };
+
+        #[cfg(target_os = "macos")]
+        let handle = WindowHandle {
+            ns_window: window.get_cocoa_window(),
+            width: self.width,
+            height: self.height,
+        };
+
+        let mut context = Context::new(handle, self.context.quality, self.context.vsync)?;
+
+        // attach glfw to context
+        context.attach_glfw(glfw, event_receiver);
+
+        // create ui renderer
+        #[cfg(feature = "ui")]
+        context.attach_ui(self.width, self.height);
+
+        Ok((context, Window::new(window)))
     }
 }
 

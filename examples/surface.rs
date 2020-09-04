@@ -3,19 +3,15 @@
 
 // example that draws a framebuffer with a custom ray-marching shader
 
-use draw_it::window::WindowOptions;
 use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(
-        Default::default(),
-        WindowOptions {
-            title: "Draw-it example: Surface",
-            resizable: true,
-            ..Default::default()
-        },
-    )?;
+    let (mut context, mut window) = Context::builder()
+        .build_window(500, 500)
+        .title("Draw-it example: Surface")
+        .resizable()
+        .build()?;
 
     // read custom shader
     let shader = context.create_shader_glsl("examples/shaders/raymarch.glsl", true)?;

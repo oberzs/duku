@@ -4,34 +4,25 @@
 // Mesh drawing example
 
 use draw_it::window::Controller;
-use draw_it::window::WindowOptions;
 use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
-use draw_it::ContextOptions;
 use draw_it::CubemapSides;
 use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
 use draw_it::Result;
 use draw_it::Transform;
-use draw_it::VSync;
 use draw_it::Vector2;
 use draw_it::Vector3;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::with_window(
-        ContextOptions {
-            vsync: VSync::Off,
-            ..Default::default()
-        },
-        WindowOptions {
-            title: "Draw-it example: Cubes",
-            resizable: true,
-            width: 720,
-            height: 640,
-        },
-    )?;
+    let (mut context, mut window) = Context::builder()
+        .no_vsync()
+        .build_window(720, 640)
+        .title("Draw-it example: Cubes")
+        .resizable()
+        .build()?;
 
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);
@@ -40,10 +31,12 @@ fn main() -> Result<()> {
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     let texture = context.create_texture_png("examples/textures/Orange/texture_01.png")?;
-    let mut material = context.create_material();
-    material.set_phong_color([255, 255, 255]);
-    material.set_phong_texture(&texture);
-    material.update();
+
+    let material = context
+        .build_material()
+        .phong_color([255, 255, 255])
+        .phong_texture(&texture)
+        .build();
 
     context.set_skybox_png(CubemapSides {
         top: "examples/textures/Skybox/glacier_up.png",

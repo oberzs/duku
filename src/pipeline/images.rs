@@ -8,7 +8,6 @@ use std::rc::Rc;
 
 use super::Descriptor;
 use super::Sampler;
-use super::SamplerOptions;
 use super::ShaderLayout;
 use crate::device::Device;
 use crate::image::ImageLayout;
@@ -38,15 +37,8 @@ impl ShaderImages {
                 TextureWrap::ClampEdge,
             ] {
                 for mipmaps in &[true, false] {
-                    sampler_combinations.push(Sampler::new(
-                        device,
-                        SamplerOptions {
-                            anisotropy,
-                            filter: *filter,
-                            wrap: *wrap,
-                            mipmaps: *mipmaps,
-                        },
-                    ));
+                    sampler_combinations
+                        .push(Sampler::new(device, *wrap, *filter, *mipmaps, anisotropy));
                 }
             }
         }
