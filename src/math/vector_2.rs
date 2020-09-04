@@ -54,9 +54,9 @@ impl Vector2 {
     pub const ZERO: Self = Self::new(0.0, 0.0);
 }
 
-impl From<[f32; 2]> for Vector2 {
-    fn from(array: [f32; 2]) -> Self {
-        Self::new(array[0], array[1])
+impl From<(f32, f32)> for Vector2 {
+    fn from(tuple: (f32, f32)) -> Self {
+        Self::new(tuple.0, tuple.1)
     }
 }
 
@@ -142,13 +142,6 @@ mod test {
         let v = Vector2::new(1.0, 2.0);
         assert_eq!(v.x, 1.0);
         assert_eq!(v.y, 2.0);
-    }
-
-    #[test]
-    fn from_array() {
-        let v: Vector2 = [5.0, 6.0].into();
-        assert_eq!(v.x, 5.0);
-        assert_eq!(v.y, 6.0);
     }
 
     #[test]

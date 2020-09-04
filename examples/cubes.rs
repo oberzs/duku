@@ -25,16 +25,16 @@ fn main() -> Result<()> {
         .build()?;
 
     let mut camera = Camera::perspective_autosized(90);
-    camera.transform.move_by([1.0, 3.0, -3.0]);
+    camera.transform.move_by((1.0, 3.0, -3.0));
     camera.transform.look_dir(Vector3::FORWARD);
 
-    let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
+    let mut controller = Controller::orbit((0.0, 0.0, 0.0));
 
     let texture = context.create_texture_png("examples/textures/Orange/texture_01.png")?;
 
     let material = context
         .build_material()
-        .phong_color([255, 255, 255])
+        .phong_color((255, 255, 255))
         .phong_texture(&texture)
         .build();
 
@@ -47,7 +47,7 @@ fn main() -> Result<()> {
         right: "examples/textures/Skybox/glacier_right.png",
     })?;
 
-    let cube = cube_mesh(&mut context, [1.0, 1.0, 1.0]);
+    let cube = cube_mesh(&mut context, (1.0, 1.0, 1.0));
 
     let floor_transform = Transform {
         scale: Vector3::new(80.0, 0.2, 80.0),
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
-    let main_light = Light::directional([-0.4, -1.0, -1.0], Color::WHITE, true);
+    let main_light = Light::directional((-0.4, -1.0, -1.0), Color::WHITE, true);
 
     while window.is_open() {
         // update
@@ -76,11 +76,11 @@ fn main() -> Result<()> {
             target.lights[0] = main_light;
             // target.draw_grid();
             target.draw_cube(floor_transform);
-            target.draw(&cube, [2.0, 1.0, 0.0]);
-            target.draw_cube([0.0, 0.0, 0.0]);
-            target.draw_sphere([-4.0, 1.0, 0.0]);
+            target.draw(&cube, (2.0, 1.0, 0.0));
+            target.draw_cube((0.0, 0.0, 0.0));
+            target.draw_sphere((-4.0, 1.0, 0.0));
             target.set_material(&material);
-            target.draw_cube([-2.0, 1.0, 0.0]);
+            target.draw_cube((-2.0, 1.0, 0.0));
         });
     }
 
@@ -92,40 +92,40 @@ fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Mesh {
 
     let top = square_mesh(
         context,
-        [size.x, size.z],
-        [0.0, size.y / 2.0, 0.0],
+        (size.x, size.z),
+        (0.0, size.y / 2.0, 0.0),
         Quaternion::axis_rotation(Vector3::RIGHT, 0.0),
     );
     let bottom = square_mesh(
         context,
-        [size.x, size.z],
-        [0.0, -size.y / 2.0, 0.0],
+        (size.x, size.z),
+        (0.0, -size.y / 2.0, 0.0),
         Quaternion::axis_rotation(Vector3::RIGHT, 180.0),
     );
 
     let left = square_mesh(
         context,
-        [size.z, size.y],
-        [-size.x / 2.0, 0.0, 0.0],
+        (size.z, size.y),
+        (-size.x / 2.0, 0.0, 0.0),
         Quaternion::axis_rotation(Vector3::FORWARD, 90.0),
     );
     let right = square_mesh(
         context,
-        [size.z, size.y],
-        [size.x / 2.0, 0.0, 0.0],
+        (size.z, size.y),
+        (size.x / 2.0, 0.0, 0.0),
         Quaternion::axis_rotation(Vector3::FORWARD, -90.0),
     );
 
     let front = square_mesh(
         context,
-        [size.x, size.y],
-        [0.0, 0.0, -size.z / 2.0],
+        (size.x, size.y),
+        (0.0, 0.0, -size.z / 2.0),
         Quaternion::axis_rotation(Vector3::RIGHT, -90.0),
     );
     let back = square_mesh(
         context,
-        [size.x, size.y],
-        [0.0, 0.0, size.z / 2.0],
+        (size.x, size.y),
+        (0.0, 0.0, size.z / 2.0),
         Quaternion::axis_rotation(Vector3::RIGHT, 90.0),
     );
 

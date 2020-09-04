@@ -201,7 +201,7 @@ impl Ui {
                 let vertex =
                     Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
                 let uv = Vector2::new(vert.uv[0], vert.uv[1]);
-                let color = Color::from(vert.col);
+                let color = Color::rgba(vert.col[0], vert.col[1], vert.col[2], vert.col[3]);
                 vertices.push(vertex);
                 uvs.push(uv);
                 colors.push(color);
@@ -240,7 +240,7 @@ impl Ui {
         });
 
         // begin render pass
-        cmd.begin_render_pass(framebuffer, [0.0, 0.0, 0.0, 0.0]);
+        cmd.begin_render_pass(framebuffer, (0.0, 0.0, 0.0, 0.0));
         cmd.set_view(framebuffer.size());
         cmd.set_line_width(1.0);
 
@@ -344,9 +344,16 @@ impl UiFrame<'_> {
         let cstring = CString::new(label.as_ref()).expect("bad cstring");
         let im_label = unsafe { ImStr::from_cstr_unchecked(&cstring) };
 
-        let mut color_array = color.to_rgba_norm();
+        let norm = color.to_rgba_norm();
+        let mut color_array = [norm.0, norm.1, norm.2, norm.3];
         ColorEdit::new(im_label, &mut color_array).build(&self.frame);
-        *color = color_array.into();
+        *color = (
+            color_array[0],
+            color_array[1],
+            color_array[2],
+            color_array[3],
+        )
+            .into();
     }
 
     pub fn drag_vector2(&self, label: impl AsRef<str>, vector: &mut Vector2) {

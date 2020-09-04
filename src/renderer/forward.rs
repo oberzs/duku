@@ -336,7 +336,7 @@ impl ForwardRenderer {
             });
 
             // do render pass
-            cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
+            cmd.begin_render_pass(framebuffer, (1.0, 1.0, 1.0, 1.0));
             cmd.set_view(framebuffer.size());
             cmd.bind_descriptor(shader_layout, framebuffer.world());
             cmd.bind_shader(&self.shadow_shader);

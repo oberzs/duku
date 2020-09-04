@@ -73,7 +73,7 @@ impl<'b> Target<'b> {
             orders_by_shader: vec![],
             clear: Color::rgba_norm(0.7, 0.7, 0.7, 1.0),
             lights: [
-                Light::directional([-1.0, -1.0, 1.0], Color::WHITE, true),
+                Light::directional((-1.0, -1.0, 1.0), Color::WHITE, true),
                 Light::NONE,
                 Light::NONE,
                 Light::NONE,
@@ -115,7 +115,7 @@ impl<'b> Target<'b> {
         let cache = self.store();
         self.cast_shadows = false;
 
-        self.draw(&self.builtins.surface_mesh, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.surface_mesh, (0.0, 0.0));
 
         self.restore(cache);
     }
@@ -125,7 +125,7 @@ impl<'b> Target<'b> {
         self.current_shader = self.builtins.line_shader.index.clone();
         self.cast_shadows = false;
 
-        self.draw(&self.builtins.grid_mesh, [0.0, 0.0, 0.0]);
+        self.draw(&self.builtins.grid_mesh, (0.0, 0.0, 0.0));
 
         self.restore(cache);
     }

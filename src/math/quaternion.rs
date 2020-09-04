@@ -151,7 +151,7 @@ mod test {
 
     #[test]
     fn axis_rotation() {
-        let q = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
+        let q = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0);
         assert_eq!(q, Quaternion::new(0.707_106_77, 0.0, 0.0, 0.707_106_77));
     }
 
@@ -163,20 +163,20 @@ mod test {
 
     #[test]
     fn look_rotation() {
-        let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::UP);
+        let q = Quaternion::look_rotation((1.0, 0.0, 0.0), Vector3::UP);
         assert_eq!(q, Quaternion::new(0.0, 0.707_106_77, 0.0, 0.707_106_77));
     }
 
     #[test]
     fn rotate_vector() {
-        let q = Quaternion::axis_rotation([0.0, 1.0, 0.0], 90.0);
+        let q = Quaternion::axis_rotation((0.0, 1.0, 0.0), 90.0);
         let v = Vector3::new(1.0, 2.0, 3.0);
         assert_eq!(
             q.rotate_vector(v),
             Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
         );
 
-        let q1 = Quaternion::look_rotation([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
+        let q1 = Quaternion::look_rotation((1.0, 0.0, 0.0), (0.0, 1.0, 0.0));
         assert_eq!(
             q1.rotate_vector(v),
             Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
@@ -185,8 +185,8 @@ mod test {
 
     #[test]
     fn as_matrix() {
-        let m3 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0).as_matrix();
-        let m4 = Matrix4::axis_rotation([1.0, 0.0, 0.0], 90.0);
+        let m3 = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0).as_matrix();
+        let m4 = Matrix4::axis_rotation((1.0, 0.0, 0.0), 90.0);
         assert_eq!(m3.col_x, m4.col_x);
         assert_eq!(m3.col_y, m4.col_y);
         assert_eq!(m3.col_z, m4.col_z);
@@ -195,7 +195,7 @@ mod test {
 
     #[test]
     fn operator() {
-        let mut q1 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
+        let mut q1 = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0);
         let r = q1 * q1;
         q1 *= q1;
         assert_eq!(r, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));

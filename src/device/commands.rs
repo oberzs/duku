@@ -149,7 +149,11 @@ impl Commands {
         }
     }
 
-    pub(crate) fn begin_render_pass(&self, framebuffer: &CoreFramebuffer, clear: [f32; 4]) {
+    pub(crate) fn begin_render_pass(
+        &self,
+        framebuffer: &CoreFramebuffer,
+        clear: (f32, f32, f32, f32),
+    ) {
         // create clear values based on framebuffer image formats
         let clear_values: Vec<_> = framebuffer
             .iter_images()
@@ -163,7 +167,9 @@ impl Commands {
                     }
                 } else {
                     vk::ClearValue {
-                        color: vk::ClearColorValue { float32: clear },
+                        color: vk::ClearColorValue {
+                            float32: [clear.0, clear.1, clear.2, clear.3],
+                        },
                     }
                 }
             })

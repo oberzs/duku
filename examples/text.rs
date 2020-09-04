@@ -22,15 +22,15 @@ fn main() -> Result<()> {
 
         context.draw_on_window(None, |target| {
             target.clear = Color::BLACK;
-            target.text.draw("Bitmap 24p text", [left, 190.0, 1.0]);
+            target.text.draw("Bitmap 24p text", (left, 190.0));
 
             // render with custom material
             target.text.color = Color::RED;
-            target.text.draw("Red text!", [left, 160.0, 1.0]);
+            target.text.draw("Red text!", (left, 160.0));
             target.text.color = Color::BLUE;
             target
                 .text
-                .draw("Blue text\n.. on multiple lines", [left, 130.0, 1.0]);
+                .draw("Blue text\n.. on multiple lines", (left, 130.0));
         });
     }
 

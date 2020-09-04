@@ -50,9 +50,9 @@ impl Vector4 {
     pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 0.0);
 }
 
-impl From<[f32; 4]> for Vector4 {
-    fn from(array: [f32; 4]) -> Self {
-        Self::new(array[0], array[1], array[2], array[3])
+impl From<(f32, f32, f32, f32)> for Vector4 {
+    fn from(tuple: (f32, f32, f32, f32)) -> Self {
+        Self::new(tuple.0, tuple.1, tuple.2, tuple.3)
     }
 }
 
@@ -152,15 +152,6 @@ mod test {
         assert_eq!(v.y, 2.0);
         assert_eq!(v.z, 3.0);
         assert_eq!(v.w, 4.0);
-    }
-
-    #[test]
-    fn from_array() {
-        let v: Vector4 = [5.0, 6.0, 7.0, 8.0].into();
-        assert_eq!(v.x, 5.0);
-        assert_eq!(v.y, 6.0);
-        assert_eq!(v.z, 7.0);
-        assert_eq!(v.w, 8.0);
     }
 
     #[test]

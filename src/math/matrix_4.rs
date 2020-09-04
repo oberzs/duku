@@ -45,39 +45,39 @@ impl Matrix4 {
         let rw = row_w.into();
 
         Self::from_columns(
-            [rx.x, ry.x, rz.x, rw.x],
-            [rx.y, ry.y, rz.y, rw.y],
-            [rx.z, ry.z, rz.z, rw.z],
-            [rx.w, ry.w, rz.w, rw.w],
+            (rx.x, ry.x, rz.x, rw.x),
+            (rx.y, ry.y, rz.y, rw.y),
+            (rx.z, ry.z, rz.z, rw.z),
+            (rx.w, ry.w, rz.w, rw.w),
         )
     }
 
     pub fn identity() -> Self {
         Self::from_rows(
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
+            (1.0, 0.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0, 0.0),
+            (0.0, 0.0, 1.0, 0.0),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
     pub fn translation(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
         Self::from_rows(
-            [1.0, 0.0, 0.0, v.x],
-            [0.0, 1.0, 0.0, v.y],
-            [0.0, 0.0, 1.0, v.z],
-            [0.0, 0.0, 0.0, 1.0],
+            (1.0, 0.0, 0.0, v.x),
+            (0.0, 1.0, 0.0, v.y),
+            (0.0, 0.0, 1.0, v.z),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
     pub fn scale(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
         Self::from_rows(
-            [v.x, 0.0, 0.0, 0.0],
-            [0.0, v.y, 0.0, 0.0],
-            [0.0, 0.0, v.z, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
+            (v.x, 0.0, 0.0, 0.0),
+            (0.0, v.y, 0.0, 0.0),
+            (0.0, 0.0, v.z, 0.0),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
@@ -86,25 +86,25 @@ impl Matrix4 {
         let sin = angle.to_radians().sin();
         let cos = angle.to_radians().cos();
 
-        let row_x = [
+        let row_x = (
             v.x * v.x * (1.0 - cos) + cos,
             v.x * v.y * (1.0 - cos) - v.z * sin,
             v.x * v.z * (1.0 - cos) + v.y * sin,
             0.0,
-        ];
-        let row_y = [
+        );
+        let row_y = (
             v.x * v.y * (1.0 - cos) + v.z * sin,
             v.y * v.y * (1.0 - cos) + cos,
             v.y * v.z * (1.0 - cos) - v.x * sin,
             0.0,
-        ];
-        let row_z = [
+        );
+        let row_z = (
             v.x * v.z * (1.0 - cos) - v.y * sin,
             v.y * v.z * (1.0 - cos) + v.x * sin,
             v.z * v.z * (1.0 - cos) + cos,
             0.0,
-        ];
-        let row_w = [0.0, 0.0, 0.0, 1.0];
+        );
+        let row_w = (0.0, 0.0, 0.0, 1.0);
 
         Self::from_rows(row_x, row_y, row_z, row_w)
     }
@@ -124,10 +124,10 @@ impl Matrix4 {
         let copy = 1.0;
 
         Self::from_rows(
-            [x_scale, 0.0, 0.0, 0.0],
-            [0.0, y_scale, 0.0, 0.0],
-            [0.0, 0.0, z_scale, z_move],
-            [0.0, 0.0, copy, 0.0],
+            (x_scale, 0.0, 0.0, 0.0),
+            (0.0, y_scale, 0.0, 0.0),
+            (0.0, 0.0, z_scale, z_move),
+            (0.0, 0.0, copy, 0.0),
         )
     }
 
@@ -141,10 +141,10 @@ impl Matrix4 {
         let z_move = -near / (far - near);
 
         Self::from_rows(
-            [x_scale, 0.0, 0.0, 0.0],
-            [0.0, y_scale, 0.0, 0.0],
-            [0.0, 0.0, z_scale, z_move],
-            [0.0, 0.0, 0.0, 1.0],
+            (x_scale, 0.0, 0.0, 0.0),
+            (0.0, y_scale, 0.0, 0.0),
+            (0.0, 0.0, z_scale, z_move),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
@@ -158,10 +158,10 @@ impl Matrix4 {
         let z_move = -near / (far - near);
 
         Self::from_rows(
-            [x_scale, 0.0, 0.0, -1.0],
-            [0.0, y_scale, 0.0, -1.0],
-            [0.0, 0.0, z_scale, z_move],
-            [0.0, 0.0, 0.0, 1.0],
+            (x_scale, 0.0, 0.0, -1.0),
+            (0.0, y_scale, 0.0, -1.0),
+            (0.0, 0.0, z_scale, z_move),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
@@ -171,10 +171,10 @@ impl Matrix4 {
         let y_axis = z_axis.cross(x_axis);
 
         Self::from_rows(
-            [x_axis.x, x_axis.y, x_axis.z, 0.0],
-            [y_axis.x, y_axis.y, y_axis.z, 0.0],
-            [z_axis.x, z_axis.y, z_axis.z, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
+            (x_axis.x, x_axis.y, x_axis.z, 0.0),
+            (y_axis.x, y_axis.y, y_axis.z, 0.0),
+            (z_axis.x, z_axis.y, z_axis.z, 0.0),
+            (0.0, 0.0, 0.0, 1.0),
         )
     }
 
@@ -315,7 +315,7 @@ impl Mul<Vector4> for Matrix4 {
         let y = self.row_y().dot(rhs);
         let z = self.row_z().dot(rhs);
         let w = self.row_w().dot(rhs);
-        [x, y, z, w].into()
+        (x, y, z, w).into()
     }
 }
 
@@ -340,10 +340,10 @@ impl MulAssign<Self> for Matrix4 {
 impl From<[f32; 16]> for Matrix4 {
     fn from(m: [f32; 16]) -> Self {
         Self::from_columns(
-            [m[0], m[1], m[2], m[3]],
-            [m[4], m[5], m[6], m[7]],
-            [m[8], m[9], m[10], m[11]],
-            [m[12], m[13], m[14], m[15]],
+            (m[0], m[1], m[2], m[3]),
+            (m[4], m[5], m[6], m[7]),
+            (m[8], m[9], m[10], m[11]),
+            (m[12], m[13], m[14], m[15]),
         )
     }
 }
@@ -379,10 +379,10 @@ mod test {
     #[test]
     fn from_columns() {
         let m = Matrix4::from_columns(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
         );
         assert_eq!(m.col_x, Vector4::new(1.0, 2.0, 3.0, 4.0));
         assert_eq!(m.col_y, Vector4::new(5.0, 6.0, 7.0, 8.0));
@@ -393,10 +393,10 @@ mod test {
     #[test]
     fn from_rows() {
         let m = Matrix4::from_rows(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
         );
         assert_eq!(m.col_x, Vector4::new(1.0, 5.0, 8.0, 4.0));
         assert_eq!(m.col_y, Vector4::new(2.0, 6.0, 7.0, 3.0));
@@ -407,10 +407,10 @@ mod test {
     #[test]
     fn rows() {
         let m = Matrix4::from_rows(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
         );
         assert_eq!(m.row_x(), Vector4::new(1.0, 2.0, 3.0, 4.0));
         assert_eq!(m.row_y(), Vector4::new(5.0, 6.0, 7.0, 8.0));
@@ -429,21 +429,21 @@ mod test {
 
     #[test]
     fn translation() {
-        let m = Matrix4::translation([3.0, 4.0, 5.0]);
+        let m = Matrix4::translation((3.0, 4.0, 5.0));
         let v = Vector4::new(6.0, 7.0, 8.0, 1.0);
         assert_eq!(m * v, Vector4::new(9.0, 11.0, 13.0, 1.0));
     }
 
     #[test]
     fn scale() {
-        let m = Matrix4::scale([1.0, 2.0, 3.0]);
+        let m = Matrix4::scale((1.0, 2.0, 3.0));
         let v = Vector4::new(3.0, 4.0, 5.0, 1.0);
         assert_eq!(m * v, Vector4::new(3.0, 8.0, 15.0, 1.0));
     }
 
     #[test]
     fn axis_rotation() {
-        let m = Matrix4::axis_rotation([1.0, 0.0, 0.0], 180.0);
+        let m = Matrix4::axis_rotation((1.0, 0.0, 0.0), 180.0);
         let v = Vector4::new(1.0, 1.0, 1.0, 1.0);
         assert_eq!(m * v, Vector4::new(1.0, -0.999_999_94, -1.000_000_1, 1.0));
     }
@@ -468,7 +468,7 @@ mod test {
 
     #[test]
     fn look_rotation() {
-        let m = Matrix4::look_rotation([0.0, 0.0, -1.0], [0.0, 1.0, 0.0]);
+        let m = Matrix4::look_rotation((0.0, 0.0, -1.0), (0.0, 1.0, 0.0));
         assert_eq!(m.row_x(), Vector4::new(-1.0, 0.0, 0.0, -0.0));
         assert_eq!(m.row_y(), Vector4::new(0.0, 1.0, 0.0, -0.0));
         assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, -1.0, -0.0));
@@ -478,10 +478,10 @@ mod test {
     #[test]
     fn mul_with_vector() {
         let m = Matrix4::from_rows(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
         );
         let v = Vector4::new(1.0, 2.0, 3.0, 4.0);
         assert_eq!(m * v, Vector4::new(30.0, 70.0, 60.0, 20.0));
@@ -490,16 +490,16 @@ mod test {
     #[test]
     fn mul_with_matrix() {
         let mut ma = Matrix4::from_rows(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
         );
         let mb = Matrix4::from_rows(
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
+            (8.0, 7.0, 6.0, 5.0),
+            (4.0, 3.0, 2.0, 1.0),
+            (1.0, 2.0, 3.0, 4.0),
+            (5.0, 6.0, 7.0, 8.0),
         );
         let r = ma * mb;
         ma *= mb;

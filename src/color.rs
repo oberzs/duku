@@ -59,17 +59,17 @@ impl Color {
         Self::rgba(to_byte(r), to_byte(g), to_byte(b), to_byte(a))
     }
 
-    pub fn to_rgb_norm(&self) -> [f32; 3] {
-        [to_norm(self.r), to_norm(self.g), to_norm(self.b)]
+    pub fn to_rgb_norm(&self) -> (f32, f32, f32) {
+        (to_norm(self.r), to_norm(self.g), to_norm(self.b))
     }
 
-    pub fn to_rgba_norm(&self) -> [f32; 4] {
-        [
+    pub fn to_rgba_norm(&self) -> (f32, f32, f32, f32) {
+        (
             to_norm(self.r),
             to_norm(self.g),
             to_norm(self.b),
             to_norm(self.a),
-        ]
+        )
     }
 
     pub fn to_rgb_norm_vec(&self) -> Vector3 {
@@ -81,7 +81,7 @@ impl Color {
     }
 
     pub fn to_hsv(&self) -> (u16, u8, u8) {
-        let [r, g, b] = self.to_rgb_norm();
+        let (r, g, b) = self.to_rgb_norm();
 
         let min = cmp::min(self.r, cmp::min(self.g, self.b));
         let max = cmp::max(self.r, cmp::max(self.g, self.b));
@@ -123,27 +123,27 @@ impl Color {
     pub const ORANGE: Self = Self::rgb(255, 127, 0);
 }
 
-impl From<[u8; 3]> for Color {
-    fn from(value: [u8; 3]) -> Self {
-        Self::rgb(value[0], value[1], value[2])
+impl From<(u8, u8, u8)> for Color {
+    fn from(value: (u8, u8, u8)) -> Self {
+        Self::rgb(value.0, value.1, value.2)
     }
 }
 
-impl From<[u8; 4]> for Color {
-    fn from(value: [u8; 4]) -> Self {
-        Self::rgba(value[0], value[1], value[2], value[3])
+impl From<(u8, u8, u8, u8)> for Color {
+    fn from(value: (u8, u8, u8, u8)) -> Self {
+        Self::rgba(value.0, value.1, value.2, value.3)
     }
 }
 
-impl From<[f32; 3]> for Color {
-    fn from(value: [f32; 3]) -> Self {
-        Self::rgb_norm(value[0], value[1], value[2])
+impl From<(f32, f32, f32)> for Color {
+    fn from(value: (f32, f32, f32)) -> Self {
+        Self::rgb_norm(value.0, value.1, value.2)
     }
 }
 
-impl From<[f32; 4]> for Color {
-    fn from(value: [f32; 4]) -> Self {
-        Self::rgba_norm(value[0], value[1], value[2], value[3])
+impl From<(f32, f32, f32, f32)> for Color {
+    fn from(value: (f32, f32, f32, f32)) -> Self {
+        Self::rgba_norm(value.0, value.1, value.2, value.3)
     }
 }
 

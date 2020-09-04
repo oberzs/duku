@@ -83,9 +83,9 @@ impl Vector3 {
     pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
 }
 
-impl From<[f32; 3]> for Vector3 {
-    fn from(array: [f32; 3]) -> Self {
-        Self::new(array[0], array[1], array[2])
+impl From<(f32, f32, f32)> for Vector3 {
+    fn from(tuple: (f32, f32, f32)) -> Self {
+        Self::new(tuple.0, tuple.1, tuple.2)
     }
 }
 
@@ -183,14 +183,6 @@ mod test {
         assert_eq!(v.x, 1.0);
         assert_eq!(v.y, 2.0);
         assert_eq!(v.z, 3.0);
-    }
-
-    #[test]
-    fn from_array() {
-        let v: Vector3 = [5.0, 6.0, 7.0].into();
-        assert_eq!(v.x, 5.0);
-        assert_eq!(v.y, 6.0);
-        assert_eq!(v.z, 7.0);
     }
 
     #[test]

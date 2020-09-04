@@ -127,10 +127,19 @@ impl Default for Transform {
     }
 }
 
-impl From<[f32; 3]> for Transform {
-    fn from(position: [f32; 3]) -> Self {
+impl From<(f32, f32, f32)> for Transform {
+    fn from(position: (f32, f32, f32)) -> Self {
         Self {
-            position: Vector3::new(position[0], position[1], position[2]),
+            position: Vector3::new(position.0, position.1, position.2),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<(f32, f32)> for Transform {
+    fn from(position: (f32, f32)) -> Self {
+        Self {
+            position: Vector3::new(position.0, position.1, 0.0),
             ..Default::default()
         }
     }
@@ -162,7 +171,7 @@ mod test {
 
     #[test]
     fn from_position() {
-        let t = Transform::from([1.0, 2.0, 3.0]);
+        let t = Transform::from((1.0, 2.0, 3.0));
         assert_eq!(t.position, Vector3::new(1.0, 2.0, 3.0));
         assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
         assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
@@ -170,27 +179,27 @@ mod test {
 
     #[test]
     fn as_matrix() {
-        let t = Transform::from([1.0, 2.0, 3.0]);
-        assert_eq!(t.as_matrix(), Matrix4::translation([1.0, 2.0, 3.0]));
+        let t = Transform::from((1.0, 2.0, 3.0));
+        assert_eq!(t.as_matrix(), Matrix4::translation((1.0, 2.0, 3.0)));
     }
 
     #[test]
     fn as_matrix_for_camera() {
-        let t = Transform::from([1.0, 2.0, 3.0]);
+        let t = Transform::from((1.0, 2.0, 3.0));
         assert_eq!(
             t.as_matrix_for_camera(),
             Matrix4::from_rows(
-                [1.0, 0.0, 0.0, -1.0],
-                [0.0, 1.0, -0.00000017484555, -1.9999995],
-                [0.0, 0.00000017484555, 1.0, -3.0000002],
-                [0.0, 0.0, 0.0, 1.0]
+                (1.0, 0.0, 0.0, -1.0),
+                (0.0, 1.0, -0.00000017484555, -1.9999995),
+                (0.0, 0.00000017484555, 1.0, -3.0000002),
+                (0.0, 0.0, 0.0, 1.0)
             )
         );
     }
 
     #[test]
     fn direction() {
-        let t = Transform::from([1.0, 0.0, 0.0]);
+        let t = Transform::from((1.0, 0.0, 0.0));
         assert_eq!(t.up(), Vector3::new(0.0, 1.0, 0.0));
         assert_eq!(t.right(), Vector3::new(1.0, 0.0, 0.0));
         assert_eq!(t.forward(), Vector3::new(0.0, 0.0, 1.0));
@@ -199,7 +208,7 @@ mod test {
     #[test]
     fn move_by() {
         let mut t = Transform::default();
-        t.move_by([1.0, 2.0, 3.0]);
-        assert_eq!(t, Transform::from([1.0, 2.0, 3.0]));
+        t.move_by((1.0, 2.0, 3.0));
+        assert_eq!(t, Transform::from((1.0, 2.0, 3.0)));
     }
 }

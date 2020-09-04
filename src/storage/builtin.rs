@@ -74,7 +74,7 @@ impl Builtins {
         let white_material = {
             let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
             let mut mat = Material::new(index, updater);
-            mat.set_phong_color([255, 255, 255]);
+            mat.set_phong_color((255, 255, 255));
             mat.update();
             mat
         };
@@ -235,55 +235,55 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
     let top = create_rectangle(
         device,
         storage,
-        [-0.5, 0.5, 0.5],
-        [0.5, 0.5, 0.5],
-        [0.5, 0.5, -0.5],
-        [-0.5, 0.5, -0.5],
+        (-0.5, 0.5, 0.5),
+        (0.5, 0.5, 0.5),
+        (0.5, 0.5, -0.5),
+        (-0.5, 0.5, -0.5),
     );
 
     let bottom = create_rectangle(
         device,
         storage,
-        [0.5, -0.5, 0.5],
-        [-0.5, -0.5, 0.5],
-        [-0.5, -0.5, -0.5],
-        [0.5, -0.5, -0.5],
+        (0.5, -0.5, 0.5),
+        (-0.5, -0.5, 0.5),
+        (-0.5, -0.5, -0.5),
+        (0.5, -0.5, -0.5),
     );
 
     let back = create_rectangle(
         device,
         storage,
-        [0.5, 0.5, 0.5],
-        [-0.5, 0.5, 0.5],
-        [-0.5, -0.5, 0.5],
-        [0.5, -0.5, 0.5],
+        (0.5, 0.5, 0.5),
+        (-0.5, 0.5, 0.5),
+        (-0.5, -0.5, 0.5),
+        (0.5, -0.5, 0.5),
     );
 
     let front = create_rectangle(
         device,
         storage,
-        [-0.5, 0.5, -0.5],
-        [0.5, 0.5, -0.5],
-        [0.5, -0.5, -0.5],
-        [-0.5, -0.5, -0.5],
+        (-0.5, 0.5, -0.5),
+        (0.5, 0.5, -0.5),
+        (0.5, -0.5, -0.5),
+        (-0.5, -0.5, -0.5),
     );
 
     let left = create_rectangle(
         device,
         storage,
-        [-0.5, 0.5, 0.5],
-        [-0.5, 0.5, -0.5],
-        [-0.5, -0.5, -0.5],
-        [-0.5, -0.5, 0.5],
+        (-0.5, 0.5, 0.5),
+        (-0.5, 0.5, -0.5),
+        (-0.5, -0.5, -0.5),
+        (-0.5, -0.5, 0.5),
     );
 
     let right = create_rectangle(
         device,
         storage,
-        [0.5, 0.5, -0.5],
-        [0.5, 0.5, 0.5],
-        [0.5, -0.5, 0.5],
-        [0.5, -0.5, -0.5],
+        (0.5, 0.5, -0.5),
+        (0.5, 0.5, 0.5),
+        (0.5, -0.5, 0.5),
+        (0.5, -0.5, -0.5),
     );
 
     let (index, updater) = storage.meshes.add(CoreMesh::new(device));

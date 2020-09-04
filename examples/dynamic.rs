@@ -22,7 +22,7 @@ fn main() -> Result<()> {
     let mut controller = Controller::fly();
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_backward(10.0);
-    camera.transform.look_at([0.0, 0.0, 0.0]);
+    camera.transform.look_at((0.0, 0.0, 0.0));
 
     let mut square = context
         .build_mesh()
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
 
             // draw square
             let offset = -(square_size as f32 / 2.0);
-            target.draw(&square, [offset, offset, 0.0]);
+            target.draw(&square, (offset, offset));
         });
     }
 
