@@ -160,11 +160,10 @@ fn square_mesh(
         *v += position;
     }
 
-    let mut mesh = context.create_mesh();
-    mesh.vertices = vertices;
-    mesh.indices = indices;
-    mesh.calculate_normals();
-    mesh.update();
-
-    mesh
+    context
+        .build_mesh()
+        .vertices(vertices)
+        .indices(indices)
+        .calculated_normals()
+        .build()
 }

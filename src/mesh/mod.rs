@@ -33,6 +33,10 @@ pub struct Mesh {
     updater: Sender<(Index, MeshData)>,
 }
 
+pub struct MeshBuilder {
+    mesh: Mesh,
+}
+
 // GPU data storage for a mesh
 pub(crate) struct CoreMesh {
     vertex_buffer: Buffer<Vertex>,
@@ -129,6 +133,47 @@ impl Mesh {
         self.updater
             .send((self.index.clone(), data))
             .expect("bad receiver");
+    }
+}
+
+impl MeshBuilder {
+    pub(crate) fn new(mesh: Mesh) -> Self {
+        Self { mesh }
+    }
+
+    pub fn vertices(mut self, vertices: Vec<Vector3>) -> Self {
+        self.mesh.vertices = vertices;
+        self
+    }
+
+    pub fn normals(mut self, normals: Vec<Vector3>) -> Self {
+        self.mesh.normals = normals;
+        self
+    }
+
+    pub fn colors(mut self, colors: Vec<Color>) -> Self {
+        self.mesh.colors = colors;
+        self
+    }
+
+    pub fn uvs(mut self, uvs: Vec<Vector2>) -> Self {
+        self.mesh.uvs = uvs;
+        self
+    }
+
+    pub fn indices(mut self, indices: Vec<u16>) -> Self {
+        self.mesh.indices = indices;
+        self
+    }
+
+    pub fn calculated_normals(mut self) -> Self {
+        self.mesh.calculate_normals();
+        self
+    }
+
+    pub fn build(self) -> Mesh {
+        self.mesh.update();
+        self.mesh
     }
 }
 

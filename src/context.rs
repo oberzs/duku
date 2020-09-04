@@ -23,6 +23,7 @@ use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
+use crate::mesh::MeshBuilder;
 use crate::pipeline::CoreMaterial;
 use crate::pipeline::CoreShader;
 use crate::pipeline::Material;
@@ -337,6 +338,10 @@ impl Context {
     pub fn create_mesh(&mut self) -> Mesh {
         let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
         Mesh::new(index, updater)
+    }
+
+    pub fn build_mesh(&mut self) -> MeshBuilder {
+        MeshBuilder::new(self.create_mesh())
     }
 
     pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Mesh {
