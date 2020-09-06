@@ -74,7 +74,7 @@ pub struct Context {
     device: Rc<Device>,
     surface: Surface,
     gpu_index: usize,
-    instance: Rc<Instance>,
+    instance: Instance,
 
     // Misc
     render_stage: RenderStage,
@@ -128,7 +128,7 @@ impl Context {
     }
 
     fn new(window: WindowHandle, quality: Quality, vsync: VSync) -> Result<Self> {
-        let instance = Rc::new(Instance::new());
+        let instance = Instance::new();
         let surface = Surface::new(&instance, window);
 
         let QualitySettings {
@@ -614,6 +614,7 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {
         self.device.wait_idle();
+        self.instance.destroy_surface(&self.surface);
     }
 }
 

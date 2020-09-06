@@ -8,7 +8,6 @@ mod properties;
 mod swapchain;
 
 use std::ptr;
-use std::rc::Rc;
 
 use crate::instance::Instance;
 use crate::vk;
@@ -22,12 +21,11 @@ pub(crate) struct Surface {
     handle: vk::SurfaceKHR,
     width: u32,
     height: u32,
-    instance: Rc<Instance>,
 }
 
 impl Surface {
     #[cfg(target_os = "windows")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
+    pub(crate) fn new(instance: &Instance, window: WindowHandle) -> Self {
         let info = vk::Win32SurfaceCreateInfoKHR {
             s_type: vk::STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
             p_next: ptr::null(),
@@ -42,12 +40,11 @@ impl Surface {
             handle,
             width: window.width,
             height: window.height,
-            instance: Rc::clone(instance),
         }
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
+    pub(crate) fn new(instance: &Instance, window: WindowHandle) -> Self {
         let info = vk::XlibSurfaceCreateInfoKHR {
             s_type: vk::STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
             p_next: ptr::null(),
@@ -67,7 +64,7 @@ impl Surface {
     }
 
     #[cfg(target_os = "macos")]
-    pub(crate) fn new(instance: &Rc<Instance>, window: WindowHandle) -> Self {
+    pub(crate) fn new(instance: &Instance, window: WindowHandle) -> Self {
         unimplemented!();
 
         let info = vk::MacOSSurfaceCreateInfoMVK {
@@ -102,11 +99,5 @@ impl Surface {
 
     pub(crate) const fn handle(&self) -> vk::SurfaceKHR {
         self.handle
-    }
-}
-
-impl Drop for Surface {
-    fn drop(&mut self) {
-        self.instance.destroy_surface(self.handle);
     }
 }

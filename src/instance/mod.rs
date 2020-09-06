@@ -343,9 +343,9 @@ impl Instance {
         surface
     }
 
-    pub(crate) fn destroy_surface(&self, surface: vk::SurfaceKHR) {
+    pub(crate) fn destroy_surface(&self, surface: &Surface) {
         unsafe {
-            vk::destroy_surface_khr(self.handle, surface, ptr::null());
+            vk::destroy_surface_khr(self.handle, surface.handle(), ptr::null());
         }
     }
 
