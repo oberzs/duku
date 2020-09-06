@@ -114,7 +114,7 @@ impl MaterialBuilder {
 impl CoreMaterial {
     pub(crate) fn new(device: &Device, shader_layout: &ShaderLayout) -> Self {
         let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let descriptor = shader_layout.material_set(&buffer);
+        let descriptor = shader_layout.material_set(device, &buffer);
 
         Self { buffer, descriptor }
     }

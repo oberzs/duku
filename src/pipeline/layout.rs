@@ -5,7 +5,6 @@
 
 use std::mem;
 use std::ptr;
-use std::rc::Rc;
 
 use super::ShaderConstants;
 use super::ShaderMaterial;
@@ -22,14 +21,13 @@ pub(crate) struct ShaderLayout {
     image_layout: vk::DescriptorSetLayout,
     shadow_map_layout: vk::DescriptorSetLayout,
     descriptor_pool: vk::DescriptorPool,
-    device: Rc<Device>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl ShaderLayout {
-    pub(crate) fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Device) -> Self {
         // world uniform layout
         let world_binding = [vk::DescriptorSetLayoutBinding {
             binding: 0,
@@ -145,7 +143,6 @@ impl ShaderLayout {
         let handle = device.create_pipeline_layout(&pipeline_layout_info);
 
         Self {
-            device: Rc::clone(device),
             handle,
             world_layout,
             material_layout,
@@ -155,10 +152,8 @@ impl ShaderLayout {
         }
     }
 
-    pub(crate) fn world_set(&self, buffer: &Buffer<ShaderWorld>) -> Descriptor {
-        let set = self
-            .device
-            .allocate_descriptor_set(self.world_layout, self.descriptor_pool);
+    pub(crate) fn world_set(&self, device: &Device, buffer: &Buffer<ShaderWorld>) -> Descriptor {
+        let set = device.allocate_descriptor_set(self.world_layout, self.descriptor_pool);
 
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
@@ -178,15 +173,17 @@ impl ShaderLayout {
             p_texel_buffer_view: ptr::null(),
         }];
 
-        self.device.update_descriptor_sets(&write);
+        device.update_descriptor_sets(&write);
 
         Descriptor(0, set)
     }
 
-    pub(crate) fn material_set(&self, buffer: &Buffer<ShaderMaterial>) -> Descriptor {
-        let set = self
-            .device
-            .allocate_descriptor_set(self.material_layout, self.descriptor_pool);
+    pub(crate) fn material_set(
+        &self,
+        device: &Device,
+        buffer: &Buffer<ShaderMaterial>,
+    ) -> Descriptor {
+        let set = device.allocate_descriptor_set(self.material_layout, self.descriptor_pool);
 
         let buffer_info = [vk::DescriptorBufferInfo {
             buffer: buffer.handle(),
@@ -206,22 +203,18 @@ impl ShaderLayout {
             p_texel_buffer_view: ptr::null(),
         }];
 
-        self.device.update_descriptor_sets(&write);
+        device.update_descriptor_sets(&write);
 
         Descriptor(1, set)
     }
 
-    pub(crate) fn image_set(&self) -> Descriptor {
-        let set = self
-            .device
-            .allocate_descriptor_set(self.image_layout, self.descriptor_pool);
+    pub(crate) fn image_set(&self, device: &Device) -> Descriptor {
+        let set = device.allocate_descriptor_set(self.image_layout, self.descriptor_pool);
         Descriptor(2, set)
     }
 
-    pub(crate) fn shadow_map_set(&self, views: [vk::ImageView; 4]) -> Descriptor {
-        let set = self
-            .device
-            .allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool);
+    pub(crate) fn shadow_map_set(&self, device: &Device, views: [vk::ImageView; 4]) -> Descriptor {
+        let set = device.allocate_descriptor_set(self.shadow_map_layout, self.descriptor_pool);
 
         let image_infos: Vec<_> = views
             .iter()
@@ -244,25 +237,21 @@ impl ShaderLayout {
             p_texel_buffer_view: ptr::null(),
         }];
 
-        self.device.update_descriptor_sets(&image_write);
+        device.update_descriptor_sets(&image_write);
 
         Descriptor(3, set)
     }
 
+    pub(crate) fn destroy(&self, device: &Device) {
+        device.destroy_pipeline_layout(self.handle);
+        device.destroy_descriptor_set_layout(self.world_layout);
+        device.destroy_descriptor_set_layout(self.material_layout);
+        device.destroy_descriptor_set_layout(self.image_layout);
+        device.destroy_descriptor_set_layout(self.shadow_map_layout);
+        device.destroy_descriptor_pool(self.descriptor_pool);
+    }
+
     pub(crate) const fn handle(&self) -> vk::PipelineLayout {
         self.handle
-    }
-}
-
-impl Drop for ShaderLayout {
-    fn drop(&mut self) {
-        self.device.destroy_pipeline_layout(self.handle);
-        self.device.destroy_descriptor_set_layout(self.world_layout);
-        self.device
-            .destroy_descriptor_set_layout(self.material_layout);
-        self.device.destroy_descriptor_set_layout(self.image_layout);
-        self.device
-            .destroy_descriptor_set_layout(self.shadow_map_layout);
-        self.device.destroy_descriptor_pool(self.descriptor_pool);
     }
 }

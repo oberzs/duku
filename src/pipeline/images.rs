@@ -24,7 +24,7 @@ pub(crate) struct ShaderImages {
 
 impl ShaderImages {
     pub(crate) fn new(device: &Device, layout: &ShaderLayout, anisotropy: f32) -> Self {
-        let descriptor = layout.image_set();
+        let descriptor = layout.image_set(device);
 
         // create sampler combinations
         let mut samplers = vec![];

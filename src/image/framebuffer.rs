@@ -121,7 +121,7 @@ impl CoreFramebuffer {
                 let handle = device.create_framebuffer(&info);
 
                 let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-                let world_descriptor = shader_layout.world_set(&world_buffer);
+                let world_descriptor = shader_layout.world_set(device, &world_buffer);
 
                 Self {
                     device: Rc::clone(device),
@@ -183,7 +183,7 @@ impl CoreFramebuffer {
         let handle = device.create_framebuffer(&info);
 
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let world_descriptor = shader_layout.world_set(&world_buffer);
+        let world_descriptor = shader_layout.world_set(device, &world_buffer);
 
         let mut shader_image = Image::shader(device, size);
         let shader_index = shader_images.add(shader_image.add_view(device));

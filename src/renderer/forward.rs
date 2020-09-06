@@ -387,12 +387,15 @@ impl ShadowMapSet {
             Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
             Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
         ];
-        let descriptor = shader_layout.shadow_map_set([
-            framebuffers[0].stored_view(),
-            framebuffers[1].stored_view(),
-            framebuffers[2].stored_view(),
-            framebuffers[3].stored_view(),
-        ]);
+        let descriptor = shader_layout.shadow_map_set(
+            device,
+            [
+                framebuffers[0].stored_view(),
+                framebuffers[1].stored_view(),
+                framebuffers[2].stored_view(),
+                framebuffers[3].stored_view(),
+            ],
+        );
 
         Self {
             matrices: [Matrix4::identity(); 4],
