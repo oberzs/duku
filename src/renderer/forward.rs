@@ -122,16 +122,19 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        framebuffer.update_world(ShaderWorld {
-            cascade_splits: self.shadow_frames[current].cascades,
-            light_matrices: self.shadow_frames[current].matrices,
-            bias: target.bias,
-            time: self.start_time.elapsed().as_secs_f32(),
-            camera_position: camera.transform.position,
-            world_matrix: camera.matrix(),
-            lights,
-            pcf,
-        });
+        framebuffer.update_world(
+            &self.device,
+            ShaderWorld {
+                cascade_splits: self.shadow_frames[current].cascades,
+                light_matrices: self.shadow_frames[current].matrices,
+                bias: target.bias,
+                time: self.start_time.elapsed().as_secs_f32(),
+                camera_position: camera.transform.position,
+                world_matrix: camera.matrix(),
+                lights,
+                pcf,
+            },
+        );
 
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
@@ -324,16 +327,19 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.update_world(ShaderWorld {
-                light_matrices: [Matrix4::identity(); 4],
-                camera_position: Vector3::default(),
-                lights: [Default::default(); 4],
-                world_matrix: light_matrix,
-                cascade_splits: [0.0; 4],
-                bias: 0.0,
-                time: 0.0,
-                pcf: 0.0,
-            });
+            framebuffer.update_world(
+                &self.device,
+                ShaderWorld {
+                    light_matrices: [Matrix4::identity(); 4],
+                    camera_position: Vector3::default(),
+                    lights: [Default::default(); 4],
+                    world_matrix: light_matrix,
+                    cascade_splits: [0.0; 4],
+                    bias: 0.0,
+                    time: 0.0,
+                    pcf: 0.0,
+                },
+            );
 
             // do render pass
             cmd.begin_render_pass(framebuffer, (1.0, 1.0, 1.0, 1.0));
@@ -356,6 +362,11 @@ impl ForwardRenderer {
 
     pub(crate) fn destroy(&self, device: &Device) {
         device.destroy_shader(&self.shadow_shader);
+        for frame in &self.shadow_frames {
+            for framebuffer in &frame.framebuffers {
+                framebuffer.destroy(device);
+            }
+        }
     }
 
     fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {

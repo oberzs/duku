@@ -5,7 +5,6 @@
 // also manages world uniform and camera
 
 use std::ptr;
-use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
 use super::Image;
@@ -53,8 +52,6 @@ pub(crate) struct CoreFramebuffer {
 
     msaa: Msaa,
     size: Size,
-
-    device: Rc<Device>,
 }
 
 impl Framebuffer {
@@ -77,7 +74,7 @@ impl Framebuffer {
 
 impl CoreFramebuffer {
     pub(crate) fn for_swapchain(
-        device: &Rc<Device>,
+        device: &Device,
         swapchain: &Swapchain,
         shader_layout: &ShaderLayout,
         msaa: Msaa,
@@ -124,7 +121,6 @@ impl CoreFramebuffer {
                 let world_descriptor = shader_layout.world_set(device, &world_buffer);
 
                 Self {
-                    device: Rc::clone(device),
                     shader_image: None,
                     shader_index: None,
                     stored_index: 0,
@@ -141,7 +137,7 @@ impl CoreFramebuffer {
     }
 
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
         attachment_formats: &[ImageFormat],
@@ -202,7 +198,6 @@ impl CoreFramebuffer {
         Self {
             shader_image: Some(shader_image),
             shader_index: Some(shader_index),
-            device: Rc::clone(device),
             world_buffer,
             world_descriptor,
             stored_index,
@@ -214,7 +209,7 @@ impl CoreFramebuffer {
         }
     }
 
-    pub(crate) fn update(&mut self, shader_images: &mut ShaderImages, size: Size) {
+    pub(crate) fn update(&mut self, device: &Device, shader_images: &mut ShaderImages, size: Size) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
@@ -234,14 +229,11 @@ impl CoreFramebuffer {
                     stored_index = i;
                 }
 
-                Image::attachment(&self.device, attachment, size, None)
+                Image::attachment(device, attachment, size, None)
             })
             .collect();
 
-        let views: Vec<_> = images
-            .iter_mut()
-            .map(|i| i.add_view(&self.device))
-            .collect();
+        let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
 
         let info = vk::FramebufferCreateInfo {
             s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -257,17 +249,13 @@ impl CoreFramebuffer {
 
         shader_images.remove(self.shader_index.expect("bad texture index"));
 
-        let mut shader_image = Image::shader(&self.device, size);
-        let shader_index = shader_images.add(shader_image.add_view(&self.device));
+        let mut shader_image = Image::shader(device, size);
+        let shader_index = shader_images.add(shader_image.add_view(device));
 
         // ready image layouts
-        shader_image.change_layout(
-            &self.device,
-            ImageLayout::Undefined,
-            ImageLayout::ShaderColor,
-        );
+        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
         images[stored_index].change_layout(
-            &self.device,
+            device,
             ImageLayout::Undefined,
             match stored_format {
                 Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
@@ -276,8 +264,8 @@ impl CoreFramebuffer {
         );
 
         // reassign new values
-        self.device.destroy_framebuffer(self.handle);
-        self.handle = self.device.create_framebuffer(&info);
+        device.destroy_framebuffer(self.handle);
+        self.handle = device.create_framebuffer(&info);
         self.images = images;
         self.stored_index = stored_index;
         self.shader_image = Some(shader_image);
@@ -300,6 +288,18 @@ impl CoreFramebuffer {
             src.change_layout_sync(cmd, ImageLayout::TransferSrc, ImageLayout::ShaderColor);
             dst.change_layout_sync(cmd, ImageLayout::TransferDst, ImageLayout::ShaderColor);
         }
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        for image in &self.images {
+            image.destroy(device);
+        }
+        if let Some(image) = &self.shader_image {
+            image.destroy(device);
+        }
+        self.world_buffer.destroy(device);
+        self.render_pass.destroy(device);
+        device.destroy_framebuffer(self.handle);
     }
 
     pub(crate) const fn handle(&self) -> vk::Framebuffer {
@@ -330,25 +330,11 @@ impl CoreFramebuffer {
         self.shader_index.expect("bad framebuffer")
     }
 
-    pub(crate) fn update_world(&self, data: ShaderWorld) {
-        self.world_buffer.copy_from_data(&self.device, &[data]);
+    pub(crate) fn update_world(&self, device: &Device, data: ShaderWorld) {
+        self.world_buffer.copy_from_data(device, &[data]);
     }
 
     pub(crate) const fn world(&self) -> Descriptor {
         self.world_descriptor
-    }
-}
-
-impl Drop for CoreFramebuffer {
-    fn drop(&mut self) {
-        for image in &self.images {
-            image.destroy(&self.device);
-        }
-        if let Some(image) = &self.shader_image {
-            image.destroy(&self.device);
-        }
-        self.world_buffer.destroy(&self.device);
-        self.render_pass.destroy(&self.device);
-        self.device.destroy_framebuffer(self.handle);
     }
 }

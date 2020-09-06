@@ -69,7 +69,7 @@ impl Storage {
         }
         for unused in self.framebuffers.clear_unused() {
             shader_images.remove(unused.shader_index());
-            // unused.destroy(device);
+            unused.destroy(device);
         }
         for unused in self.textures.clear_unused() {
             shader_images.remove(unused.shader_index());
@@ -92,7 +92,7 @@ impl Storage {
         }
         for unused in self.framebuffers.clear() {
             shader_images.remove(unused.shader_index());
-            // unused.destroy(device);
+            unused.destroy(device);
         }
         for unused in self.textures.clear() {
             shader_images.remove(unused.shader_index());
@@ -125,7 +125,7 @@ impl Storage {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(shader_images, data);
+                .update(device, shader_images, data);
         }
     }
 }

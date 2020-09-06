@@ -231,16 +231,19 @@ impl Ui {
         // update world uniform
         let world_matrix = self.camera.matrix();
         let camera_position = self.camera.transform.position;
-        framebuffer.update_world(ShaderWorld {
-            light_matrices: [Matrix4::identity(); 4],
-            lights: [Default::default(); 4],
-            cascade_splits: [0.0; 4],
-            bias: 0.0,
-            time: 0.0,
-            pcf: 0.0,
-            camera_position,
-            world_matrix,
-        });
+        framebuffer.update_world(
+            &self.device,
+            ShaderWorld {
+                light_matrices: [Matrix4::identity(); 4],
+                lights: [Default::default(); 4],
+                cascade_splits: [0.0; 4],
+                bias: 0.0,
+                time: 0.0,
+                pcf: 0.0,
+                camera_position,
+                world_matrix,
+            },
+        );
 
         // begin render pass
         cmd.begin_render_pass(framebuffer, (0.0, 0.0, 0.0, 0.0));
@@ -322,7 +325,7 @@ impl Ui {
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(shader_images, size);
+            .update(&self.device, shader_images, size);
     }
 
     pub(crate) const fn drawn(&self) -> bool {
