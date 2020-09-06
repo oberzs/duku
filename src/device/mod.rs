@@ -28,8 +28,6 @@ use crate::error::Result;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
-use crate::pipeline::CoreShader;
-use crate::pipeline::Sampler;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -673,9 +671,9 @@ impl Device {
         sampler
     }
 
-    pub(crate) fn destroy_sampler(&self, sampler: &Sampler) {
+    pub(crate) fn destroy_sampler(&self, sampler: vk::Sampler) {
         unsafe {
-            vk::destroy_sampler(self.handle, sampler.handle(), ptr::null());
+            vk::destroy_sampler(self.handle, sampler, ptr::null());
         }
     }
 
@@ -695,8 +693,8 @@ impl Device {
         pipeline
     }
 
-    pub(crate) fn destroy_shader(&self, shader: &CoreShader) {
-        self.destroyed_pipelines.borrow_mut()[self.current_frame.get()].push(shader.handle());
+    pub(crate) fn destroy_pipeline(&self, pipeline: vk::Pipeline) {
+        self.destroyed_pipelines.borrow_mut()[self.current_frame.get()].push(pipeline);
     }
 
     pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {

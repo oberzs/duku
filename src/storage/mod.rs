@@ -65,7 +65,7 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.shaders.clear_unused() {
-            device.destroy_shader(&unused);
+            unused.destroy(device);
         }
         for unused in self.framebuffers.clear_unused() {
             shader_images.remove(unused.shader_index());
@@ -88,7 +88,7 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.shaders.clear() {
-            device.destroy_shader(&unused);
+            unused.destroy(device);
         }
         for unused in self.framebuffers.clear() {
             shader_images.remove(unused.shader_index());

@@ -23,7 +23,6 @@ use imgui::Slider;
 use imgui::Ui as ImUi;
 use imgui::Window;
 use std::ffi::CString;
-use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
@@ -59,8 +58,6 @@ pub(crate) struct Ui {
     drawn: bool,
 
     imgui: ImContext,
-
-    device: Rc<Device>,
 }
 
 pub struct UiFrame<'ui> {
@@ -69,7 +66,7 @@ pub struct UiFrame<'ui> {
 
 impl Ui {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
         storage: &mut Storage,
@@ -160,7 +157,6 @@ impl Ui {
         let mesh = CoreMesh::new(device);
 
         Self {
-            device: Rc::clone(device),
             drawn: false,
             framebuffer,
             camera,
@@ -173,6 +169,7 @@ impl Ui {
 
     pub(crate) fn draw(
         &mut self,
+        device: &Device,
         shader_layout: &ShaderLayout,
         storage: &mut Storage,
         mut draw_fn: impl FnMut(&UiFrame<'_>),
@@ -213,7 +210,7 @@ impl Ui {
 
         // update mesh
         self.mesh.update(
-            &self.device,
+            device,
             MeshData {
                 textures,
                 vertices,
@@ -225,14 +222,14 @@ impl Ui {
         );
 
         // render ui
-        let cmd = self.device.commands();
+        let cmd = device.commands();
         let framebuffer = storage.framebuffers.get_mut(&self.framebuffer.index);
 
         // update world uniform
         let world_matrix = self.camera.matrix();
         let camera_position = self.camera.transform.position;
         framebuffer.update_world(
-            &self.device,
+            device,
             ShaderWorld {
                 light_matrices: [Matrix4::identity(); 4],
                 lights: [Default::default(); 4],
@@ -313,6 +310,7 @@ impl Ui {
 
     pub(crate) fn resize(
         &mut self,
+        device: &Device,
         storage: &mut Storage,
         shader_images: &mut ShaderImages,
         size: Size,
@@ -325,7 +323,13 @@ impl Ui {
         storage
             .framebuffers
             .get_mut(&self.framebuffer.index)
-            .update(&self.device, shader_images, size);
+            .update(device, shader_images, size);
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.texture.destroy(device);
+        self.mesh.destroy(device);
+        self.shader.destroy(device);
     }
 
     pub(crate) const fn drawn(&self) -> bool {
@@ -339,14 +343,6 @@ impl Ui {
     // pub(crate) const fn framebuffer(&self) -> &Framebuffer {
     //     &self.framebuffer
     // }
-}
-
-impl Drop for Ui {
-    fn drop(&mut self) {
-        self.texture.destroy(&self.device);
-        self.mesh.destroy(&self.device);
-        self.device.destroy_shader(&self.shader);
-    }
 }
 
 impl UiFrame<'_> {

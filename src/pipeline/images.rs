@@ -178,7 +178,7 @@ impl ShaderImages {
 
     pub(crate) fn destroy(&self, device: &Device) {
         for sampler in &self.samplers {
-            device.destroy_sampler(sampler);
+            sampler.destroy(device);
         }
     }
 }

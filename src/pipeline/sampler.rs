@@ -57,6 +57,10 @@ impl Sampler {
         Self { handle }
     }
 
+    pub(crate) fn destroy(&self, device: &Device) {
+        device.destroy_sampler(self.handle);
+    }
+
     pub(crate) const fn handle(&self) -> vk::Sampler {
         self.handle
     }

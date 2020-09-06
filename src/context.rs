@@ -3,7 +3,6 @@
 
 // Context - draw-it application entrypoint
 
-use std::rc::Rc;
 use std::time::Instant;
 
 use crate::color::Color;
@@ -71,7 +70,7 @@ pub struct Context {
     shader_images: ShaderImages,
     shader_layout: ShaderLayout,
     swapchain: Swapchain,
-    device: Rc<Device>,
+    device: Device,
     surface: Surface,
     gpu_index: usize,
     instance: Instance,
@@ -142,7 +141,7 @@ impl Context {
         let mut gpu_properties_list = instance.gpu_properties(&surface);
         let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
         let gpu_properties = gpu_properties_list.remove(gpu_index);
-        let device = Rc::new(Device::new(&instance, &gpu_properties, gpu_index));
+        let device = Device::new(&instance, &gpu_properties, gpu_index);
         let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync);
 
         info!("using anisotropy level {}", anisotropy);
@@ -249,6 +248,7 @@ impl Context {
         #[cfg(feature = "ui")]
         if let Some(ui) = &mut self.ui {
             ui.resize(
+                &self.device,
                 &mut self.storage,
                 &mut self.shader_images,
                 Size::new(width, height),
@@ -281,6 +281,7 @@ impl Context {
 
         // draw
         self.forward_renderer.draw(
+            &self.device,
             framebuffer,
             &cam,
             &self.storage,
@@ -309,6 +310,7 @@ impl Context {
 
         // draw
         self.forward_renderer.draw(
+            &self.device,
             self.storage.framebuffers.get(&framebuffer.index),
             &cam,
             &self.storage,
@@ -606,6 +608,7 @@ impl Context {
         }
 
         self.ui.as_mut().ok_or(Error::UnitializedUi)?.draw(
+            &self.device,
             &self.shader_layout,
             &mut self.storage,
             draw_fn,
@@ -621,6 +624,10 @@ impl Drop for Context {
         self.shader_images.destroy(&self.device);
         self.storage.clear(&self.device, &mut self.shader_images);
         self.forward_renderer.destroy(&self.device);
+        #[cfg(feature = "ui")]
+        if let Some(ui) = &self.ui {
+            ui.destroy(&self.device);
+        }
         self.shader_layout.destroy(&self.device);
         for framebuffer in &self.window_framebuffers {
             framebuffer.destroy(&self.device);

@@ -6,7 +6,6 @@
 mod fira_mono;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::color::Color;
 use crate::device::Device;
@@ -48,7 +47,7 @@ impl Font {
 }
 
 impl CoreFont {
-    pub(crate) fn fira_mono(device: &Rc<Device>, shader_images: &mut ShaderImages) -> Self {
+    pub(crate) fn fira_mono(device: &Device, shader_images: &mut ShaderImages) -> Self {
         let atlas_width = fira_mono::ATLAS_WIDTH;
         let atlas_height = fira_mono::ATLAS_HEIGHT;
         let line_height = fira_mono::LINE_HEIGHT;

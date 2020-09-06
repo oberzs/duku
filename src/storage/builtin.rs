@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::rc::Rc;
 
 use super::Storage;
 use crate::color::Color;
@@ -50,7 +49,7 @@ pub struct Builtins {
 
 impl Builtins {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         storage: &mut Storage,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
@@ -185,7 +184,7 @@ impl Builtins {
     }
 }
 
-fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
+fn create_surface(device: &Device, storage: &mut Storage) -> Mesh {
     let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
 
@@ -208,7 +207,7 @@ fn create_surface(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
     mesh
 }
 
-fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
+fn create_quad(device: &Device, storage: &mut Storage) -> Mesh {
     let (index, updater) = storage.meshes.add(CoreMesh::new(device));
     let mut mesh = Mesh::new(index, updater);
 
@@ -231,7 +230,7 @@ fn create_quad(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
     mesh
 }
 
-fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
+fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
     let top = create_rectangle(
         device,
         storage,
@@ -291,7 +290,7 @@ fn create_cube(device: &Rc<Device>, storage: &mut Storage) -> Mesh {
     Mesh::combine(index, updater, &[top, bottom, front, back, left, right])
 }
 
-fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Mesh {
+fn create_grid(device: &Device, storage: &mut Storage, size: u32) -> Mesh {
     let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
@@ -336,7 +335,7 @@ fn create_grid(device: &Rc<Device>, storage: &mut Storage, size: u32) -> Mesh {
 }
 
 fn create_rectangle<V: Into<Vector3>>(
-    device: &Rc<Device>,
+    device: &Device,
     storage: &mut Storage,
     p1: V,
     p2: V,
@@ -359,7 +358,7 @@ fn create_rectangle<V: Into<Vector3>>(
     mesh
 }
 
-fn create_sphere(device: &Rc<Device>, storage: &mut Storage, detail_level: u32) -> Mesh {
+fn create_sphere(device: &Device, storage: &mut Storage, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut indices = vec![];
 

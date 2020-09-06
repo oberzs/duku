@@ -325,6 +325,10 @@ impl CoreShader {
         Ok(Self { handle })
     }
 
+    pub(crate) fn destroy(&self, device: &Device) {
+        device.destroy_pipeline(self.handle);
+    }
+
     pub(crate) const fn handle(&self) -> vk::Pipeline {
         self.handle
     }
