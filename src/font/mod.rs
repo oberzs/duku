@@ -113,14 +113,17 @@ impl CoreFont {
         let textures = vec![texture.shader_index(); vertex_count];
 
         let mut mesh = CoreMesh::new(device);
-        mesh.update(MeshData {
-            textures,
-            vertices,
-            normals,
-            colors,
-            uvs,
-            indices,
-        });
+        mesh.update(
+            device,
+            MeshData {
+                textures,
+                vertices,
+                normals,
+                colors,
+                uvs,
+                indices,
+            },
+        );
 
         Self {
             char_data,
@@ -142,5 +145,9 @@ impl CoreFont {
             Some(data) => *data,
             None => *self.char_data.get(&'?').expect("bad default"),
         }
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.mesh.destroy(device);
     }
 }

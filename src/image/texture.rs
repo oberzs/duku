@@ -74,6 +74,9 @@ impl CoreTexture {
         image.copy_from_buffer(&staging_buffer, 0);
         image.generate_mipmaps();
 
+        // destroy staging buffer
+        staging_buffer.destroy(device);
+
         let shader_index = shader_images.add(image.add_view());
 
         Self {

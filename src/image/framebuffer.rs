@@ -86,8 +86,9 @@ impl CoreFramebuffer {
         let attachment_formats = &[ImageFormat::Depth, ImageFormat::Sbgra];
 
         // create a framebuffer for each image in the swapchain
-        swapchain
-            .iter_images()
+        device
+            .get_swapchain_images(swapchain)
+            .into_iter()
             .map(|img| {
                 let render_pass = RenderPass::new(device, attachment_formats, msaa, true);
                 let mut images: Vec<_> = render_pass
@@ -321,7 +322,7 @@ impl CoreFramebuffer {
     }
 
     pub(crate) fn update_world(&self, data: ShaderWorld) {
-        self.world_buffer.copy_from_data(&[data]);
+        self.world_buffer.copy_from_data(&self.device, &[data]);
     }
 
     pub(crate) const fn world(&self) -> Descriptor {
@@ -331,6 +332,7 @@ impl CoreFramebuffer {
 
 impl Drop for CoreFramebuffer {
     fn drop(&mut self) {
+        self.world_buffer.destroy(&self.device);
         self.device.destroy_framebuffer(self.handle);
     }
 }

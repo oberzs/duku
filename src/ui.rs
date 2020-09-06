@@ -212,14 +212,17 @@ impl Ui {
         let textures = vec![self.texture.shader_index(); vertices.len()];
 
         // update mesh
-        self.mesh.update(MeshData {
-            textures,
-            vertices,
-            normals,
-            colors,
-            uvs,
-            indices,
-        });
+        self.mesh.update(
+            &self.device,
+            MeshData {
+                textures,
+                vertices,
+                normals,
+                colors,
+                uvs,
+                indices,
+            },
+        );
 
         // render ui
         let cmd = self.device.commands();
@@ -333,6 +336,12 @@ impl Ui {
     // pub(crate) const fn framebuffer(&self) -> &Framebuffer {
     //     &self.framebuffer
     // }
+}
+
+impl Drop for Ui {
+    fn drop(&mut self) {
+        self.mesh.destroy(&self.device);
+    }
 }
 
 impl UiFrame<'_> {

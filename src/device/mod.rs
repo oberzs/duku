@@ -191,7 +191,8 @@ impl Device {
         let mut current = self.current_frame.get();
         current = (current + 1) % FRAMES_IN_FLIGHT;
 
-        swapchain.next(self.sync_acquire[current]);
+        let next_image = self.get_next_swapchain_image(swapchain, self.sync_acquire[current]);
+        swapchain.next(next_image);
 
         // wait for queue
         let wait = self.sync_submit[current];
@@ -318,25 +319,25 @@ impl Device {
         swapchain
     }
 
-    pub(crate) fn destroy_swapchain(&self, swapchain: vk::SwapchainKHR) {
+    pub(crate) fn destroy_swapchain(&self, swapchain: &Swapchain) {
         unsafe {
-            vk::destroy_swapchain_khr(self.handle, swapchain, ptr::null());
+            vk::destroy_swapchain_khr(self.handle, swapchain.handle(), ptr::null());
         }
     }
 
-    pub(crate) fn get_swapchain_images(&self, swapchain: vk::SwapchainKHR) -> Vec<vk::Image> {
+    pub(crate) fn get_swapchain_images(&self, swapchain: &Swapchain) -> Vec<vk::Image> {
         unsafe {
             let mut count = 0;
             vk::check(vk::get_swapchain_images_khr(
                 self.handle,
-                swapchain,
+                swapchain.handle(),
                 &mut count,
                 ptr::null_mut(),
             ));
             let mut images: Vec<vk::Image> = Vec::with_capacity(count as usize);
             vk::check(vk::get_swapchain_images_khr(
                 self.handle,
-                swapchain,
+                swapchain.handle(),
                 &mut count,
                 images.as_mut_ptr(),
             ));
@@ -347,14 +348,14 @@ impl Device {
 
     pub(crate) fn get_next_swapchain_image(
         &self,
-        swapchain: vk::SwapchainKHR,
+        swapchain: &Swapchain,
         signal: vk::Semaphore,
     ) -> usize {
         let mut index = 0;
         unsafe {
             vk::check(vk::acquire_next_image_khr(
                 self.handle,
-                swapchain,
+                swapchain.handle(),
                 u64::max_value(),
                 signal,
                 0,

@@ -11,6 +11,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
+use crate::device::Device;
 use crate::font::CoreFont;
 use crate::image::CoreFramebuffer;
 use crate::image::CoreTexture;
@@ -53,33 +54,56 @@ impl Storage {
         }
     }
 
-    pub(crate) fn clean_unused(&mut self, shader_images: &mut ShaderImages) {
-        self.fonts.stored.retain(|i, _| i.count() > 1);
-        self.meshes.stored.retain(|i, _| i.count() > 1);
-        self.materials.stored.retain(|i, _| i.count() > 1);
-        self.shaders.stored.retain(|i, _| i.count() > 1);
-        self.framebuffers.stored.retain(|i, f| {
-            if i.count() == 1 {
-                shader_images.remove(f.shader_index());
-            }
-            i.count() > 1
-        });
-        self.textures.stored.retain(|i, t| {
-            if i.count() == 1 {
-                shader_images.remove(t.shader_index());
-            }
-            i.count() > 1
-        });
+    pub(crate) fn clear_unused(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+        for unused in self.fonts.clear_unused() {
+            unused.destroy(device);
+        }
+        for unused in self.meshes.clear_unused() {
+            unused.destroy(device);
+        }
+        for unused in self.materials.clear_unused() {
+            unused.destroy(device);
+        }
+        for _unused in self.shaders.clear_unused() {
+            // unused.destroy(device);
+        }
+        for unused in self.framebuffers.clear_unused() {
+            shader_images.remove(unused.shader_index());
+        }
+        for unused in self.textures.clear_unused() {
+            shader_images.remove(unused.shader_index());
+        }
     }
 
-    pub(crate) fn update_if_needed(&mut self, shader_images: &mut ShaderImages) {
+    pub(crate) fn clear(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+        for unused in self.fonts.clear() {
+            unused.destroy(device);
+        }
+        for unused in self.meshes.clear() {
+            unused.destroy(device);
+        }
+        for unused in self.materials.clear() {
+            unused.destroy(device);
+        }
+        for _unused in self.shaders.clear() {
+            // unused.destroy(device);
+        }
+        for unused in self.framebuffers.clear() {
+            shader_images.remove(unused.shader_index());
+        }
+        for unused in self.textures.clear() {
+            shader_images.remove(unused.shader_index());
+        }
+    }
+
+    pub(crate) fn update_if_needed(&mut self, device: &Device, shader_images: &mut ShaderImages) {
         // update meshes
         for (i, data) in self.meshes.receiver.try_iter() {
             self.meshes
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data);
+                .update(device, data);
         }
 
         // update materials
@@ -88,7 +112,7 @@ impl Storage {
                 .stored
                 .get_mut(&i)
                 .expect("bad index")
-                .update(data);
+                .update(device, data);
         }
 
         // update framebuffers
@@ -127,5 +151,26 @@ impl<T, U> Store<T, U> {
 
     pub(crate) fn get_mut(&mut self, index: &Index) -> &mut T {
         self.stored.get_mut(index).expect("bad index")
+    }
+
+    pub(crate) fn clear_unused(&mut self) -> impl Iterator<Item = T> {
+        let mut removed = vec![];
+        let stored: Vec<_> = self.stored.drain().collect();
+        for (k, v) in stored {
+            if k.count() == 1 {
+                removed.push(v);
+            } else {
+                self.stored.insert(k, v);
+            }
+        }
+        removed.into_iter()
+    }
+
+    pub(crate) fn clear(&mut self) -> impl Iterator<Item = T> {
+        self.stored
+            .drain()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }

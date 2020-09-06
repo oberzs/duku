@@ -55,6 +55,14 @@ impl Cubemap {
         image.copy_from_buffer(&back_staging_buffer, 5);
         image.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
 
+        // destroy staging buffers
+        top_staging_buffer.destroy(device);
+        bottom_staging_buffer.destroy(device);
+        front_staging_buffer.destroy(device);
+        back_staging_buffer.destroy(device);
+        left_staging_buffer.destroy(device);
+        right_staging_buffer.destroy(device);
+
         Self { image }
     }
 

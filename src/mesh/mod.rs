@@ -5,7 +5,6 @@
 
 mod vertex;
 
-use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
 use crate::buffer::Buffer;
@@ -137,7 +136,7 @@ impl Mesh {
 }
 
 impl MeshBuilder {
-    pub(crate) fn new(mesh: Mesh) -> Self {
+    pub(crate) const fn new(mesh: Mesh) -> Self {
         Self { mesh }
     }
 
@@ -178,7 +177,7 @@ impl MeshBuilder {
 }
 
 impl CoreMesh {
-    pub(crate) fn new(device: &Rc<Device>) -> Self {
+    pub(crate) fn new(device: &Device) -> Self {
         let vertex_buffer = Buffer::dynamic(device, BufferUsage::Vertex, 1);
         let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
 
@@ -188,7 +187,7 @@ impl CoreMesh {
         }
     }
 
-    pub(crate) fn update(&mut self, data: MeshData) {
+    pub(crate) fn update(&mut self, device: &Device, data: MeshData) {
         let vertices: Vec<_> = data
             .vertices
             .iter()
@@ -207,14 +206,14 @@ impl CoreMesh {
 
         // resize buffers if needed
         if vertices.len() > self.vertex_buffer.len() {
-            self.vertex_buffer.resize(vertices.len());
+            self.vertex_buffer.resize(device, vertices.len());
         }
         if data.indices.len() > self.index_buffer.len() {
-            self.index_buffer.resize(data.indices.len());
+            self.index_buffer.resize(device, data.indices.len());
         }
 
-        self.vertex_buffer.copy_from_data(&vertices);
-        self.index_buffer.copy_from_data(&data.indices);
+        self.vertex_buffer.copy_from_data(device, &vertices);
+        self.index_buffer.copy_from_data(device, &data.indices);
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
@@ -227,5 +226,10 @@ impl CoreMesh {
 
     pub(crate) fn index_count(&self) -> usize {
         self.index_buffer.len()
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.vertex_buffer.destroy(device);
+        self.index_buffer.destroy(device);
     }
 }

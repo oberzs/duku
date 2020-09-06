@@ -237,7 +237,7 @@ impl Context {
             .gpu_properties(&self.surface)
             .remove(self.gpu_index);
         self.swapchain
-            .recreate(&self.surface, &gpu_properties, self.vsync);
+            .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
 
         self.window_framebuffers = CoreFramebuffer::for_swapchain(
             &self.device,
@@ -413,8 +413,10 @@ impl Context {
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain);
-        self.storage.clean_unused(&mut self.shader_images);
-        self.storage.update_if_needed(&mut self.shader_images);
+        self.storage
+            .clear_unused(&self.device, &mut self.shader_images);
+        self.storage
+            .update_if_needed(&self.device, &mut self.shader_images);
 
         // hot-reload shaders
         #[cfg(feature = "glsl")]
@@ -614,42 +616,44 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {
         self.device.wait_idle();
+        self.storage.clear(&self.device, &mut self.shader_images);
+        self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);
     }
 }
 
 impl ContextBuilder {
-    pub fn vsync(mut self, vsync: VSync) -> Self {
+    pub const fn vsync(mut self, vsync: VSync) -> Self {
         self.vsync = vsync;
         self
     }
 
-    pub fn no_vsync(mut self) -> Self {
+    pub const fn no_vsync(mut self) -> Self {
         self.vsync = VSync::Off;
         self
     }
 
-    pub fn quality(mut self, quality: Quality) -> Self {
+    pub const fn quality(mut self, quality: Quality) -> Self {
         self.quality = quality;
         self
     }
 
-    pub fn low_quality(mut self) -> Self {
+    pub const fn low_quality(mut self) -> Self {
         self.quality = Quality::Low;
         self
     }
 
-    pub fn medium_quality(mut self) -> Self {
+    pub const fn medium_quality(mut self) -> Self {
         self.quality = Quality::Medium;
         self
     }
 
-    pub fn high_quality(mut self) -> Self {
+    pub const fn high_quality(mut self) -> Self {
         self.quality = Quality::High;
         self
     }
 
-    pub fn attach_window(mut self, window: WindowHandle) -> Self {
+    pub const fn attach_window(mut self, window: WindowHandle) -> Self {
         self.window = Some(window);
         self
     }
@@ -686,7 +690,7 @@ impl Default for ContextBuilder {
 
 #[cfg(feature = "window")]
 impl WindowBuilder {
-    pub fn resizable(mut self) -> Self {
+    pub const fn resizable(mut self) -> Self {
         self.resizable = true;
         self
     }

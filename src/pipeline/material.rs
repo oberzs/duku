@@ -3,7 +3,6 @@
 
 // Material - struct to pass additional data to shader
 
-use std::rc::Rc;
 use std::sync::mpsc::Sender;
 
 use super::Descriptor;
@@ -89,7 +88,7 @@ impl Material {
 }
 
 impl MaterialBuilder {
-    pub(crate) fn new(material: Material) -> Self {
+    pub(crate) const fn new(material: Material) -> Self {
         Self { material }
     }
 
@@ -101,7 +100,7 @@ impl MaterialBuilder {
         self
     }
 
-    pub fn phong_texture(mut self, texture: &Texture) -> Self {
+    pub const fn phong_texture(mut self, texture: &Texture) -> Self {
         self.material.arg_1.w = texture.shader_index as f32;
         self
     }
@@ -113,19 +112,23 @@ impl MaterialBuilder {
 }
 
 impl CoreMaterial {
-    pub(crate) fn new(device: &Rc<Device>, shader_layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Device, shader_layout: &ShaderLayout) -> Self {
         let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let descriptor = shader_layout.material_set(&buffer);
 
         Self { buffer, descriptor }
     }
 
-    pub(crate) fn update(&mut self, data: ShaderMaterial) {
-        self.buffer.copy_from_data(&[data]);
+    pub(crate) fn update(&mut self, device: &Device, data: ShaderMaterial) {
+        self.buffer.copy_from_data(device, &[data]);
     }
 
     pub(crate) const fn descriptor(&self) -> Descriptor {
         self.descriptor
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.buffer.destroy(device);
     }
 }
 
