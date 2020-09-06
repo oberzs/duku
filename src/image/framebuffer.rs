@@ -348,6 +348,7 @@ impl Drop for CoreFramebuffer {
             image.destroy(&self.device);
         }
         self.world_buffer.destroy(&self.device);
+        self.render_pass.destroy(&self.device);
         self.device.destroy_framebuffer(self.handle);
     }
 }

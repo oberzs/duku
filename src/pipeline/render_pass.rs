@@ -4,7 +4,6 @@
 // RenderPass - struct that structures a rendering pass
 
 use std::ptr;
-use std::rc::Rc;
 
 use super::Attachment;
 use super::Clear;
@@ -18,12 +17,11 @@ use crate::vk;
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
     attachments: Vec<Attachment>,
-    device: Rc<Device>,
 }
 
 impl RenderPass {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         attachment_formats: &[ImageFormat],
         msaa: Msaa,
         present: bool,
@@ -206,10 +204,13 @@ impl RenderPass {
         let handle = device.create_render_pass(&info);
 
         Self {
-            device: Rc::clone(device),
             attachments,
             handle,
         }
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        device.destroy_render_pass(self.handle);
     }
 
     pub(crate) fn attachments(&self) -> impl Iterator<Item = &Attachment> {
@@ -218,11 +219,5 @@ impl RenderPass {
 
     pub(crate) const fn handle(&self) -> vk::RenderPass {
         self.handle
-    }
-}
-
-impl Drop for RenderPass {
-    fn drop(&mut self) {
-        self.device.destroy_render_pass(self.handle);
     }
 }
