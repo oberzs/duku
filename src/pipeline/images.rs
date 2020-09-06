@@ -4,7 +4,6 @@
 // uniform structs to manage shader accessible uniform data
 
 use std::ptr;
-use std::rc::Rc;
 
 use super::Descriptor;
 use super::Sampler;
@@ -17,19 +16,18 @@ use crate::vk;
 
 pub(crate) struct ShaderImages {
     descriptor: Descriptor,
-    sampler_combinations: Vec<Sampler>,
+    samplers: Vec<Sampler>,
     images: Vec<Option<vk::ImageView>>,
     skybox: Option<vk::ImageView>,
     should_update: bool,
-    device: Rc<Device>,
 }
 
 impl ShaderImages {
-    pub(crate) fn new(device: &Rc<Device>, layout: &ShaderLayout, anisotropy: f32) -> Self {
+    pub(crate) fn new(device: &Device, layout: &ShaderLayout, anisotropy: f32) -> Self {
         let descriptor = layout.image_set();
 
         // create sampler combinations
-        let mut sampler_combinations = vec![];
+        let mut samplers = vec![];
         for filter in &[TextureFilter::Linear, TextureFilter::Nearest] {
             for wrap in &[
                 TextureWrap::Repeat,
@@ -37,19 +35,17 @@ impl ShaderImages {
                 TextureWrap::ClampEdge,
             ] {
                 for mipmaps in &[true, false] {
-                    sampler_combinations
-                        .push(Sampler::new(device, *wrap, *filter, *mipmaps, anisotropy));
+                    samplers.push(Sampler::new(device, *wrap, *filter, *mipmaps, anisotropy));
                 }
             }
         }
 
         Self {
             descriptor,
-            sampler_combinations,
+            samplers,
             images: vec![],
             skybox: None,
             should_update: true,
-            device: Rc::clone(device),
         }
     }
 
@@ -91,7 +87,7 @@ impl ShaderImages {
         self.should_update = true;
     }
 
-    pub(crate) fn update_if_needed(&mut self) {
+    pub(crate) fn update_if_needed(&mut self, device: &Device) {
         // update if image was added/removed
         if self.should_update {
             let mut writes = vec![];
@@ -127,7 +123,7 @@ impl ShaderImages {
 
             // configure sampler writes to descriptor
             let sampler_info: Vec<_> = self
-                .sampler_combinations
+                .samplers
                 .iter()
                 .map(|s| vk::DescriptorImageInfo {
                     sampler: s.handle(),
@@ -171,12 +167,18 @@ impl ShaderImages {
             });
 
             // write data to descriptor
-            self.device.update_descriptor_sets(&writes);
+            device.update_descriptor_sets(&writes);
             self.should_update = false;
         }
     }
 
     pub(crate) const fn descriptor(&self) -> Descriptor {
         self.descriptor
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        for sampler in &self.samplers {
+            device.destroy_sampler(sampler);
+        }
     }
 }

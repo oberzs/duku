@@ -63,7 +63,7 @@ pub struct Context {
 
     // Resources
     storage: Storage,
-    _skybox: Cubemap, // TODO: set skybox from colors
+    skybox: Cubemap,
     builtins: Builtins,
 
     // Vulkan
@@ -179,7 +179,7 @@ impl Context {
                 right: vec![255, 255, 255, 255],
             },
         );
-        shader_images.set_skybox(skybox.add_view());
+        shader_images.set_skybox(skybox.add_view(&device));
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
@@ -210,7 +210,7 @@ impl Context {
             builtins,
             instance,
             surface,
-            _skybox: skybox,
+            skybox,
             device,
             msaa,
             vsync,
@@ -440,7 +440,7 @@ impl Context {
             }
         }
 
-        self.shader_images.update_if_needed();
+        self.shader_images.update_if_needed(&self.device);
         self.device
             .commands()
             .bind_descriptor(&self.shader_layout, self.shader_images.descriptor());
@@ -591,8 +591,9 @@ impl Context {
                 right: std::fs::read(sides.right)?,
             },
         )?;
-        self.shader_images.set_skybox(cubemap.add_view());
-        self._skybox = cubemap;
+        self.shader_images
+            .set_skybox(cubemap.add_view(&self.device));
+        self.skybox = cubemap;
         Ok(())
     }
 
@@ -616,6 +617,8 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {
         self.device.wait_idle();
+        self.skybox.destroy(&self.device);
+        self.shader_images.destroy(&self.device);
         self.storage.clear(&self.device, &mut self.shader_images);
         self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);

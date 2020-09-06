@@ -28,6 +28,7 @@ use crate::error::Result;
 use crate::instance::GPUProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
+use crate::pipeline::Sampler;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -671,9 +672,9 @@ impl Device {
         sampler
     }
 
-    pub(crate) fn destroy_sampler(&self, sampler: vk::Sampler) {
+    pub(crate) fn destroy_sampler(&self, sampler: &Sampler) {
         unsafe {
-            vk::destroy_sampler(self.handle, sampler, ptr::null());
+            vk::destroy_sampler(self.handle, sampler.handle(), ptr::null());
         }
     }
 

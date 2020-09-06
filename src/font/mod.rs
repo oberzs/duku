@@ -30,7 +30,7 @@ pub struct Font {
 pub(crate) struct CoreFont {
     char_data: HashMap<char, CharData>,
     mesh: CoreMesh,
-    _texture: CoreTexture,
+    texture: CoreTexture,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -128,7 +128,7 @@ impl CoreFont {
         Self {
             char_data,
             mesh,
-            _texture: texture,
+            texture,
         }
     }
 
@@ -148,6 +148,7 @@ impl CoreFont {
     }
 
     pub(crate) fn destroy(&self, device: &Device) {
+        self.texture.destroy(device);
         self.mesh.destroy(device);
     }
 }

@@ -104,7 +104,7 @@ impl CoreFramebuffer {
                     })
                     .collect();
 
-                let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
+                let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
 
                 let info = vk::FramebufferCreateInfo {
                     s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -166,7 +166,7 @@ impl CoreFramebuffer {
             })
             .collect();
 
-        let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
+        let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
 
         let info = vk::FramebufferCreateInfo {
             s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -186,11 +186,12 @@ impl CoreFramebuffer {
         let world_descriptor = shader_layout.world_set(&world_buffer);
 
         let mut shader_image = Image::shader(device, size);
-        let shader_index = shader_images.add(shader_image.add_view());
+        let shader_index = shader_images.add(shader_image.add_view(device));
 
         // ready image layouts
-        shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
         images[stored_index].change_layout(
+            device,
             ImageLayout::Undefined,
             match stored_format {
                 Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
@@ -237,7 +238,10 @@ impl CoreFramebuffer {
             })
             .collect();
 
-        let views: Vec<_> = images.iter_mut().map(|i| i.add_view()).collect();
+        let views: Vec<_> = images
+            .iter_mut()
+            .map(|i| i.add_view(&self.device))
+            .collect();
 
         let info = vk::FramebufferCreateInfo {
             s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -254,11 +258,16 @@ impl CoreFramebuffer {
         shader_images.remove(self.shader_index.expect("bad texture index"));
 
         let mut shader_image = Image::shader(&self.device, size);
-        let shader_index = shader_images.add(shader_image.add_view());
+        let shader_index = shader_images.add(shader_image.add_view(&self.device));
 
         // ready image layouts
-        shader_image.change_layout(ImageLayout::Undefined, ImageLayout::ShaderColor);
+        shader_image.change_layout(
+            &self.device,
+            ImageLayout::Undefined,
+            ImageLayout::ShaderColor,
+        );
         images[stored_index].change_layout(
+            &self.device,
             ImageLayout::Undefined,
             match stored_format {
                 Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
@@ -332,6 +341,12 @@ impl CoreFramebuffer {
 
 impl Drop for CoreFramebuffer {
     fn drop(&mut self) {
+        for image in &self.images {
+            image.destroy(&self.device);
+        }
+        if let Some(image) = &self.shader_image {
+            image.destroy(&self.device);
+        }
         self.world_buffer.destroy(&self.device);
         self.device.destroy_framebuffer(self.handle);
     }

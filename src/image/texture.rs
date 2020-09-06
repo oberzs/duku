@@ -3,8 +3,6 @@
 
 // Texture - simple image that can be used for rendering
 
-use std::rc::Rc;
-
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
@@ -30,7 +28,7 @@ pub struct Texture {
 
 // data storage for a texture
 pub(crate) struct CoreTexture {
-    _image: Image,
+    image: Image,
     shader_index: i32,
 }
 
@@ -49,7 +47,7 @@ impl Texture {
 
 impl CoreTexture {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         shader_images: &mut ShaderImages,
         data: Vec<u8>,
         size: Size,
@@ -70,24 +68,24 @@ impl CoreTexture {
         let mut image = Image::texture(device, format, size, false);
 
         // copy image from staging buffer
-        image.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
-        image.copy_from_buffer(&staging_buffer, 0);
-        image.generate_mipmaps();
+        image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
+        image.copy_from_buffer(device, &staging_buffer, 0);
+        image.generate_mipmaps(device);
 
         // destroy staging buffer
         staging_buffer.destroy(device);
 
-        let shader_index = shader_images.add(image.add_view());
+        let shader_index = shader_images.add(image.add_view(device));
 
         Self {
-            _image: image,
+            image,
             shader_index,
         }
     }
 
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
-        device: &Rc<Device>,
+        device: &Device,
         shader_images: &mut ShaderImages,
         bytes: Vec<u8>,
     ) -> crate::error::Result<Self> {
@@ -111,6 +109,10 @@ impl CoreTexture {
         };
 
         Ok(Self::new(device, shader_images, data, size, format))
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.image.destroy(device);
     }
 
     pub(crate) const fn shader_index(&self) -> i32 {

@@ -11,7 +11,6 @@ mod texture;
 
 use std::cmp;
 use std::ptr;
-use std::rc::Rc;
 
 use crate::buffer::Buffer;
 use crate::device::Commands;
@@ -42,16 +41,10 @@ pub(crate) struct Image {
     mip_count: u32,
     layer_count: u32,
     format: ImageFormat,
-    device: Rc<Device>,
 }
 
 impl Image {
-    pub(crate) fn texture(
-        device: &Rc<Device>,
-        format: ImageFormat,
-        size: Size,
-        cubemap: bool,
-    ) -> Self {
+    pub(crate) fn texture(device: &Device, format: ImageFormat, size: Size, cubemap: bool) -> Self {
         // calculate mip count
         let mip_count = (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1;
 
@@ -89,7 +82,6 @@ impl Image {
         let (handle, memory) = device.allocate_image(&image_info);
 
         Self {
-            device: Rc::clone(device),
             memory: Some(memory),
             views: vec![],
             layer_count,
@@ -100,7 +92,7 @@ impl Image {
         }
     }
 
-    pub(crate) fn shader(device: &Rc<Device>, size: Size) -> Self {
+    pub(crate) fn shader(device: &Device, size: Size) -> Self {
         let format = ImageFormat::Sbgra;
 
         // create image
@@ -129,7 +121,6 @@ impl Image {
         let (handle, memory) = device.allocate_image(&image_info);
 
         Self {
-            device: Rc::clone(device),
             memory: Some(memory),
             views: vec![],
             layer_count: 1,
@@ -141,7 +132,7 @@ impl Image {
     }
 
     pub(crate) fn attachment(
-        device: &Rc<Device>,
+        device: &Device,
         attachment: &Attachment,
         size: Size,
         external: Option<vk::Image>,
@@ -201,7 +192,6 @@ impl Image {
         };
 
         Self {
-            device: Rc::clone(device),
             views: vec![],
             layer_count: 1,
             mip_count: 1,
@@ -212,7 +202,7 @@ impl Image {
         }
     }
 
-    pub(crate) fn add_view(&mut self) -> vk::ImageView {
+    pub(crate) fn add_view(&mut self, device: &Device) -> vk::ImageView {
         let view_type = if self.layer_count == 6 {
             vk::IMAGE_VIEW_TYPE_CUBE
         } else {
@@ -242,15 +232,15 @@ impl Image {
             view_type,
         };
 
-        let view = self.device.create_image_view(&view_info);
+        let view = device.create_image_view(&view_info);
         self.views.push(view);
         view
     }
 
-    pub(crate) fn copy_from_buffer(&self, buffer: &Buffer<u8>, layer: u32) {
+    pub(crate) fn copy_from_buffer(&self, device: &Device, buffer: &Buffer<u8>, layer: u32) {
         debug_assert!(layer < self.layer_count, "layer out of bounds");
 
-        self.device.do_commands(|cmd| {
+        device.do_commands(|cmd| {
             let subresource = vk::ImageSubresourceLayers {
                 aspect_mask: self.format.aspect(),
                 mip_level: 0,
@@ -270,8 +260,8 @@ impl Image {
         });
     }
 
-    pub(crate) fn change_layout(&self, from: ImageLayout, to: ImageLayout) {
-        self.device.do_commands(|cmd| {
+    pub(crate) fn change_layout(&self, device: &Device, from: ImageLayout, to: ImageLayout) {
+        device.do_commands(|cmd| {
             cmd.change_image_layout(self, from, to, 0..self.mip_count, 0..self.layer_count);
         });
     }
@@ -280,8 +270,8 @@ impl Image {
         cmd.change_image_layout(self, from, to, 0..self.mip_count, 0..self.layer_count);
     }
 
-    pub(crate) fn generate_mipmaps(&self) {
-        self.device.do_commands(|cmd| {
+    pub(crate) fn generate_mipmaps(&self, device: &Device) {
+        device.do_commands(|cmd| {
             for i in 1..self.mip_count {
                 cmd.change_image_layout(
                     self,
@@ -311,6 +301,15 @@ impl Image {
         });
     }
 
+    pub(crate) fn destroy(&self, device: &Device) {
+        for view in &self.views {
+            device.destroy_image_view(*view);
+        }
+        if let Some(memory) = self.memory {
+            device.free_image(self.handle, memory);
+        }
+    }
+
     pub(crate) fn get_view(&self, index: usize) -> vk::ImageView {
         self.views[index]
     }
@@ -333,16 +332,5 @@ impl Image {
 
     pub(crate) const fn size(&self) -> Size {
         self.size
-    }
-}
-
-impl Drop for Image {
-    fn drop(&mut self) {
-        for view in &self.views {
-            self.device.destroy_image_view(*view);
-        }
-        if let Some(memory) = self.memory {
-            self.device.free_image(self.handle, memory);
-        }
     }
 }

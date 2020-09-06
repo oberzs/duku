@@ -3,8 +3,6 @@
 
 // Cubemap - image with 6 layers to render a skybox
 
-use std::rc::Rc;
-
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
@@ -29,7 +27,7 @@ pub struct CubemapSides<T> {
 
 impl Cubemap {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         size: u32,
         format: ImageFormat,
         sides: CubemapSides<Vec<u8>>,
@@ -46,14 +44,14 @@ impl Cubemap {
         let image = Image::texture(device, format, Size::new(size, size), true);
 
         // copy images from staging buffer
-        image.change_layout(ImageLayout::Undefined, ImageLayout::TransferDst);
-        image.copy_from_buffer(&right_staging_buffer, 0);
-        image.copy_from_buffer(&left_staging_buffer, 1);
-        image.copy_from_buffer(&top_staging_buffer, 2);
-        image.copy_from_buffer(&bottom_staging_buffer, 3);
-        image.copy_from_buffer(&front_staging_buffer, 4);
-        image.copy_from_buffer(&back_staging_buffer, 5);
-        image.change_layout(ImageLayout::TransferDst, ImageLayout::ShaderColor);
+        image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
+        image.copy_from_buffer(device, &right_staging_buffer, 0);
+        image.copy_from_buffer(device, &left_staging_buffer, 1);
+        image.copy_from_buffer(device, &top_staging_buffer, 2);
+        image.copy_from_buffer(device, &bottom_staging_buffer, 3);
+        image.copy_from_buffer(device, &front_staging_buffer, 4);
+        image.copy_from_buffer(device, &back_staging_buffer, 5);
+        image.change_layout(device, ImageLayout::TransferDst, ImageLayout::ShaderColor);
 
         // destroy staging buffers
         top_staging_buffer.destroy(device);
@@ -68,7 +66,7 @@ impl Cubemap {
 
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
-        device: &Rc<Device>,
+        device: &Device,
         sides: CubemapSides<Vec<u8>>,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
@@ -123,7 +121,11 @@ impl Cubemap {
         ))
     }
 
-    pub(crate) fn add_view(&mut self) -> vk::ImageView {
-        self.image.add_view()
+    pub(crate) fn add_view(&mut self, device: &Device) -> vk::ImageView {
+        self.image.add_view(device)
+    }
+
+    pub(crate) fn destroy(&self, device: &Device) {
+        self.image.destroy(device);
     }
 }

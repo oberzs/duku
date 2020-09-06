@@ -4,7 +4,6 @@
 // Sampler - struct that provides image access in shader
 
 use std::ptr;
-use std::rc::Rc;
 
 use crate::device::Device;
 use crate::image::TextureFilter;
@@ -13,12 +12,11 @@ use crate::vk;
 
 pub(crate) struct Sampler {
     handle: vk::Sampler,
-    device: Rc<Device>,
 }
 
 impl Sampler {
     pub(crate) fn new(
-        device: &Rc<Device>,
+        device: &Device,
         wrap: TextureWrap,
         filter: TextureFilter,
         mipmaps: bool,
@@ -56,19 +54,10 @@ impl Sampler {
 
         let handle = device.create_sampler(&info);
 
-        Self {
-            device: Rc::clone(device),
-            handle,
-        }
+        Self { handle }
     }
 
     pub(crate) const fn handle(&self) -> vk::Sampler {
         self.handle
-    }
-}
-
-impl Drop for Sampler {
-    fn drop(&mut self) {
-        self.device.destroy_sampler(self.handle);
     }
 }

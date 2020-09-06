@@ -18,7 +18,6 @@ use properties::CullMode;
 use properties::DepthMode;
 use properties::ShapeMode;
 use properties::Store;
-use sampler::Sampler;
 
 pub(crate) use attachment::Attachment;
 pub(crate) use images::ShaderImages;
@@ -26,6 +25,7 @@ pub(crate) use layout::Descriptor;
 pub(crate) use layout::ShaderLayout;
 pub(crate) use material::CoreMaterial;
 pub(crate) use render_pass::RenderPass;
+pub(crate) use sampler::Sampler;
 pub(crate) use shader::CoreShader;
 pub(crate) use uniform::ShaderConstants;
 pub(crate) use uniform::ShaderLight;
