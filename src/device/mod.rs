@@ -6,7 +6,6 @@
 mod commands;
 mod pick;
 
-use std::cell::Cell;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::ffi::CString;
@@ -43,7 +42,7 @@ pub(crate) struct Device {
     sync_acquire: [vk::Semaphore; FRAMES_IN_FLIGHT],
     sync_release: [vk::Semaphore; FRAMES_IN_FLIGHT],
     sync_submit: [vk::Fence; FRAMES_IN_FLIGHT],
-    current_frame: Cell<usize>,
+    current_frame: usize,
 
     destroyed_pipelines: RefCell<[Vec<vk::Pipeline>; FRAMES_IN_FLIGHT]>,
     destroyed_buffers: RefCell<[Vec<(vk::Buffer, vk::DeviceMemory)>; FRAMES_IN_FLIGHT]>,
@@ -177,7 +176,7 @@ impl Device {
             destroyed_buffers: RefCell::new(destroyed_buffers),
             destroyed_images: RefCell::new(destroyed_images),
             queue: (queue_index, queue),
-            current_frame: Cell::new(0),
+            current_frame: 0,
             commands,
             memory_types,
             sync_release,
@@ -187,9 +186,8 @@ impl Device {
         }
     }
 
-    pub(crate) fn next_frame(&self, swapchain: &mut Swapchain) {
-        let mut current = self.current_frame.get();
-        current = (current + 1) % FRAMES_IN_FLIGHT;
+    pub(crate) fn next_frame(&mut self, swapchain: &mut Swapchain) {
+        let current = (self.current_frame + 1) % FRAMES_IN_FLIGHT;
 
         let next_image = self.get_next_swapchain_image(swapchain, self.sync_acquire[current]);
         swapchain.next(next_image);
@@ -221,7 +219,7 @@ impl Device {
         // begin new command buffer
         self.commands[current].begin();
 
-        self.current_frame.set(current);
+        self.current_frame = current;
     }
 
     pub(crate) fn submit_and_wait(&self, buffer: vk::CommandBuffer) {
@@ -245,16 +243,14 @@ impl Device {
     }
 
     pub(crate) fn submit(&self) {
-        let current = self.current_frame.get();
-
         // end command buffer
-        self.commands[current].end();
+        self.commands[self.current_frame].end();
 
         // submit
-        let wait = [self.sync_acquire[current]];
-        let signal = [self.sync_release[current]];
-        let done = self.sync_submit[current];
-        let buffers = [self.commands[current].buffer()];
+        let wait = [self.sync_acquire[self.current_frame]];
+        let signal = [self.sync_release[self.current_frame]];
+        let done = self.sync_submit[self.current_frame];
+        let buffers = [self.commands[self.current_frame].buffer()];
         let stage_mask = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
 
         let infos = [vk::SubmitInfo {
@@ -275,8 +271,7 @@ impl Device {
     }
 
     pub(crate) fn present(&self, swapchain: &Swapchain) {
-        let current = self.current_frame.get();
-        let wait = [self.sync_release[current]];
+        let wait = [self.sync_release[self.current_frame]];
         let image = [swapchain.current() as u32];
         let handle = [swapchain.handle()];
 
@@ -296,8 +291,8 @@ impl Device {
         }
     }
 
-    pub(crate) fn commands(&self) -> &Commands {
-        &self.commands[self.current_frame.get()]
+    pub(crate) const fn commands(&self) -> &Commands {
+        &self.commands[self.current_frame]
     }
 
     pub(crate) fn wait_idle(&self) {
@@ -365,8 +360,8 @@ impl Device {
         index as usize
     }
 
-    pub(crate) fn current_frame(&self) -> usize {
-        self.current_frame.get()
+    pub(crate) const fn current_frame(&self) -> usize {
+        self.current_frame
     }
 
     pub(crate) fn stats(&self) -> Stats {
@@ -418,7 +413,7 @@ impl Device {
     }
 
     pub(crate) fn free_buffer(&self, handle: vk::Buffer, memory: vk::DeviceMemory) {
-        self.destroyed_buffers.borrow_mut()[self.current_frame.get()].push((handle, memory));
+        self.destroyed_buffers.borrow_mut()[self.current_frame].push((handle, memory));
     }
 
     pub(crate) fn allocate_image(
@@ -694,7 +689,7 @@ impl Device {
     }
 
     pub(crate) fn destroy_pipeline(&self, pipeline: vk::Pipeline) {
-        self.destroyed_pipelines.borrow_mut()[self.current_frame.get()].push(pipeline);
+        self.destroyed_pipelines.borrow_mut()[self.current_frame].push(pipeline);
     }
 
     pub(crate) fn create_shader_module(&self, source: &[u8]) -> Result<vk::ShaderModule> {
@@ -772,6 +767,27 @@ impl Device {
         cmd.destroy(self.handle);
     }
 
+    pub(crate) fn destroy(&self) {
+        for i in 0..FRAMES_IN_FLIGHT {
+            self.cleanup_resources(i);
+        }
+        unsafe {
+            for s in &self.sync_acquire {
+                vk::destroy_semaphore(self.handle, *s, ptr::null());
+            }
+            for s in &self.sync_release {
+                vk::destroy_semaphore(self.handle, *s, ptr::null());
+            }
+            for f in &self.sync_submit {
+                vk::destroy_fence(self.handle, *f, ptr::null());
+            }
+            for c in &self.commands {
+                c.destroy(self.handle);
+            }
+            vk::destroy_device(self.handle, ptr::null());
+        }
+    }
+
     fn cleanup_resources(&self, frame: usize) {
         // cleanup pipelines
         let destroyed_pipelines = &mut self.destroyed_pipelines.borrow_mut()[frame];
@@ -814,28 +830,5 @@ impl Device {
             })
             .expect("bad memory type")
             .0 as u32
-    }
-}
-
-impl Drop for Device {
-    fn drop(&mut self) {
-        for i in 0..FRAMES_IN_FLIGHT {
-            self.cleanup_resources(i);
-        }
-        unsafe {
-            for s in &self.sync_acquire {
-                vk::destroy_semaphore(self.handle, *s, ptr::null());
-            }
-            for s in &self.sync_release {
-                vk::destroy_semaphore(self.handle, *s, ptr::null());
-            }
-            for f in &self.sync_submit {
-                vk::destroy_fence(self.handle, *f, ptr::null());
-            }
-            for c in &self.commands {
-                c.destroy(self.handle);
-            }
-            vk::destroy_device(self.handle, ptr::null());
-        }
     }
 }

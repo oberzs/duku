@@ -365,10 +365,8 @@ impl Instance {
         }
         device
     }
-}
 
-impl Drop for Instance {
-    fn drop(&mut self) {
+    pub(crate) fn destroy(&self) {
         unsafe { vk::destroy_instance(self.handle, ptr::null()) };
     }
 }

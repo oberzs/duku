@@ -53,27 +53,23 @@ use crate::window::Window;
 const FPS_SAMPLE_COUNT: usize = 64;
 
 pub struct Context {
-    // Renderers
-    forward_renderer: ForwardRenderer,
-
-    // UI
-    #[cfg(feature = "ui")]
-    ui: Option<Ui>,
+    // Vulkan
+    instance: Instance,
+    device: Device,
+    gpu_index: usize,
+    surface: Surface,
+    swapchain: Swapchain,
+    shader_layout: ShaderLayout,
+    window_framebuffers: Vec<CoreFramebuffer>,
+    shader_images: ShaderImages,
 
     // Resources
     storage: Storage,
     skybox: Cubemap,
     builtins: Builtins,
 
-    // Vulkan
-    window_framebuffers: Vec<CoreFramebuffer>,
-    shader_images: ShaderImages,
-    shader_layout: ShaderLayout,
-    swapchain: Swapchain,
-    device: Device,
-    surface: Surface,
-    gpu_index: usize,
-    instance: Instance,
+    // Renderers
+    forward_renderer: ForwardRenderer,
 
     // Misc
     render_stage: RenderStage,
@@ -96,6 +92,10 @@ pub struct Context {
     glfw: Option<glfw::Glfw>,
     #[cfg(feature = "window")]
     event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
+
+    // UI
+    #[cfg(feature = "ui")]
+    ui: Option<Ui>,
 }
 
 #[derive(Debug, Clone)]
@@ -634,6 +634,9 @@ impl Drop for Context {
         }
         self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);
+
+        self.device.destroy();
+        self.instance.destroy();
     }
 }
 

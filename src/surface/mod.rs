@@ -59,7 +59,6 @@ impl Surface {
             handle,
             width: window.width,
             height: window.height,
-            instance: Rc::clone(instance),
         }
     }
 
@@ -80,7 +79,6 @@ impl Surface {
             handle,
             width: window.width,
             height: window.height,
-            instance: Rc::clone(instance),
         }
     }
 
