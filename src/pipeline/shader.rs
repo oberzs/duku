@@ -8,7 +8,6 @@ use std::ffi::CString;
 use std::io::Cursor;
 use std::io::Read;
 use std::ptr;
-use std::rc::Rc;
 
 use super::CullMode;
 use super::DepthMode;
@@ -31,7 +30,6 @@ pub struct Shader {
 // GPU data storage for a shader
 pub(crate) struct CoreShader {
     handle: vk::Pipeline,
-    device: Rc<Device>,
 }
 
 pub(crate) struct ShaderModes {
@@ -48,7 +46,7 @@ impl Shader {
 
 impl CoreShader {
     pub(crate) fn from_spirv_bytes(
-        device: &Rc<Device>,
+        device: &Device,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         bytes: &[u8],
@@ -91,7 +89,7 @@ impl CoreShader {
 
     #[cfg(feature = "glsl")]
     pub(crate) fn from_glsl_string(
-        device: &Rc<Device>,
+        device: &Device,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         source: String,
@@ -109,7 +107,7 @@ impl CoreShader {
     }
 
     fn new(
-        device: &Rc<Device>,
+        device: &Device,
         framebuffer: &CoreFramebuffer,
         layout: &ShaderLayout,
         vert_source: &[u8],
@@ -324,20 +322,11 @@ impl CoreShader {
         device.destroy_shader_module(vert_module);
         device.destroy_shader_module(frag_module);
 
-        Ok(Self {
-            device: Rc::clone(device),
-            handle,
-        })
+        Ok(Self { handle })
     }
 
     pub(crate) const fn handle(&self) -> vk::Pipeline {
         self.handle
-    }
-}
-
-impl Drop for CoreShader {
-    fn drop(&mut self) {
-        self.device.destroy_pipeline(self.handle);
     }
 }
 

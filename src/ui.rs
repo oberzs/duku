@@ -342,6 +342,7 @@ impl Drop for Ui {
     fn drop(&mut self) {
         self.texture.destroy(&self.device);
         self.mesh.destroy(&self.device);
+        self.device.destroy_shader(&self.shader);
     }
 }
 

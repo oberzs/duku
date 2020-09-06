@@ -354,6 +354,10 @@ impl ForwardRenderer {
         }
     }
 
+    pub(crate) fn destroy(&self, device: &Device) {
+        device.destroy_shader(&self.shadow_shader);
+    }
+
     fn draw_order(&self, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
         let cmd = self.device.commands();
         let mesh = storage.meshes.get(&order.mesh);

@@ -620,6 +620,7 @@ impl Drop for Context {
         self.skybox.destroy(&self.device);
         self.shader_images.destroy(&self.device);
         self.storage.clear(&self.device, &mut self.shader_images);
+        self.forward_renderer.destroy(&self.device);
         self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);
     }
