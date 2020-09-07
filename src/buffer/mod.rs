@@ -5,7 +5,6 @@
 
 mod properties;
 
-use std::cell::Cell;
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem;
@@ -17,11 +16,11 @@ pub(crate) use properties::BufferAccess;
 pub(crate) use properties::BufferUsage;
 
 pub(crate) struct Buffer<T: Copy> {
-    handle: Cell<vk::Buffer>,
-    memory: Cell<vk::DeviceMemory>,
+    handle: vk::Buffer,
+    memory: vk::DeviceMemory,
     usage: BufferUsage,
-    size: Cell<usize>,
-    marker: PhantomData<T>,
+    size: usize,
+    marker: PhantomData<*const T>,
 }
 
 impl<T: Copy> Buffer<T> {
@@ -43,10 +42,10 @@ impl<T: Copy> Buffer<T> {
         let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
 
         Self {
-            handle: Cell::new(handle),
-            memory: Cell::new(memory),
-            size: Cell::new(size),
             marker: PhantomData,
+            handle,
+            memory,
+            size,
             usage,
         }
     }
@@ -70,17 +69,17 @@ impl<T: Copy> Buffer<T> {
         let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
 
         let buffer = Self {
-            handle: Cell::new(handle),
-            memory: Cell::new(memory),
-            size: Cell::new(size),
             marker: PhantomData,
+            handle,
+            memory,
+            size,
             usage,
         };
         buffer.copy_from_data(device, data);
         buffer
     }
 
-    pub(crate) fn resize(&self, device: &Device, len: usize) {
+    pub(crate) fn resize(&mut self, device: &Device, len: usize) {
         debug_assert!(
             self.usage != BufferUsage::TransferSrc,
             "cannot resize staging buffer"
@@ -102,38 +101,35 @@ impl<T: Copy> Buffer<T> {
 
         self.destroy(device);
         let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
-        self.handle.set(handle);
-        self.memory.set(memory);
-        self.size.set(size);
+        self.handle = handle;
+        self.memory = memory;
+        self.size = size;
     }
 
     pub(crate) fn copy_from_data(&self, device: &Device, data: &[T]) {
         let size = mem::size_of::<T>() * data.len();
 
-        debug_assert!(
-            self.size.get() >= size,
-            "dynamic buffer needs to be resized"
-        );
+        debug_assert!(self.size >= size, "dynamic buffer needs to be resized");
 
-        device.map_memory(self.memory.get(), size, |mem| unsafe {
+        device.map_memory(self.memory, size, |mem| unsafe {
             ptr::copy_nonoverlapping(data as *const [T] as *const c_void, mem, size);
         });
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {
-        self.handle.get()
+        self.handle
     }
 
     pub(crate) fn size(&self) -> usize {
-        self.size.get()
+        self.size
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.size.get() / mem::size_of::<T>()
+        self.size / mem::size_of::<T>()
     }
 
     pub(crate) fn destroy(&self, device: &Device) {
-        device.free_buffer(self.handle.get(), self.memory.get());
+        device.free_buffer(self.handle, self.memory);
     }
 }
 
