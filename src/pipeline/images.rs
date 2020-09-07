@@ -49,7 +49,7 @@ impl ShaderImages {
         }
     }
 
-    pub(crate) fn add(&mut self, image: vk::ImageView) -> i32 {
+    pub(crate) fn add(&mut self, image: vk::ImageView) -> u32 {
         let next_index = self.images.len();
 
         // find free index
@@ -67,10 +67,10 @@ impl ShaderImages {
         }
 
         self.should_update = true;
-        index as i32
+        index as u32
     }
 
-    pub(crate) fn remove(&mut self, index: i32) {
+    pub(crate) fn remove(&mut self, index: u32) {
         debug_assert!(
             (index as usize) < self.images.len(),
             "image index out of bounds"
@@ -78,6 +78,17 @@ impl ShaderImages {
 
         // mark image as removed
         self.images[index as usize] = None;
+
+        self.should_update = true;
+    }
+
+    pub(crate) fn replace(&mut self, index: u32, image: vk::ImageView) {
+        debug_assert!(
+            (index as usize) < self.images.len(),
+            "image index out of bounds"
+        );
+
+        self.images[index as usize] = Some(image);
 
         self.should_update = true;
     }

@@ -9,27 +9,18 @@ use std::collections::HashMap;
 
 use crate::color::Color;
 use crate::device::Device;
-use crate::image::CoreTexture;
 use crate::image::ImageFormat;
 use crate::image::Size;
+use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::mesh::CoreMesh;
-use crate::mesh::MeshData;
+use crate::mesh::Mesh;
 use crate::pipeline::ShaderImages;
-use crate::storage::Index;
 
-// user facing framebuffer data
-#[derive(Debug)]
 pub struct Font {
-    pub(crate) index: Index,
-}
-
-// data storage for a font
-pub(crate) struct CoreFont {
     char_data: HashMap<char, CharData>,
-    mesh: CoreMesh,
-    texture: CoreTexture,
+    mesh: Mesh,
+    texture: Texture,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,18 +32,12 @@ pub(crate) struct CharData {
 }
 
 impl Font {
-    pub(crate) const fn new(index: Index) -> Self {
-        Self { index }
-    }
-}
-
-impl CoreFont {
     pub(crate) fn fira_mono(device: &Device, shader_images: &mut ShaderImages) -> Self {
         let atlas_width = fira_mono::ATLAS_WIDTH;
         let atlas_height = fira_mono::ATLAS_HEIGHT;
         let line_height = fira_mono::LINE_HEIGHT;
 
-        let texture = CoreTexture::new(
+        let texture = Texture::new(
             device,
             shader_images,
             fira_mono::DATA.to_vec(),
@@ -111,18 +96,14 @@ impl CoreFont {
         let colors = vec![Color::WHITE; vertex_count];
         let textures = vec![texture.shader_index(); vertex_count];
 
-        let mut mesh = CoreMesh::new(device);
-        mesh.update(
-            device,
-            MeshData {
-                textures,
-                vertices,
-                normals,
-                colors,
-                uvs,
-                indices,
-            },
-        );
+        let mut mesh = Mesh::new(device);
+        mesh.set_textures(textures);
+        mesh.set_vertices(vertices);
+        mesh.set_normals(normals);
+        mesh.set_colors(colors);
+        mesh.set_uvs(uvs);
+        mesh.set_indices(indices);
+        mesh.update_if_needed(device);
 
         Self {
             char_data,
@@ -135,7 +116,7 @@ impl CoreFont {
     //     &self.texture
     // }
 
-    pub(crate) const fn mesh(&self) -> &CoreMesh {
+    pub(crate) const fn mesh(&self) -> &Mesh {
         &self.mesh
     }
 

@@ -16,19 +16,11 @@ use super::ShapeMode;
 use crate::device::Device;
 use crate::error::Error;
 use crate::error::Result;
-use crate::image::CoreFramebuffer;
+use crate::image::Framebuffer;
 use crate::mesh::Vertex;
-use crate::storage::Index;
 use crate::vk;
 
-// user facing texture data
-#[derive(Debug)]
 pub struct Shader {
-    pub(crate) index: Index,
-}
-
-// GPU data storage for a shader
-pub(crate) struct CoreShader {
     handle: vk::Pipeline,
 }
 
@@ -39,15 +31,9 @@ pub(crate) struct ShaderModes {
 }
 
 impl Shader {
-    pub(crate) const fn new(index: Index) -> Self {
-        Self { index }
-    }
-}
-
-impl CoreShader {
     pub(crate) fn from_spirv_bytes(
         device: &Device,
-        framebuffer: &CoreFramebuffer,
+        framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         bytes: &[u8],
     ) -> Result<Self> {
@@ -90,7 +76,7 @@ impl CoreShader {
     #[cfg(feature = "glsl")]
     pub(crate) fn from_glsl_string(
         device: &Device,
-        framebuffer: &CoreFramebuffer,
+        framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         source: String,
     ) -> Result<Self> {
@@ -108,7 +94,7 @@ impl CoreShader {
 
     fn new(
         device: &Device,
-        framebuffer: &CoreFramebuffer,
+        framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         vert_source: &[u8],
         frag_source: &[u8],
@@ -334,7 +320,7 @@ impl CoreShader {
     }
 }
 
-impl PartialEq for CoreShader {
+impl PartialEq for Shader {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
     }

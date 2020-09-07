@@ -45,5 +45,5 @@ pub(crate) struct ShaderLight {
 #[repr(C)]
 pub(crate) struct ShaderConstants {
     pub(crate) model_matrix: Matrix4,
-    pub(crate) sampler_index: i32,
+    pub(crate) sampler_index: u32,
 }

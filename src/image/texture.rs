@@ -10,42 +10,13 @@ use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::pipeline::ShaderImages;
-use crate::storage::Index;
 
-// user facing texture data
-#[derive(Debug)]
 pub struct Texture {
-    pub(crate) index: Index,
-    pub(crate) shader_index: i32,
-}
-
-// pub struct Texture {
-//     id: u32,
-//     updater: //bla bla bla
-// }
-
-// pub struct TextureRef(u32);
-
-// data storage for a texture
-pub(crate) struct CoreTexture {
     image: Image,
-    shader_index: i32,
+    shader_index: u32,
 }
 
 impl Texture {
-    pub(crate) const fn new(index: Index, shader_index: i32) -> Self {
-        Self {
-            index,
-            shader_index,
-        }
-    }
-
-    pub const fn shader_index(&self) -> i32 {
-        self.shader_index
-    }
-}
-
-impl CoreTexture {
     pub(crate) fn new(
         device: &Device,
         shader_images: &mut ShaderImages,
@@ -115,7 +86,7 @@ impl CoreTexture {
         self.image.destroy(device);
     }
 
-    pub(crate) const fn shader_index(&self) -> i32 {
+    pub(crate) const fn shader_index(&self) -> u32 {
         self.shader_index
     }
 }

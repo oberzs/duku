@@ -14,7 +14,7 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::storage::Builtins;
-use crate::storage::Index;
+use crate::storage::Handle;
 
 pub struct Target<'b> {
     pub text: TextTarget,
@@ -35,31 +35,31 @@ pub struct Target<'b> {
     pub(crate) has_shadow_casters: bool,
     pub(crate) builtins: &'b Builtins,
 
-    current_shader: Index,
-    current_material: Index,
+    current_shader: Handle<Shader>,
+    current_material: Handle<Material>,
 }
 
 pub(crate) struct OrdersByShader {
-    pub(crate) shader: Index,
+    pub(crate) shader: Handle<Shader>,
     pub(crate) orders_by_material: Vec<OrdersByMaterial>,
 }
 
 pub(crate) struct OrdersByMaterial {
-    pub(crate) material: Index,
+    pub(crate) material: Handle<Material>,
     pub(crate) orders: Vec<Order>,
 }
 
 #[derive(Clone)]
 pub(crate) struct Order {
-    pub(crate) mesh: Index,
+    pub(crate) mesh: Handle<Mesh>,
     pub(crate) model: Matrix4,
     pub(crate) cast_shadows: bool,
-    pub(crate) sampler_index: i32,
+    pub(crate) sampler_index: u32,
 }
 
 struct Cache {
-    current_shader: Index,
-    current_material: Index,
+    current_shader: Handle<Shader>,
+    current_material: Handle<Material>,
     texture_filter: TextureFilter,
     texture_wrap: TextureWrap,
     texture_mipmaps: bool,
@@ -78,8 +78,8 @@ impl<'b> Target<'b> {
                 Light::NONE,
                 Light::NONE,
             ],
-            current_shader: builtins.phong_shader.index.clone(),
-            current_material: builtins.white_material.index.clone(),
+            current_shader: builtins.phong_shader.clone(),
+            current_material: builtins.white_material.clone(),
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
             texture_mipmaps: true,
@@ -94,9 +94,9 @@ impl<'b> Target<'b> {
         }
     }
 
-    pub fn draw(&mut self, mesh: &Mesh, transform: impl Into<Transform>) {
+    pub fn draw(&mut self, mesh: &Handle<Mesh>, transform: impl Into<Transform>) {
         self.add_order(Order {
-            mesh: mesh.index.clone(),
+            mesh: mesh.clone(),
             model: transform.into().as_matrix(),
             cast_shadows: self.cast_shadows,
             sampler_index: self.sampler_index(),
@@ -122,7 +122,7 @@ impl<'b> Target<'b> {
 
     pub fn draw_grid(&mut self) {
         let cache = self.store();
-        self.current_shader = self.builtins.line_shader.index.clone();
+        self.current_shader = self.builtins.line_shader.clone();
         self.cast_shadows = false;
 
         self.draw(&self.builtins.grid_mesh, (0.0, 0.0, 0.0));
@@ -130,12 +130,12 @@ impl<'b> Target<'b> {
         self.restore(cache);
     }
 
-    pub fn set_material(&mut self, material: &Material) {
-        self.current_material = material.index.clone();
+    pub fn set_material(&mut self, material: &Handle<Material>) {
+        self.current_material = material.clone();
     }
 
-    pub fn set_shader(&mut self, shader: &Shader) {
-        self.current_shader = shader.index.clone();
+    pub fn set_shader(&mut self, shader: &Handle<Shader>) {
+        self.current_shader = shader.clone();
     }
 
     fn add_order(&mut self, order: Order) {
@@ -172,7 +172,7 @@ impl<'b> Target<'b> {
         }
 
         if self.wireframes {
-            let wireframe_shader = self.builtins.wireframe_shader.index.clone();
+            let wireframe_shader = self.builtins.wireframe_shader.clone();
             match self
                 .orders_by_shader
                 .iter_mut()
@@ -182,7 +182,7 @@ impl<'b> Target<'b> {
                 None => self.orders_by_shader.push(OrdersByShader {
                     shader: wireframe_shader,
                     orders_by_material: vec![OrdersByMaterial {
-                        material: self.builtins.white_material.index.clone(),
+                        material: self.builtins.white_material.clone(),
                         orders: vec![order],
                     }],
                 }),
@@ -190,7 +190,7 @@ impl<'b> Target<'b> {
         }
     }
 
-    const fn sampler_index(&self) -> i32 {
+    const fn sampler_index(&self) -> u32 {
         use TextureFilter as F;
         use TextureWrap as W;
 

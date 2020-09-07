@@ -8,6 +8,7 @@ use draw_it::Camera;
 use draw_it::Color;
 use draw_it::Context;
 use draw_it::CubemapSides;
+use draw_it::Handle;
 use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
@@ -87,7 +88,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Mesh {
+fn cube_mesh(context: &mut Context, size: impl Into<Vector3>) -> Handle<Mesh> {
     let size = size.into();
 
     let top = square_mesh(
@@ -137,7 +138,7 @@ fn square_mesh(
     size: impl Into<Vector2>,
     position: impl Into<Vector3>,
     rotation: Quaternion,
-) -> Mesh {
+) -> Handle<Mesh> {
     let size = size.into();
     let position = position.into();
 

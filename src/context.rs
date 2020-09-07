@@ -10,8 +10,6 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
-use crate::image::CoreFramebuffer;
-use crate::image::CoreTexture;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Framebuffer;
@@ -20,11 +18,8 @@ use crate::image::Msaa;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::instance::Instance;
-use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
 use crate::mesh::MeshBuilder;
-use crate::pipeline::CoreMaterial;
-use crate::pipeline::CoreShader;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
@@ -36,6 +31,7 @@ use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::storage::Builtins;
+use crate::storage::Handle;
 use crate::storage::Storage;
 use crate::surface::Surface;
 use crate::surface::Swapchain;
@@ -60,7 +56,7 @@ pub struct Context {
     surface: Surface,
     swapchain: Swapchain,
     shader_layout: ShaderLayout,
-    window_framebuffers: Vec<CoreFramebuffer>,
+    window_framebuffers: Vec<Framebuffer>,
     shader_images: ShaderImages,
 
     // Resources
@@ -83,9 +79,9 @@ pub struct Context {
 
     // Hot Reload
     #[cfg(feature = "glsl")]
-    hot_reload_sender: std::sync::mpsc::Sender<(u32, std::path::PathBuf)>,
+    hot_reload_sender: std::sync::mpsc::Sender<(Handle<Shader>, std::path::PathBuf)>,
     #[cfg(feature = "glsl")]
-    hot_reload_receiver: std::sync::mpsc::Receiver<(u32, std::path::PathBuf)>,
+    hot_reload_receiver: std::sync::mpsc::Receiver<(Handle<Shader>, std::path::PathBuf)>,
 
     // Window
     #[cfg(feature = "window")]
@@ -154,7 +150,7 @@ impl Context {
 
         // setup framebuffers
         let window_framebuffers =
-            CoreFramebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa);
+            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa);
 
         // setup storage
         let mut storage = Storage::new();
@@ -164,7 +160,7 @@ impl Context {
             &window_framebuffers[0],
             &shader_layout,
             &mut shader_images,
-        )?;
+        );
         let mut skybox = Cubemap::new(
             &device,
             1,
@@ -238,7 +234,7 @@ impl Context {
         self.swapchain
             .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
 
-        self.window_framebuffers = CoreFramebuffer::for_swapchain(
+        self.window_framebuffers = Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
             &self.shader_layout,
@@ -294,7 +290,7 @@ impl Context {
 
     pub fn draw(
         &mut self,
-        framebuffer: &Framebuffer,
+        framebuffer: &Handle<Framebuffer>,
         camera: Option<&Camera>,
         draw_callback: impl Fn(&mut Target<'_>),
     ) {
@@ -306,12 +302,13 @@ impl Context {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let cam = get_camera(camera, Size::new(framebuffer.width, framebuffer.height));
+        let frame = self.storage.framebuffers.get(framebuffer);
+        let cam = get_camera(camera, frame.size());
 
         // draw
         self.forward_renderer.draw(
             &self.device,
-            self.storage.framebuffers.get(&framebuffer.index),
+            frame,
             &cam,
             &self.storage,
             &self.shader_layout,
@@ -319,85 +316,103 @@ impl Context {
         );
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32, height: u32) -> Texture {
+    pub fn create_texture(&mut self, pixels: &[Color], width: u32, height: u32) -> Handle<Texture> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
             .flatten()
             .collect::<Vec<_>>();
-        let tex = CoreTexture::new(
+        let tex = Texture::new(
             &self.device,
             &mut self.shader_images,
             data,
             Size::new(width, height),
             ImageFormat::Rgba,
         );
-        let shader_index = tex.shader_index();
-        let (index, _) = self.storage.textures.add(tex);
-        Texture::new(index, shader_index)
+        self.storage.add_texture(tex)
     }
 
-    pub fn create_mesh(&mut self) -> Mesh {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
-        Mesh::new(index, updater)
+    pub fn create_mesh(&mut self) -> Handle<Mesh> {
+        let mesh = Mesh::new(&self.device);
+        self.storage.add_mesh(mesh)
     }
 
-    pub fn build_mesh(&mut self) -> MeshBuilder {
-        MeshBuilder::new(self.create_mesh())
+    pub fn mesh(&self, mesh: &Handle<Mesh>) -> &Mesh {
+        self.storage.meshes.get(mesh)
     }
 
-    pub fn duplicate_mesh(&mut self, mesh: &Mesh) -> Mesh {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
-        let mut result = Mesh::new(index, updater);
-        result.vertices = mesh.vertices.clone();
-        result.normals = mesh.normals.clone();
-        result.colors = mesh.colors.clone();
-        result.uvs = mesh.uvs.clone();
-        result.indices = mesh.indices.clone();
-        result.update();
-        result
+    pub fn mesh_mut(&mut self, mesh: &Handle<Mesh>) -> &mut Mesh {
+        self.storage.meshes.get_mut(mesh)
     }
 
-    pub fn combine_meshes(&mut self, meshes: &[Mesh]) -> Mesh {
-        let (index, updater) = self.storage.meshes.add(CoreMesh::new(&self.device));
-        Mesh::combine(index, updater, meshes)
+    pub fn build_mesh(&mut self) -> MeshBuilder<'_> {
+        MeshBuilder {
+            storage: &mut self.storage,
+            mesh: Mesh::new(&self.device),
+        }
     }
 
-    pub fn create_material(&mut self) -> Material {
-        let (index, updater) = self
-            .storage
-            .materials
-            .add(CoreMaterial::new(&self.device, &self.shader_layout));
-        Material::new(index, updater)
+    pub fn duplicate_mesh(&mut self, mesh: &Handle<Mesh>) -> Handle<Mesh> {
+        let m = self.storage.meshes.get(mesh);
+        let mut result = Mesh::new(&self.device);
+        result.set_vertices(m.vertices().to_vec());
+        result.set_normals(m.normals().to_vec());
+        result.set_colors(m.colors().to_vec());
+        result.set_uvs(m.uvs().to_vec());
+        result.set_indices(m.indices().to_vec());
+        self.storage.add_mesh(result)
     }
 
-    pub fn build_material(&mut self) -> MaterialBuilder {
-        MaterialBuilder::new(self.create_material())
+    pub fn combine_meshes(&mut self, meshes: &[Handle<Mesh>]) -> Handle<Mesh> {
+        let ms: Vec<_> = meshes.iter().map(|m| self.storage.meshes.get(m)).collect();
+        let mesh = Mesh::combine(&self.device, &ms);
+        self.storage.add_mesh(mesh)
     }
 
-    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Framebuffer {
-        let (index, updater) = self.storage.framebuffers.add(CoreFramebuffer::new(
+    pub fn create_material(&mut self) -> Handle<Material> {
+        let mat = Material::new(&self.device, &self.shader_layout);
+        self.storage.add_material(mat)
+    }
+
+    pub fn material(&self, material: &Handle<Material>) -> &Material {
+        self.storage.materials.get(material)
+    }
+
+    pub fn material_mut(&mut self, material: &Handle<Material>) -> &mut Material {
+        self.storage.materials.get_mut(material)
+    }
+
+    pub fn build_material(&mut self) -> MaterialBuilder<'_> {
+        MaterialBuilder {
+            storage: &mut self.storage,
+            material: Material::new(&self.device, &self.shader_layout),
+        }
+    }
+
+    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Handle<Framebuffer> {
+        let framebuffer = Framebuffer::new(
             &self.device,
             &self.shader_layout,
             &mut self.shader_images,
             &[ImageFormat::Depth, ImageFormat::Sbgra],
             self.msaa,
             Size::new(width, height),
-        ));
-        let mut framebuffer = Framebuffer::new(index, updater);
-        framebuffer.width = width;
-        framebuffer.height = height;
-        framebuffer
+        );
+        self.storage.add_framebuffer(framebuffer)
     }
 
-    pub fn create_shader_spirv(&mut self, source: &[u8]) -> Result<Shader> {
-        let (index, _) = self.storage.shaders.add(CoreShader::from_spirv_bytes(
+    pub fn framebuffer_mut(&mut self, framebuffer: &Handle<Framebuffer>) -> &mut Framebuffer {
+        self.storage.framebuffers.get_mut(framebuffer)
+    }
+
+    pub fn create_shader_spirv(&mut self, source: &[u8]) -> Result<Handle<Shader>> {
+        let shader = Shader::from_spirv_bytes(
             &self.device,
             &self.window_framebuffers[0],
             &self.shader_layout,
             source,
-        )?);
-        Ok(Shader::new(index))
+        )?;
+        Ok(self.storage.add_shader(shader))
     }
 
     pub fn stats(&self) -> Stats {
@@ -422,20 +437,17 @@ impl Context {
 
         // hot-reload shaders
         #[cfg(feature = "glsl")]
-        for (pointer, path) in self.hot_reload_receiver.try_iter() {
+        for (handle, path) in self.hot_reload_receiver.try_iter() {
             let source = std::fs::read_to_string(&path).expect("bad read");
 
-            match CoreShader::from_glsl_string(
+            match Shader::from_glsl_string(
                 &self.device,
                 &self.window_framebuffers[0],
                 &self.shader_layout,
                 source,
             ) {
                 Ok(new_shader) => {
-                    *self
-                        .storage
-                        .shaders
-                        .get_mut(&crate::storage::Index::new(pointer)) = new_shader;
+                    *self.storage.shaders.get_mut(&handle) = new_shader;
                     info!("shader {:?} was reloaded", path);
                 }
                 Err(err) => warn!("{}", err),
@@ -545,11 +557,11 @@ impl Context {
         &mut self,
         path: impl AsRef<std::path::Path>,
         watch: bool,
-    ) -> Result<Shader> {
+    ) -> Result<Handle<Shader>> {
         use crate::watch::watch_file;
 
         let source = std::fs::read_to_string(&path)?;
-        let (index, _) = self.storage.shaders.add(CoreShader::from_glsl_string(
+        let handle = self.storage.add_shader(Shader::from_glsl_string(
             &self.device,
             &self.window_framebuffers[0],
             &self.shader_layout,
@@ -557,22 +569,23 @@ impl Context {
         )?);
 
         if watch {
-            watch_file(path, index.pointer(), self.hot_reload_sender.clone());
+            watch_file(path, handle.clone(), self.hot_reload_sender.clone());
         }
 
-        Ok(Shader::new(index))
+        Ok(handle)
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Texture> {
-        let tex = CoreTexture::from_png_bytes(&self.device, &mut self.shader_images, bytes)?;
-        let shader_index = tex.shader_index();
-        let (index, _) = self.storage.textures.add(tex);
-        Ok(Texture::new(index, shader_index))
+    pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Handle<Texture>> {
+        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes)?;
+        Ok(self.storage.add_texture(tex))
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png(&mut self, path: impl AsRef<std::path::Path>) -> Result<Texture> {
+    pub fn create_texture_png(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Handle<Texture>> {
         let bytes = std::fs::read(path.as_ref())?;
         self.create_texture_png_bytes(bytes)
     }
@@ -595,6 +608,7 @@ impl Context {
         )?;
         self.shader_images
             .set_skybox(cubemap.add_view(&self.device));
+        self.skybox.destroy(&self.device);
         self.skybox = cubemap;
         Ok(())
     }

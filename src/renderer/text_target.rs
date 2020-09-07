@@ -4,22 +4,23 @@
 // Target - struct that collects text draw calls in a batch
 
 use crate::color::Color;
+use crate::font::Font;
 use crate::math::Transform;
 use crate::storage::Builtins;
-use crate::storage::Index;
+use crate::storage::Handle;
 
 pub struct TextTarget {
     pub font_size: u32,
     pub color: Color,
 
-    font: Index,
+    font: Handle<Font>,
     orders: Vec<TextOrder>,
 }
 
 pub(crate) struct TextOrder {
     pub(crate) font_size: u32,
     pub(crate) _color: Color,
-    pub(crate) font: Index,
+    pub(crate) font: Handle<Font>,
     pub(crate) text: String,
     pub(crate) transform: Transform,
 }
@@ -30,7 +31,7 @@ impl TextTarget {
             font_size: 24,
             color: Color::BLACK,
             orders: vec![],
-            font: builtins.fira_font.index.clone(),
+            font: builtins.fira_font.clone(),
         }
     }
 

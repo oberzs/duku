@@ -12,7 +12,7 @@ use super::Target;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
-use crate::image::CoreFramebuffer;
+use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Size;
@@ -20,8 +20,8 @@ use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::pipeline::CoreShader;
 use crate::pipeline::Descriptor;
+use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
@@ -30,7 +30,7 @@ use crate::storage::Storage;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; FRAMES_IN_FLIGHT],
-    shadow_shader: CoreShader,
+    shadow_shader: Shader,
     start_time: Instant,
     pcf: Pcf,
 }
@@ -43,7 +43,7 @@ pub enum Pcf {
 }
 
 struct ShadowMapSet {
-    framebuffers: [CoreFramebuffer; 4],
+    framebuffers: [Framebuffer; 4],
     descriptor: Descriptor,
     matrices: [Matrix4; 4],
     cascades: [f32; 4],
@@ -63,7 +63,7 @@ impl ForwardRenderer {
             ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
         ];
 
-        let shadow_shader = CoreShader::from_spirv_bytes(
+        let shadow_shader = Shader::from_spirv_bytes(
             device,
             &shadow_frames[0].framebuffers[0],
             shader_layout,
@@ -82,7 +82,7 @@ impl ForwardRenderer {
     pub(crate) fn draw(
         &mut self,
         device: &Device,
-        framebuffer: &CoreFramebuffer,
+        framebuffer: &Framebuffer,
         camera: &Camera,
         storage: &Storage,
         shader_layout: &ShaderLayout,
@@ -295,8 +295,8 @@ impl ShadowMapSet {
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
         size: u32,
-    ) -> CoreFramebuffer {
-        CoreFramebuffer::new(
+    ) -> Framebuffer {
+        Framebuffer::new(
             device,
             shader_layout,
             shader_images,
@@ -337,10 +337,10 @@ fn record_skybox(
     shader_layout: &ShaderLayout,
     camera: &Camera,
 ) {
-    let shader = storage.shaders.get(&target.builtins.skybox_shader.index);
+    let shader = storage.shaders.get(&target.builtins.skybox_shader);
     cmd.bind_shader(shader);
 
-    let mesh = storage.meshes.get(&target.builtins.cube_mesh.index);
+    let mesh = storage.meshes.get(&target.builtins.cube_mesh);
     cmd.bind_mesh(mesh);
 
     let model_matrix = (Transform {
@@ -368,11 +368,11 @@ fn record_text(
     let Target { text, builtins, .. } = &target;
 
     // bind shader
-    let shader = storage.shaders.get(&builtins.font_shader.index);
+    let shader = storage.shaders.get(&builtins.font_shader);
     cmd.bind_shader(shader);
 
     // bind material
-    let material = storage.materials.get(&builtins.white_material.index);
+    let material = storage.materials.get(&builtins.white_material);
     cmd.bind_material(shader_layout, material);
 
     for order in text.orders() {

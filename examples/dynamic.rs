@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     camera.transform.move_backward(10.0);
     camera.transform.look_at((0.0, 0.0, 0.0));
 
-    let mut square = context
+    let square = context
         .build_mesh()
         .vertices(square_vertices(square_size, 0.0))
         .indices(square_indices(square_size))
@@ -37,8 +37,9 @@ fn main() -> Result<()> {
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
-        square.vertices = square_vertices(square_size, elapsed);
-        square.update();
+        context
+            .mesh_mut(&square)
+            .set_vertices(square_vertices(square_size, elapsed));
 
         context.draw_on_window(Some(&camera), |target| {
             target.wireframes = true;

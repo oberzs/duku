@@ -27,34 +27,33 @@ use std::ffi::CString;
 use crate::color::Color;
 use crate::device::Device;
 use crate::device::Stats;
-use crate::image::CoreFramebuffer;
-use crate::image::CoreTexture;
 use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Size;
+use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::mesh::CoreMesh;
-use crate::mesh::MeshData;
-use crate::pipeline::CoreShader;
+use crate::mesh::Mesh;
+use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
 use crate::renderer::Camera;
+use crate::storage::Handle;
 use crate::storage::Storage;
 
 pub use imgui;
 
 pub(crate) struct Ui {
-    framebuffer: Framebuffer,
+    framebuffer: Handle<Framebuffer>,
     camera: Camera,
-    shader: CoreShader,
-    mesh: CoreMesh,
-    texture: CoreTexture,
+    shader: Shader,
+    mesh: Mesh,
+    texture: Texture,
     drawn: bool,
 
     imgui: ImContext,
@@ -121,7 +120,7 @@ impl Ui {
                 }),
             }]);
             let ui_texture = fonts.build_alpha8_texture();
-            CoreTexture::new(
+            Texture::new(
                 device,
                 shader_images,
                 ui_texture.data.to_vec(),
@@ -130,7 +129,7 @@ impl Ui {
             )
         };
 
-        let core_framebuffer = CoreFramebuffer::new(
+        let framebuffer = Framebuffer::new(
             device,
             shader_layout,
             shader_images,
@@ -141,24 +140,21 @@ impl Ui {
 
         let camera = Camera::orthographic(size.width as f32, size.height as f32);
 
-        let shader = CoreShader::from_spirv_bytes(
+        let shader = Shader::from_spirv_bytes(
             device,
-            &core_framebuffer,
+            &framebuffer,
             shader_layout,
             include_bytes!("../shaders/ui.spirv"),
         )
         .expect("bad shader");
 
-        let (index, updater) = storage.framebuffers.add(core_framebuffer);
-        let mut framebuffer = Framebuffer::new(index, updater);
-        framebuffer.width = size.width;
-        framebuffer.height = size.height;
+        let framebuffer_handle = storage.add_framebuffer(framebuffer);
 
-        let mesh = CoreMesh::new(device);
+        let mesh = Mesh::new(device);
 
         Self {
             drawn: false,
-            framebuffer,
+            framebuffer: framebuffer_handle,
             camera,
             texture,
             shader,
@@ -209,21 +205,17 @@ impl Ui {
         let textures = vec![self.texture.shader_index(); vertices.len()];
 
         // update mesh
-        self.mesh.update(
-            device,
-            MeshData {
-                textures,
-                vertices,
-                normals,
-                colors,
-                uvs,
-                indices,
-            },
-        );
+        self.mesh.set_indices(indices);
+        self.mesh.set_vertices(vertices);
+        self.mesh.set_normals(normals);
+        self.mesh.set_colors(colors);
+        self.mesh.set_uvs(uvs);
+        self.mesh.set_textures(textures);
+        self.mesh.update_if_needed(device);
 
         // render ui
         let cmd = device.commands();
-        let framebuffer = storage.framebuffers.get_mut(&self.framebuffer.index);
+        let framebuffer = storage.framebuffers.get_mut(&self.framebuffer);
 
         // update world uniform
         let world_matrix = self.camera.matrix();
@@ -316,14 +308,12 @@ impl Ui {
         size: Size,
     ) {
         self.imgui.io_mut().display_size = [size.width as f32, size.height as f32];
-        self.framebuffer.width = size.width;
-        self.framebuffer.height = size.height;
         self.camera.width = size.width as f32;
         self.camera.height = size.height as f32;
-        storage
-            .framebuffers
-            .get_mut(&self.framebuffer.index)
-            .update(device, shader_images, size);
+
+        let framebuffer = storage.framebuffers.get_mut(&self.framebuffer);
+        framebuffer.resize(size.width, size.height);
+        framebuffer.update_if_needed(device, shader_images);
     }
 
     pub(crate) fn destroy(&self, device: &Device) {

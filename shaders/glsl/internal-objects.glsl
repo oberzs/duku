@@ -33,5 +33,5 @@ layout(set = 1, binding = 0) uniform Material {
 
 layout(push_constant) uniform Constants {
     mat4 model_matrix;
-    int sampler_index;
+    uint sampler_index;
 } object;

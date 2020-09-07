@@ -12,14 +12,14 @@ use std::ops::Range;
 use std::ptr;
 use std::slice;
 
-use crate::image::CoreFramebuffer;
+use crate::image::Framebuffer;
 use crate::image::Image;
 use crate::image::ImageLayout;
 use crate::image::Size;
-use crate::mesh::CoreMesh;
-use crate::pipeline::CoreMaterial;
-use crate::pipeline::CoreShader;
+use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
+use crate::pipeline::Material;
+use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderLayout;
 use crate::vk;
@@ -149,11 +149,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn begin_render_pass(
-        &self,
-        framebuffer: &CoreFramebuffer,
-        clear: (f32, f32, f32, f32),
-    ) {
+    pub(crate) fn begin_render_pass(&self, framebuffer: &Framebuffer, clear: (f32, f32, f32, f32)) {
         // create clear values based on framebuffer image formats
         let clear_values: Vec<_> = framebuffer
             .iter_images()
@@ -199,7 +195,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn bind_shader(&self, shader: &CoreShader) {
+    pub(crate) fn bind_shader(&self, shader: &Shader) {
         // update stats
         let mut stats = self.stats.get();
         let mut used = self.used_shaders.borrow_mut();
@@ -220,7 +216,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn bind_material(&self, layout: &ShaderLayout, material: &CoreMaterial) {
+    pub(crate) fn bind_material(&self, layout: &ShaderLayout, material: &Material) {
         // update stats
         let mut stats = self.stats.get();
         let mut used = self.used_materials.borrow_mut();
@@ -251,7 +247,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn bind_mesh(&self, mesh: &CoreMesh) {
+    pub(crate) fn bind_mesh(&self, mesh: &Mesh) {
         self.bind_index_buffer(mesh.index_buffer());
         self.bind_vertex_buffer(mesh.vertex_buffer());
     }

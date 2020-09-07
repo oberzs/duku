@@ -6,23 +6,18 @@
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
+use super::Handle;
 use super::Storage;
 use crate::color::Color;
 use crate::device::Device;
-use crate::error::Result;
-use crate::font::CoreFont;
 use crate::font::Font;
-use crate::image::CoreFramebuffer;
-use crate::image::CoreTexture;
+use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::mesh::CoreMesh;
 use crate::mesh::Mesh;
-use crate::pipeline::CoreMaterial;
-use crate::pipeline::CoreShader;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderImages;
@@ -30,141 +25,143 @@ use crate::pipeline::ShaderLayout;
 
 #[derive(Debug)]
 pub struct Builtins {
-    pub white_texture: Texture,
-    pub white_material: Material,
-    pub surface_mesh: Mesh,
-    pub quad_mesh: Mesh,
-    pub cube_mesh: Mesh,
-    pub sphere_mesh: Mesh,
-    pub grid_mesh: Mesh,
-    pub phong_shader: Shader,
-    pub font_shader: Shader,
-    pub blit_shader: Shader,
-    pub wireframe_shader: Shader,
-    pub line_shader: Shader,
-    pub unshaded_shader: Shader,
-    pub skybox_shader: Shader,
-    pub fira_font: Font,
+    pub white_texture: Handle<Texture>,
+    pub white_material: Handle<Material>,
+    pub surface_mesh: Handle<Mesh>,
+    pub quad_mesh: Handle<Mesh>,
+    pub cube_mesh: Handle<Mesh>,
+    pub sphere_mesh: Handle<Mesh>,
+    pub grid_mesh: Handle<Mesh>,
+    pub phong_shader: Handle<Shader>,
+    pub font_shader: Handle<Shader>,
+    pub blit_shader: Handle<Shader>,
+    pub wireframe_shader: Handle<Shader>,
+    pub line_shader: Handle<Shader>,
+    pub unshaded_shader: Handle<Shader>,
+    pub skybox_shader: Handle<Shader>,
+    pub fira_font: Handle<Font>,
 }
 
 impl Builtins {
     pub(crate) fn new(
         device: &Device,
         storage: &mut Storage,
-        framebuffer: &CoreFramebuffer,
+        framebuffer: &Framebuffer,
         layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
-    ) -> Result<Self> {
+    ) -> Self {
         // textures
         let white_texture = {
-            let tex = CoreTexture::new(
+            let tex = Texture::new(
                 device,
                 shader_images,
                 vec![255, 255, 255, 255],
                 Size::new(1, 1),
                 ImageFormat::Rgba,
             );
-            let shader_index = tex.shader_index();
-            let (index, _) = storage.textures.add(tex);
-            Texture::new(index, shader_index)
+            storage.add_texture(tex)
         };
 
         // materials
         let white_material = {
-            let (index, updater) = storage.materials.add(CoreMaterial::new(device, layout));
-            let mut mat = Material::new(index, updater);
+            let mut mat = Material::new(device, layout);
             mat.set_phong_color((255, 255, 255));
-            mat.update();
-            mat
+            mat.update_if_needed(device);
+            storage.add_material(mat)
         };
 
         // meshes
-        let surface_mesh = create_surface(device, storage);
-        let quad_mesh = create_quad(device, storage);
-        let cube_mesh = create_cube(device, storage);
-        let sphere_mesh = create_sphere(device, storage, 3);
-        let grid_mesh = create_grid(device, storage, 50);
+        let surface_mesh = storage.add_mesh(create_surface(device));
+        let quad_mesh = storage.add_mesh(create_quad(device));
+        let cube_mesh = storage.add_mesh(create_cube(device));
+        let sphere_mesh = storage.add_mesh(create_sphere(device, 3));
+        let grid_mesh = storage.add_mesh(create_grid(device, 50));
 
         // shaders
         let phong_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/phong.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let font_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/font.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let blit_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/blit.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let wireframe_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/wireframe.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let line_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/lines.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let unshaded_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/unshaded.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         let skybox_shader = {
-            let (index, _) = storage.shaders.add(CoreShader::from_spirv_bytes(
+            let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/skybox.spirv"),
-            )?);
-            Shader::new(index)
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
         };
 
         // fonts
         let fira_font = {
-            let (index, _) = storage
-                .fonts
-                .add(CoreFont::fira_mono(device, shader_images));
-            Font::new(index)
+            let font = Font::fira_mono(device, shader_images);
+            storage.add_font(font)
         };
 
-        Ok(Self {
+        Self {
             white_texture,
             white_material,
             surface_mesh,
@@ -180,60 +177,57 @@ impl Builtins {
             unshaded_shader,
             skybox_shader,
             fira_font,
-        })
+        }
     }
 }
 
-fn create_surface(device: &Device, storage: &mut Storage) -> Mesh {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-    let mut mesh = Mesh::new(index, updater);
+fn create_surface(device: &Device) -> Mesh {
+    let mut mesh = Mesh::new(device);
 
-    mesh.vertices = vec![
+    mesh.set_vertices(vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, -1.0, 0.0),
         Vector3::new(-1.0, -1.0, 0.0),
-    ];
-    mesh.uvs = vec![
+    ]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ];
-    mesh.indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
     mesh.calculate_normals();
-    mesh.update();
+    mesh.update_if_needed(device);
 
     mesh
 }
 
-fn create_quad(device: &Device, storage: &mut Storage) -> Mesh {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-    let mut mesh = Mesh::new(index, updater);
+fn create_quad(device: &Device) -> Mesh {
+    let mut mesh = Mesh::new(device);
 
-    mesh.vertices = vec![
+    mesh.set_vertices(vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
-    ];
-    mesh.uvs = vec![
+    ]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
-    ];
-    mesh.indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
     mesh.calculate_normals();
-    mesh.update();
+    mesh.update_if_needed(device);
 
     mesh
 }
 
-fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
+fn create_cube(device: &Device) -> Mesh {
     let top = create_rectangle(
         device,
-        storage,
         (-0.5, 0.5, 0.5),
         (0.5, 0.5, 0.5),
         (0.5, 0.5, -0.5),
@@ -242,7 +236,6 @@ fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
 
     let bottom = create_rectangle(
         device,
-        storage,
         (0.5, -0.5, 0.5),
         (-0.5, -0.5, 0.5),
         (-0.5, -0.5, -0.5),
@@ -251,7 +244,6 @@ fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
 
     let back = create_rectangle(
         device,
-        storage,
         (0.5, 0.5, 0.5),
         (-0.5, 0.5, 0.5),
         (-0.5, -0.5, 0.5),
@@ -260,7 +252,6 @@ fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
 
     let front = create_rectangle(
         device,
-        storage,
         (-0.5, 0.5, -0.5),
         (0.5, 0.5, -0.5),
         (0.5, -0.5, -0.5),
@@ -269,7 +260,6 @@ fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
 
     let left = create_rectangle(
         device,
-        storage,
         (-0.5, 0.5, 0.5),
         (-0.5, 0.5, -0.5),
         (-0.5, -0.5, -0.5),
@@ -278,19 +268,23 @@ fn create_cube(device: &Device, storage: &mut Storage) -> Mesh {
 
     let right = create_rectangle(
         device,
-        storage,
         (0.5, 0.5, -0.5),
         (0.5, 0.5, 0.5),
         (0.5, -0.5, 0.5),
         (0.5, -0.5, -0.5),
     );
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-
-    Mesh::combine(index, updater, &[top, bottom, front, back, left, right])
+    let mesh = Mesh::combine(device, &[&top, &bottom, &front, &back, &left, &right]);
+    top.destroy(device);
+    bottom.destroy(device);
+    front.destroy(device);
+    back.destroy(device);
+    left.destroy(device);
+    right.destroy(device);
+    mesh
 }
 
-fn create_grid(device: &Device, storage: &mut Storage, size: u32) -> Mesh {
+fn create_grid(device: &Device, size: u32) -> Mesh {
     let half = size as i32 / 2;
     let mut vertices = vec![];
     let mut colors = vec![];
@@ -325,40 +319,31 @@ fn create_grid(device: &Device, storage: &mut Storage, size: u32) -> Mesh {
         indices.extend(&[vc, vc + 1]);
     }
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-    let mut mesh = Mesh::new(index, updater);
-    mesh.vertices = vertices;
-    mesh.colors = colors;
-    mesh.indices = indices;
-    mesh.update();
+    let mut mesh = Mesh::new(device);
+    mesh.set_vertices(vertices);
+    mesh.set_colors(colors);
+    mesh.set_indices(indices);
+    mesh.update_if_needed(device);
     mesh
 }
 
-fn create_rectangle<V: Into<Vector3>>(
-    device: &Device,
-    storage: &mut Storage,
-    p1: V,
-    p2: V,
-    p3: V,
-    p4: V,
-) -> Mesh {
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-    let mut mesh = Mesh::new(index, updater);
+fn create_rectangle<V: Into<Vector3>>(device: &Device, p1: V, p2: V, p3: V, p4: V) -> Mesh {
+    let mut mesh = Mesh::new(device);
 
-    mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
-    mesh.uvs = vec![
+    mesh.set_vertices(vec![p1.into(), p2.into(), p3.into(), p4.into()]);
+    mesh.set_uvs(vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ];
-    mesh.indices = vec![0, 1, 2, 0, 2, 3];
+    ]);
+    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
     mesh.calculate_normals();
 
     mesh
 }
 
-fn create_sphere(device: &Device, storage: &mut Storage, detail_level: u32) -> Mesh {
+fn create_sphere(device: &Device, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -430,13 +415,12 @@ fn create_sphere(device: &Device, storage: &mut Storage, detail_level: u32) -> M
         uvs.push(Vector2::new(u, v));
     }
 
-    let (index, updater) = storage.meshes.add(CoreMesh::new(device));
-    let mut mesh = Mesh::new(index, updater);
-    mesh.vertices = vertices;
-    mesh.indices = indices;
-    mesh.uvs = uvs;
+    let mut mesh = Mesh::new(device);
+    mesh.set_vertices(vertices);
+    mesh.set_indices(indices);
+    mesh.set_uvs(uvs);
     mesh.calculate_normals();
-    mesh.update();
+    mesh.update_if_needed(device);
     mesh
 }
 

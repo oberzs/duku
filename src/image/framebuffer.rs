@@ -5,7 +5,6 @@
 // also manages world uniform and camera
 
 use std::ptr;
-use std::sync::mpsc::Sender;
 
 use super::Image;
 use super::ImageFormat;
@@ -21,29 +20,16 @@ use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
-use crate::storage::Index;
 use crate::surface::Swapchain;
 use crate::vk;
 
-// user facing framebuffer data
-#[derive(Debug)]
 pub struct Framebuffer {
-    pub width: u32,
-    pub height: u32,
-
-    pub(crate) index: Index,
-
-    updater: Sender<(Index, Size)>,
-}
-
-// data storage for a framebuffer
-pub(crate) struct CoreFramebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
     images: Vec<Image>,
     stored_index: usize,
     shader_image: Option<Image>,
-    shader_index: Option<i32>,
+    shader_index: Option<u32>,
 
     // resources needed for each
     // framebuffer in rendering
@@ -52,27 +38,11 @@ pub(crate) struct CoreFramebuffer {
 
     msaa: Msaa,
     size: Size,
+
+    should_update: bool,
 }
 
 impl Framebuffer {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, Size)>) -> Self {
-        Self {
-            width: 1,
-            height: 1,
-            updater,
-            index,
-        }
-    }
-
-    pub fn update(&self) {
-        let data = Size::new(self.width, self.height);
-        self.updater
-            .send((self.index.clone(), data))
-            .expect("bad receiver");
-    }
-}
-
-impl CoreFramebuffer {
     pub(crate) fn for_swapchain(
         device: &Device,
         swapchain: &Swapchain,
@@ -124,6 +94,7 @@ impl CoreFramebuffer {
                     shader_image: None,
                     shader_index: None,
                     stored_index: 0,
+                    should_update: false,
                     world_buffer,
                     world_descriptor,
                     render_pass,
@@ -198,6 +169,7 @@ impl CoreFramebuffer {
         Self {
             shader_image: Some(shader_image),
             shader_index: Some(shader_index),
+            should_update: false,
             world_buffer,
             world_descriptor,
             stored_index,
@@ -209,68 +181,76 @@ impl CoreFramebuffer {
         }
     }
 
-    pub(crate) fn update(&mut self, device: &Device, shader_images: &mut ShaderImages, size: Size) {
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.size = Size::new(width, height);
+        self.should_update = true;
+    }
+
+    pub(crate) fn update_if_needed(&mut self, device: &Device, shader_images: &mut ShaderImages) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
         );
 
-        // recreate framebuffer images
-        let mut stored_format = None;
-        let mut stored_index = 0;
+        if self.should_update {
+            // recreate framebuffer images
+            let mut stored_format = None;
+            let mut stored_index = 0;
 
-        let mut images: Vec<_> = self
-            .render_pass
-            .attachments()
-            .enumerate()
-            .map(|(i, attachment)| {
-                if attachment.is_stored() {
-                    stored_format = Some(attachment.format());
-                    stored_index = i;
-                }
+            let mut images: Vec<_> = self
+                .render_pass
+                .attachments()
+                .enumerate()
+                .map(|(i, attachment)| {
+                    if attachment.is_stored() {
+                        stored_format = Some(attachment.format());
+                        stored_index = i;
+                    }
 
-                Image::attachment(device, attachment, size, None)
-            })
-            .collect();
+                    Image::attachment(device, attachment, self.size, None)
+                })
+                .collect();
 
-        let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
+            let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
 
-        let info = vk::FramebufferCreateInfo {
-            s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            p_next: ptr::null(),
-            flags: 0,
-            render_pass: self.render_pass.handle(),
-            attachment_count: views.len() as u32,
-            p_attachments: views.as_ptr(),
-            layers: 1,
-            width: size.width,
-            height: size.height,
-        };
+            let info = vk::FramebufferCreateInfo {
+                s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                p_next: ptr::null(),
+                flags: 0,
+                render_pass: self.render_pass.handle(),
+                attachment_count: views.len() as u32,
+                p_attachments: views.as_ptr(),
+                layers: 1,
+                width: self.size.width,
+                height: self.size.height,
+            };
 
-        shader_images.remove(self.shader_index.expect("bad texture index"));
+            let mut shader_image = Image::shader(device, self.size);
+            shader_images.replace(
+                self.shader_index.expect("bad shader index"),
+                shader_image.add_view(device),
+            );
 
-        let mut shader_image = Image::shader(device, size);
-        let shader_index = shader_images.add(shader_image.add_view(device));
+            // ready image layouts
+            shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
+            images[stored_index].change_layout(
+                device,
+                ImageLayout::Undefined,
+                match stored_format {
+                    Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                    _ => ImageLayout::ShaderColor,
+                },
+            );
 
-        // ready image layouts
-        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
-        images[stored_index].change_layout(
-            device,
-            ImageLayout::Undefined,
-            match stored_format {
-                Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
-                _ => ImageLayout::ShaderColor,
-            },
-        );
+            // reassign new values
+            device.destroy_framebuffer(self.handle);
+            self.handle = device.create_framebuffer(&info);
+            self.images = images;
+            self.stored_index = stored_index;
+            self.shader_image = Some(shader_image);
 
-        // reassign new values
-        device.destroy_framebuffer(self.handle);
-        self.handle = device.create_framebuffer(&info);
-        self.images = images;
-        self.stored_index = stored_index;
-        self.shader_image = Some(shader_image);
-        self.shader_index = Some(shader_index);
-        self.size = size;
+            self.should_update = false;
+        }
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
@@ -326,7 +306,7 @@ impl CoreFramebuffer {
         self.images.iter()
     }
 
-    pub(crate) fn shader_index(&self) -> i32 {
+    pub(crate) fn shader_index(&self) -> u32 {
         self.shader_index.expect("bad framebuffer")
     }
 

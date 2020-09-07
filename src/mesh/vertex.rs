@@ -17,7 +17,7 @@ pub(crate) struct Vertex {
     pub(crate) norm: Vector3,
     pub(crate) uv: Vector2,
     pub(crate) col: Vector4,
-    pub(crate) tex: i32,
+    pub(crate) tex: u32,
 }
 
 impl Vertex {
@@ -67,7 +67,7 @@ impl Vertex {
             vk::VertexInputAttributeDescription {
                 location: 4,
                 binding: 0,
-                format: vk::FORMAT_R32_SINT,
+                format: vk::FORMAT_R32_UINT,
                 offset: size3 * 2 + size2 + size4,
             },
         ]

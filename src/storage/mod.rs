@@ -4,42 +4,35 @@
 // Storage - Vulkan resource storage
 
 mod builtin;
-mod index;
+mod handle;
 
 use std::collections::HashMap;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
 
 use crate::device::Device;
-use crate::font::CoreFont;
-use crate::image::CoreFramebuffer;
-use crate::image::CoreTexture;
-use crate::image::Size;
-use crate::mesh::CoreMesh;
-use crate::mesh::MeshData;
-use crate::pipeline::CoreMaterial;
-use crate::pipeline::CoreShader;
+use crate::font::Font;
+use crate::image::Framebuffer;
+use crate::image::Texture;
+use crate::mesh::Mesh;
+use crate::pipeline::Material;
+use crate::pipeline::Shader;
 use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderMaterial;
 
 pub(crate) use builtin::Builtins;
-pub(crate) use index::Index;
+
+pub use handle::Handle;
 
 pub(crate) struct Storage {
-    pub(crate) shaders: Store<CoreShader>,
-    pub(crate) fonts: Store<CoreFont>,
-    pub(crate) textures: Store<CoreTexture>,
-    pub(crate) framebuffers: Store<CoreFramebuffer, Size>,
-    pub(crate) materials: Store<CoreMaterial, ShaderMaterial>,
-    pub(crate) meshes: Store<CoreMesh, MeshData>,
+    pub(crate) shaders: Store<Shader>,
+    pub(crate) fonts: Store<Font>,
+    pub(crate) textures: Store<Texture>,
+    pub(crate) framebuffers: Store<Framebuffer>,
+    pub(crate) materials: Store<Material>,
+    pub(crate) meshes: Store<Mesh>,
+    next_id: u32,
 }
 
-pub(crate) struct Store<T, U = ()> {
-    stored: HashMap<Index, T>,
-    sender: Sender<(Index, U)>,
-    receiver: Receiver<(Index, U)>,
-    next_index: u32,
+pub(crate) struct Store<T> {
+    stored: HashMap<Handle<T>, T>,
 }
 
 impl Storage {
@@ -51,7 +44,42 @@ impl Storage {
             framebuffers: Store::new(),
             materials: Store::new(),
             meshes: Store::new(),
+            next_id: 0,
         }
+    }
+
+    pub(crate) fn add_shader(&mut self, shader: Shader) -> Handle<Shader> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.shaders.add(shader, id)
+    }
+
+    pub(crate) fn add_font(&mut self, font: Font) -> Handle<Font> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.fonts.add(font, id)
+    }
+
+    pub(crate) fn add_texture(&mut self, texture: Texture) -> Handle<Texture> {
+        let id = texture.shader_index();
+        self.textures.add(texture, id)
+    }
+
+    pub(crate) fn add_framebuffer(&mut self, framebuffer: Framebuffer) -> Handle<Framebuffer> {
+        let id = framebuffer.shader_index();
+        self.framebuffers.add(framebuffer, id)
+    }
+
+    pub(crate) fn add_material(&mut self, material: Material) -> Handle<Material> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.materials.add(material, id)
+    }
+
+    pub(crate) fn add_mesh(&mut self, mesh: Mesh) -> Handle<Mesh> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.meshes.add(mesh, id)
     }
 
     pub(crate) fn clear_unused(&mut self, device: &Device, shader_images: &mut ShaderImages) {
@@ -102,62 +130,38 @@ impl Storage {
 
     pub(crate) fn update_if_needed(&mut self, device: &Device, shader_images: &mut ShaderImages) {
         // update meshes
-        for (i, data) in self.meshes.receiver.try_iter() {
-            self.meshes
-                .stored
-                .get_mut(&i)
-                .expect("bad index")
-                .update(device, data);
+        for value in self.meshes.stored.values_mut() {
+            value.update_if_needed(device);
         }
 
         // update materials
-        for (i, data) in self.materials.receiver.try_iter() {
-            self.materials
-                .stored
-                .get_mut(&i)
-                .expect("bad index")
-                .update(device, data);
+        for value in self.materials.stored.values_mut() {
+            value.update_if_needed(device);
         }
 
         // update framebuffers
-        for (i, data) in self.framebuffers.receiver.try_iter() {
-            self.framebuffers
-                .stored
-                .get_mut(&i)
-                .expect("bad index")
-                .update(device, shader_images, data);
+        for value in self.framebuffers.stored.values_mut() {
+            value.update_if_needed(device, shader_images);
         }
     }
 }
 
-impl<T, U> Store<T, U> {
-    pub(crate) fn new() -> Self {
-        let (sender, receiver) = mpsc::channel::<(Index, U)>();
-
+impl<T> Store<T> {
+    fn new() -> Self {
         Self {
             stored: HashMap::new(),
-            next_index: 0,
-            sender,
-            receiver,
         }
     }
 
-    pub(crate) fn add(&mut self, value: T) -> (Index, Sender<(Index, U)>) {
-        let index = Index::new(self.next_index);
-        self.next_index += 1;
-        self.stored.insert(index.clone(), value);
-        (index, self.sender.clone())
+    pub(crate) fn get(&self, handle: &Handle<T>) -> &T {
+        self.stored.get(handle).expect("bad index")
     }
 
-    pub(crate) fn get(&self, index: &Index) -> &T {
-        self.stored.get(index).expect("bad index")
+    pub(crate) fn get_mut(&mut self, handle: &Handle<T>) -> &mut T {
+        self.stored.get_mut(handle).expect("bad index")
     }
 
-    pub(crate) fn get_mut(&mut self, index: &Index) -> &mut T {
-        self.stored.get_mut(index).expect("bad index")
-    }
-
-    pub(crate) fn clear_unused(&mut self) -> impl Iterator<Item = T> {
+    fn clear_unused(&mut self) -> impl Iterator<Item = T> {
         let mut removed = vec![];
         let stored: Vec<_> = self.stored.drain().collect();
         for (k, v) in stored {
@@ -170,11 +174,17 @@ impl<T, U> Store<T, U> {
         removed.into_iter()
     }
 
-    pub(crate) fn clear(&mut self) -> impl Iterator<Item = T> {
+    fn clear(&mut self) -> impl Iterator<Item = T> {
         self.stored
             .drain()
             .map(|(_, v)| v)
             .collect::<Vec<_>>()
             .into_iter()
+    }
+
+    fn add(&mut self, value: T, id: u32) -> Handle<T> {
+        let handle = Handle::new(id);
+        self.stored.insert(handle.clone(), value);
+        handle
     }
 }

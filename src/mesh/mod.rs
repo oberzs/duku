@@ -5,71 +5,56 @@
 
 mod vertex;
 
-use std::sync::mpsc::Sender;
-
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
 use crate::device::Device;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::storage::Index;
+use crate::storage::Handle;
+use crate::storage::Storage;
 use crate::vk;
+
 pub(crate) use vertex::Vertex;
 
-// user facing Mesh data
-#[derive(Debug)]
 pub struct Mesh {
-    pub vertices: Vec<Vector3>,
-    pub uvs: Vec<Vector2>,
-    pub normals: Vec<Vector3>,
-    pub colors: Vec<Color>,
-    pub textures: Vec<i32>,
-    pub indices: Vec<u16>,
+    vertices: Vec<Vector3>,
+    uvs: Vec<Vector2>,
+    normals: Vec<Vector3>,
+    colors: Vec<Color>,
+    textures: Vec<u32>,
+    indices: Vec<u16>,
 
-    pub(crate) index: Index,
+    should_update: bool,
 
-    updater: Sender<(Index, MeshData)>,
-}
-
-pub struct MeshBuilder {
-    mesh: Mesh,
-}
-
-// GPU data storage for a mesh
-pub(crate) struct CoreMesh {
     vertex_buffer: Buffer<Vertex>,
     index_buffer: Buffer<u16>,
 }
 
-pub(crate) struct MeshData {
-    pub(crate) vertices: Vec<Vector3>,
-    pub(crate) normals: Vec<Vector3>,
-    pub(crate) colors: Vec<Color>,
-    pub(crate) uvs: Vec<Vector2>,
-    pub(crate) textures: Vec<i32>,
-    pub(crate) indices: Vec<u16>,
+pub struct MeshBuilder<'s> {
+    pub(crate) storage: &'s mut Storage,
+    pub(crate) mesh: Mesh,
 }
 
 impl Mesh {
-    pub(crate) fn new(index: Index, updater: Sender<(Index, MeshData)>) -> Self {
+    pub(crate) fn new(device: &Device) -> Self {
+        let vertex_buffer = Buffer::dynamic(device, BufferUsage::Vertex, 1);
+        let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
+
         Self {
             vertices: vec![Vector3::ZERO; 1],
+            uvs: vec![Vector2::ZERO; 1],
             normals: vec![Vector3::ZERO; 1],
             colors: vec![Color::WHITE; 1],
-            uvs: vec![Vector2::ZERO; 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
-            updater,
-            index,
+            should_update: true,
+            vertex_buffer,
+            index_buffer,
         }
     }
 
-    pub(crate) fn combine(
-        index: Index,
-        updater: Sender<(Index, MeshData)>,
-        meshes: &[Self],
-    ) -> Self {
+    pub(crate) fn combine(device: &Device, meshes: &[&Self]) -> Self {
         let mut offset = 0;
         let mut indices = vec![];
         let mut vertices = vec![];
@@ -88,14 +73,15 @@ impl Mesh {
             offset = vertices.len() as u16;
         }
 
-        let mut result = Self::new(index, updater);
+        let mut result = Self::new(device);
         result.vertices = vertices;
         result.normals = normals;
         result.colors = colors;
         result.uvs = uvs;
         result.textures = textures;
         result.indices = indices;
-        result.update();
+        result.should_update = true;
+        result.update_if_needed(device);
         result
     }
 
@@ -117,103 +103,91 @@ impl Mesh {
             for norm in &mut self.normals {
                 *norm = norm.unit();
             }
+            self.should_update = true;
         }
     }
 
-    pub fn update(&self) {
-        let data = MeshData {
-            vertices: self.vertices.clone(),
-            normals: self.normals.clone(),
-            colors: self.colors.clone(),
-            uvs: self.uvs.clone(),
-            textures: self.textures.clone(),
-            indices: self.indices.clone(),
-        };
-        self.updater
-            .send((self.index.clone(), data))
-            .expect("bad receiver");
-    }
-}
-
-impl MeshBuilder {
-    pub(crate) const fn new(mesh: Mesh) -> Self {
-        Self { mesh }
+    pub fn set_vertices(&mut self, vertices: Vec<Vector3>) {
+        self.vertices = vertices;
+        self.should_update = true;
     }
 
-    pub fn vertices(mut self, vertices: Vec<Vector3>) -> Self {
-        self.mesh.vertices = vertices;
-        self
+    pub fn set_normals(&mut self, normals: Vec<Vector3>) {
+        self.normals = normals;
+        self.should_update = true;
     }
 
-    pub fn normals(mut self, normals: Vec<Vector3>) -> Self {
-        self.mesh.normals = normals;
-        self
+    pub fn set_colors(&mut self, colors: Vec<Color>) {
+        self.colors = colors;
+        self.should_update = true;
     }
 
-    pub fn colors(mut self, colors: Vec<Color>) -> Self {
-        self.mesh.colors = colors;
-        self
+    pub fn set_uvs(&mut self, uvs: Vec<Vector2>) {
+        self.uvs = uvs;
+        self.should_update = true;
     }
 
-    pub fn uvs(mut self, uvs: Vec<Vector2>) -> Self {
-        self.mesh.uvs = uvs;
-        self
+    pub fn set_indices(&mut self, indices: Vec<u16>) {
+        self.indices = indices;
+        self.should_update = true;
     }
 
-    pub fn indices(mut self, indices: Vec<u16>) -> Self {
-        self.mesh.indices = indices;
-        self
+    pub fn vertices(&self) -> &[Vector3] {
+        &self.vertices
     }
 
-    pub fn calculated_normals(mut self) -> Self {
-        self.mesh.calculate_normals();
-        self
+    pub fn normals(&self) -> &[Vector3] {
+        &self.normals
     }
 
-    pub fn build(self) -> Mesh {
-        self.mesh.update();
-        self.mesh
+    pub fn colors(&self) -> &[Color] {
+        &self.colors
     }
-}
 
-impl CoreMesh {
-    pub(crate) fn new(device: &Device) -> Self {
-        let vertex_buffer = Buffer::dynamic(device, BufferUsage::Vertex, 1);
-        let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
+    pub fn uvs(&self) -> &[Vector2] {
+        &self.uvs
+    }
 
-        Self {
-            vertex_buffer,
-            index_buffer,
+    pub fn indices(&self) -> &[u16] {
+        &self.indices
+    }
+
+    pub(crate) fn set_textures(&mut self, textures: Vec<u32>) {
+        self.textures = textures;
+        self.should_update = true;
+    }
+
+    pub(crate) fn update_if_needed(&mut self, device: &Device) {
+        if self.should_update {
+            let vertices: Vec<_> = self
+                .vertices
+                .iter()
+                .zip(self.uvs.iter().chain([Vector2::ZERO].iter().cycle()))
+                .zip(self.normals.iter().chain([Vector3::ZERO].iter().cycle()))
+                .zip(self.colors.iter().chain([Color::WHITE].iter().cycle()))
+                .zip(self.textures.iter().chain([0].iter().cycle()))
+                .map(|((((pos, uv), normal), col), tex)| Vertex {
+                    pos: *pos,
+                    uv: *uv,
+                    norm: *normal,
+                    col: col.to_rgba_norm_vec(),
+                    tex: *tex,
+                })
+                .collect();
+
+            // resize buffers if needed
+            if vertices.len() > self.vertex_buffer.len() {
+                self.vertex_buffer.resize(device, vertices.len());
+            }
+            if self.indices.len() > self.index_buffer.len() {
+                self.index_buffer.resize(device, self.indices.len());
+            }
+
+            self.vertex_buffer.copy_from_data(device, &vertices);
+            self.index_buffer.copy_from_data(device, &self.indices);
+
+            self.should_update = false;
         }
-    }
-
-    pub(crate) fn update(&mut self, device: &Device, data: MeshData) {
-        let vertices: Vec<_> = data
-            .vertices
-            .iter()
-            .zip(data.uvs.iter().chain([Vector2::ZERO].iter().cycle()))
-            .zip(data.normals.iter().chain([Vector3::ZERO].iter().cycle()))
-            .zip(data.colors.iter().chain([Color::WHITE].iter().cycle()))
-            .zip(data.textures.iter().chain([0].iter().cycle()))
-            .map(|((((pos, uv), normal), col), tex)| Vertex {
-                pos: *pos,
-                uv: *uv,
-                norm: *normal,
-                col: col.to_rgba_norm_vec(),
-                tex: *tex,
-            })
-            .collect();
-
-        // resize buffers if needed
-        if vertices.len() > self.vertex_buffer.len() {
-            self.vertex_buffer.resize(device, vertices.len());
-        }
-        if data.indices.len() > self.index_buffer.len() {
-            self.index_buffer.resize(device, data.indices.len());
-        }
-
-        self.vertex_buffer.copy_from_data(device, &vertices);
-        self.index_buffer.copy_from_data(device, &data.indices);
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
@@ -231,5 +205,41 @@ impl CoreMesh {
     pub(crate) fn destroy(&self, device: &Device) {
         self.vertex_buffer.destroy(device);
         self.index_buffer.destroy(device);
+    }
+}
+
+impl MeshBuilder<'_> {
+    pub fn vertices(mut self, vertices: Vec<Vector3>) -> Self {
+        self.mesh.set_vertices(vertices);
+        self
+    }
+
+    pub fn normals(mut self, normals: Vec<Vector3>) -> Self {
+        self.mesh.set_normals(normals);
+        self
+    }
+
+    pub fn colors(mut self, colors: Vec<Color>) -> Self {
+        self.mesh.set_colors(colors);
+        self
+    }
+
+    pub fn uvs(mut self, uvs: Vec<Vector2>) -> Self {
+        self.mesh.set_uvs(uvs);
+        self
+    }
+
+    pub fn indices(mut self, indices: Vec<u16>) -> Self {
+        self.mesh.set_indices(indices);
+        self
+    }
+
+    pub fn calculated_normals(mut self) -> Self {
+        self.mesh.calculate_normals();
+        self
+    }
+
+    pub fn build(self) -> Handle<Mesh> {
+        self.storage.add_mesh(self.mesh)
     }
 }
