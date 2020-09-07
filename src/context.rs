@@ -29,6 +29,7 @@ use crate::quality::Quality;
 use crate::quality::QualitySettings;
 use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
+use crate::renderer::RenderStores;
 use crate::renderer::Target;
 use crate::storage::Builtins;
 use crate::storage::Handle;
@@ -271,16 +272,23 @@ impl Context {
             }
         }
 
-        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
+        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
 
         let cam = get_camera(camera, framebuffer.size());
+
+        let stores = RenderStores {
+            shaders: &self.storage.shaders,
+            fonts: &self.storage.fonts,
+            materials: &self.storage.materials,
+            meshes: &self.storage.meshes,
+        };
 
         // draw
         self.forward_renderer.draw(
             &self.device,
             framebuffer,
             &cam,
-            &self.storage,
+            stores,
             &self.shader_layout,
             target,
         );
@@ -302,15 +310,22 @@ impl Context {
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
 
-        let frame = self.storage.framebuffers.get(framebuffer);
+        let frame = self.storage.framebuffers.get_mut(framebuffer);
         let cam = get_camera(camera, frame.size());
+
+        let stores = RenderStores {
+            shaders: &self.storage.shaders,
+            fonts: &self.storage.fonts,
+            materials: &self.storage.materials,
+            meshes: &self.storage.meshes,
+        };
 
         // draw
         self.forward_renderer.draw(
             &self.device,
             frame,
             &cam,
-            &self.storage,
+            stores,
             &self.shader_layout,
             target,
         );

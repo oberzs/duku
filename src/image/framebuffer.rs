@@ -15,6 +15,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
+use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderImages;
@@ -35,6 +36,7 @@ pub struct Framebuffer {
     // framebuffer in rendering
     world_descriptor: Descriptor,
     world_buffer: Buffer<ShaderWorld>,
+    text_mesh: Mesh,
 
     msaa: Msaa,
     size: Size,
@@ -89,6 +91,7 @@ impl Framebuffer {
 
                 let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
                 let world_descriptor = shader_layout.world_set(device, &world_buffer);
+                let text_mesh = Mesh::new(device);
 
                 Self {
                     shader_image: None,
@@ -97,6 +100,7 @@ impl Framebuffer {
                     should_update: false,
                     world_buffer,
                     world_descriptor,
+                    text_mesh,
                     render_pass,
                     handle,
                     size,
@@ -151,6 +155,7 @@ impl Framebuffer {
 
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(device, &world_buffer);
+        let text_mesh = Mesh::new(device);
 
         let mut shader_image = Image::shader(device, size);
         let shader_index = shader_images.add(shader_image.add_view(device));
@@ -172,6 +177,7 @@ impl Framebuffer {
             should_update: false,
             world_buffer,
             world_descriptor,
+            text_mesh,
             stored_index,
             render_pass,
             handle,
@@ -278,6 +284,7 @@ impl Framebuffer {
             image.destroy(device);
         }
         self.world_buffer.destroy(device);
+        self.text_mesh.destroy(device);
         self.render_pass.destroy(device);
         device.destroy_framebuffer(self.handle);
     }
@@ -316,5 +323,9 @@ impl Framebuffer {
 
     pub(crate) const fn world(&self) -> Descriptor {
         self.world_descriptor
+    }
+
+    pub(crate) fn text_mesh(&mut self) -> &mut Mesh {
+        &mut self.text_mesh
     }
 }

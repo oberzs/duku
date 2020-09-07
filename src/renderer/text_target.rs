@@ -19,7 +19,7 @@ pub struct TextTarget {
 
 pub(crate) struct TextOrder {
     pub(crate) font_size: u32,
-    pub(crate) _color: Color,
+    pub(crate) color: Color,
     pub(crate) font: Handle<Font>,
     pub(crate) text: String,
     pub(crate) transform: Transform,
@@ -42,7 +42,7 @@ impl TextTarget {
     {
         self.orders.push(TextOrder {
             font_size: self.font_size,
-            _color: self.color,
+            color: self.color,
             font: self.font.clone(),
             text: text.as_ref().to_string(),
             transform: transform.into(),

@@ -12,21 +12,25 @@ use super::Target;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
+use crate::font::Font;
 use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Size;
 use crate::math::Matrix4;
 use crate::math::Transform;
+use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
+use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderImages;
 use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
-use crate::storage::Storage;
+use crate::storage::Store;
 
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; FRAMES_IN_FLIGHT],
@@ -40,6 +44,13 @@ pub enum Pcf {
     X16,
     X4,
     Disabled,
+}
+
+pub(crate) struct RenderStores<'s> {
+    pub(crate) shaders: &'s Store<Shader>,
+    pub(crate) fonts: &'s Store<Font>,
+    pub(crate) materials: &'s Store<Material>,
+    pub(crate) meshes: &'s Store<Mesh>,
 }
 
 struct ShadowMapSet {
@@ -82,9 +93,9 @@ impl ForwardRenderer {
     pub(crate) fn draw(
         &mut self,
         device: &Device,
-        framebuffer: &Framebuffer,
+        framebuffer: &mut Framebuffer,
         camera: &Camera,
-        storage: &Storage,
+        stores: RenderStores<'_>,
         shader_layout: &ShaderLayout,
         target: Target<'_>,
     ) {
@@ -98,7 +109,7 @@ impl ForwardRenderer {
         if target.has_shadow_casters {
             let mut view = camera.clone();
             view.depth = 50.0;
-            self.shadow_pass(device, shader_layout, storage, &target, &view);
+            self.shadow_pass(device, shader_layout, stores.meshes, &target, &view);
         }
 
         let cmd = device.commands();
@@ -142,14 +153,14 @@ impl ForwardRenderer {
 
         // skybox rendering
         if target.skybox {
-            record_skybox(cmd, &target, storage, shader_layout, camera);
+            record_skybox(cmd, &target, &stores, shader_layout, camera);
         }
 
         // normal mesh rendering
-        record_shader_orders(cmd, &target.orders_by_shader, storage, shader_layout);
+        record_shader_orders(cmd, &target.orders_by_shader, &stores, shader_layout);
 
         // text rendering
-        record_text(cmd, &target, storage, shader_layout);
+        record_text(device, framebuffer, &target, &stores, shader_layout);
 
         // end rendering
         cmd.end_render_pass();
@@ -160,7 +171,7 @@ impl ForwardRenderer {
         &mut self,
         device: &Device,
         shader_layout: &ShaderLayout,
-        storage: &Storage,
+        meshes: &Store<Mesh>,
         target: &Target<'_>,
         view: &Camera,
     ) {
@@ -239,7 +250,7 @@ impl ForwardRenderer {
                 for m_order in &s_order.orders_by_material {
                     for order in &m_order.orders {
                         if order.cast_shadows {
-                            record_order(cmd, storage, shader_layout, order);
+                            record_order(cmd, meshes, shader_layout, order);
                         }
                     }
                 }
@@ -310,21 +321,21 @@ impl ShadowMapSet {
 fn record_shader_orders(
     cmd: &Commands,
     orders_by_shader: &[OrdersByShader],
-    storage: &Storage,
+    stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
 ) {
     for s_order in orders_by_shader {
         // bind shader
-        let shader = storage.shaders.get(&s_order.shader);
+        let shader = stores.shaders.get(&s_order.shader);
         cmd.bind_shader(shader);
 
         for m_order in &s_order.orders_by_material {
             // bind material
-            let material = storage.materials.get(&m_order.material);
+            let material = stores.materials.get(&m_order.material);
             cmd.bind_material(shader_layout, material);
 
             for order in &m_order.orders {
-                record_order(cmd, storage, shader_layout, order);
+                record_order(cmd, stores.meshes, shader_layout, order);
             }
         }
     }
@@ -333,14 +344,14 @@ fn record_shader_orders(
 fn record_skybox(
     cmd: &Commands,
     target: &Target<'_>,
-    storage: &Storage,
+    stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
     camera: &Camera,
 ) {
-    let shader = storage.shaders.get(&target.builtins.skybox_shader);
+    let shader = stores.shaders.get(&target.builtins.skybox_shader);
     cmd.bind_shader(shader);
 
-    let mesh = storage.meshes.get(&target.builtins.cube_mesh);
+    let mesh = stores.meshes.get(&target.builtins.cube_mesh);
     cmd.bind_mesh(mesh);
 
     let model_matrix = (Transform {
@@ -360,28 +371,27 @@ fn record_skybox(
 }
 
 fn record_text(
-    cmd: &Commands,
+    device: &Device,
+    framebuffer: &mut Framebuffer,
     target: &Target<'_>,
-    storage: &Storage,
+    stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
 ) {
+    let cmd = device.commands();
     let Target { text, builtins, .. } = &target;
 
-    // bind shader
-    let shader = storage.shaders.get(&builtins.font_shader);
-    cmd.bind_shader(shader);
-
-    // bind material
-    let material = storage.materials.get(&builtins.white_material);
-    cmd.bind_material(shader_layout, material);
+    // update text batching mesh
+    let mut vertices = vec![];
+    let mut colors = vec![];
+    let mut textures = vec![];
+    let mut indices = vec![];
+    let mut uvs = vec![];
 
     for order in text.orders() {
-        let font = storage.fonts.get(&order.font);
-
-        // bind mesh
-        cmd.bind_mesh(font.mesh());
+        let font = stores.fonts.get(&order.font);
 
         let mut transform = order.transform;
+        let quat = transform.rotation;
         let start_x = transform.position.x;
         transform.scale *= order.font_size as f32;
 
@@ -398,28 +408,69 @@ fn record_text(
             }
 
             let data = font.char_data(c);
-
             let mut local_transform = transform;
             local_transform.position.x += data.x_offset * transform.scale.x;
             local_transform.position.y -= data.y_offset * transform.scale.y;
 
-            cmd.push_constants(
-                shader_layout,
-                ShaderConstants {
-                    model_matrix: local_transform.as_matrix(),
-                    sampler_index: 7,
-                },
-            );
+            let pos1 = local_transform.position;
+            let pos2 = pos1
+                + Vector3::new(
+                    data.width * transform.scale.x,
+                    -data.height * transform.scale.y,
+                    0.0,
+                );
 
-            cmd.draw(6, data.index_offset);
+            let o = vertices.len() as u16;
+            vertices.extend(&[
+                quat.rotate_vector(Vector3::new(pos1.x, pos1.y, pos1.z)),
+                quat.rotate_vector(Vector3::new(pos2.x, pos1.y, pos1.z)),
+                quat.rotate_vector(Vector3::new(pos2.x, pos2.y, pos1.z)),
+                quat.rotate_vector(Vector3::new(pos1.x, pos2.y, pos1.z)),
+            ]);
+            uvs.extend(&[
+                Vector2::new(data.uvs.x, data.uvs.y),
+                Vector2::new(data.uvs.z, data.uvs.y),
+                Vector2::new(data.uvs.z, data.uvs.w),
+                Vector2::new(data.uvs.x, data.uvs.w),
+            ]);
+            colors.extend(&[order.color; 4]);
+            textures.extend(&[font.texture().shader_index(); 4]);
+            indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
 
             transform.position.x += data.advance * transform.scale.x;
         }
     }
+
+    // bind shader
+    let shader = stores.shaders.get(&builtins.font_shader);
+    cmd.bind_shader(shader);
+
+    // bind material
+    let material = stores.materials.get(&builtins.white_material);
+    cmd.bind_material(shader_layout, material);
+
+    // bind and draw mesh
+    let text_mesh = framebuffer.text_mesh();
+    text_mesh.set_vertices(vertices);
+    text_mesh.set_colors(colors);
+    text_mesh.set_textures(textures);
+    text_mesh.set_uvs(uvs);
+    text_mesh.set_indices(indices);
+    text_mesh.update_if_needed(device);
+
+    cmd.bind_mesh(text_mesh);
+    cmd.push_constants(
+        shader_layout,
+        ShaderConstants {
+            model_matrix: Matrix4::identity(),
+            sampler_index: 7,
+        },
+    );
+    cmd.draw(text_mesh.index_count(), 0);
 }
 
-fn record_order(cmd: &Commands, storage: &Storage, shader_layout: &ShaderLayout, order: &Order) {
-    let mesh = storage.meshes.get(&order.mesh);
+fn record_order(cmd: &Commands, meshes: &Store<Mesh>, shader_layout: &ShaderLayout, order: &Order) {
+    let mesh = meshes.get(&order.mesh);
 
     cmd.push_constants(
         shader_layout,

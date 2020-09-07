@@ -10,6 +10,7 @@ mod target;
 mod text_target;
 
 pub(crate) use forward::ForwardRenderer;
+pub(crate) use forward::RenderStores;
 pub(crate) use target::Order;
 pub(crate) use target::OrdersByShader;
 
