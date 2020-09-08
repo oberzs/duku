@@ -80,7 +80,7 @@ impl Shader {
         layout: &ShaderLayout,
         source: String,
     ) -> Result<Self> {
-        use crate::glsl::compile_glsl;
+        use super::glsl::compile_glsl;
 
         let (vert, frag, mode_bytes) = compile_glsl(&source)?;
         let modes = ShaderModes {

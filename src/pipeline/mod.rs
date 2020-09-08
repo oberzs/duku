@@ -13,6 +13,9 @@ mod sampler;
 mod shader;
 mod uniform;
 
+#[cfg(feature = "glsl")]
+mod glsl;
+
 use properties::Clear;
 use properties::CullMode;
 use properties::DepthMode;

@@ -24,6 +24,8 @@
 #![allow(dead_code)]
 
 mod error;
+
+#[path = "pipeline/glsl.rs"]
 mod glsl;
 
 use std::env;
