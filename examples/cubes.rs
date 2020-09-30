@@ -50,12 +50,6 @@ fn main() -> Result<()> {
 
     let cube = cube_mesh(&mut context, (1.0, 1.0, 1.0));
 
-    let floor_transform = Transform {
-        scale: Vector3::new(80.0, 0.2, 80.0),
-        position: Vector3::new(0.0, -0.1, 0.0),
-        ..Default::default()
-    };
-
     let main_light = Light::directional((-0.4, -1.0, -1.0), Color::WHITE, true);
 
     while window.is_open() {
@@ -75,13 +69,24 @@ fn main() -> Result<()> {
         context.draw_on_window(Some(&camera), |target| {
             target.skybox = true;
             target.lights[0] = main_light;
-            // target.draw_grid();
-            target.draw_cube(floor_transform);
-            target.draw(&cube, (2.0, 1.0, 0.0));
-            target.draw_cube((0.0, 0.0, 0.0));
-            target.draw_sphere((-4.0, 1.0, 0.0));
-            target.set_material(&material);
-            target.draw_cube((-2.0, 1.0, 0.0));
+
+            // render floor
+            target.transform.scale = Vector3::new(80.0, 0.2, 80.0);
+            target.transform.move_down(0.1);
+            target.draw_cube();
+            target.transform = Transform::default();
+
+            // render custom mesh
+            target.transform.move_by((-2.0, 1.0, 0.0));
+            target.draw_mesh(&cube);
+
+            // render builtin meshes
+            target.transform.move_right(2.0);
+            target.draw_sphere();
+            target.material = Some(&material);
+            target.transform.move_right(2.0);
+            target.transform.rotation = camera.transform.rotation;
+            target.draw_cube();
         });
     }
 

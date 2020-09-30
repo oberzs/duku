@@ -8,7 +8,7 @@
 #define SHAPE filled_triangles 
 
 #define SRGB
-#define VERTEX_COLOR_SRGB
+#define VERTEX_SRGB_COLOR
 
 layout(location = 0) out vec4 out_color;
 

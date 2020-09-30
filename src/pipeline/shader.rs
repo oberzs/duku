@@ -192,7 +192,7 @@ impl Shader {
             depth_bias_constant_factor: 0.0,
             depth_bias_clamp: 0.0,
             depth_bias_slope_factor: 0.0,
-            line_width: 1.0,
+            line_width: 2.0,
         };
 
         // configure msaa state
@@ -267,11 +267,7 @@ impl Shader {
         };
 
         // configure dynamic state
-        let dynamic_states = [
-            vk::DYNAMIC_STATE_LINE_WIDTH,
-            vk::DYNAMIC_STATE_SCISSOR,
-            vk::DYNAMIC_STATE_VIEWPORT,
-        ];
+        let dynamic_states = [vk::DYNAMIC_STATE_SCISSOR, vk::DYNAMIC_STATE_VIEWPORT];
         let dynamic_state = vk::PipelineDynamicStateCreateInfo {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
             p_next: ptr::null(),

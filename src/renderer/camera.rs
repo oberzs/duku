@@ -99,10 +99,21 @@ impl Camera {
         }
     }
 
-    pub(crate) fn matrix(&self) -> Matrix4 {
-        let projection = self.projection();
-        let view = self.transform.as_matrix_for_camera();
-        projection * view
+    pub(crate) fn world_to_view(&self) -> Matrix4 {
+        Matrix4::scale(self.transform.scale)
+            * self.transform.rotation.inverse_rotation().as_matrix()
+            * Matrix4::translation(-self.transform.position)
+    }
+
+    pub(crate) fn view_to_clip(&self) -> Matrix4 {
+        match self.projection {
+            Projection::Orthographic => {
+                Matrix4::orthographic_center(self.width, self.height, -0.001, self.depth)
+            }
+            Projection::Perspective => {
+                Matrix4::perspective(self.fov as f32, self.width / self.height, 0.001, self.depth)
+            }
+        }
     }
 
     pub(crate) fn bounding_sphere_for_split(&self, near: f32, far: f32) -> Sphere {
@@ -117,10 +128,10 @@ impl Camera {
             Vector3::new(-1.0, -1.0, 1.0),
         ];
 
-        let projection = self.projection();
-        let view = self.transform.as_matrix_for_camera();
+        let view_to_clip = self.view_to_clip();
+        let world_to_view = self.world_to_view();
 
-        let inverse_projection = projection.inverse().expect("bad projection");
+        let inverse_projection = view_to_clip.inverse().expect("bad projection");
 
         // get projection frustum corners from NDC
         for corner in &mut frustum_corners {
@@ -152,23 +163,12 @@ impl Camera {
         // round radius to 1/16 increments
         radius = (radius * 16.0).ceil() / 16.0;
 
-        // transform frustum center into world space
-        let center = view
+        // transform frustum center into view space
+        let center = world_to_view
             .inverse()
             .expect("no inverse")
             .transform_vector(frustum_center);
 
         Sphere { center, radius }
-    }
-
-    fn projection(&self) -> Matrix4 {
-        match self.projection {
-            Projection::Orthographic => {
-                Matrix4::orthographic_center(self.width, self.height, 0.0, self.depth)
-            }
-            Projection::Perspective => {
-                Matrix4::perspective(self.fov as f32, self.width / self.height, 0.001, self.depth)
-            }
-        }
     }
 }

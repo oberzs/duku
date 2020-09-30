@@ -22,7 +22,7 @@ fn main() -> Result<()> {
         hue = (hue + 1) % 360;
 
         context.draw_on_window(None, |target| {
-            target.clear = Color::hsv(hue, 255, 255);
+            target.clear_color = Color::hsv(hue, 255, 255);
         });
     }
 

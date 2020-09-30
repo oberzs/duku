@@ -342,12 +342,6 @@ impl Commands {
         }
     }
 
-    pub(crate) fn set_line_width(&self, width: f32) {
-        unsafe {
-            vk::cmd_set_line_width(self.buffer.get(), width);
-        }
-    }
-
     pub(crate) fn blit_image_mip(&self, image: &Image, src: u32, dst: u32) {
         fn mip_offsets(image: &Image, mip: u32) -> [vk::Offset3D; 2] {
             let orig_width = image.size().width;

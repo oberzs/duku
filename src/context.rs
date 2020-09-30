@@ -235,6 +235,10 @@ impl Context {
         self.swapchain
             .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
 
+        for framebuffer in &self.window_framebuffers {
+            framebuffer.destroy(&self.device);
+        }
+
         self.window_framebuffers = Framebuffer::for_swapchain(
             &self.device,
             &self.swapchain,
@@ -253,11 +257,11 @@ impl Context {
         }
     }
 
-    pub fn draw_on_window(
-        &mut self,
-        camera: Option<&Camera>,
-        draw_callback: impl Fn(&mut Target<'_>),
-    ) {
+    #[allow(single_use_lifetimes)]
+    pub fn draw_on_window<'target, F>(&mut self, camera: Option<&Camera>, draw_callback: F)
+    where
+        F: Fn(&mut Target<'target, '_>),
+    {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
@@ -296,12 +300,15 @@ impl Context {
         self.end_draw();
     }
 
-    pub fn draw(
+    #[allow(single_use_lifetimes)]
+    pub fn draw<'target, F>(
         &mut self,
         framebuffer: &Handle<Framebuffer>,
         camera: Option<&Camera>,
-        draw_callback: impl Fn(&mut Target<'_>),
-    ) {
+        draw_callback: F,
+    ) where
+        F: Fn(&mut Target<'target, '_>),
+    {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }

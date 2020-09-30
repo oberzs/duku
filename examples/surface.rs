@@ -30,7 +30,7 @@ fn main() -> Result<()> {
 
         // draw other stuff
         context.draw_on_window(None, |target| {
-            target.set_shader(&shader);
+            target.shader = Some(&shader);
             target.draw_surface();
         });
     }

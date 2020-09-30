@@ -7,11 +7,10 @@ mod camera;
 mod forward;
 mod light;
 mod target;
-mod text_target;
 
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use forward::RenderStores;
-pub(crate) use target::Order;
+pub(crate) use target::MeshOrder;
 pub(crate) use target::OrdersByShader;
 
 pub use camera::Camera;
@@ -20,4 +19,3 @@ pub use forward::Pcf;
 pub use light::Light;
 pub use light::LightType;
 pub use target::Target;
-pub use text_target::TextTarget;

@@ -62,6 +62,12 @@ impl Vector3 {
         cos.acos().to_degrees()
     }
 
+    pub fn project_onto(&self, other: impl Into<Self>) -> Self {
+        let o = other.into();
+        let projected_length = self.dot(o) / o.length();
+        o.unit() * projected_length
+    }
+
     pub const fn extend(&self, w: f32) -> Vector4 {
         Vector4::new(self.x, self.y, self.z, w)
     }

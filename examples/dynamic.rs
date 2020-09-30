@@ -43,11 +43,12 @@ fn main() -> Result<()> {
 
         context.draw_on_window(Some(&camera), |target| {
             target.wireframes = true;
-            target.clear = Color::ORANGE;
+            target.clear_color = Color::ORANGE;
 
             // draw square
             let offset = -(square_size as f32 / 2.0);
-            target.draw(&square, (offset, offset));
+            target.transform.move_by((offset, offset, 0.0));
+            target.draw_mesh(&square);
         });
     }
 

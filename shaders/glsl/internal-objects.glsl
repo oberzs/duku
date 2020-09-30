@@ -10,14 +10,15 @@ struct Light {
 };
 
 layout(set = 0, binding = 0) uniform World {
-    mat4 world_matrix;
+    mat4 world_to_view;
+    mat4 view_to_clip;
     Light lights[4];
     vec3 camera_position;
     float time;
-    mat4 light_matrices[4];
-    vec4 cascade_splits;
-    float bias;
-    float pcf;
+    mat4 world_to_shadow[4];
+    vec4 shadow_cascades;
+    float shadow_bias;
+    float shadow_pcf;
 } world;
 
 layout(set = 1, binding = 0) uniform Material {
@@ -32,6 +33,6 @@ layout(set = 1, binding = 0) uniform Material {
 } material;
 
 layout(push_constant) uniform Constants {
-    mat4 model_matrix;
+    mat4 local_to_world;
     uint sampler_index;
 } object;

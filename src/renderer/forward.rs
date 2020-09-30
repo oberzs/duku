@@ -6,7 +6,7 @@
 use std::time::Instant;
 
 use super::Camera;
-use super::Order;
+use super::MeshOrder;
 use super::OrdersByShader;
 use super::Target;
 use crate::device::Commands;
@@ -35,8 +35,8 @@ use crate::storage::Store;
 pub(crate) struct ForwardRenderer {
     shadow_frames: [ShadowMapSet; FRAMES_IN_FLIGHT],
     shadow_shader: Shader,
+    shadow_pcf: Pcf,
     start_time: Instant,
-    pcf: Pcf,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -56,7 +56,7 @@ pub(crate) struct RenderStores<'s> {
 struct ShadowMapSet {
     framebuffers: [Framebuffer; 4],
     descriptor: Descriptor,
-    matrices: [Matrix4; 4],
+    world_to_shadow: [Matrix4; 4],
     cascades: [f32; 4],
     map_size: u32,
 }
@@ -67,7 +67,7 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
         shadow_map_size: u32,
-        pcf: Pcf,
+        shadow_pcf: Pcf,
     ) -> Self {
         let shadow_frames = [
             ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
@@ -86,7 +86,7 @@ impl ForwardRenderer {
             start_time: Instant::now(),
             shadow_frames,
             shadow_shader,
-            pcf,
+            shadow_pcf,
         }
     }
 
@@ -97,12 +97,12 @@ impl ForwardRenderer {
         camera: &Camera,
         stores: RenderStores<'_>,
         shader_layout: &ShaderLayout,
-        target: Target<'_>,
+        target: Target<'_, '_>,
     ) {
         let current = device.current_frame();
 
         // reset current matrices and cascades
-        self.shadow_frames[current].matrices = [Matrix4::identity(); 4];
+        self.shadow_frames[current].world_to_shadow = [Matrix4::identity(); 4];
         self.shadow_frames[current].cascades = [0.0; 4];
 
         // shadow mapping
@@ -113,12 +113,11 @@ impl ForwardRenderer {
         }
 
         let cmd = device.commands();
-        cmd.set_line_width(target.line_width);
 
         // bind current shadow map set
         cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
 
-        let pcf = match self.pcf {
+        let shadow_pcf = match self.shadow_pcf {
             Pcf::Disabled => 2.0,
             Pcf::X4 => 0.0,
             Pcf::X16 => 1.0,
@@ -135,19 +134,20 @@ impl ForwardRenderer {
         framebuffer.update_world(
             device,
             ShaderWorld {
-                cascade_splits: self.shadow_frames[current].cascades,
-                light_matrices: self.shadow_frames[current].matrices,
-                bias: target.bias,
+                shadow_cascades: self.shadow_frames[current].cascades,
+                world_to_shadow: self.shadow_frames[current].world_to_shadow,
+                shadow_bias: target.shadow_bias,
                 time: self.start_time.elapsed().as_secs_f32(),
                 camera_position: camera.transform.position,
-                world_matrix: camera.matrix(),
+                world_to_view: camera.world_to_view(),
+                view_to_clip: camera.view_to_clip(),
                 lights,
-                pcf,
+                shadow_pcf,
             },
         );
 
         // do render pass
-        cmd.begin_render_pass(framebuffer, target.clear.to_rgba_norm());
+        cmd.begin_render_pass(framebuffer, target.clear_color.to_rgba_norm());
         cmd.set_view(framebuffer.size());
         cmd.bind_descriptor(shader_layout, framebuffer.world());
 
@@ -157,10 +157,17 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        record_shader_orders(cmd, &target.orders_by_shader, &stores, shader_layout);
+        record_shader_orders(cmd, &target.mesh_orders, &stores, shader_layout);
 
         // text rendering
-        record_text(device, framebuffer, &target, &stores, shader_layout);
+        if !target.text_orders.is_empty() {
+            record_text(device, framebuffer, &target, &stores, shader_layout);
+        }
+
+        // line rendering
+        if !target.line_orders.is_empty() {
+            record_lines(device, framebuffer, &target, &stores, shader_layout);
+        }
 
         // end rendering
         cmd.end_render_pass();
@@ -172,7 +179,7 @@ impl ForwardRenderer {
         device: &Device,
         shader_layout: &ShaderLayout,
         meshes: &Store<Mesh>,
-        target: &Target<'_>,
+        target: &Target<'_, '_>,
         view: &Camera,
     ) {
         let light_dir = match target.lights.iter().find(|l| l.shadows) {
@@ -190,7 +197,7 @@ impl ForwardRenderer {
 
         // render shadow map for each cascade
         let mut prev_cs = 0.0;
-        for (i, cs) in target.cascade_splits.iter().enumerate() {
+        for (i, cs) in target.shadow_cascades.iter().enumerate() {
             let map_size = self.shadow_frames[current].map_size;
 
             // get view frustum bounding sphere
@@ -220,7 +227,7 @@ impl ForwardRenderer {
             let light_matrix = light_ortho_matrix * light_view_matrix;
 
             // set uniform variables for normal render
-            self.shadow_frames[current].matrices[i] = light_matrix;
+            self.shadow_frames[current].world_to_shadow[i] = light_matrix;
             self.shadow_frames[current].cascades[i] = view.depth * cs;
             prev_cs = *cs;
 
@@ -229,14 +236,15 @@ impl ForwardRenderer {
             framebuffer.update_world(
                 device,
                 ShaderWorld {
-                    light_matrices: [Matrix4::identity(); 4],
+                    world_to_shadow: [Matrix4::identity(); 4],
                     camera_position: Vector3::default(),
                     lights: [Default::default(); 4],
-                    world_matrix: light_matrix,
-                    cascade_splits: [0.0; 4],
-                    bias: 0.0,
+                    world_to_view: light_view_matrix,
+                    view_to_clip: light_ortho_matrix,
+                    shadow_cascades: [0.0; 4],
+                    shadow_bias: 0.0,
+                    shadow_pcf: 0.0,
                     time: 0.0,
-                    pcf: 0.0,
                 },
             );
 
@@ -246,8 +254,8 @@ impl ForwardRenderer {
             cmd.bind_descriptor(shader_layout, framebuffer.world());
             cmd.bind_shader(&self.shadow_shader);
 
-            for s_order in &target.orders_by_shader {
-                for m_order in &s_order.orders_by_material {
+            for s_order in &target.mesh_orders {
+                for m_order in &s_order.orders {
                     for order in &m_order.orders {
                         if order.cast_shadows {
                             record_order(cmd, meshes, shader_layout, order);
@@ -293,7 +301,7 @@ impl ShadowMapSet {
         );
 
         Self {
-            matrices: [Matrix4::identity(); 4],
+            world_to_shadow: [Matrix4::identity(); 4],
             cascades: [0.0; 4],
             framebuffers,
             descriptor,
@@ -320,16 +328,16 @@ impl ShadowMapSet {
 
 fn record_shader_orders(
     cmd: &Commands,
-    orders_by_shader: &[OrdersByShader],
+    mesh_orders: &[OrdersByShader],
     stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
 ) {
-    for s_order in orders_by_shader {
+    for s_order in mesh_orders {
         // bind shader
         let shader = stores.shaders.get(&s_order.shader);
         cmd.bind_shader(shader);
 
-        for m_order in &s_order.orders_by_material {
+        for m_order in &s_order.orders {
             // bind material
             let material = stores.materials.get(&m_order.material);
             cmd.bind_material(shader_layout, material);
@@ -343,7 +351,7 @@ fn record_shader_orders(
 
 fn record_skybox(
     cmd: &Commands,
-    target: &Target<'_>,
+    target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
     camera: &Camera,
@@ -354,7 +362,7 @@ fn record_skybox(
     let mesh = stores.meshes.get(&target.builtins.cube_mesh);
     cmd.bind_mesh(mesh);
 
-    let model_matrix = (Transform {
+    let local_to_world = (Transform {
         position: camera.transform.position,
         scale: Vector3::uniform(camera.depth * 2.0 - 0.1),
         ..Default::default()
@@ -364,7 +372,7 @@ fn record_skybox(
         shader_layout,
         ShaderConstants {
             sampler_index: 0,
-            model_matrix,
+            local_to_world,
         },
     );
     cmd.draw(mesh.index_count(), 0);
@@ -373,12 +381,16 @@ fn record_skybox(
 fn record_text(
     device: &Device,
     framebuffer: &mut Framebuffer,
-    target: &Target<'_>,
+    target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
 ) {
     let cmd = device.commands();
-    let Target { text, builtins, .. } = &target;
+    let Target {
+        text_orders,
+        builtins,
+        ..
+    } = &target;
 
     // update text batching mesh
     let mut vertices = vec![];
@@ -387,13 +399,13 @@ fn record_text(
     let mut indices = vec![];
     let mut uvs = vec![];
 
-    for order in text.orders() {
+    for order in text_orders {
         let font = stores.fonts.get(&order.font);
 
         let mut transform = order.transform;
         let quat = transform.rotation;
         let start_x = transform.position.x;
-        transform.scale *= order.font_size as f32;
+        transform.scale *= order.size as f32;
 
         for c in order.text.chars() {
             // handle whitespace
@@ -462,20 +474,81 @@ fn record_text(
     cmd.push_constants(
         shader_layout,
         ShaderConstants {
-            model_matrix: Matrix4::identity(),
+            local_to_world: Matrix4::identity(),
             sampler_index: 7,
         },
     );
     cmd.draw(text_mesh.index_count(), 0);
 }
 
-fn record_order(cmd: &Commands, meshes: &Store<Mesh>, shader_layout: &ShaderLayout, order: &Order) {
+fn record_lines(
+    device: &Device,
+    framebuffer: &mut Framebuffer,
+    target: &Target<'_, '_>,
+    stores: &RenderStores<'_>,
+    shader_layout: &ShaderLayout,
+) {
+    let cmd = device.commands();
+    let Target {
+        line_orders,
+        builtins,
+        ..
+    } = &target;
+
+    // update line batching mesh
+    let mut vertices = vec![];
+    let mut colors = vec![];
+    let mut indices = vec![];
+
+    for order in line_orders {
+        let matrix = order.transform.as_matrix();
+        let point_1 = (matrix * order.point_1.extend(1.0)).shrink();
+        let point_2 = (matrix * order.point_2.extend(1.0)).shrink();
+
+        let o = vertices.len() as u16;
+        vertices.extend(&[point_1, point_2]);
+        colors.extend(&[order.color, order.color]);
+        indices.extend(&[o, o + 1]);
+    }
+
+    // bind shader
+    let shader = stores.shaders.get(&builtins.line_shader);
+    cmd.bind_shader(shader);
+
+    // bind material
+    let material = stores.materials.get(&builtins.white_material);
+    cmd.bind_material(shader_layout, material);
+
+    // bind and draw mesh
+    let line_mesh = framebuffer.line_mesh();
+    line_mesh.set_vertices(vertices);
+    line_mesh.set_colors(colors);
+    line_mesh.set_indices(indices);
+    line_mesh.update_if_needed(device);
+
+    cmd.bind_mesh(line_mesh);
+    cmd.push_constants(
+        shader_layout,
+        ShaderConstants {
+            local_to_world: Matrix4::identity(),
+            sampler_index: 0,
+        },
+    );
+    cmd.draw(line_mesh.index_count(), 0);
+}
+
+fn record_order(
+    cmd: &Commands,
+    meshes: &Store<Mesh>,
+    shader_layout: &ShaderLayout,
+    order: &MeshOrder,
+) {
     let mesh = meshes.get(&order.mesh);
 
     cmd.push_constants(
         shader_layout,
         ShaderConstants {
-            model_matrix: order.model,
+            local_to_world: order.local_to_world,
             sampler_index: order.sampler_index,
         },
     );

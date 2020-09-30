@@ -7,10 +7,11 @@ layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in vec4 in_color;
 layout(location = 3) flat in uint in_texture;
-layout(location = 4) in vec3 in_modelspace_position;
-layout(location = 5) in vec3 in_worldspace_position;
-layout(location = 6) in vec4 in_screenspace_position;
-layout(location = 7) in vec4 in_lightspace_position[4];
+layout(location = 4) in vec3 in_local_position;
+layout(location = 5) in vec3 in_world_position;
+layout(location = 6) in vec3 in_view_position;
+layout(location = 7) in vec4 in_clip_position;
+layout(location = 8) in vec4 in_shadow_position[4];
 
 layout(set = 2, binding = 0) uniform texture2D textures[100];
 layout(set = 2, binding = 1) uniform sampler samplers[12];

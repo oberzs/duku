@@ -18,7 +18,7 @@ void fragment() {
     Light light = world.lights[0];
     vec3 normal = normalize(in_normal);
     vec3 light_dir = normalize(-light.coords);
-    vec3 cam_dir = normalize(world.camera_position - in_modelspace_position.xyz);
+    vec3 cam_dir = normalize(world.camera_position - in_local_position.xyz);
 
     // received shadows
     float shadow = shadow(light);

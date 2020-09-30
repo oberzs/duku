@@ -10,7 +10,7 @@ float tex_sm(int index, vec3 uvc) {
 float tex_pcfsm(int index, vec3 uvc) {
     float depth = 0.0;
     vec2 texel = 1.0 / textureSize(sampler2DShadow(shadow_maps[index], sampler_cm), 0);
-    float softness = 0.5 + world.pcf;
+    float softness = 0.5 + world.shadow_pcf;
     for (float x = -softness; x <= softness; x += 1.0) {
         for (float y = -softness; y <= softness; y += 1.0) {
             vec2 offset = vec2(x, y) * texel;
@@ -22,7 +22,7 @@ float tex_pcfsm(int index, vec3 uvc) {
 }
 
 float tex_shadow(int index, vec3 uvc) {
-    if (world.pcf == 2.0) {
+    if (world.shadow_pcf == 2.0) {
         return tex_sm(index, uvc);
     } else {
         return tex_pcfsm(index, uvc);
@@ -30,7 +30,7 @@ float tex_shadow(int index, vec3 uvc) {
 }
 
 vec3 tex_coord(int index, float bias) {
-    vec4 coord = in_lightspace_position[index];
+    vec4 coord = in_shadow_position[index];
     coord.y = -coord.y;
     coord.z -= bias;
     coord.xyz / coord.w;
@@ -40,16 +40,16 @@ vec3 tex_coord(int index, float bias) {
 }
 
 float shadow(Light light) {
-    float depth = in_screenspace_position.z;
-    float blend_margin = world.cascade_splits[3] * 0.05;
+    float depth = in_clip_position.z;
+    float blend_margin = world.shadow_cascades[3] * 0.05;
 
     // choose shadow map
     int cascade;
-    if (depth < world.cascade_splits[0]) {
+    if (depth < world.shadow_cascades[0]) {
         cascade = 0;
-    } else if (depth < world.cascade_splits[1]) {
+    } else if (depth < world.shadow_cascades[1]) {
         cascade = 1;
-    } else if (depth < world.cascade_splits[2]) {
+    } else if (depth < world.shadow_cascades[2]) {
         cascade = 2;
     } else {
         cascade = 3;
@@ -57,7 +57,7 @@ float shadow(Light light) {
 
     vec3 light_dir = normalize(-light.coords);
     vec3 normal = normalize(in_normal);
-    float bias = world.bias * tan(acos(dot(normal, light_dir)));
+    float bias = world.shadow_bias * tan(acos(dot(normal, light_dir)));
 
     vec3 coord = tex_coord(cascade, bias);
 
@@ -65,7 +65,7 @@ float shadow(Light light) {
         return 0.0;
     } else {
         // blend between side-by-side cascades
-        float blend = smoothstep(-blend_margin, 0.0, depth - world.cascade_splits[cascade]);
+        float blend = smoothstep(-blend_margin, 0.0, depth - world.shadow_cascades[cascade]);
         if (blend == 0.0) {
             return tex_shadow(cascade, coord);
         } else {

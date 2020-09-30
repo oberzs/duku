@@ -90,19 +90,19 @@ fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
     let mut real_src = "#version 450\n".to_string();
 
     // pick output position format
-    let out_position = if defines.exists("VERTEX_POSITION_WORLDSPACE") {
-        "worldspace_position"
-    } else if defines.exists("VERTEX_POSITION_MODELSPACE") {
-        "modelspace_position"
-    } else if defines.exists("VERTEX_POSITION_SKYBOXSPACE") {
-        "screenspace_position.xyww"
+    let out_position = if defines.exists("VERTEX_WORLD_POSITION") {
+        "world_position"
+    } else if defines.exists("VERTEX_LOCAL_POSITION") {
+        "local_position"
+    } else if defines.exists("VERTEX_SKYBOX_POSITION") {
+        "clip_position.xyww"
     } else {
-        "screenspace_position"
+        "clip_position"
     };
     default_vert_glsl = default_vert_glsl.replace("{{out_position}}", out_position);
 
     // pick output color
-    let out_color = if defines.exists("VERTEX_COLOR_SRGB") {
+    let out_color = if defines.exists("VERTEX_SRGB_COLOR") {
         real_src.push_str(srgb_glsl);
         "srgb_to_linear_color(in_color)"
     } else {

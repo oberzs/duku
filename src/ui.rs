@@ -218,26 +218,24 @@ impl Ui {
         let framebuffer = storage.framebuffers.get_mut(&self.framebuffer);
 
         // update world uniform
-        let world_matrix = self.camera.matrix();
-        let camera_position = self.camera.transform.position;
         framebuffer.update_world(
             device,
             ShaderWorld {
-                light_matrices: [Matrix4::identity(); 4],
+                world_to_shadow: [Matrix4::identity(); 4],
+                world_to_view: self.camera.world_to_view(),
+                view_to_clip: self.camera.view_to_clip(),
+                camera_position: self.camera.transform.position,
                 lights: [Default::default(); 4],
-                cascade_splits: [0.0; 4],
-                bias: 0.0,
+                shadow_cascades: [0.0; 4],
+                shadow_bias: 0.0,
+                shadow_pcf: 0.0,
                 time: 0.0,
-                pcf: 0.0,
-                camera_position,
-                world_matrix,
             },
         );
 
         // begin render pass
         cmd.begin_render_pass(framebuffer, (0.0, 0.0, 0.0, 0.0));
         cmd.set_view(framebuffer.size());
-        cmd.set_line_width(1.0);
 
         // bind storage
         cmd.bind_descriptor(shader_layout, framebuffer.world());
@@ -247,7 +245,7 @@ impl Ui {
         cmd.push_constants(
             shader_layout,
             ShaderConstants {
-                model_matrix: Matrix4::identity(),
+                local_to_world: Matrix4::identity(),
                 sampler_index: 0,
             },
         );

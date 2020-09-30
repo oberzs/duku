@@ -5,12 +5,15 @@
 
 mod vertex;
 
+use std::iter;
+
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
 use crate::device::Device;
 use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::storage::Handle;
 use crate::storage::Storage;
 use crate::vk;
@@ -24,11 +27,14 @@ pub struct Mesh {
     colors: Vec<Color>,
     textures: Vec<u32>,
     indices: Vec<u16>,
+    extra_data_1: Vec<Vector4>,
+    extra_data_2: Vec<Vector4>,
 
     should_update: bool,
 
     vertex_buffer: Buffer<Vertex>,
     index_buffer: Buffer<u16>,
+    index_count: usize,
 }
 
 pub struct MeshBuilder<'s> {
@@ -46,9 +52,12 @@ impl Mesh {
             uvs: vec![Vector2::ZERO; 1],
             normals: vec![Vector3::ZERO; 1],
             colors: vec![Color::WHITE; 1],
+            extra_data_1: vec![Vector4::ZERO; 1],
+            extra_data_2: vec![Vector4::ZERO; 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
             should_update: true,
+            index_count: 3,
             vertex_buffer,
             index_buffer,
         }
@@ -132,6 +141,16 @@ impl Mesh {
         self.should_update = true;
     }
 
+    pub fn set_extra_data_1(&mut self, data: Vec<Vector4>) {
+        self.extra_data_1 = data;
+        self.should_update = true;
+    }
+
+    pub fn set_extra_data_2(&mut self, data: Vec<Vector4>) {
+        self.extra_data_2 = data;
+        self.should_update = true;
+    }
+
     pub fn vertices(&self) -> &[Vector3] {
         &self.vertices
     }
@@ -162,16 +181,20 @@ impl Mesh {
             let vertices: Vec<_> = self
                 .vertices
                 .iter()
-                .zip(self.uvs.iter().chain([Vector2::ZERO].iter().cycle()))
-                .zip(self.normals.iter().chain([Vector3::ZERO].iter().cycle()))
-                .zip(self.colors.iter().chain([Color::WHITE].iter().cycle()))
-                .zip(self.textures.iter().chain([0].iter().cycle()))
-                .map(|((((pos, uv), normal), col), tex)| Vertex {
-                    pos: *pos,
-                    uv: *uv,
-                    norm: *normal,
-                    col: col.to_rgba_norm_vec(),
-                    tex: *tex,
+                .zip(self.uvs.iter().chain(iter::repeat(&Vector2::ZERO)))
+                .zip(self.normals.iter().chain(iter::repeat(&Vector3::ZERO)))
+                .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
+                .zip(self.textures.iter().chain(iter::repeat(&0)))
+                .zip(self.extra_data_1.iter().chain(iter::repeat(&Vector4::ZERO)))
+                .zip(self.extra_data_2.iter().chain(iter::repeat(&Vector4::ZERO)))
+                .map(|((((((pos, uv), normal), col), tex), e1), e2)| Vertex {
+                    in_local_position: *pos,
+                    in_normal: *normal,
+                    in_uv: *uv,
+                    in_color: col.to_rgba_norm_vec(),
+                    in_texture: *tex,
+                    in_extra_data_1: *e1,
+                    in_extra_data_2: *e2,
                 })
                 .collect();
 
@@ -183,8 +206,11 @@ impl Mesh {
                 self.index_buffer.resize(device, self.indices.len());
             }
 
-            self.vertex_buffer.copy_from_data(device, &vertices);
-            self.index_buffer.copy_from_data(device, &self.indices);
+            if !vertices.is_empty() && !self.indices.is_empty() {
+                self.vertex_buffer.copy_from_data(device, &vertices);
+                self.index_buffer.copy_from_data(device, &self.indices);
+            }
+            self.index_count = self.indices.len();
 
             self.should_update = false;
         }
@@ -198,8 +224,8 @@ impl Mesh {
         self.index_buffer.handle()
     }
 
-    pub(crate) fn index_count(&self) -> usize {
-        self.index_buffer.len()
+    pub(crate) const fn index_count(&self) -> usize {
+        self.index_count
     }
 
     pub(crate) fn destroy(&self, device: &Device) {
@@ -231,6 +257,16 @@ impl MeshBuilder<'_> {
 
     pub fn indices(mut self, indices: Vec<u16>) -> Self {
         self.mesh.set_indices(indices);
+        self
+    }
+
+    pub fn extra_data_1(mut self, data: Vec<Vector4>) -> Self {
+        self.mesh.set_extra_data_1(data);
+        self
+    }
+
+    pub fn extra_data_2(mut self, data: Vec<Vector4>) -> Self {
+        self.mesh.set_extra_data_2(data);
         self
     }
 

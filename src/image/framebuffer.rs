@@ -37,6 +37,7 @@ pub struct Framebuffer {
     world_descriptor: Descriptor,
     world_buffer: Buffer<ShaderWorld>,
     text_mesh: Mesh,
+    line_mesh: Mesh,
 
     msaa: Msaa,
     size: Size,
@@ -92,6 +93,7 @@ impl Framebuffer {
                 let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
                 let world_descriptor = shader_layout.world_set(device, &world_buffer);
                 let text_mesh = Mesh::new(device);
+                let line_mesh = Mesh::new(device);
 
                 Self {
                     shader_image: None,
@@ -101,6 +103,7 @@ impl Framebuffer {
                     world_buffer,
                     world_descriptor,
                     text_mesh,
+                    line_mesh,
                     render_pass,
                     handle,
                     size,
@@ -156,6 +159,7 @@ impl Framebuffer {
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
         let world_descriptor = shader_layout.world_set(device, &world_buffer);
         let text_mesh = Mesh::new(device);
+        let line_mesh = Mesh::new(device);
 
         let mut shader_image = Image::shader(device, size);
         let shader_index = shader_images.add(shader_image.add_view(device));
@@ -178,6 +182,7 @@ impl Framebuffer {
             world_buffer,
             world_descriptor,
             text_mesh,
+            line_mesh,
             stored_index,
             render_pass,
             handle,
@@ -199,6 +204,14 @@ impl Framebuffer {
         );
 
         if self.should_update {
+            // cleanup images
+            for image in &self.images {
+                image.destroy(device);
+            }
+            if let Some(image) = &self.shader_image {
+                image.destroy(device);
+            }
+
             // recreate framebuffer images
             let mut stored_format = None;
             let mut stored_index = 0;
@@ -285,6 +298,7 @@ impl Framebuffer {
         }
         self.world_buffer.destroy(device);
         self.text_mesh.destroy(device);
+        self.line_mesh.destroy(device);
         self.render_pass.destroy(device);
         device.destroy_framebuffer(self.handle);
     }
@@ -327,5 +341,9 @@ impl Framebuffer {
 
     pub(crate) fn text_mesh(&mut self) -> &mut Mesh {
         &mut self.text_mesh
+    }
+
+    pub(crate) fn line_mesh(&mut self) -> &mut Mesh {
+        &mut self.line_mesh
     }
 }

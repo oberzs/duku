@@ -10,76 +10,64 @@ use crate::math::Quaternion;
 use crate::math::Vector3;
 use crate::renderer::Camera;
 
-pub struct Controller {
-    // fly
-    camera_angle: f32,
-
-    // orbit
-    pivot: Vector3,
-
-    // common
-    move_speed: f32,
-    mode: Mode,
-}
-
-enum Mode {
-    Fly,
-    Orbit,
+#[derive(Debug, Copy, Clone)]
+pub enum Controller {
+    Fly { camera_angle: f32, move_speed: f32 },
+    Orbit { pivot: Vector3, move_speed: f32 },
 }
 
 impl Controller {
     pub const fn fly() -> Self {
-        Self {
+        Self::Fly {
             camera_angle: 0.0,
-            pivot: Vector3::ZERO,
             move_speed: 1.0,
-            mode: Mode::Fly,
         }
     }
 
     pub fn orbit(pivot: impl Into<Vector3>) -> Self {
-        Self {
-            camera_angle: 0.0,
+        Self::Orbit {
             pivot: pivot.into(),
             move_speed: 2.5,
-            mode: Mode::Orbit,
         }
     }
 
     pub fn update(&mut self, camera: &mut Camera, window: &mut Window, delta_time: f32) {
-        // update move speed
-        if window.is_key_typed(Key::Equal) {
-            self.move_speed += 0.5;
-        }
-        if window.is_key_typed(Key::Minus) {
-            self.move_speed -= 0.5;
-        }
+        match self {
+            Self::Fly {
+                camera_angle,
+                move_speed,
+            } => {
+                // update move speed
+                if window.is_key_typed(Key::Equal) {
+                    *move_speed += 0.5;
+                }
+                if window.is_key_typed(Key::Minus) {
+                    *move_speed -= 0.5;
+                }
 
-        match self.mode {
-            Mode::Fly => {
                 // control in flying mode
                 let transform = &mut camera.transform;
-                let move_speed = 5.0f32.powf(self.move_speed) * delta_time;
+                let final_speed = 5.0f32.powf(*move_speed) * delta_time;
                 let rotation_speed = 50.0 * delta_time;
 
                 // movement
                 if window.is_key_pressed(Key::W) {
-                    transform.move_forward(move_speed);
+                    transform.move_forward(final_speed);
                 }
                 if window.is_key_pressed(Key::S) {
-                    transform.move_backward(move_speed);
+                    transform.move_backward(final_speed);
                 }
                 if window.is_key_pressed(Key::A) {
-                    transform.move_left(move_speed);
+                    transform.move_left(final_speed);
                 }
                 if window.is_key_pressed(Key::D) {
-                    transform.move_right(move_speed);
+                    transform.move_right(final_speed);
                 }
                 if window.is_key_pressed(Key::Space) {
-                    transform.move_by(Vector3::UP * move_speed);
+                    transform.move_by(Vector3::UP * final_speed);
                 }
                 if window.is_key_pressed(Key::LeftShift) {
-                    transform.move_by(Vector3::DOWN * move_speed);
+                    transform.move_by(Vector3::DOWN * final_speed);
                 }
 
                 // rotation
@@ -95,10 +83,10 @@ impl Controller {
                     let mouse_x = delta.x * rotation_speed;
 
                     let change_y = delta.y * rotation_speed;
-                    let upper_bound = change_y + self.camera_angle <= 90.0;
-                    let lower_bound = change_y + self.camera_angle >= -90.0;
+                    let upper_bound = change_y + *camera_angle <= 90.0;
+                    let lower_bound = change_y + *camera_angle >= -90.0;
                     let mouse_y = if upper_bound && lower_bound {
-                        self.camera_angle += change_y;
+                        *camera_angle += change_y;
                         change_y
                     } else {
                         0.0
@@ -115,10 +103,18 @@ impl Controller {
                     }
                 }
             }
-            Mode::Orbit => {
+            Self::Orbit { pivot, move_speed } => {
+                // update move speed
+                if window.is_key_typed(Key::Equal) {
+                    *move_speed += 0.5;
+                }
+                if window.is_key_typed(Key::Minus) {
+                    *move_speed -= 0.5;
+                }
+
                 // control orbiting around pivot
                 let transform = &mut camera.transform;
-                let angle = 5.0f32.powf(self.move_speed) * delta_time;
+                let angle = 5.0f32.powf(*move_speed) * delta_time;
 
                 // mouse rotation
                 if window.is_button_pressed(MouseButton::Button3) {
@@ -129,8 +125,8 @@ impl Controller {
 
                     let delta = window.mouse_delta();
                     let speed = 50.0 * delta_time;
-                    transform.move_around_point(self.pivot, speed * delta.x, Vector3::UP);
-                    transform.move_around_point(self.pivot, speed * delta.y, transform.right());
+                    transform.move_around_point(*pivot, speed * delta.x, Vector3::UP);
+                    transform.move_around_point(*pivot, speed * delta.y, transform.right());
                 } else {
                     // toggle mouse grab if needed
                     if window.mouse_grab() {
@@ -140,27 +136,26 @@ impl Controller {
 
                 // horizontal rotation
                 if window.is_key_pressed(Key::D) {
-                    transform.move_around_point(self.pivot, -angle, Vector3::UP);
+                    transform.move_around_point(*pivot, -angle, Vector3::UP);
                 }
                 if window.is_key_pressed(Key::A) {
-                    transform.move_around_point(self.pivot, angle, Vector3::UP);
+                    transform.move_around_point(*pivot, angle, Vector3::UP);
                 }
 
                 // vertical rotation
                 if window.is_key_pressed(Key::W) {
-                    transform.move_around_point(self.pivot, angle, transform.right());
+                    transform.move_around_point(*pivot, angle, transform.right());
                 }
                 if window.is_key_pressed(Key::S) {
-                    transform.move_around_point(self.pivot, -angle, transform.right());
+                    transform.move_around_point(*pivot, -angle, transform.right());
                 }
 
                 // zoom
                 let scroll = window.scroll_delta();
-                transform
-                    .move_forward(scroll.y * (self.pivot - transform.position).length() * 0.05);
+                transform.move_forward(scroll.y * (*pivot - transform.position).length() * 0.05);
 
                 // look at pivot point
-                transform.look_at(self.pivot);
+                transform.look_at(*pivot);
             }
         }
     }

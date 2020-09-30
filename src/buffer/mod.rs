@@ -109,7 +109,8 @@ impl<T: Copy> Buffer<T> {
     pub(crate) fn copy_from_data(&self, device: &Device, data: &[T]) {
         let size = mem::size_of::<T>() * data.len();
 
-        debug_assert!(self.size >= size, "dynamic buffer needs to be resized");
+        debug_assert!(self.size >= size, "buffer needs to be resized");
+        debug_assert!(size > 0, "buffer update data must not be empty");
 
         device.map_memory(self.memory, size, |mem| unsafe {
             ptr::copy_nonoverlapping(data as *const [T] as *const c_void, mem, size);
