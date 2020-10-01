@@ -31,7 +31,6 @@ pub struct Target<'a, 'b> {
     pub texture_filter: TextureFilter,
     pub texture_wrap: TextureWrap,
     pub texture_mipmaps: bool,
-    pub wireframes: bool,
     pub(crate) mesh_orders: Vec<OrdersByShader>,
 
     // shadows & lights
@@ -43,6 +42,10 @@ pub struct Target<'a, 'b> {
     // lines
     pub line_color: Color,
     pub(crate) line_orders: Vec<LineOrder>,
+
+    // shapes
+    pub shape_color: Color,
+    pub(crate) shape_orders: Vec<ShapeOrder>,
 
     // text
     pub font_size: u32,
@@ -61,7 +64,6 @@ pub(crate) struct OrdersByMaterial {
     pub(crate) orders: Vec<MeshOrder>,
 }
 
-#[derive(Clone)]
 pub(crate) struct MeshOrder {
     pub(crate) mesh: Handle<Mesh>,
     pub(crate) local_to_world: Matrix4,
@@ -69,7 +71,6 @@ pub(crate) struct MeshOrder {
     pub(crate) sampler_index: u32,
 }
 
-#[derive(Clone)]
 pub(crate) struct TextOrder {
     pub(crate) size: u32,
     pub(crate) color: Color,
@@ -78,11 +79,15 @@ pub(crate) struct TextOrder {
     pub(crate) transform: Transform,
 }
 
-#[derive(Clone)]
 pub(crate) struct LineOrder {
     pub(crate) color: Color,
-    pub(crate) point_1: Vector3,
-    pub(crate) point_2: Vector3,
+    pub(crate) points: [Vector3; 2],
+    pub(crate) transform: Transform,
+}
+
+pub(crate) struct ShapeOrder {
+    pub(crate) color: Color,
+    pub(crate) points: [Vector3; 3],
     pub(crate) transform: Transform,
 }
 
@@ -92,7 +97,11 @@ impl<'b> Target<'_, 'b> {
             mesh_orders: vec![],
             text_orders: vec![],
             line_orders: vec![],
+            shape_orders: vec![],
             clear_color: Color::WHITE,
+            text_color: Color::BLACK,
+            line_color: Color::BLACK,
+            shape_color: Color::BLACK,
             transform: Transform::default(),
             lights: [
                 Light::directional((-1.0, -1.0, 1.0), Color::WHITE, true),
@@ -106,10 +115,7 @@ impl<'b> Target<'_, 'b> {
             font: None,
             shader: None,
             material: None,
-            text_color: Color::BLACK,
-            line_color: Color::BLACK,
             texture_mipmaps: true,
-            wireframes: false,
             skybox: false,
             shadow_cascades: [0.1, 0.25, 0.7, 1.0],
             shadow_bias: 0.002,
@@ -138,6 +144,22 @@ impl<'b> Target<'_, 'b> {
                 local_to_world: self.transform.as_matrix(),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
+            },
+        );
+    }
+
+    pub fn draw_mesh_wireframe(&mut self, mesh: &Handle<Mesh>) {
+        let shader = self.builtins.wireframe_shader.clone();
+        let material = self.builtins.white_material.clone();
+
+        self.add_mesh_order(
+            material,
+            shader,
+            MeshOrder {
+                mesh: mesh.clone(),
+                local_to_world: self.transform.as_matrix(),
+                shadows: false,
+                sampler_index: 0,
             },
         );
     }
@@ -278,10 +300,40 @@ impl<'b> Target<'_, 'b> {
     {
         self.line_orders.push(LineOrder {
             color: self.line_color,
-            point_1: point_1.into(),
-            point_2: point_2.into(),
+            points: [point_1.into(), point_2.into()],
             transform: self.transform,
         });
+    }
+
+    pub fn draw_shape(&mut self, points: &[Vector2]) {
+        // don't draw polygon with less than 2 points
+        if points.len() < 3 {
+            return;
+        }
+
+        // triangulate points
+        let first = points[0].extend(0.0);
+        for i in 2..points.len() {
+            self.shape_orders.push(ShapeOrder {
+                color: self.shape_color,
+                points: [first, points[i - 1].extend(0.0), points[i].extend(0.0)],
+                transform: self.transform,
+            });
+        }
+    }
+
+    pub fn draw_rectangle<V>(&mut self, bottom_left: V, size: V)
+    where
+        V: Into<Vector2>,
+    {
+        let bl = bottom_left.into();
+        let s = size.into();
+        self.draw_shape(&[
+            Vector2::new(bl.x, bl.y + s.y),
+            bl + s,
+            Vector2::new(bl.x + s.x, bl.y),
+            bl,
+        ]);
     }
 
     fn add_mesh_order(
@@ -292,37 +344,19 @@ impl<'b> Target<'_, 'b> {
     ) {
         match self.mesh_orders.iter_mut().find(|so| so.shader == shader) {
             Some(so) => match so.orders.iter_mut().find(|mo| mo.material == material) {
-                Some(mo) => mo.orders.push(order.clone()),
+                Some(mo) => mo.orders.push(order),
                 None => so.orders.push(OrdersByMaterial {
                     material,
-                    orders: vec![order.clone()],
+                    orders: vec![order],
                 }),
             },
             None => self.mesh_orders.push(OrdersByShader {
                 shader,
                 orders: vec![OrdersByMaterial {
                     material,
-                    orders: vec![order.clone()],
+                    orders: vec![order],
                 }],
             }),
-        }
-
-        if self.wireframes {
-            let wireframe_shader = self.builtins.wireframe_shader.clone();
-            match self
-                .mesh_orders
-                .iter_mut()
-                .find(|so| so.shader == wireframe_shader)
-            {
-                Some(so) => so.orders[0].orders.push(order),
-                None => self.mesh_orders.push(OrdersByShader {
-                    shader: wireframe_shader,
-                    orders: vec![OrdersByMaterial {
-                        material: self.builtins.white_material.clone(),
-                        orders: vec![order],
-                    }],
-                }),
-            }
         }
     }
 

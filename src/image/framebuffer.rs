@@ -38,6 +38,7 @@ pub struct Framebuffer {
     world_buffer: Buffer<ShaderWorld>,
     text_mesh: Mesh,
     line_mesh: Mesh,
+    shape_mesh: Mesh,
 
     msaa: Msaa,
     size: Size,
@@ -94,6 +95,7 @@ impl Framebuffer {
                 let world_descriptor = shader_layout.world_set(device, &world_buffer);
                 let text_mesh = Mesh::new(device);
                 let line_mesh = Mesh::new(device);
+                let shape_mesh = Mesh::new(device);
 
                 Self {
                     shader_image: None,
@@ -104,6 +106,7 @@ impl Framebuffer {
                     world_descriptor,
                     text_mesh,
                     line_mesh,
+                    shape_mesh,
                     render_pass,
                     handle,
                     size,
@@ -160,6 +163,7 @@ impl Framebuffer {
         let world_descriptor = shader_layout.world_set(device, &world_buffer);
         let text_mesh = Mesh::new(device);
         let line_mesh = Mesh::new(device);
+        let shape_mesh = Mesh::new(device);
 
         let mut shader_image = Image::shader(device, size);
         let shader_index = shader_images.add(shader_image.add_view(device));
@@ -183,6 +187,7 @@ impl Framebuffer {
             world_descriptor,
             text_mesh,
             line_mesh,
+            shape_mesh,
             stored_index,
             render_pass,
             handle,
@@ -299,6 +304,7 @@ impl Framebuffer {
         self.world_buffer.destroy(device);
         self.text_mesh.destroy(device);
         self.line_mesh.destroy(device);
+        self.shape_mesh.destroy(device);
         self.render_pass.destroy(device);
         device.destroy_framebuffer(self.handle);
     }
@@ -345,5 +351,9 @@ impl Framebuffer {
 
     pub(crate) fn line_mesh(&mut self) -> &mut Mesh {
         &mut self.line_mesh
+    }
+
+    pub(crate) fn shape_mesh(&mut self) -> &mut Mesh {
+        &mut self.shape_mesh
     }
 }

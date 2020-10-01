@@ -168,6 +168,11 @@ impl ForwardRenderer {
             record_lines(device, framebuffer, &target, &stores, shader_layout);
         }
 
+        // shape rendering
+        if !target.shape_orders.is_empty() {
+            record_shapes(device, framebuffer, &target, &stores, shader_layout);
+        }
+
         // end rendering
         cmd.end_render_pass();
         framebuffer.blit_to_texture(cmd);
@@ -501,8 +506,8 @@ fn record_lines(
 
     for order in line_orders {
         let matrix = order.transform.as_matrix();
-        let point_1 = (matrix * order.point_1.extend(1.0)).shrink();
-        let point_2 = (matrix * order.point_2.extend(1.0)).shrink();
+        let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
+        let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
 
         let o = vertices.len() as u16;
         vertices.extend(&[point_1, point_2]);
@@ -534,6 +539,63 @@ fn record_lines(
         },
     );
     cmd.draw(line_mesh.index_count(), 0);
+}
+
+fn record_shapes(
+    device: &Device,
+    framebuffer: &mut Framebuffer,
+    target: &Target<'_, '_>,
+    stores: &RenderStores<'_>,
+    shader_layout: &ShaderLayout,
+) {
+    let cmd = device.commands();
+    let Target {
+        shape_orders,
+        builtins,
+        ..
+    } = &target;
+
+    // update shape batching mesh
+    let mut vertices = vec![];
+    let mut colors = vec![];
+    let mut indices = vec![];
+
+    for order in shape_orders {
+        let matrix = order.transform.as_matrix();
+        let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
+        let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
+        let point_3 = (matrix * order.points[2].extend(1.0)).shrink();
+
+        let o = vertices.len() as u16;
+        vertices.extend(&[point_1, point_2, point_3]);
+        colors.extend(&[order.color, order.color, order.color]);
+        indices.extend(&[o, o + 1, o + 2]);
+    }
+
+    // bind shader
+    let shader = stores.shaders.get(&builtins.shape_shader);
+    cmd.bind_shader(shader);
+
+    // bind material
+    let material = stores.materials.get(&builtins.white_material);
+    cmd.bind_material(shader_layout, material);
+
+    // bind and draw mesh
+    let shape_mesh = framebuffer.shape_mesh();
+    shape_mesh.set_vertices(vertices);
+    shape_mesh.set_colors(colors);
+    shape_mesh.set_indices(indices);
+    shape_mesh.update_if_needed(device);
+
+    cmd.bind_mesh(shape_mesh);
+    cmd.push_constants(
+        shader_layout,
+        ShaderConstants {
+            local_to_world: Matrix4::identity(),
+            sampler_index: 0,
+        },
+    );
+    cmd.draw(shape_mesh.index_count(), 0);
 }
 
 fn record_order(

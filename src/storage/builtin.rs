@@ -42,6 +42,7 @@ pub struct Builtins {
     pub blit_shader: Handle<Shader>,
     pub wireframe_shader: Handle<Shader>,
     pub line_shader: Handle<Shader>,
+    pub shape_shader: Handle<Shader>,
     pub unshaded_shader: Handle<Shader>,
     pub skybox_shader: Handle<Shader>,
 
@@ -139,6 +140,17 @@ impl Builtins {
             storage.add_shader(shader)
         };
 
+        let shape_shader = {
+            let shader = Shader::from_spirv_bytes(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/shape.spirv"),
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
+        };
+
         let unshaded_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
@@ -179,6 +191,7 @@ impl Builtins {
             blit_shader,
             wireframe_shader,
             line_shader,
+            shape_shader,
             unshaded_shader,
             skybox_shader,
             fira_font,
