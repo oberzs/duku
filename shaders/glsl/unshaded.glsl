@@ -10,5 +10,7 @@
 layout(location = 0) out vec4 out_color;
 
 void fragment() {
-    out_color = tex(0, in_uv) * in_color;
+    vec4 color = vec4(material.arg_1.rgb, 1.0);
+    uint texture = uint(material.arg_1.w);
+    out_color = tex(texture, in_uv) * in_color * color;
 }

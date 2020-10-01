@@ -7,7 +7,6 @@ use std::time::Instant;
 
 use super::Camera;
 use super::MeshOrder;
-use super::OrdersByShader;
 use super::Target;
 use crate::device::Commands;
 use crate::device::Device;
@@ -105,12 +104,10 @@ impl ForwardRenderer {
         self.shadow_frames[current].world_to_shadow = [Matrix4::identity(); 4];
         self.shadow_frames[current].cascades = [0.0; 4];
 
-        // shadow mapping
-        if target.has_shadow_casters {
-            let mut view = camera.clone();
-            view.depth = 50.0;
-            self.shadow_pass(device, shader_layout, stores.meshes, &target, &view);
-        }
+        // shadow mapping pass
+        let mut view = camera.clone();
+        view.depth = 50.0;
+        self.shadow_pass(device, shader_layout, stores.meshes, &target, &view);
 
         let cmd = device.commands();
 
@@ -157,7 +154,9 @@ impl ForwardRenderer {
         }
 
         // normal mesh rendering
-        record_shader_orders(cmd, &target.mesh_orders, &stores, shader_layout);
+        if !target.mesh_orders.is_empty() {
+            record_meshes(cmd, &target, &stores, shader_layout);
+        }
 
         // text rendering
         if !target.text_orders.is_empty() {
@@ -182,12 +181,12 @@ impl ForwardRenderer {
         target: &Target<'_, '_>,
         view: &Camera,
     ) {
-        let light_dir = match target.lights.iter().find(|l| l.shadows) {
-            Some(light) => light.coords,
-            // if there is no light with shadows,
-            // don't do shadow pass
-            None => return,
-        };
+        let light_dir = target
+            .lights
+            .iter()
+            .find(|l| l.shadows)
+            .map(|l| l.coords)
+            .unwrap_or_default();
 
         let cmd = device.commands();
         let current = device.current_frame();
@@ -257,7 +256,7 @@ impl ForwardRenderer {
             for s_order in &target.mesh_orders {
                 for m_order in &s_order.orders {
                     for order in &m_order.orders {
-                        if order.cast_shadows {
+                        if order.shadows {
                             record_order(cmd, meshes, shader_layout, order);
                         }
                     }
@@ -326,13 +325,13 @@ impl ShadowMapSet {
     }
 }
 
-fn record_shader_orders(
+fn record_meshes(
     cmd: &Commands,
-    mesh_orders: &[OrdersByShader],
+    target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
     shader_layout: &ShaderLayout,
 ) {
-    for s_order in mesh_orders {
+    for s_order in &target.mesh_orders {
         // bind shader
         let shader = stores.shaders.get(&s_order.shader);
         cmd.bind_shader(shader);

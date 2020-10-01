@@ -11,7 +11,6 @@ mod target;
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use forward::RenderStores;
 pub(crate) use target::MeshOrder;
-pub(crate) use target::OrdersByShader;
 
 pub use camera::Camera;
 pub use camera::Projection;

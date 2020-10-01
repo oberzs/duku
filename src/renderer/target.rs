@@ -37,9 +37,8 @@ pub struct Target<'a, 'b> {
     // shadows & lights
     pub shadow_bias: f32,
     pub shadow_cascades: [f32; 4],
-    pub cast_shadows: bool,
+    pub shadows: bool,
     pub lights: [Light; 4],
-    pub(crate) has_shadow_casters: bool,
 
     // lines
     pub line_color: Color,
@@ -66,7 +65,7 @@ pub(crate) struct OrdersByMaterial {
 pub(crate) struct MeshOrder {
     pub(crate) mesh: Handle<Mesh>,
     pub(crate) local_to_world: Matrix4,
-    pub(crate) cast_shadows: bool,
+    pub(crate) shadows: bool,
     pub(crate) sampler_index: u32,
 }
 
@@ -112,16 +111,20 @@ impl<'b> Target<'_, 'b> {
             texture_mipmaps: true,
             wireframes: false,
             skybox: false,
-            has_shadow_casters: false,
             shadow_cascades: [0.1, 0.25, 0.7, 1.0],
             shadow_bias: 0.002,
-            cast_shadows: true,
+            shadows: true,
             builtins,
         }
     }
 
     pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
-        let shader = self.shader.unwrap_or(&self.builtins.phong_shader).clone();
+        let default_shader = if self.shadows {
+            &self.builtins.phong_shader
+        } else {
+            &self.builtins.unshaded_shader
+        };
+        let shader = self.shader.unwrap_or(default_shader).clone();
         let material = self
             .material
             .unwrap_or(&self.builtins.white_material)
@@ -133,14 +136,19 @@ impl<'b> Target<'_, 'b> {
             MeshOrder {
                 mesh: mesh.clone(),
                 local_to_world: self.transform.as_matrix(),
-                cast_shadows: self.cast_shadows,
+                shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
         );
     }
 
     pub fn draw_cube(&mut self) {
-        let shader = self.shader.unwrap_or(&self.builtins.phong_shader).clone();
+        let default_shader = if self.shadows {
+            &self.builtins.phong_shader
+        } else {
+            &self.builtins.unshaded_shader
+        };
+        let shader = self.shader.unwrap_or(default_shader).clone();
         let material = self
             .material
             .unwrap_or(&self.builtins.white_material)
@@ -152,14 +160,19 @@ impl<'b> Target<'_, 'b> {
             MeshOrder {
                 mesh: self.builtins.cube_mesh.clone(),
                 local_to_world: self.transform.as_matrix(),
-                cast_shadows: self.cast_shadows,
+                shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
         );
     }
 
     pub fn draw_sphere(&mut self) {
-        let shader = self.shader.unwrap_or(&self.builtins.phong_shader).clone();
+        let default_shader = if self.shadows {
+            &self.builtins.phong_shader
+        } else {
+            &self.builtins.unshaded_shader
+        };
+        let shader = self.shader.unwrap_or(default_shader).clone();
         let material = self
             .material
             .unwrap_or(&self.builtins.white_material)
@@ -171,14 +184,17 @@ impl<'b> Target<'_, 'b> {
             MeshOrder {
                 mesh: self.builtins.sphere_mesh.clone(),
                 local_to_world: self.transform.as_matrix(),
-                cast_shadows: self.cast_shadows,
+                shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
         );
     }
 
     pub fn draw_surface(&mut self) {
-        let shader = self.shader.unwrap_or(&self.builtins.phong_shader).clone();
+        let shader = self
+            .shader
+            .unwrap_or(&self.builtins.unshaded_shader)
+            .clone();
         let material = self
             .material
             .unwrap_or(&self.builtins.white_material)
@@ -190,7 +206,7 @@ impl<'b> Target<'_, 'b> {
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
                 local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
-                cast_shadows: false,
+                shadows: false,
                 sampler_index: self.sampler_index(),
             },
         );
@@ -209,7 +225,7 @@ impl<'b> Target<'_, 'b> {
             MeshOrder {
                 mesh: self.builtins.grid_mesh.clone(),
                 local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
-                cast_shadows: false,
+                shadows: false,
                 sampler_index: self.sampler_index(),
             },
         );
@@ -252,10 +268,6 @@ impl<'b> Target<'_, 'b> {
         shader: Handle<Shader>,
         order: MeshOrder,
     ) {
-        if order.cast_shadows {
-            self.has_shadow_casters = true;
-        }
-
         match self.mesh_orders.iter_mut().find(|so| so.shader == shader) {
             Some(so) => match so.orders.iter_mut().find(|mo| mo.material == material) {
                 Some(mo) => mo.orders.push(order.clone()),

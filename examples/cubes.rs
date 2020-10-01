@@ -85,7 +85,6 @@ fn main() -> Result<()> {
             target.draw_sphere();
             target.material = Some(&material);
             target.transform.move_right(2.0);
-            target.transform.rotation = camera.transform.rotation;
             target.draw_cube();
         });
     }
