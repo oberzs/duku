@@ -8,7 +8,6 @@ use std::f32::consts::PI;
 
 use super::Handle;
 use super::Storage;
-use crate::color::Color;
 use crate::device::Device;
 use crate::font::Font;
 use crate::image::Framebuffer;
@@ -25,13 +24,19 @@ use crate::pipeline::ShaderLayout;
 
 #[derive(Debug)]
 pub struct Builtins {
+    // textures
     pub white_texture: Handle<Texture>,
+
+    // materials
     pub white_material: Handle<Material>,
+
+    // meshes
     pub surface_mesh: Handle<Mesh>,
     pub quad_mesh: Handle<Mesh>,
     pub cube_mesh: Handle<Mesh>,
     pub sphere_mesh: Handle<Mesh>,
-    pub grid_mesh: Handle<Mesh>,
+
+    // shaders
     pub phong_shader: Handle<Shader>,
     pub font_shader: Handle<Shader>,
     pub blit_shader: Handle<Shader>,
@@ -39,6 +44,8 @@ pub struct Builtins {
     pub line_shader: Handle<Shader>,
     pub unshaded_shader: Handle<Shader>,
     pub skybox_shader: Handle<Shader>,
+
+    // fonts
     pub fira_font: Handle<Font>,
 }
 
@@ -75,7 +82,6 @@ impl Builtins {
         let quad_mesh = storage.add_mesh(create_quad(device));
         let cube_mesh = storage.add_mesh(create_cube(device));
         let sphere_mesh = storage.add_mesh(create_sphere(device, 3));
-        let grid_mesh = storage.add_mesh(create_grid(device, 50));
 
         // shaders
         let phong_shader = {
@@ -168,7 +174,6 @@ impl Builtins {
             quad_mesh,
             cube_mesh,
             sphere_mesh,
-            grid_mesh,
             phong_shader,
             font_shader,
             blit_shader,
@@ -281,49 +286,6 @@ fn create_cube(device: &Device) -> Mesh {
     back.destroy(device);
     left.destroy(device);
     right.destroy(device);
-    mesh
-}
-
-fn create_grid(device: &Device, size: u32) -> Mesh {
-    let half = size as i32 / 2;
-    let mut vertices = vec![];
-    let mut colors = vec![];
-    let mut indices = vec![];
-
-    for x in -half..=half {
-        let color = if x == 0 {
-            Color::GREEN
-        } else {
-            Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
-        };
-        let vc = vertices.len() as u16;
-        vertices.extend(&[
-            Vector3::new(x as f32, 0.0, half as f32),
-            Vector3::new(x as f32, 0.0, -half as f32),
-        ]);
-        colors.extend(&[color, color]);
-        indices.extend(&[vc, vc + 1]);
-    }
-    for z in -half..=half {
-        let color = if z == 0 {
-            Color::BLUE
-        } else {
-            Color::rgba_norm(0.5, 0.5, 0.5, 0.5)
-        };
-        let vc = vertices.len() as u16;
-        vertices.extend(&[
-            Vector3::new(half as f32, 0.0, z as f32),
-            Vector3::new(-half as f32, 0.0, z as f32),
-        ]);
-        colors.extend(&[color, color]);
-        indices.extend(&[vc, vc + 1]);
-    }
-
-    let mut mesh = Mesh::new(device);
-    mesh.set_vertices(vertices);
-    mesh.set_colors(colors);
-    mesh.set_indices(indices);
-    mesh.update_if_needed(device);
     mesh
 }
 

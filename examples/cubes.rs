@@ -13,7 +13,6 @@ use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
 use draw_it::Result;
-use draw_it::Transform;
 use draw_it::Vector2;
 use draw_it::Vector3;
 
@@ -70,11 +69,7 @@ fn main() -> Result<()> {
             target.skybox = true;
             target.lights[0] = main_light;
 
-            // render floor
-            target.transform.scale = Vector3::new(80.0, 0.2, 80.0);
-            target.transform.move_down(0.1);
-            target.draw_cube();
-            target.transform = Transform::default();
+            target.draw_grid();
 
             // render custom mesh
             target.transform.move_by((-2.0, 1.0, 0.0));

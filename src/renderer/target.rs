@@ -213,22 +213,44 @@ impl<'b> Target<'_, 'b> {
     }
 
     pub fn draw_grid(&mut self) {
-        let shader = self.builtins.line_shader.clone();
-        let material = self
-            .material
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
+        let size = 100;
+        let half = size / 2;
+        let width = 1.0;
 
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.grid_mesh.clone(),
-                local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
-                shadows: false,
-                sampler_index: self.sampler_index(),
-            },
-        );
+        // TODO: replace with push/pop
+        let temp_color = self.line_color;
+
+        for x in -half..half {
+            let xx = x as f32 * width;
+            let z_min = -half as f32 * width;
+            let z_max = half as f32 * width;
+
+            // set color
+            self.line_color = match x {
+                0 => Color::rgba(0, 0, 255, 150),
+                _ if x % 10 == 0 => Color::rgba(255, 255, 255, 150),
+                _ => Color::rgba(255, 255, 255, 50),
+            };
+
+            self.draw_line((xx, 0.0, z_min), (xx, 0.0, z_max));
+        }
+
+        for z in -half..half {
+            let zz = z as f32 * width;
+            let x_min = -half as f32 * width;
+            let x_max = half as f32 * width;
+
+            // set color
+            self.line_color = match z {
+                0 => Color::rgba(255, 0, 0, 150),
+                _ if z % 10 == 0 => Color::rgba(255, 255, 255, 150),
+                _ => Color::rgba(255, 255, 255, 50),
+            };
+
+            self.draw_line((x_min, 0.0, zz), (x_max, 0.0, zz));
+        }
+
+        self.line_color = temp_color;
     }
 
     pub fn draw_text<T, V>(&mut self, text: T, position: V)
