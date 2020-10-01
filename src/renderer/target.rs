@@ -5,6 +5,7 @@
 
 use crate::color::Color;
 use crate::font::Font;
+use crate::image::Texture;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
 use crate::math::Matrix4;
@@ -89,6 +90,8 @@ pub(crate) struct ShapeOrder {
     pub(crate) color: Color,
     pub(crate) points: [Vector3; 3],
     pub(crate) transform: Transform,
+    pub(crate) texture: Handle<Texture>,
+    pub(crate) uvs: [Vector2; 3],
 }
 
 impl<'b> Target<'_, 'b> {
@@ -318,6 +321,8 @@ impl<'b> Target<'_, 'b> {
                 color: self.shape_color,
                 points: [first, points[i - 1].extend(0.0), points[i].extend(0.0)],
                 transform: self.transform,
+                texture: self.builtins.white_texture.clone(),
+                uvs: [Vector2::ZERO; 3],
             });
         }
     }
@@ -334,6 +339,44 @@ impl<'b> Target<'_, 'b> {
             Vector2::new(bl.x + s.x, bl.y),
             bl,
         ]);
+    }
+
+    pub fn draw_texture<V>(&mut self, texture: &Handle<Texture>, bottom_left: V, size: V)
+    where
+        V: Into<Vector2>,
+    {
+        let bl = bottom_left.into().extend(0.0);
+        let s = size.into().extend(0.0);
+        self.shape_orders.push(ShapeOrder {
+            color: self.shape_color,
+            points: [
+                bl,
+                Vector3::new(bl.x, bl.y + s.y, 0.0),
+                Vector3::new(bl.x + s.x, bl.y, 0.0),
+            ],
+            transform: self.transform,
+            texture: texture.clone(),
+            uvs: [
+                Vector2::new(0.0, 1.0),
+                Vector2::new(0.0, 0.0),
+                Vector2::new(1.0, 1.0),
+            ],
+        });
+        self.shape_orders.push(ShapeOrder {
+            color: self.shape_color,
+            points: [
+                Vector3::new(bl.x, bl.y + s.y, 0.0),
+                bl + s,
+                Vector3::new(bl.x + s.x, bl.y, 0.0),
+            ],
+            transform: self.transform,
+            texture: texture.clone(),
+            uvs: [
+                Vector2::new(0.0, 0.0),
+                Vector2::new(1.0, 0.0),
+                Vector2::new(1.0, 1.0),
+            ],
+        });
     }
 
     fn add_mesh_order(

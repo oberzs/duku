@@ -16,6 +16,7 @@ use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Size;
+use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector2;
@@ -49,6 +50,7 @@ pub(crate) struct RenderStores<'s> {
     pub(crate) shaders: &'s Store<Shader>,
     pub(crate) fonts: &'s Store<Font>,
     pub(crate) materials: &'s Store<Material>,
+    pub(crate) textures: &'s Store<Texture>,
     pub(crate) meshes: &'s Store<Mesh>,
 }
 
@@ -558,6 +560,8 @@ fn record_shapes(
     // update shape batching mesh
     let mut vertices = vec![];
     let mut colors = vec![];
+    let mut textures = vec![];
+    let mut uvs = vec![];
     let mut indices = vec![];
 
     for order in shape_orders {
@@ -565,10 +569,13 @@ fn record_shapes(
         let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
         let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
         let point_3 = (matrix * order.points[2].extend(1.0)).shrink();
+        let texture = stores.textures.get(&order.texture).shader_index();
 
         let o = vertices.len() as u16;
         vertices.extend(&[point_1, point_2, point_3]);
         colors.extend(&[order.color, order.color, order.color]);
+        textures.extend(&[texture, texture, texture]);
+        uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2]]);
         indices.extend(&[o, o + 1, o + 2]);
     }
 
@@ -584,6 +591,8 @@ fn record_shapes(
     let shape_mesh = framebuffer.shape_mesh();
     shape_mesh.set_vertices(vertices);
     shape_mesh.set_colors(colors);
+    shape_mesh.set_textures(textures);
+    shape_mesh.set_uvs(uvs);
     shape_mesh.set_indices(indices);
     shape_mesh.update_if_needed(device);
 
@@ -592,7 +601,7 @@ fn record_shapes(
         shader_layout,
         ShaderConstants {
             local_to_world: Matrix4::identity(),
-            sampler_index: 0,
+            sampler_index: 6,
         },
     );
     cmd.draw(shape_mesh.index_count(), 0);

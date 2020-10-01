@@ -284,6 +284,7 @@ impl Context {
             shaders: &self.storage.shaders,
             fonts: &self.storage.fonts,
             materials: &self.storage.materials,
+            textures: &self.storage.textures,
             meshes: &self.storage.meshes,
         };
 
@@ -324,6 +325,7 @@ impl Context {
             shaders: &self.storage.shaders,
             fonts: &self.storage.fonts,
             materials: &self.storage.materials,
+            textures: &self.storage.textures,
             meshes: &self.storage.meshes,
         };
 
