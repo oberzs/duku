@@ -55,6 +55,8 @@ pub struct Target<'a, 'b> {
     pub texture_filter: TextureFilter,
     pub texture_wrap: TextureWrap,
     pub texture_mipmaps: bool,
+
+    cache: Vec<Cache>,
 }
 
 pub(crate) struct OrdersByShader {
@@ -97,6 +99,14 @@ pub(crate) struct ShapeOrder {
     pub(crate) sampler_index: u32,
 }
 
+struct Cache {
+    transform: Transform,
+    line_color: Color,
+    shape_color: Color,
+    text_color: Color,
+    font_size: u32,
+}
+
 impl<'b> Target<'_, 'b> {
     pub(crate) fn new(builtins: &'b Builtins) -> Self {
         Self {
@@ -104,6 +114,7 @@ impl<'b> Target<'_, 'b> {
             text_orders: vec![],
             line_orders: vec![],
             shape_orders: vec![],
+            cache: vec![],
             clear_color: Color::WHITE,
             text_color: Color::BLACK,
             line_color: Color::BLACK,
@@ -127,6 +138,26 @@ impl<'b> Target<'_, 'b> {
             shadow_bias: 0.002,
             shadows: true,
             builtins,
+        }
+    }
+
+    pub fn push(&mut self) {
+        self.cache.push(Cache {
+            transform: self.transform,
+            line_color: self.line_color,
+            shape_color: self.shape_color,
+            text_color: self.text_color,
+            font_size: self.font_size,
+        });
+    }
+
+    pub fn pop(&mut self) {
+        if let Some(cache) = self.cache.pop() {
+            self.transform = cache.transform;
+            self.line_color = cache.line_color;
+            self.shape_color = cache.shape_color;
+            self.text_color = cache.text_color;
+            self.font_size = cache.font_size;
         }
     }
 
@@ -245,8 +276,7 @@ impl<'b> Target<'_, 'b> {
         let half = size / 2;
         let width = 1.0;
 
-        // TODO: replace with push/pop
-        let temp_color = self.line_color;
+        self.push();
 
         for x in -half..half {
             let xx = x as f32 * width;
@@ -278,7 +308,7 @@ impl<'b> Target<'_, 'b> {
             self.draw_line((x_min, 0.0, zz), (x_max, 0.0, zz));
         }
 
-        self.line_color = temp_color;
+        self.pop();
     }
 
     pub fn draw_text<T, V>(&mut self, text: T, position: V)

@@ -37,15 +37,18 @@ where
     V: Into<Vector2>,
     C: Into<Color>,
 {
-    let pos = position.into();
+    target.push();
 
+    target.transform.move_by(position.into().extend(0.0));
     target.line_color = color.into();
 
     let r = 20.0;
     for i in 0..20 {
         let q = 2.0 * PI * (i as f32 / 20.0);
-        let x = pos.x + r * q.cos();
-        let y = pos.y + r * q.sin();
-        target.draw_line((pos.x, pos.y, 0.0), (x, y, 0.0));
+        let x = r * q.cos();
+        let y = r * q.sin();
+        target.draw_line((0.0, 0.0, 0.0), (x, y, 0.0));
     }
+
+    target.pop();
 }
