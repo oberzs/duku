@@ -18,8 +18,6 @@ pub(crate) struct Vertex {
     pub(crate) in_uv: Vector2,
     pub(crate) in_color: Vector4,
     pub(crate) in_texture: u32,
-    pub(crate) in_extra_data_1: Vector4,
-    pub(crate) in_extra_data_2: Vector4,
 }
 
 impl Vertex {
@@ -31,15 +29,13 @@ impl Vertex {
         }
     }
 
-    pub(crate) const fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 7] {
-        let mut offsets = [0; 7];
+    pub(crate) const fn attribute_descriptions() -> [vk::VertexInputAttributeDescription; 5] {
+        let mut offsets = [0; 5];
         offsets[0] = 0;
         offsets[1] = offsets[0] + mem::size_of::<Vector3>() as u32;
         offsets[2] = offsets[1] + mem::size_of::<Vector3>() as u32;
         offsets[3] = offsets[2] + mem::size_of::<Vector2>() as u32;
         offsets[4] = offsets[3] + mem::size_of::<Vector4>() as u32;
-        offsets[5] = offsets[4] + mem::size_of::<u32>() as u32;
-        offsets[6] = offsets[5] + mem::size_of::<Vector4>() as u32;
 
         [
             // in_local_position
@@ -76,20 +72,6 @@ impl Vertex {
                 binding: 0,
                 format: vk::FORMAT_R32_UINT,
                 offset: offsets[4],
-            },
-            // in_extra_data_1
-            vk::VertexInputAttributeDescription {
-                location: 5,
-                binding: 0,
-                format: vk::FORMAT_R32G32B32A32_SFLOAT,
-                offset: offsets[5],
-            },
-            // in_extra_data_2
-            vk::VertexInputAttributeDescription {
-                location: 6,
-                binding: 0,
-                format: vk::FORMAT_R32G32B32A32_SFLOAT,
-                offset: offsets[6],
             },
         ]
     }

@@ -8,8 +8,6 @@ layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_uv;
 layout(location = 3) in vec4 in_color;
 layout(location = 4) in uint in_texture;
-layout(location = 5) in vec4 in_extra_data_1;
-layout(location = 6) in vec4 in_extra_data_2;
 
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec2 out_uv;

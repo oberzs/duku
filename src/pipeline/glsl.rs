@@ -94,8 +94,6 @@ fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
         "world_position"
     } else if defines.exists("VERTEX_LOCAL_POSITION") {
         "local_position"
-    } else if defines.exists("VERTEX_SKYBOX_POSITION") {
-        "clip_position.xyww"
     } else {
         "clip_position"
     };

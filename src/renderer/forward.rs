@@ -562,6 +562,7 @@ fn record_shapes(
     let mut colors = vec![];
     let mut textures = vec![];
     let mut uvs = vec![];
+    let mut normals = vec![];
     let mut indices = vec![];
 
     for order in shape_orders {
@@ -570,12 +571,14 @@ fn record_shapes(
         let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
         let point_3 = (matrix * order.points[2].extend(1.0)).shrink();
         let texture = stores.textures.get(&order.texture).shader_index();
+        let sampler = order.sampler_index;
 
         let o = vertices.len() as u16;
         vertices.extend(&[point_1, point_2, point_3]);
         colors.extend(&[order.color, order.color, order.color]);
         textures.extend(&[texture, texture, texture]);
         uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2]]);
+        normals.extend(&[Vector3::new(sampler as f32, 0.0, 0.0); 3]); // use normal to store sampler
         indices.extend(&[o, o + 1, o + 2]);
     }
 
@@ -593,6 +596,7 @@ fn record_shapes(
     shape_mesh.set_colors(colors);
     shape_mesh.set_textures(textures);
     shape_mesh.set_uvs(uvs);
+    shape_mesh.set_normals(normals);
     shape_mesh.set_indices(indices);
     shape_mesh.update_if_needed(device);
 
@@ -601,7 +605,7 @@ fn record_shapes(
         shader_layout,
         ShaderConstants {
             local_to_world: Matrix4::identity(),
-            sampler_index: 6,
+            sampler_index: 0,
         },
     );
     cmd.draw(shape_mesh.index_count(), 0);

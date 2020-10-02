@@ -29,9 +29,6 @@ pub struct Target<'a, 'b> {
     // meshes
     pub shader: Option<&'a Handle<Shader>>,
     pub material: Option<&'a Handle<Material>>,
-    pub texture_filter: TextureFilter,
-    pub texture_wrap: TextureWrap,
-    pub texture_mipmaps: bool,
     pub(crate) mesh_orders: Vec<OrdersByShader>,
 
     // shadows & lights
@@ -53,6 +50,11 @@ pub struct Target<'a, 'b> {
     pub font: Option<&'a Handle<Font>>,
     pub text_color: Color,
     pub(crate) text_orders: Vec<TextOrder>,
+
+    // textures
+    pub texture_filter: TextureFilter,
+    pub texture_wrap: TextureWrap,
+    pub texture_mipmaps: bool,
 }
 
 pub(crate) struct OrdersByShader {
@@ -92,6 +94,7 @@ pub(crate) struct ShapeOrder {
     pub(crate) transform: Transform,
     pub(crate) texture: Handle<Texture>,
     pub(crate) uvs: [Vector2; 3],
+    pub(crate) sampler_index: u32,
 }
 
 impl<'b> Target<'_, 'b> {
@@ -323,6 +326,7 @@ impl<'b> Target<'_, 'b> {
                 transform: self.transform,
                 texture: self.builtins.white_texture.clone(),
                 uvs: [Vector2::ZERO; 3],
+                sampler_index: 0,
             });
         }
     }
@@ -361,6 +365,7 @@ impl<'b> Target<'_, 'b> {
                 Vector2::new(0.0, 0.0),
                 Vector2::new(1.0, 1.0),
             ],
+            sampler_index: self.sampler_index(),
         });
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
@@ -376,6 +381,7 @@ impl<'b> Target<'_, 'b> {
                 Vector2::new(1.0, 0.0),
                 Vector2::new(1.0, 1.0),
             ],
+            sampler_index: self.sampler_index(),
         });
     }
 
