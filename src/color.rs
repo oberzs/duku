@@ -59,6 +59,14 @@ impl Color {
         Self::rgba(to_byte(r), to_byte(g), to_byte(b), to_byte(a))
     }
 
+    pub const fn gray(v: u8) -> Self {
+        Self::rgb(v, v, v)
+    }
+
+    pub fn gray_norm(v: f32) -> Self {
+        Self::rgb_norm(v, v, v)
+    }
+
     pub fn to_rgb_norm(&self) -> (f32, f32, f32) {
         (to_norm(self.r), to_norm(self.g), to_norm(self.b))
     }
@@ -115,10 +123,21 @@ impl Color {
     }
 
     pub const WHITE: Self = Self::rgb(255, 255, 255);
+    pub const SILVER: Self = Self::rgb(192, 192, 192);
+    pub const GRAY: Self = Self::rgb(128, 128, 128);
     pub const BLACK: Self = Self::rgb(0, 0, 0);
     pub const RED: Self = Self::rgb(255, 0, 0);
-    pub const GREEN: Self = Self::rgb(0, 255, 0);
+    pub const MAROON: Self = Self::rgb(128, 0, 0);
+    pub const YELLOW: Self = Self::rgb(255, 255, 0);
+    pub const OLIVE: Self = Self::rgb(128, 128, 0);
+    pub const AQUA: Self = Self::rgb(0, 255, 255);
+    pub const TEAL: Self = Self::rgb(0, 128, 128);
     pub const BLUE: Self = Self::rgb(0, 0, 255);
+    pub const NAVY: Self = Self::rgb(0, 0, 128);
+    pub const FUCHSIA: Self = Self::rgb(128, 0, 128);
+    pub const PURPLE: Self = Self::rgb(128, 0, 128);
+
+    pub const GREEN: Self = Self::rgb(0, 255, 0);
     pub const SKY_BLUE: Self = Self::rgb(135, 206, 235);
     pub const ORANGE: Self = Self::rgb(255, 127, 0);
 }
