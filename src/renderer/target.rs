@@ -3,6 +3,8 @@
 
 // Target - struct that collects draw calls to be used in a renderer
 
+use std::f32::consts::PI;
+
 use crate::color::Color;
 use crate::font::Font;
 use crate::image::Texture;
@@ -43,6 +45,7 @@ pub struct Target<'a, 'b> {
 
     // shapes
     pub shape_color: Color,
+    pub shape_mode: ShapeMode,
     pub(crate) shape_orders: Vec<ShapeOrder>,
 
     // text
@@ -57,6 +60,12 @@ pub struct Target<'a, 'b> {
     pub texture_mipmaps: bool,
 
     cache: Vec<Cache>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ShapeMode {
+    Corner,
+    Center,
 }
 
 pub(crate) struct OrdersByShader {
@@ -115,6 +124,7 @@ impl<'b> Target<'_, 'b> {
             line_orders: vec![],
             shape_orders: vec![],
             cache: vec![],
+            shape_mode: ShapeMode::Corner,
             clear_color: Color::WHITE,
             text_color: Color::BLACK,
             line_color: Color::BLACK,
@@ -311,11 +321,7 @@ impl<'b> Target<'_, 'b> {
         self.pop();
     }
 
-    pub fn draw_text<T, V>(&mut self, text: T, position: V)
-    where
-        T: AsRef<str>,
-        V: Into<Vector2>,
-    {
+    pub fn draw_text(&mut self, text: impl AsRef<str>, position: impl Into<Vector2>) {
         let font = self.font.unwrap_or(&self.builtins.fira_font).clone();
 
         let mut transform = self.transform;
@@ -330,10 +336,7 @@ impl<'b> Target<'_, 'b> {
         });
     }
 
-    pub fn draw_line<V>(&mut self, point_1: V, point_2: V)
-    where
-        V: Into<Vector3>,
-    {
+    pub fn draw_line(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
         self.line_orders.push(LineOrder {
             color: self.line_color,
             points: [point_1.into(), point_2.into()],
@@ -361,32 +364,79 @@ impl<'b> Target<'_, 'b> {
         }
     }
 
-    pub fn draw_rectangle<V>(&mut self, bottom_left: V, size: V)
-    where
-        V: Into<Vector2>,
-    {
-        let bl = bottom_left.into();
+    pub fn draw_rectangle(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
+        let pos = position.into();
         let s = size.into();
+
+        self.push();
+
+        if self.shape_mode == ShapeMode::Center {
+            self.transform.position -= (s / 2.0).extend(0.0);
+        }
+
         self.draw_shape(&[
-            Vector2::new(bl.x, bl.y + s.y),
-            bl + s,
-            Vector2::new(bl.x + s.x, bl.y),
-            bl,
+            Vector2::new(pos.x, pos.y + s.y),
+            pos + s,
+            Vector2::new(pos.x + s.x, pos.y),
+            pos,
         ]);
+
+        self.pop();
     }
 
-    pub fn draw_texture<V>(&mut self, texture: &Handle<Texture>, bottom_left: V, size: V)
-    where
-        V: Into<Vector2>,
-    {
-        let bl = bottom_left.into().extend(0.0);
+    pub fn draw_square(&mut self, position: impl Into<Vector2>, size: f32) {
+        self.draw_rectangle(position, Vector2::new(size, size));
+    }
+
+    pub fn draw_ellipse(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
+        let pos = position.into();
+        let s = size.into() / 2.0;
+        let resolution = 50;
+
+        self.push();
+
+        if self.shape_mode == ShapeMode::Corner {
+            self.transform.position += s.extend(0.0);
+        }
+
+        let points: Vec<_> = (0..resolution)
+            .map(|i| {
+                let q = 2.0 * PI * (i as f32 / resolution as f32);
+                let x = s.x * q.cos();
+                let y = s.y * q.sin();
+                pos + Vector2::new(x, y)
+            })
+            .collect();
+        self.draw_shape(&points);
+
+        self.pop();
+    }
+
+    pub fn draw_circle(&mut self, position: impl Into<Vector2>, size: f32) {
+        self.draw_ellipse(position, Vector2::new(size, size));
+    }
+
+    pub fn draw_texture(
+        &mut self,
+        texture: &Handle<Texture>,
+        position: impl Into<Vector2>,
+        size: impl Into<Vector2>,
+    ) {
+        let pos = position.into().extend(0.0);
         let s = size.into().extend(0.0);
+
+        self.push();
+
+        if self.shape_mode == ShapeMode::Center {
+            self.transform.position -= s / 2.0;
+        }
+
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                bl,
-                Vector3::new(bl.x, bl.y + s.y, 0.0),
-                Vector3::new(bl.x + s.x, bl.y, 0.0),
+                pos,
+                Vector3::new(pos.x, pos.y + s.y, 0.0),
+                Vector3::new(pos.x + s.x, pos.y, 0.0),
             ],
             transform: self.transform,
             texture: texture.clone(),
@@ -400,9 +450,9 @@ impl<'b> Target<'_, 'b> {
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                Vector3::new(bl.x, bl.y + s.y, 0.0),
-                bl + s,
-                Vector3::new(bl.x + s.x, bl.y, 0.0),
+                Vector3::new(pos.x, pos.y + s.y, 0.0),
+                pos + s,
+                Vector3::new(pos.x + s.x, pos.y, 0.0),
             ],
             transform: self.transform,
             texture: texture.clone(),
@@ -413,6 +463,8 @@ impl<'b> Target<'_, 'b> {
             ],
             sampler_index: self.sampler_index(),
         });
+
+        self.pop();
     }
 
     fn add_mesh_order(

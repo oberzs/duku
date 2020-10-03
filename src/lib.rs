@@ -70,6 +70,7 @@ pub use renderer::Light;
 pub use renderer::LightType;
 pub use renderer::Pcf;
 pub use renderer::Projection;
+pub use renderer::ShapeMode;
 pub use renderer::Target;
 pub use storage::Handle;
 pub use surface::VSync;
