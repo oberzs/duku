@@ -401,10 +401,10 @@ fn create_sphere(device: &Device, detail_level: u32) -> Mesh {
 
 fn get_middle_point(
     vertices: &mut Vec<Vector3>,
-    p1: u16,
-    p2: u16,
-    midpoints: &mut HashMap<(u16, u16), u16>,
-) -> u16 {
+    p1: u32,
+    p2: u32,
+    midpoints: &mut HashMap<(u32, u32), u32>,
+) -> u32 {
     match (midpoints.get(&(p1, p2)), midpoints.get(&(p2, p1))) {
         (Some(i), _) => *i,
         (_, Some(i)) => *i,
@@ -414,7 +414,7 @@ fn get_middle_point(
             let middle = (point_1 + point_2) / 2.0;
 
             vertices.push(middle.unit() * 0.5);
-            let i = vertices.len() as u16 - 1;
+            let i = vertices.len() as u32 - 1;
             midpoints.insert((p1, p2), i);
             i
         }

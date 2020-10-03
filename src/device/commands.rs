@@ -268,7 +268,7 @@ impl Commands {
 
     fn bind_index_buffer(&self, i_buffer: vk::Buffer) {
         unsafe {
-            vk::cmd_bind_index_buffer(self.buffer.get(), i_buffer, 0, vk::INDEX_TYPE_UINT16);
+            vk::cmd_bind_index_buffer(self.buffer.get(), i_buffer, 0, vk::INDEX_TYPE_UINT32);
         }
     }
 

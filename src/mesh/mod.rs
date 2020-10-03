@@ -25,12 +25,12 @@ pub struct Mesh {
     normals: Vec<Vector3>,
     colors: Vec<Color>,
     textures: Vec<u32>,
-    indices: Vec<u16>,
+    indices: Vec<u32>,
 
     should_update: bool,
 
     vertex_buffer: Buffer<Vertex>,
-    index_buffer: Buffer<u16>,
+    index_buffer: Buffer<u32>,
     index_count: usize,
 }
 
@@ -74,7 +74,7 @@ impl Mesh {
             uvs.extend(&mesh.uvs);
             colors.extend(&mesh.colors);
             textures.extend(&mesh.textures);
-            offset = vertices.len() as u16;
+            offset = vertices.len() as u32;
         }
 
         let mut result = Self::new(device);
@@ -131,7 +131,7 @@ impl Mesh {
         self.should_update = true;
     }
 
-    pub fn set_indices(&mut self, indices: Vec<u16>) {
+    pub fn set_indices(&mut self, indices: Vec<u32>) {
         self.indices = indices;
         self.should_update = true;
     }
@@ -152,7 +152,7 @@ impl Mesh {
         &self.uvs
     }
 
-    pub fn indices(&self) -> &[u16] {
+    pub fn indices(&self) -> &[u32] {
         &self.indices
     }
 
@@ -236,7 +236,7 @@ impl MeshBuilder<'_> {
         self
     }
 
-    pub fn indices(mut self, indices: Vec<u16>) -> Self {
+    pub fn indices(mut self, indices: Vec<u32>) -> Self {
         self.mesh.set_indices(indices);
         self
     }

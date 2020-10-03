@@ -438,7 +438,7 @@ fn record_text(
                     0.0,
                 );
 
-            let o = vertices.len() as u16;
+            let o = vertices.len() as u32;
             vertices.extend(&[
                 quat.rotate_vector(Vector3::new(pos1.x, pos1.y, pos1.z)),
                 quat.rotate_vector(Vector3::new(pos2.x, pos1.y, pos1.z)),
@@ -511,7 +511,7 @@ fn record_lines(
         let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
         let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
 
-        let o = vertices.len() as u16;
+        let o = vertices.len() as u32;
         vertices.extend(&[point_1, point_2]);
         colors.extend(&[order.color, order.color]);
         indices.extend(&[o, o + 1]);
@@ -573,13 +573,15 @@ fn record_shapes(
         let texture = stores.textures.get(&order.texture).shader_index();
         let sampler = order.sampler_index;
 
-        let o = vertices.len() as u16;
+        let o = vertices.len() as u32;
         vertices.extend(&[point_1, point_2, point_3]);
         colors.extend(&[order.color, order.color, order.color]);
         textures.extend(&[texture, texture, texture]);
         uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2]]);
-        normals.extend(&[Vector3::new(sampler as f32, 0.0, 0.0); 3]); // use normal to store sampler
         indices.extend(&[o, o + 1, o + 2]);
+
+        // use normal to store sampler
+        normals.extend(&[Vector3::new(sampler as f32, 0.0, 0.0); 3]);
     }
 
     // bind shader

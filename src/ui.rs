@@ -189,7 +189,7 @@ impl Ui {
         let mut uvs = vec![];
         let mut to = 0;
         for draw_list in draw_data.draw_lists() {
-            indices.extend(draw_list.idx_buffer().iter().map(|i| *i + to));
+            indices.extend(draw_list.idx_buffer().iter().map(|i| u32::from(*i) + to));
             for vert in draw_list.vtx_buffer() {
                 let vertex =
                     Vector3::new(vert.pos[0] - half_width, -vert.pos[1] + half_height, 1.0);
@@ -200,7 +200,7 @@ impl Ui {
                 colors.push(color);
                 normals.push(Vector3::BACKWARD);
             }
-            to = vertices.len() as u16;
+            to = vertices.len() as u32;
         }
         let textures = vec![self.texture.shader_index(); vertices.len()];
 
