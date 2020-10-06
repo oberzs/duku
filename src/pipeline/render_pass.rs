@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/draw-it
+// https://github.com/oberzs/draw-it
 
 // RenderPass - struct that structures a rendering pass
 

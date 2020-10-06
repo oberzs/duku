@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/draw-it
+// https://github.com/oberzs/draw-it
 
 // Camera - struct to hold matrix transforms for a camera
 

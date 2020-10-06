@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/draw-it
+// https://github.com/oberzs/draw-it
 
 // WindowHandle - OS window properties for surface creation
 

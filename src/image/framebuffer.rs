@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/draw-it
+// https://github.com/oberzs/draw-it
 
 // Framebuffer - image that can be used as a render target
 // also manages world uniform and camera

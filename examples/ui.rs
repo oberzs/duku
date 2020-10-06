@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/OllieBerzs/draw-it
+// https://github.com/oberzs/draw-it
 
 // UI example using Imgui support
 // https://github.com/Gekkio/imgui-rs

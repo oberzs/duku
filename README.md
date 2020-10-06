@@ -13,15 +13,15 @@
   </span>
   <!-- Build status -->
   <span>
-    <img src="https://img.shields.io/github/workflow/status/OllieBerzs/draw-it/Full%20Build?style=flat-square" alt="Build Status" />
+    <img src="https://img.shields.io/github/workflow/status/oberzs/draw-it/Full%20Build?style=flat-square" alt="Build Status" />
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
     <img src="https://img.shields.io/badge/rust-1.46.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
-  <a href="https://github.com/OllieBerzs/draw-it/blob/develop/LICENSE">
-    <img src="https://img.shields.io/github/license/OllieBerzs/draw-it?style=flat-square" alt="License" />
+  <a href="https://github.com/oberzs/draw-it/blob/develop/LICENSE">
+    <img src="https://img.shields.io/github/license/oberzs/draw-it?style=flat-square" alt="License" />
   </a>
 </div>
 
@@ -76,7 +76,7 @@ fn main() -> Result<()> {
 }
 ```
 
-Want more? Check out these other [examples](https://github.com/OllieBerzs/draw-it/tree/develop/examples).
+Want more? Check out these other [examples](https://github.com/oberzs/draw-it/tree/develop/examples).
 
 ## Credits
 
