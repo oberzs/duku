@@ -8,12 +8,12 @@
 // prints debug info in debug mode
 macro_rules! info {
     ($($arg:expr),*) => {{
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         {
             print!("\x1b[96minfo\x1b[0m: ");
             println!($($arg),*);
         }
-        #[cfg(not(debug_assertions))]
+        #[cfg(not(feature = "log"))]
         {
             $(let _ = &$arg;)*
         }
@@ -24,12 +24,12 @@ macro_rules! info {
 #[cfg(feature = "glsl")]
 macro_rules! warn {
     ($($arg:expr),*) => {{
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "log")]
         {
             print!("\x1b[93mwarn\x1b[0m: ");
             println!($($arg),*);
         }
-        #[cfg(not(debug_assertions))]
+        #[cfg(not(feature = "log"))]
         {
             $(let _ = &$arg;)*
         }

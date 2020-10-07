@@ -13,6 +13,7 @@ default = ["ui", "png", "glsl"]
 glsl = ["shaderc"]
 window = ["glfw"]
 ui = ["window", "imgui"]
+log = []
 
 # optional dependencies
 [dependencies]
