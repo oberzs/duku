@@ -17,6 +17,7 @@ use crate::device::Commands;
 use crate::device::Device;
 use crate::pipeline::Attachment;
 use crate::vk;
+use properties::with_alpha;
 
 pub(crate) use cubemap::Cubemap;
 pub(crate) use properties::ImageFormat;

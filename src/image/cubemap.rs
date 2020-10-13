@@ -3,13 +3,13 @@
 
 // Cubemap - image with 6 layers to render a skybox
 
+use super::with_alpha;
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
 use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
-
 use crate::vk;
 
 pub(crate) struct Cubemap {
@@ -32,6 +32,25 @@ impl Cubemap {
         format: ImageFormat,
         sides: CubemapSides<Vec<u8>>,
     ) -> Self {
+        // convert 3-byte data to 4-byte data
+        let sides = if matches!(format, ImageFormat::Srgb | ImageFormat::Rgb) {
+            CubemapSides {
+                top: with_alpha(sides.top),
+                bottom: with_alpha(sides.bottom),
+                front: with_alpha(sides.front),
+                back: with_alpha(sides.back),
+                left: with_alpha(sides.left),
+                right: with_alpha(sides.right),
+            }
+        } else {
+            sides
+        };
+        let format = match format {
+            ImageFormat::Srgb => ImageFormat::Srgba,
+            ImageFormat::Rgb => ImageFormat::Rgba,
+            f => f,
+        };
+
         // create staging buffers
         let top_staging_buffer = Buffer::staging(device, &sides.top);
         let bottom_staging_buffer = Buffer::staging(device, &sides.bottom);

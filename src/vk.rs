@@ -6283,26 +6283,26 @@ pub const SUBPASS_CONTENTS_INLINE: u32 = 0;
 pub const SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS: u32 = 1;
 
 // Vulkan enum Result
-pub type Result = u32;
-pub const SUCCESS: u32 = 0;
-pub const NOT_READY: u32 = 1;
-pub const TIMEOUT: u32 = 2;
-pub const EVENT_SET: u32 = 3;
-pub const EVENT_RESET: u32 = 4;
-pub const INCOMPLETE: u32 = 5;
-pub const ERROR_OUT_OF_HOST_MEMORY: u32 = -1i32 as u32;
-pub const ERROR_OUT_OF_DEVICE_MEMORY: u32 = -2i32 as u32;
-pub const ERROR_INITIALIZATION_FAILED: u32 = -3i32 as u32;
-pub const ERROR_DEVICE_LOST: u32 = -4i32 as u32;
-pub const ERROR_MEMORY_MAP_FAILED: u32 = -5i32 as u32;
-pub const ERROR_LAYER_NOT_PRESENT: u32 = -6i32 as u32;
-pub const ERROR_EXTENSION_NOT_PRESENT: u32 = -7i32 as u32;
-pub const ERROR_FEATURE_NOT_PRESENT: u32 = -8i32 as u32;
-pub const ERROR_INCOMPATIBLE_DRIVER: u32 = -9i32 as u32;
-pub const ERROR_TOO_MANY_OBJECTS: u32 = -10i32 as u32;
-pub const ERROR_FORMAT_NOT_SUPPORTED: u32 = -11i32 as u32;
-pub const ERROR_FRAGMENTED_POOL: u32 = -12i32 as u32;
-pub const ERROR_UNKNOWN: u32 = -13i32 as u32;
+pub type Result = i32;
+pub const SUCCESS: i32 = 0;
+pub const NOT_READY: i32 = 1;
+pub const TIMEOUT: i32 = 2;
+pub const EVENT_SET: i32 = 3;
+pub const EVENT_RESET: i32 = 4;
+pub const INCOMPLETE: i32 = 5;
+pub const ERROR_OUT_OF_HOST_MEMORY: i32 = -1;
+pub const ERROR_OUT_OF_DEVICE_MEMORY: i32 = -2;
+pub const ERROR_INITIALIZATION_FAILED: i32 = -3;
+pub const ERROR_DEVICE_LOST: i32 = -4;
+pub const ERROR_MEMORY_MAP_FAILED: i32 = -5;
+pub const ERROR_LAYER_NOT_PRESENT: i32 = -6;
+pub const ERROR_EXTENSION_NOT_PRESENT: i32 = -7;
+pub const ERROR_FEATURE_NOT_PRESENT: i32 = -8;
+pub const ERROR_INCOMPATIBLE_DRIVER: i32 = -9;
+pub const ERROR_TOO_MANY_OBJECTS: i32 = -10;
+pub const ERROR_FORMAT_NOT_SUPPORTED: i32 = -11;
+pub const ERROR_FRAGMENTED_POOL: i32 = -12;
+pub const ERROR_UNKNOWN: i32 = -13;
 
 // Vulkan enum DynamicState
 pub type DynamicState = u32;
@@ -10374,27 +10374,19 @@ pub const IMAGE_LAYOUT_PRESENT_SRC_KHR: u32 = 1000001002;
 // Utils
 pub fn check(result: Result) {
     match result {
-        SUCCESS => (),
+        SUCCESS | NOT_READY | TIMEOUT | EVENT_SET | EVENT_RESET | INCOMPLETE => (),
         ERROR_OUT_OF_HOST_MEMORY => panic!("out of host memory"),
         ERROR_OUT_OF_DEVICE_MEMORY => panic!("out of device memory"),
+        ERROR_INITIALIZATION_FAILED => panic!("initialization failed"),
+        ERROR_DEVICE_LOST => panic!("device has been lost"),
+        ERROR_MEMORY_MAP_FAILED => panic!("memory mapping failed"),
         ERROR_LAYER_NOT_PRESENT => panic!("layer not present"),
         ERROR_EXTENSION_NOT_PRESENT => panic!("extension not present"),
         ERROR_FEATURE_NOT_PRESENT => panic!("feature not present"),
-        _ => panic!("Vulkan error {}", result),
+        ERROR_INCOMPATIBLE_DRIVER => panic!("requested Vulkan version is not supported"),
+        ERROR_TOO_MANY_OBJECTS => panic!("too many objects of type have been created"),
+        ERROR_FORMAT_NOT_SUPPORTED => panic!("requested format is not supported"),
+        ERROR_FRAGMENTED_POOL => panic!("pool allocation failed due to fragmentation"),
+        n => panic!("unknown Vulkan error has occured: {}", n),
     }
-}
-
-// Macros
-macro_rules! vk_check {
-    ($e:expr) => {
-        match $e {
-            vk::SUCCESS => (),
-            vk::ERROR_OUT_OF_HOST_MEMORY => panic!("out of host memory"),
-            vk::ERROR_OUT_OF_DEVICE_MEMORY => panic!("out of device memory"),
-            vk::ERROR_LAYER_NOT_PRESENT => panic!("layer not present"),
-            vk::ERROR_EXTENSION_NOT_PRESENT => panic!("extension not present"),
-            vk::ERROR_FEATURE_NOT_PRESENT => panic!("feature not present"),
-            _ => panic!("Vulkan error {}", $e),
-        }
-    };
 }

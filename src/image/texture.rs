@@ -3,6 +3,7 @@
 
 // Texture - simple image that can be used for rendering
 
+use super::with_alpha;
 use super::Image;
 use super::ImageFormat;
 use super::ImageLayout;
@@ -89,12 +90,4 @@ impl Texture {
     pub(crate) const fn shader_index(&self) -> u32 {
         self.shader_index
     }
-}
-
-pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {
-    let mut new_data = Vec::with_capacity(4 * data.len() / 3);
-    for pixel in data.chunks(3) {
-        new_data.extend(&[pixel[0], pixel[1], pixel[2], 255]);
-    }
-    new_data
 }
