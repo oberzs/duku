@@ -12,45 +12,45 @@ pub struct Light {
     pub coords: Vector3,
     pub color: Color,
     pub light_type: LightType,
-    pub shadows: bool,
-    pub mesh: bool,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LightType {
+    Main,
     Directional,
     Point,
 }
 
 impl Light {
-    pub fn directional(
-        direction: impl Into<Vector3>,
-        color: impl Into<Color>,
-        shadows: bool,
-    ) -> Self {
+    pub fn main(direction: impl Into<Vector3>, color: impl Into<Color>) -> Self {
+        Self {
+            light_type: LightType::Main,
+            coords: direction.into().unit(),
+            color: color.into(),
+        }
+    }
+
+    pub fn directional(direction: impl Into<Vector3>, color: impl Into<Color>) -> Self {
         Self {
             light_type: LightType::Directional,
             coords: direction.into().unit(),
             color: color.into(),
-            mesh: false,
-            shadows,
         }
     }
 
-    pub fn point(position: impl Into<Vector3>, color: impl Into<Color>, mesh: bool) -> Self {
+    pub fn point(position: impl Into<Vector3>, color: impl Into<Color>) -> Self {
         Self {
             light_type: LightType::Point,
             coords: position.into(),
             color: color.into(),
-            shadows: false,
-            mesh,
         }
     }
 
     pub(crate) fn shader(&self) -> ShaderLight {
         let light_type = match self.light_type {
-            LightType::Directional => 0,
-            LightType::Point => 1,
+            LightType::Main => 0,
+            LightType::Directional => 1,
+            LightType::Point => 2,
         };
 
         ShaderLight {
@@ -64,7 +64,5 @@ impl Light {
         light_type: LightType::Point,
         coords: Vector3::ZERO,
         color: Color::BLACK,
-        mesh: false,
-        shadows: false,
     };
 }

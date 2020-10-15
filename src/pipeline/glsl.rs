@@ -81,10 +81,10 @@ pub(crate) fn compile_glsl(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 3])> {
 
 fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
     let mut default_vert_glsl =
-        include_str!("../../shaders/glsl/internal-default-vert.glsl").to_string();
-    let vert_glsl = include_str!("../../shaders/glsl/internal-vert.glsl");
-    let objects_glsl = include_str!("../../shaders/glsl/internal-objects.glsl");
-    let srgb_glsl = include_str!("../../shaders/glsl/internal-srgb.glsl");
+        include_str!("../../shaders/glsl/addon-default-vert.glsl").to_string();
+    let vert_glsl = include_str!("../../shaders/glsl/addon-vert.glsl");
+    let objects_glsl = include_str!("../../shaders/glsl/addon-objects.glsl");
+    let srgb_glsl = include_str!("../../shaders/glsl/addon-srgb.glsl");
 
     // create real glsl code
     let mut real_src = "#version 450\n".to_string();
@@ -132,10 +132,10 @@ fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
 }
 
 fn compile_frag(src: &str, defines: &Defines) -> Result<Vec<u8>> {
-    let frag_glsl = include_str!("../../shaders/glsl/internal-frag.glsl");
-    let objects_glsl = include_str!("../../shaders/glsl/internal-objects.glsl");
-    let shadow_glsl = include_str!("../../shaders/glsl/internal-shadow.glsl");
-    let srgb_glsl = include_str!("../../shaders/glsl/internal-srgb.glsl");
+    let frag_glsl = include_str!("../../shaders/glsl/addon-frag.glsl");
+    let objects_glsl = include_str!("../../shaders/glsl/addon-objects.glsl");
+    let shadow_glsl = include_str!("../../shaders/glsl/addon-shadow.glsl");
+    let srgb_glsl = include_str!("../../shaders/glsl/addon-srgb.glsl");
 
     // create real glsl code
     let mut real_src = "#version 450\n".to_string();

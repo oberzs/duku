@@ -6,6 +6,7 @@
 use std::time::Instant;
 
 use super::Camera;
+use super::LightType;
 use super::MeshOrder;
 use super::Target;
 use crate::device::Commands;
@@ -191,7 +192,7 @@ impl ForwardRenderer {
         let light_dir = target
             .lights
             .iter()
-            .find(|l| l.shadows)
+            .find(|l| l.light_type == LightType::Main)
             .map(|l| l.coords)
             .unwrap_or_default();
 

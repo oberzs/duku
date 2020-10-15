@@ -37,7 +37,7 @@ pub struct Builtins {
     pub sphere_mesh: Handle<Mesh>,
 
     // shaders
-    pub phong_shader: Handle<Shader>,
+    pub pbr_shader: Handle<Shader>,
     pub font_shader: Handle<Shader>,
     pub blit_shader: Handle<Shader>,
     pub wireframe_shader: Handle<Shader>,
@@ -85,12 +85,12 @@ impl Builtins {
         let sphere_mesh = storage.add_mesh(create_sphere(device, 3));
 
         // shaders
-        let phong_shader = {
+        let pbr_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
                 layout,
-                include_bytes!("../../shaders/phong.spirv"),
+                include_bytes!("../../shaders/pbr.spirv"),
             )
             .expect("bad shader");
             storage.add_shader(shader)
@@ -186,7 +186,7 @@ impl Builtins {
             quad_mesh,
             cube_mesh,
             sphere_mesh,
-            phong_shader,
+            pbr_shader,
             font_shader,
             blit_shader,
             wireframe_shader,

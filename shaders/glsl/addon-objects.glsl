@@ -36,3 +36,7 @@ layout(push_constant) uniform Constants {
     mat4 local_to_world;
     uint sampler_index;
 } object;
+
+#define LIGHT_TYPE_MAIN 0
+#define LIGHT_TYPE_DIRECTIONAL 1
+#define LIGHT_TYPE_POINT 2

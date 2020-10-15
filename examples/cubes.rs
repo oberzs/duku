@@ -49,7 +49,7 @@ fn main() -> Result<()> {
 
     let cube = cube_mesh(&mut context, (1.0, 1.0, 1.0));
 
-    let main_light = Light::directional((-0.4, -1.0, -1.0), Color::WHITE, true);
+    let main_light = Light::main((-0.4, -1.0, -1.0), Color::WHITE);
 
     while window.is_open() {
         // update

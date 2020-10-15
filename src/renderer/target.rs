@@ -131,7 +131,7 @@ impl<'b> Target<'_, 'b> {
             shape_color: Color::BLACK,
             transform: Transform::default(),
             lights: [
-                Light::directional((-1.0, -1.0, 1.0), Color::WHITE, true),
+                Light::main((-1.0, -1.0, 1.0), Color::WHITE),
                 Light::NONE,
                 Light::NONE,
                 Light::NONE,
@@ -173,7 +173,7 @@ impl<'b> Target<'_, 'b> {
 
     pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
         let default_shader = if self.shadows {
-            &self.builtins.phong_shader
+            &self.builtins.pbr_shader
         } else {
             &self.builtins.unshaded_shader
         };
@@ -213,7 +213,7 @@ impl<'b> Target<'_, 'b> {
 
     pub fn draw_cube(&mut self) {
         let default_shader = if self.shadows {
-            &self.builtins.phong_shader
+            &self.builtins.pbr_shader
         } else {
             &self.builtins.unshaded_shader
         };
@@ -237,7 +237,7 @@ impl<'b> Target<'_, 'b> {
 
     pub fn draw_sphere(&mut self) {
         let default_shader = if self.shadows {
-            &self.builtins.phong_shader
+            &self.builtins.pbr_shader
         } else {
             &self.builtins.unshaded_shader
         };
