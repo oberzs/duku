@@ -73,7 +73,7 @@ impl Builtins {
         // materials
         let white_material = {
             let mut mat = Material::new(device, layout);
-            mat.set_phong_color((255, 255, 255));
+            mat.set_albedo_color((255, 255, 255));
             mat.update_if_needed(device);
             storage.add_material(mat)
         };

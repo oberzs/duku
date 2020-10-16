@@ -13,6 +13,7 @@ use draw_it::Light;
 use draw_it::Mesh;
 use draw_it::Quaternion;
 use draw_it::Result;
+use draw_it::Transform;
 use draw_it::Vector2;
 use draw_it::Vector3;
 
@@ -34,8 +35,8 @@ fn main() -> Result<()> {
 
     let material = context
         .build_material()
-        .phong_color((255, 255, 255))
-        .phong_texture(&texture)
+        .albedo_color((255, 255, 255))
+        .albedo_texture(&texture)
         .build();
 
     context.set_skybox_png(CubemapSides {
@@ -80,6 +81,11 @@ fn main() -> Result<()> {
             target.draw_sphere();
             target.material = Some(&material);
             target.transform.move_right(2.0);
+            target.draw_cube();
+
+            // render floor
+            target.transform = Transform::scaled(10.0, 0.2, 10.0);
+            target.material = None;
             target.draw_cube();
         });
     }

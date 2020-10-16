@@ -56,7 +56,7 @@ impl Material {
         }
     }
 
-    pub fn set_phong_color(&mut self, color: impl Into<Color>) {
+    pub fn set_albedo_color(&mut self, color: impl Into<Color>) {
         let c = color.into().to_rgb_norm_vec();
         self.arg_1.x = c.x;
         self.arg_1.y = c.y;
@@ -64,7 +64,7 @@ impl Material {
         self.should_update = true;
     }
 
-    pub fn set_phong_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_albedo_texture(&mut self, texture: &Handle<Texture>) {
         self.arg_1.w = texture.id() as f32;
         self.should_update = true;
     }
@@ -138,13 +138,13 @@ impl Material {
 }
 
 impl MaterialBuilder<'_> {
-    pub fn phong_color(mut self, color: impl Into<Color>) -> Self {
-        self.material.set_phong_color(color);
+    pub fn albedo_color(mut self, color: impl Into<Color>) -> Self {
+        self.material.set_albedo_color(color);
         self
     }
 
-    pub fn phong_texture(mut self, texture: &Handle<Texture>) -> Self {
-        self.material.set_phong_texture(texture);
+    pub fn albedo_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_albedo_texture(texture);
         self
     }
 
