@@ -31,6 +31,7 @@ use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStores;
 use crate::renderer::Target;
+use crate::storage;
 use crate::storage::Builtins;
 use crate::storage::Handle;
 use crate::storage::Storage;
@@ -361,6 +362,23 @@ impl Context {
         self.storage.add_mesh(mesh)
     }
 
+    pub fn create_mesh_cube(&mut self) -> Handle<Mesh> {
+        self.storage.add_mesh(storage::create_cube(&self.device))
+    }
+
+    pub fn create_mesh_sphere_ico(&mut self, detail: u32) -> Handle<Mesh> {
+        self.storage
+            .add_mesh(storage::create_ico_sphere(&self.device, detail))
+    }
+
+    pub fn create_mesh_sphere_uv(&mut self, meridians: u32, parallels: u32) -> Handle<Mesh> {
+        self.storage.add_mesh(storage::create_uv_sphere(
+            &self.device,
+            meridians,
+            parallels,
+        ))
+    }
+
     pub fn mesh(&self, mesh: &Handle<Mesh>) -> &Mesh {
         self.storage.meshes.get(mesh)
     }
@@ -601,7 +619,7 @@ impl Context {
 
     #[cfg(feature = "png")]
     pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Handle<Texture>> {
-        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes)?;
+        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, false)?;
         Ok(self.storage.add_texture(tex))
     }
 
@@ -612,6 +630,21 @@ impl Context {
     ) -> Result<Handle<Texture>> {
         let bytes = std::fs::read(path.as_ref())?;
         self.create_texture_png_bytes(bytes)
+    }
+
+    #[cfg(feature = "png")]
+    pub fn create_texture_png_bytes_linear(&mut self, bytes: Vec<u8>) -> Result<Handle<Texture>> {
+        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, true)?;
+        Ok(self.storage.add_texture(tex))
+    }
+
+    #[cfg(feature = "png")]
+    pub fn create_texture_png_linear(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Handle<Texture>> {
+        let bytes = std::fs::read(path.as_ref())?;
+        self.create_texture_png_bytes_linear(bytes)
     }
 
     #[cfg(feature = "png")]

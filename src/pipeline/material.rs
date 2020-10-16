@@ -69,6 +69,31 @@ impl Material {
         self.should_update = true;
     }
 
+    pub fn set_metalness(&mut self, value: f32) {
+        self.arg_2.x = value;
+        self.should_update = true;
+    }
+
+    pub fn set_metalness_texture(&mut self, texture: &Handle<Texture>) {
+        self.arg_2.w = texture.id() as f32;
+        self.should_update = true;
+    }
+
+    pub fn set_roughness(&mut self, value: f32) {
+        self.arg_2.y = value;
+        self.should_update = true;
+    }
+
+    pub fn set_roughness_texture(&mut self, texture: &Handle<Texture>) {
+        self.arg_2.z = texture.id() as f32;
+        self.should_update = true;
+    }
+
+    pub fn set_ambient_occlusion_texture(&mut self, texture: &Handle<Texture>) {
+        self.arg_3.x = texture.id() as f32;
+        self.should_update = true;
+    }
+
     pub fn set_arg_1<V: Into<Vector4>>(&mut self, arg: V) {
         self.arg_1 = arg.into();
         self.should_update = true;
@@ -145,6 +170,31 @@ impl MaterialBuilder<'_> {
 
     pub fn albedo_texture(mut self, texture: &Handle<Texture>) -> Self {
         self.material.set_albedo_texture(texture);
+        self
+    }
+
+    pub fn metalness(mut self, value: f32) -> Self {
+        self.material.set_metalness(value);
+        self
+    }
+
+    pub fn metalness_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_metalness_texture(texture);
+        self
+    }
+
+    pub fn roughness(mut self, value: f32) -> Self {
+        self.material.set_roughness(value);
+        self
+    }
+
+    pub fn roughness_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_roughness_texture(texture);
+        self
+    }
+
+    pub fn ambient_occlusion_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_ambient_occlusion_texture(texture);
         self
     }
 

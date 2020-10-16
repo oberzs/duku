@@ -131,7 +131,7 @@ impl<'b> Target<'_, 'b> {
             shape_color: Color::BLACK,
             transform: Transform::default(),
             lights: [
-                Light::main((-1.0, -1.0, 1.0), Color::WHITE),
+                Light::main((-1.0, -1.0, 1.0), Color::WHITE, 10.0),
                 Light::NONE,
                 Light::NONE,
                 Light::NONE,
@@ -235,7 +235,7 @@ impl<'b> Target<'_, 'b> {
         );
     }
 
-    pub fn draw_sphere(&mut self) {
+    pub fn draw_sphere_ico(&mut self) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
         } else {
@@ -251,7 +251,31 @@ impl<'b> Target<'_, 'b> {
             material,
             shader,
             MeshOrder {
-                mesh: self.builtins.sphere_mesh.clone(),
+                mesh: self.builtins.ico_sphere_mesh.clone(),
+                local_to_world: self.transform.as_matrix(),
+                shadows: self.shadows,
+                sampler_index: self.sampler_index(),
+            },
+        );
+    }
+
+    pub fn draw_sphere_uv(&mut self) {
+        let default_shader = if self.shadows {
+            &self.builtins.pbr_shader
+        } else {
+            &self.builtins.unshaded_shader
+        };
+        let shader = self.shader.unwrap_or(default_shader).clone();
+        let material = self
+            .material
+            .unwrap_or(&self.builtins.white_material)
+            .clone();
+
+        self.add_mesh_order(
+            material,
+            shader,
+            MeshOrder {
+                mesh: self.builtins.uv_sphere_mesh.clone(),
                 local_to_world: self.transform.as_matrix(),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),

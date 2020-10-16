@@ -49,11 +49,13 @@ float geometry_smith(float dot_nv, float dot_nl, float roughness) {
 }
 
 void fragment() {
-    int albedo_tex = int(material.arg_1.a);
-    vec3 albedo = material.arg_1.rgb * tex(albedo_tex, in_uv).rgb;
-    float metallic = material.arg_2.r;
-    float roughness = material.arg_2.g;
-    float ambient_occlusion = 1.0;
+    vec4 albedo_tex = tex(int(material.arg_1.a), in_uv);
+    vec4 roughness_tex = tex(int(material.arg_2.b), in_uv);
+    vec4 metalness_tex = tex(int(material.arg_2.a), in_uv);
+    float ambient_occlusion = tex(int(material.arg_3.r), in_uv).r;
+    vec3 albedo = material.arg_1.rgb * albedo_tex.rgb;
+    float metalness = material.arg_2.r * metalness_tex.r;
+    float roughness = material.arg_2.g * roughness_tex.r;
 
     // calculate normal and view direction
     vec3 normal = normalize(in_normal);
@@ -95,13 +97,13 @@ void fragment() {
         // when looking directly at it
         // non-metallics get constant 0.04, metalics get their albedo
         vec3 direct_refl = vec3(0.04);
-        direct_refl = mix(direct_refl, albedo, metallic);
+        direct_refl = mix(direct_refl, albedo, metalness);
 
         // calculate light's specular (reflected)
         // and diffuse (refracted) parts
         vec3 specular_part = fresnel_schlick(dot_hv, direct_refl);
         vec3 diffuse_part = vec3(1.0) - specular_part;
-        diffuse_part *= 1.0 - metallic;
+        diffuse_part *= 1.0 - metalness;
 
         float NDF = distribution_ggx(dot_nh, roughness);
         float G = geometry_smith(dot_nv, dot_nl, roughness);
@@ -117,6 +119,9 @@ void fragment() {
 
     vec3 ambient = vec3(0.03) * albedo * ambient_occlusion;
     vec3 color = ambient + light_amount;
+
+    // Reinhard tonemapping
+    color = color / (color + vec3(1.0));
 
     out_color = vec4(color, 1.0);
 }

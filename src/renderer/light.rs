@@ -11,6 +11,7 @@ use crate::pipeline::ShaderLight;
 pub struct Light {
     pub coords: Vector3,
     pub color: Color,
+    pub brightness: f32,
     pub light_type: LightType,
 }
 
@@ -22,27 +23,34 @@ pub enum LightType {
 }
 
 impl Light {
-    pub fn main(direction: impl Into<Vector3>, color: impl Into<Color>) -> Self {
+    pub fn main(direction: impl Into<Vector3>, color: impl Into<Color>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Main,
             coords: direction.into().unit(),
             color: color.into(),
+            brightness,
         }
     }
 
-    pub fn directional(direction: impl Into<Vector3>, color: impl Into<Color>) -> Self {
+    pub fn directional(
+        direction: impl Into<Vector3>,
+        color: impl Into<Color>,
+        brightness: f32,
+    ) -> Self {
         Self {
             light_type: LightType::Directional,
             coords: direction.into().unit(),
             color: color.into(),
+            brightness,
         }
     }
 
-    pub fn point(position: impl Into<Vector3>, color: impl Into<Color>) -> Self {
+    pub fn point(position: impl Into<Vector3>, color: impl Into<Color>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Point,
             coords: position.into(),
             color: color.into(),
+            brightness,
         }
     }
 
@@ -55,7 +63,7 @@ impl Light {
 
         ShaderLight {
             coords: self.coords,
-            color: self.color.to_rgba_norm_vec(),
+            color: self.color.to_rgba_norm_vec() * self.brightness,
             light_type,
         }
     }
@@ -64,5 +72,6 @@ impl Light {
         light_type: LightType::Point,
         coords: Vector3::ZERO,
         color: Color::BLACK,
+        brightness: 0.0,
     };
 }

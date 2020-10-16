@@ -60,6 +60,7 @@ impl Texture {
         device: &Device,
         shader_images: &mut ShaderImages,
         bytes: Vec<u8>,
+        linear: bool,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
         use png::Decoder;
@@ -74,7 +75,9 @@ impl Texture {
         reader.next_frame(&mut data).expect("bad read");
 
         let format = match info.color_type {
+            ColorType::RGBA if linear => ImageFormat::Rgba,
             ColorType::RGBA => ImageFormat::Srgba,
+            ColorType::RGB if linear => ImageFormat::Rgb,
             ColorType::RGB => ImageFormat::Srgb,
             ColorType::Grayscale => ImageFormat::Gray,
             _ => return Err(Error::UnsupportedColorType),

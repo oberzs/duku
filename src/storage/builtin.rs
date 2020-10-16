@@ -34,7 +34,8 @@ pub struct Builtins {
     pub surface_mesh: Handle<Mesh>,
     pub quad_mesh: Handle<Mesh>,
     pub cube_mesh: Handle<Mesh>,
-    pub sphere_mesh: Handle<Mesh>,
+    pub ico_sphere_mesh: Handle<Mesh>,
+    pub uv_sphere_mesh: Handle<Mesh>,
 
     // shaders
     pub pbr_shader: Handle<Shader>,
@@ -82,7 +83,8 @@ impl Builtins {
         let surface_mesh = storage.add_mesh(create_surface(device));
         let quad_mesh = storage.add_mesh(create_quad(device));
         let cube_mesh = storage.add_mesh(create_cube(device));
-        let sphere_mesh = storage.add_mesh(create_sphere(device, 3));
+        let ico_sphere_mesh = storage.add_mesh(create_ico_sphere(device, 3));
+        let uv_sphere_mesh = storage.add_mesh(create_uv_sphere(device, 30, 30));
 
         // shaders
         let pbr_shader = {
@@ -185,7 +187,8 @@ impl Builtins {
             surface_mesh,
             quad_mesh,
             cube_mesh,
-            sphere_mesh,
+            ico_sphere_mesh,
+            uv_sphere_mesh,
             pbr_shader,
             font_shader,
             blit_shader,
@@ -243,7 +246,7 @@ fn create_quad(device: &Device) -> Mesh {
     mesh
 }
 
-fn create_cube(device: &Device) -> Mesh {
+pub(crate) fn create_cube(device: &Device) -> Mesh {
     let top = create_rectangle(
         device,
         (-0.5, 0.5, 0.5),
@@ -318,7 +321,7 @@ fn create_rectangle<V: Into<Vector3>>(device: &Device, p1: V, p2: V, p3: V, p4: 
     mesh
 }
 
-fn create_sphere(device: &Device, detail_level: u32) -> Mesh {
+pub(crate) fn create_ico_sphere(device: &Device, detail_level: u32) -> Mesh {
     let mut vertices = vec![];
     let mut indices = vec![];
 
@@ -394,6 +397,69 @@ fn create_sphere(device: &Device, detail_level: u32) -> Mesh {
     mesh.set_vertices(vertices);
     mesh.set_indices(indices);
     mesh.set_uvs(uvs);
+    mesh.calculate_normals();
+    mesh.update_if_needed(device);
+    mesh
+}
+
+pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) -> Mesh {
+    let mut vertices = vec![];
+    let mut indices = vec![];
+
+    vertices.push(Vector3::new(0.0, 1.0, 0.0) * 0.5);
+    for j in 0..(parallels - 1) {
+        let polar = PI * (j + 1) as f32 / parallels as f32;
+        let sp = polar.sin();
+        let cp = polar.cos();
+
+        for i in 0..meridians {
+            let azimuth = 2.0 * PI * i as f32 / meridians as f32;
+            let sa = azimuth.sin();
+            let ca = azimuth.cos();
+            let x = sp * ca;
+            let y = cp;
+            let z = sp * sa;
+
+            vertices.push(Vector3::new(x, y, z) * 0.5);
+        }
+    }
+    vertices.push(Vector3::new(0.0, -1.0, 0.0) * 0.5);
+
+    for i in 0..meridians {
+        let a = i + 1;
+        let b = (i + 1) % meridians + 1;
+        indices.extend(&[0, b, a]);
+    }
+
+    for j in 0..(parallels - 2) {
+        let a_start = j * meridians + 1;
+        let b_start = (j + 1) * meridians + 1;
+        for i in 0..meridians {
+            let a = a_start + i;
+            let a1 = a_start + (i + 1) % meridians;
+            let b = b_start + i;
+            let b1 = b_start + (i + 1) % meridians;
+            indices.extend(&[a, a1, b1, a, b1, b]);
+        }
+    }
+
+    for i in 0..meridians {
+        let a = i + meridians * (parallels - 2) + 1;
+        let b = (i + 1) % meridians + meridians * (parallels - 2) + 1;
+        indices.extend(&[vertices.len() as u32 - 1, a, b]);
+    }
+
+    let mut uvs = vec![];
+    for vertex in &vertices {
+        let u = vertex.z.atan2(vertex.x) / (2.0 * PI);
+        let v = (vertex.y.asin() / PI) + 0.5;
+        uvs.push(Vector2::new(u, v));
+    }
+
+    let mut mesh = Mesh::new(device);
+    mesh.set_vertices(vertices);
+    mesh.set_uvs(uvs);
+    mesh.set_indices(indices);
     mesh.calculate_normals();
     mesh.update_if_needed(device);
     mesh

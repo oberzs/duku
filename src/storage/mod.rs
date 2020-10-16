@@ -17,6 +17,9 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderImages;
 
+pub(crate) use builtin::create_cube;
+pub(crate) use builtin::create_ico_sphere;
+pub(crate) use builtin::create_uv_sphere;
 pub(crate) use builtin::Builtins;
 
 pub use handle::Handle;
