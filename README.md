@@ -61,14 +61,14 @@ fn main() -> Result<()> {
     let (mut context, mut window) = Context::builder().build_window(500, 500).build()?;
 
     let mut camera = Camera::perspective_autosized(90);
-    camera.transform.move_by([2.0, 1.5, 2.0]);
-    camera.transform.look_at([0.0, 0.0, 0.0]);
+    camera.transform.move_by((2.0, 1.5, 2.0));
+    camera.transform.look_at((0.0, 0.0, 0.0));
 
     while window.is_open() {
         context.poll_events(&mut window);
         context.draw_on_window(Some(&camera), |target| {
             target.clear = Color::SKY_BLUE;
-            target.draw_cube([0.0, 0.0, 0.0]);
+            target.draw_cube();
         });
     }
 
@@ -95,4 +95,3 @@ Optional projects for extra functionality:
 - [Png](https://github.com/image-rs/image-png) - Png image loading
 - [Shaderc](https://github.com/google/shaderc-rs) - Glsl shader loading
 - [Glfw](https://github.com/PistonDevelopers/glfw-rs) - OS Windowing
-- [Imgui](https://github.com/Gekkio/imgui-rs) - Easy UI
