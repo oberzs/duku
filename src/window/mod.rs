@@ -7,24 +7,36 @@
 
 mod controller;
 
-use glfw::Action;
-use glfw::Cursor as GlfwCursor;
-use glfw::CursorMode;
-use glfw::StandardCursor;
-use glfw::Window as GlfwWindow;
 use std::collections::HashSet;
+use std::time::Duration;
 use std::time::Instant;
-use std::vec::Drain;
+use winit::dpi::PhysicalPosition;
+use winit::dpi::PhysicalSize;
+use winit::event::ElementState;
+use winit::event::Event as WinitEvent;
+use winit::event::MouseScrollDelta;
+use winit::event::WindowEvent;
+use winit::event_loop::ControlFlow;
+use winit::event_loop::EventLoop;
+use winit::window::Window as WinitWindow;
+use winit::window::WindowBuilder;
+
+pub use winit::event::MouseButton;
+pub use winit::event::VirtualKeyCode as Key;
+pub use winit::window::CursorIcon as Cursor;
 
 use crate::math::Vector2;
-
-pub use glfw::Key;
-pub use glfw::MouseButton;
+use crate::surface::WindowHandle;
 
 pub use controller::Controller;
 
 pub struct Window {
-    handle: GlfwWindow,
+    window: WinitWindow,
+    event_loop: EventLoop<()>,
+}
+
+pub struct Events {
+    window: WinitWindow,
     events: Vec<Event>,
 
     keys_pressed: HashSet<Key>,
@@ -36,48 +48,167 @@ pub struct Window {
 
     mouse_position: Vector2,
     mouse_delta: Vector2,
+    mouse_grab: bool,
     scroll_delta: Vector2,
-
-    last_resize: Option<Instant>,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum Event {
-    Resize(u32, u32),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Cursor {
-    Arrow,
-    IBeam,
-    Crosshair,
-    Hand,
-    HResize,
-    VResize,
+    Resize(Vector2),
 }
 
 impl Window {
-    pub(crate) fn new(handle: GlfwWindow) -> Self {
-        Self {
+    pub(crate) fn new(title: &str, width: u32, height: u32, resizable: bool) -> Self {
+        let event_loop = EventLoop::new();
+        let window = WindowBuilder::new()
+            .with_inner_size(PhysicalSize::new(width, height))
+            .with_title(title)
+            .with_resizable(resizable)
+            .build(&event_loop)
+            .expect("bad window");
+
+        Self { window, event_loop }
+    }
+
+    #[cfg(target_os = "windows")]
+    pub(crate) fn handle(&self) -> WindowHandle {
+        use winit::platform::windows::WindowExtWindows;
+
+        let size = self.window.inner_size();
+
+        WindowHandle {
+            hwnd: self.window.hwnd(),
+            width: size.width,
+            height: size.height,
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn handle(&self) -> WindowHandle {
+        unimplemented!()
+    }
+
+    #[cfg(target_os = "macos")]
+    pub(crate) fn handle(&self) -> WindowHandle {
+        unimplemented!()
+    }
+
+    pub fn main_loop<F>(self, mut main_fn: F)
+    where
+        F: FnMut(&mut Events) + 'static,
+    {
+        let Self { window, event_loop } = self;
+        let mut events = Events {
+            events: vec![],
             keys_pressed: HashSet::new(),
             keys_released: HashSet::new(),
             keys_typed: HashSet::new(),
             buttons_pressed: HashSet::new(),
             buttons_released: HashSet::new(),
             buttons_clicked: HashSet::new(),
-            mouse_position: Vector2::new(0.0, 0.0),
-            mouse_delta: Vector2::new(0.0, 0.0),
-            scroll_delta: Vector2::new(0.0, 0.0),
-            last_resize: None,
-            events: vec![],
-            handle,
-        }
-    }
+            mouse_position: Vector2::ZERO,
+            mouse_delta: Vector2::ZERO,
+            mouse_grab: false,
+            scroll_delta: Vector2::ZERO,
+            window,
+        };
 
-    pub fn is_open(&self) -> bool {
-        !self.handle.should_close()
-    }
+        let mut last_resize = None;
 
+        event_loop.run(move |event, _, control_flow| {
+            *control_flow = ControlFlow::Wait;
+
+            match event {
+                WinitEvent::WindowEvent { event, .. } => match event {
+                    // close event
+                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+
+                    // resize event
+                    WindowEvent::Resized(size) => {
+                        if size.width != 0 && size.height != 0 {
+                            last_resize = Some(Instant::now());
+                        }
+                    }
+
+                    // mouse position event
+                    WindowEvent::CursorMoved { position, .. } => {
+                        let mouse_position = Vector2::new(position.x as f32, position.y as f32);
+                        events.mouse_delta = mouse_position - events.mouse_position;
+                        events.mouse_position = mouse_position;
+                    }
+
+                    // mouse scroll event
+                    WindowEvent::MouseWheel { delta, .. } => {
+                        if let MouseScrollDelta::PixelDelta(pos) = delta {
+                            events.scroll_delta = Vector2::new(pos.x as f32, pos.y as f32);
+                        }
+                    }
+
+                    // keyboard key event
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let Some(key) = input.virtual_keycode {
+                            match input.state {
+                                ElementState::Pressed => {
+                                    events.keys_pressed.insert(key);
+                                    events.keys_typed.insert(key);
+                                    events.keys_released.remove(&key);
+                                }
+                                ElementState::Released => {
+                                    events.keys_released.insert(key);
+                                    events.keys_pressed.remove(&key);
+                                    events.keys_typed.remove(&key);
+                                }
+                            }
+                        }
+                    }
+
+                    // mouse button event
+                    WindowEvent::MouseInput { state, button, .. } => match state {
+                        ElementState::Pressed => {
+                            events.buttons_pressed.insert(button);
+                            events.buttons_clicked.insert(button);
+                            events.buttons_released.remove(&button);
+                        }
+                        ElementState::Released => {
+                            events.buttons_released.insert(button);
+                            events.buttons_pressed.remove(&button);
+                            events.buttons_clicked.remove(&button);
+                        }
+                    },
+
+                    _ => (),
+                },
+
+                // draw event
+                WinitEvent::MainEventsCleared => {
+                    // check resize timing
+                    if let Some(last) = last_resize {
+                        if Instant::now().duration_since(last) >= Duration::from_millis(100) {
+                            let size = events.size();
+                            events.events.push(Event::Resize(size));
+                            last_resize = None;
+
+                            info!("resized window to {}x{}", size.x as u32, size.y as u32);
+                        }
+                    }
+
+                    let size = events.size();
+                    if size.x as i32 != 0 && size.y as i32 != 0 && last_resize == None {
+                        main_fn(&mut events);
+                    }
+
+                    events.events.clear();
+                    events.keys_typed.clear();
+                    events.mouse_delta = Vector2::new(0.0, 0.0);
+                    events.scroll_delta = Vector2::new(0.0, 0.0);
+                }
+                _ => (),
+            }
+        });
+    }
+}
+
+impl Events {
     pub fn is_key_pressed(&self, key: Key) -> bool {
         self.keys_pressed.contains(&key)
     }
@@ -107,8 +238,9 @@ impl Window {
     }
 
     pub fn set_mouse_position(&mut self, position: Vector2) {
-        self.handle
-            .set_cursor_pos(f64::from(position.x), f64::from(position.y));
+        self.window
+            .set_cursor_position(PhysicalPosition::new(position.x as i32, position.y as i32))
+            .expect("cannot set cursor position");
     }
 
     pub const fn mouse_delta(&self) -> Vector2 {
@@ -119,118 +251,35 @@ impl Window {
         self.scroll_delta
     }
 
-    pub fn mouse_grab(&self) -> bool {
-        self.handle.get_cursor_mode() == CursorMode::Disabled
+    pub const fn mouse_grab(&self) -> bool {
+        self.mouse_grab
     }
 
     pub fn set_mouse_grab(&mut self, grab: bool) {
-        let cursor_mode = if grab {
-            CursorMode::Disabled
-        } else {
-            CursorMode::Normal
-        };
-        self.handle.set_cursor_mode(cursor_mode);
+        self.window
+            .set_cursor_grab(grab)
+            .expect("cannot set cursor grab");
+        self.mouse_grab = grab;
     }
 
     pub fn hide_cursor(&mut self, hide: bool) {
-        let cursor_mode = if hide {
-            CursorMode::Hidden
-        } else {
-            CursorMode::Normal
-        };
-        self.handle.set_cursor_mode(cursor_mode);
+        self.window.set_cursor_visible(hide);
     }
 
     pub fn set_cursor(&mut self, cursor: Cursor) {
-        let glfw_cursor = match cursor {
-            Cursor::Arrow => GlfwCursor::standard(StandardCursor::Arrow),
-            Cursor::Crosshair => GlfwCursor::standard(StandardCursor::Crosshair),
-            Cursor::Hand => GlfwCursor::standard(StandardCursor::Hand),
-            Cursor::HResize => GlfwCursor::standard(StandardCursor::HResize),
-            Cursor::IBeam => GlfwCursor::standard(StandardCursor::IBeam),
-            Cursor::VResize => GlfwCursor::standard(StandardCursor::VResize),
-        };
-        self.handle.set_cursor(Some(glfw_cursor));
+        self.window.set_cursor_icon(cursor);
     }
 
     pub fn size(&self) -> Vector2 {
-        let (w, h) = self.handle.get_size();
-        Vector2::new(w as f32, h as f32)
+        let size = self.window.inner_size();
+        Vector2::new(size.width as f32, size.height as f32)
     }
 
-    pub fn events(&mut self) -> Drain<'_, Event> {
-        self.events.drain(..)
+    pub fn events(&self) -> impl Iterator<Item = &Event> {
+        self.events.iter()
     }
 
-    pub fn set_title(&mut self, title: &str) {
-        self.handle.set_title(title);
-    }
-
-    pub(crate) fn handle_key(&mut self, key: Key, action: Action) {
-        match action {
-            Action::Press => {
-                self.keys_pressed.insert(key);
-                self.keys_typed.insert(key);
-                self.keys_released.remove(&key);
-            }
-            Action::Release => {
-                self.keys_released.insert(key);
-                self.keys_pressed.remove(&key);
-                self.keys_typed.remove(&key);
-            }
-            _ => (),
-        }
-    }
-
-    pub(crate) fn handle_mouse_button(&mut self, button: MouseButton, action: Action) {
-        match action {
-            Action::Press => {
-                self.buttons_pressed.insert(button);
-                self.buttons_clicked.insert(button);
-                self.buttons_released.remove(&button);
-            }
-            Action::Release => {
-                self.buttons_released.insert(button);
-                self.buttons_pressed.remove(&button);
-                self.buttons_clicked.remove(&button);
-            }
-            _ => (),
-        }
-    }
-
-    pub(crate) fn handle_mouse(&mut self, x: f64, y: f64) {
-        let mouse_position = Vector2::new(x as f32, y as f32);
-        self.mouse_delta = mouse_position - self.mouse_position;
-        self.mouse_position = mouse_position;
-    }
-
-    pub(crate) fn handle_scroll(&mut self, x: f64, y: f64) {
-        self.scroll_delta = Vector2::new(x as f32, y as f32);
-    }
-
-    pub(crate) fn record_resize(&mut self) {
-        self.last_resize = Some(Instant::now());
-    }
-
-    pub(crate) fn reset_resize(&mut self) {
-        self.last_resize = None;
-    }
-
-    pub(crate) const fn last_resize(&self) -> Option<Instant> {
-        self.last_resize
-    }
-
-    pub(crate) fn handle_resize(&mut self, width: u32, height: u32) {
-        self.events.push(Event::Resize(width, height));
-    }
-
-    pub(crate) fn raw_size(&self) -> (i32, i32) {
-        self.handle.get_size()
-    }
-
-    pub(crate) fn clear(&mut self) {
-        self.keys_typed.clear();
-        self.mouse_delta = Vector2::new(0.0, 0.0);
-        self.scroll_delta = Vector2::new(0.0, 0.0);
+    pub fn set_title(&mut self, title: impl AsRef<str>) {
+        self.window.set_title(title.as_ref());
     }
 }

@@ -14,7 +14,7 @@ use std::time::Instant;
 fn main() -> Result<()> {
     let square_size = 10;
 
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .build_window(720, 640)
         .title("Draw-it example: Dynamic")
         .build()?;
@@ -31,9 +31,9 @@ fn main() -> Result<()> {
         .build();
     let time = Instant::now();
 
-    while window.is_open() {
-        context.poll_events(&mut window);
-        controller.update(&mut camera, &mut window, context.delta_time());
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
+        controller.update(&mut camera, events, context.delta_time());
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
@@ -50,7 +50,7 @@ fn main() -> Result<()> {
             target.draw_mesh(&square);
             target.draw_mesh_wireframe(&square);
         });
-    }
+    });
 
     Ok(())
 }

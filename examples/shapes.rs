@@ -10,14 +10,14 @@ use draw_it::ShapeMode;
 use draw_it::Vector2;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .build_window(600, 400)
         .title("Draw-it example: Shapes")
         .resizable()
         .build()?;
 
-    while window.is_open() {
-        context.poll_events(&mut window);
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
 
         context.draw_on_window(None, |target| {
             // move (0, 0) to top left
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
                 Vector2::new(350.0, 350.0),
             ]);
         });
-    }
+    });
 
     Ok(())
 }

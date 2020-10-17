@@ -11,14 +11,14 @@ use draw_it::Vector2;
 use std::f32::consts::PI;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .build_window(600, 400)
         .title("Draw-it example: Lines")
         .resizable()
         .build()?;
 
-    while window.is_open() {
-        context.poll_events(&mut window);
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
 
         context.draw_on_window(None, |target| {
             star(target, (0.0, 0.0), Color::BLUE);
@@ -27,7 +27,7 @@ fn main() -> Result<()> {
             star(target, (20.0, 20.0), Color::SKY_BLUE);
             star(target, (-30.0, 30.0), Color::RED);
         });
-    }
+    });
 
     Ok(())
 }
