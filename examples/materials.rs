@@ -66,13 +66,6 @@ fn main() -> Result<()> {
         let delta_time = context.delta_time();
         controller.update(&mut camera, &mut window, delta_time);
 
-        // render
-        let stats = context.stats();
-        let fps = context.fps();
-        context.draw_ui(|ui| {
-            ui.stats_window(stats, fps, delta_time);
-        })?;
-
         context.draw_on_window(Some(&camera), |target| {
             target.skybox = true;
             target.lights[0] = Light::main((-0.4, -1.0, -1.0), Color::WHITE, 10.0);

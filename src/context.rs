@@ -40,11 +40,6 @@ use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
 
-#[cfg(feature = "ui")]
-use crate::ui::Ui;
-#[cfg(feature = "ui")]
-use crate::ui::UiFrame;
-
 #[cfg(feature = "window")]
 use crate::window::Window;
 
@@ -90,10 +85,6 @@ pub struct Context {
     glfw: Option<glfw::Glfw>,
     #[cfg(feature = "window")]
     event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
-
-    // UI
-    #[cfg(feature = "ui")]
-    ui: Option<Ui>,
 }
 
 #[derive(Debug, Clone)]
@@ -216,8 +207,6 @@ impl Context {
             hot_reload_sender,
             #[cfg(feature = "glsl")]
             hot_reload_receiver,
-            #[cfg(feature = "ui")]
-            ui: None,
             #[cfg(feature = "window")]
             glfw: None,
             #[cfg(feature = "window")]
@@ -246,16 +235,6 @@ impl Context {
             &self.shader_layout,
             self.msaa,
         );
-
-        #[cfg(feature = "ui")]
-        if let Some(ui) = &mut self.ui {
-            ui.resize(
-                &self.device,
-                &mut self.storage,
-                &mut self.shader_images,
-                Size::new(width, height),
-            );
-        }
     }
 
     #[allow(single_use_lifetimes)]
@@ -270,12 +249,6 @@ impl Context {
         // let user record draw calls
         let mut target = Target::new(&self.builtins);
         draw_callback(&mut target);
-        #[cfg(feature = "ui")]
-        if let Some(ui) = &self.ui {
-            if ui.drawn() {
-                // target.blit_framebuffer(ui.framebuffer());
-            }
-        }
 
         let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
 
@@ -500,11 +473,6 @@ impl Context {
         self.device
             .commands()
             .bind_descriptor(&self.shader_layout, self.shader_images.descriptor());
-
-        #[cfg(feature = "ui")]
-        if let Some(ui) = &mut self.ui {
-            ui.reset();
-        }
     }
 
     fn end_draw(&mut self) {
@@ -524,27 +492,6 @@ impl Context {
     }
 
     #[cfg(feature = "window")]
-    pub(crate) fn attach_glfw(
-        &mut self,
-        glfw: glfw::Glfw,
-        event_receiver: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
-    ) {
-        self.glfw = Some(glfw);
-        self.event_receiver = Some(event_receiver);
-    }
-
-    #[cfg(feature = "ui")]
-    pub(crate) fn attach_ui(&mut self, width: u32, height: u32) {
-        self.ui = Some(Ui::new(
-            &self.device,
-            &self.shader_layout,
-            &mut self.shader_images,
-            &mut self.storage,
-            Size::new(width, height),
-        ));
-    }
-
-    #[cfg(feature = "window")]
     pub fn poll_events(&mut self, window: &mut Window) {
         use glfw::WindowEvent;
         use std::time::Duration;
@@ -558,12 +505,6 @@ impl Context {
             self.glfw.as_mut().expect("bad glfw").poll_events();
             let receiver = self.event_receiver.as_ref().expect("bad event receiver");
             for (_, event) in glfw::flush_messages(receiver) {
-                // update imgui
-                #[cfg(feature = "ui")]
-                if let Some(ui) = &mut self.ui {
-                    ui.handle_event(&event);
-                }
-
                 // update window events
                 match event {
                     WindowEvent::Key(key, _, action, _) => window.handle_key(key, action),
@@ -669,23 +610,6 @@ impl Context {
         self.skybox = cubemap;
         Ok(())
     }
-
-    #[cfg(feature = "ui")]
-    pub fn draw_ui(&mut self, draw_fn: impl FnMut(&UiFrame<'_>)) -> Result<()> {
-        use crate::error::Error;
-
-        if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
-        }
-
-        self.ui.as_mut().ok_or(Error::UnitializedUi)?.draw(
-            &self.device,
-            &self.shader_layout,
-            &mut self.storage,
-            draw_fn,
-        );
-        Ok(())
-    }
 }
 
 impl Drop for Context {
@@ -695,10 +619,6 @@ impl Drop for Context {
         self.shader_images.destroy(&self.device);
         self.storage.clear(&self.device, &mut self.shader_images);
         self.forward_renderer.destroy(&self.device);
-        #[cfg(feature = "ui")]
-        if let Some(ui) = &self.ui {
-            ui.destroy(&self.device);
-        }
         self.shader_layout.destroy(&self.device);
         for framebuffer in &self.window_framebuffers {
             framebuffer.destroy(&self.device);
@@ -839,11 +759,8 @@ impl WindowBuilder {
         let mut context = Context::new(handle, self.context.quality, self.context.vsync)?;
 
         // attach glfw to context
-        context.attach_glfw(glfw, event_receiver);
-
-        // create ui renderer
-        #[cfg(feature = "ui")]
-        context.attach_ui(self.width, self.height);
+        context.glfw = Some(glfw);
+        context.event_receiver = Some(event_receiver);
 
         Ok((context, Window::new(window)))
     }

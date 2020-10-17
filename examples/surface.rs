@@ -20,14 +20,6 @@ fn main() -> Result<()> {
         // poll events
         context.poll_events(&mut window);
 
-        // draw ui
-        let stats = context.stats();
-        let fps = context.fps();
-        let delta_time = context.delta_time();
-        context.draw_ui(|ui| {
-            ui.stats_window(stats, fps, delta_time);
-        })?;
-
         // draw other stuff
         context.draw_on_window(None, |target| {
             target.shader = Some(&shader);

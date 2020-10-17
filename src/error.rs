@@ -26,9 +26,6 @@ pub enum Error {
 
     #[cfg(feature = "window")]
     InternalGlfw,
-
-    #[cfg(feature = "ui")]
-    UnitializedUi,
 }
 
 impl error::Error for Error {}
