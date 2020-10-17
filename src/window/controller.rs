@@ -3,9 +3,9 @@
 
 // editor-like camera controller
 
+use super::Events;
 use super::Key;
 use super::MouseButton;
-use super::Window;
 use crate::math::Quaternion;
 use crate::math::Vector3;
 use crate::renderer::Camera;
@@ -31,17 +31,17 @@ impl Controller {
         }
     }
 
-    pub fn update(&mut self, camera: &mut Camera, window: &mut Window, delta_time: f32) {
+    pub fn update(&mut self, camera: &mut Camera, events: &mut Events, delta_time: f32) {
         match self {
             Self::Fly {
                 camera_angle,
                 move_speed,
             } => {
                 // update move speed
-                if window.is_key_typed(Key::Equal) {
+                if events.is_key_typed(Key::Plus) {
                     *move_speed += 0.5;
                 }
-                if window.is_key_typed(Key::Minus) {
+                if events.is_key_typed(Key::Minus) {
                     *move_speed -= 0.5;
                 }
 
@@ -51,34 +51,34 @@ impl Controller {
                 let rotation_speed = 50.0 * delta_time;
 
                 // movement
-                if window.is_key_pressed(Key::W) {
+                if events.is_key_pressed(Key::W) {
                     transform.move_forward(final_speed);
                 }
-                if window.is_key_pressed(Key::S) {
+                if events.is_key_pressed(Key::S) {
                     transform.move_backward(final_speed);
                 }
-                if window.is_key_pressed(Key::A) {
+                if events.is_key_pressed(Key::A) {
                     transform.move_left(final_speed);
                 }
-                if window.is_key_pressed(Key::D) {
+                if events.is_key_pressed(Key::D) {
                     transform.move_right(final_speed);
                 }
-                if window.is_key_pressed(Key::Space) {
+                if events.is_key_pressed(Key::Space) {
                     transform.move_by(Vector3::UP * final_speed);
                 }
-                if window.is_key_pressed(Key::LeftShift) {
+                if events.is_key_pressed(Key::LShift) {
                     transform.move_by(Vector3::DOWN * final_speed);
                 }
 
                 // rotation
-                if window.is_button_pressed(MouseButton::Button3) {
+                if events.is_button_pressed(MouseButton::Middle) {
                     // toggle mouse grab if needed
-                    if !window.mouse_grab() {
-                        window.set_mouse_grab(true);
+                    if !events.mouse_grab() {
+                        events.set_mouse_grab(true);
                     }
 
                     // rotate view
-                    let delta = window.mouse_delta();
+                    let delta = events.mouse_delta();
 
                     let mouse_x = delta.x * rotation_speed;
 
@@ -98,17 +98,17 @@ impl Controller {
                     transform.rotation = pitch * transform.rotation * roll;
                 } else {
                     // toggle mouse grab if needed
-                    if window.mouse_grab() {
-                        window.set_mouse_grab(false);
+                    if events.mouse_grab() {
+                        events.set_mouse_grab(false);
                     }
                 }
             }
             Self::Orbit { pivot, move_speed } => {
                 // update move speed
-                if window.is_key_typed(Key::Equal) {
+                if events.is_key_typed(Key::Plus) {
                     *move_speed += 0.5;
                 }
-                if window.is_key_typed(Key::Minus) {
+                if events.is_key_typed(Key::Minus) {
                     *move_speed -= 0.5;
                 }
 
@@ -117,41 +117,41 @@ impl Controller {
                 let angle = 5.0f32.powf(*move_speed) * delta_time;
 
                 // mouse rotation
-                if window.is_button_pressed(MouseButton::Button3) {
+                if events.is_button_pressed(MouseButton::Middle) {
                     // toggle mouse grab if needed
-                    if !window.mouse_grab() {
-                        window.set_mouse_grab(true);
+                    if !events.mouse_grab() {
+                        events.set_mouse_grab(true);
                     }
 
-                    let delta = window.mouse_delta();
+                    let delta = events.mouse_delta();
                     let speed = 50.0 * delta_time;
                     transform.move_around_point(*pivot, speed * delta.x, Vector3::UP);
                     transform.move_around_point(*pivot, speed * delta.y, transform.right());
                 } else {
                     // toggle mouse grab if needed
-                    if window.mouse_grab() {
-                        window.set_mouse_grab(false);
+                    if events.mouse_grab() {
+                        events.set_mouse_grab(false);
                     }
                 }
 
                 // horizontal rotation
-                if window.is_key_pressed(Key::D) {
+                if events.is_key_pressed(Key::D) {
                     transform.move_around_point(*pivot, -angle, Vector3::UP);
                 }
-                if window.is_key_pressed(Key::A) {
+                if events.is_key_pressed(Key::A) {
                     transform.move_around_point(*pivot, angle, Vector3::UP);
                 }
 
                 // vertical rotation
-                if window.is_key_pressed(Key::W) {
+                if events.is_key_pressed(Key::W) {
                     transform.move_around_point(*pivot, angle, transform.right());
                 }
-                if window.is_key_pressed(Key::S) {
+                if events.is_key_pressed(Key::S) {
                     transform.move_around_point(*pivot, -angle, transform.right());
                 }
 
                 // zoom
-                let scroll = window.scroll_delta();
+                let scroll = events.scroll_delta();
                 transform.move_forward(scroll.y * (*pivot - transform.position).length() * 0.05);
 
                 // look at pivot point

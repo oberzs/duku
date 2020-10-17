@@ -41,6 +41,10 @@ use crate::surface::VSync;
 use crate::surface::WindowHandle;
 
 #[cfg(feature = "window")]
+use crate::window::Event;
+#[cfg(feature = "window")]
+use crate::window::Events;
+#[cfg(feature = "window")]
 use crate::window::Window;
 
 const FPS_SAMPLE_COUNT: usize = 64;
@@ -79,12 +83,6 @@ pub struct Context {
     hot_reload_sender: std::sync::mpsc::Sender<(Handle<Shader>, std::path::PathBuf)>,
     #[cfg(feature = "glsl")]
     hot_reload_receiver: std::sync::mpsc::Receiver<(Handle<Shader>, std::path::PathBuf)>,
-
-    // Window
-    #[cfg(feature = "window")]
-    glfw: Option<glfw::Glfw>,
-    #[cfg(feature = "window")]
-    event_receiver: Option<std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>>,
 }
 
 #[derive(Debug, Clone)]
@@ -207,10 +205,6 @@ impl Context {
             hot_reload_sender,
             #[cfg(feature = "glsl")]
             hot_reload_receiver,
-            #[cfg(feature = "window")]
-            glfw: None,
-            #[cfg(feature = "window")]
-            event_receiver: None,
         })
     }
 
@@ -492,46 +486,10 @@ impl Context {
     }
 
     #[cfg(feature = "window")]
-    pub fn poll_events(&mut self, window: &mut Window) {
-        use glfw::WindowEvent;
-        use std::time::Duration;
-
-        // clear events
-        window.clear();
-
-        // poll events
-        let mut polling = true;
-        while polling {
-            self.glfw.as_mut().expect("bad glfw").poll_events();
-            let receiver = self.event_receiver.as_ref().expect("bad event receiver");
-            for (_, event) in glfw::flush_messages(receiver) {
-                // update window events
-                match event {
-                    WindowEvent::Key(key, _, action, _) => window.handle_key(key, action),
-                    WindowEvent::CursorPos(x, y) => window.handle_mouse(x, y),
-                    WindowEvent::Scroll(x, y) => window.handle_scroll(x, y),
-                    WindowEvent::Size(w, h) if w != 0 && h != 0 => window.record_resize(),
-                    WindowEvent::MouseButton(button, action, _) => {
-                        window.handle_mouse_button(button, action)
-                    }
-                    _ => (),
-                }
-            }
-
-            // check resize timing
-            if let Some(last) = window.last_resize() {
-                if Instant::now().duration_since(last) >= Duration::from_millis(100) {
-                    let (w, h) = window.raw_size();
-                    self.resize(w as u32, h as u32);
-                    window.handle_resize(w as u32, h as u32);
-                    window.reset_resize();
-
-                    info!("resized window to {}x{}", w, h);
-                }
-            }
-
-            // pause if just resized
-            polling = window.raw_size() == (0, 0) || window.last_resize().is_some();
+    pub fn handle_window_events(&mut self, events: &Events) {
+        for event in events.events() {
+            let Event::Resize(size) = event;
+            self.resize(size.x as u32, size.y as u32);
         }
     }
 
@@ -710,59 +668,9 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<(Context, Window)> {
-        use glfw::ClientApiHint;
-        use glfw::WindowHint;
-        use glfw::WindowMode;
-
-        use crate::error::Error;
-
-        // create glfw window
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).map_err(|_| Error::InternalGlfw)?;
-
-        glfw.window_hint(WindowHint::Resizable(self.resizable));
-        glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-
-        let (mut window, event_receiver) = glfw
-            .create_window(self.width, self.height, &self.title, WindowMode::Windowed)
-            .expect("bad window");
-
-        window.set_key_polling(true);
-        window.set_scroll_polling(true);
-        window.set_size_polling(true);
-        window.set_cursor_pos_polling(true);
-        window.set_mouse_button_polling(true);
-        window.set_char_polling(true);
-
-        // create context
-        #[cfg(target_os = "windows")]
-        let handle = WindowHandle {
-            hwnd: window.get_win32_window(),
-            width: self.width,
-            height: self.height,
-        };
-
-        #[cfg(target_os = "linux")]
-        let handle = WindowHandle {
-            xlib_window: window.get_x11_window(),
-            xlib_display: glfw.get_x11_display(),
-            width: self.width,
-            height: self.height,
-        };
-
-        #[cfg(target_os = "macos")]
-        let handle = WindowHandle {
-            ns_window: window.get_cocoa_window(),
-            width: self.width,
-            height: self.height,
-        };
-
-        let mut context = Context::new(handle, self.context.quality, self.context.vsync)?;
-
-        // attach glfw to context
-        context.glfw = Some(glfw);
-        context.event_receiver = Some(event_receiver);
-
-        Ok((context, Window::new(window)))
+        let window = Window::new(&self.title, self.width, self.height, self.resizable);
+        let context = Context::new(window.handle(), self.context.quality, self.context.vsync)?;
+        Ok((context, window))
     }
 }
 

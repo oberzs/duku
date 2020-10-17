@@ -8,7 +8,7 @@ use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .build_window(500, 500)
         .title("Draw-it example: Hello")
         .resizable()
@@ -16,15 +16,15 @@ fn main() -> Result<()> {
 
     let mut hue = 0;
 
-    while window.is_open() {
-        context.poll_events(&mut window);
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
 
         hue = (hue + 1) % 360;
 
         context.draw_on_window(None, |target| {
             target.clear_color = Color::hsv(hue, 255, 255);
         });
-    }
+    });
 
     Ok(())
 }

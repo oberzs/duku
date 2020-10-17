@@ -14,7 +14,7 @@ use draw_it::Transform;
 use draw_it::Vector3;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .no_vsync()
         .build_window(720, 640)
         .title("Draw-it example: Materials")
@@ -59,12 +59,9 @@ fn main() -> Result<()> {
         right: "examples/textures/Skybox/glacier_right.png",
     })?;
 
-    while window.is_open() {
-        // update
-        context.poll_events(&mut window);
-
-        let delta_time = context.delta_time();
-        controller.update(&mut camera, &mut window, delta_time);
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
+        controller.update(&mut camera, events, context.delta_time());
 
         context.draw_on_window(Some(&camera), |target| {
             target.skybox = true;
@@ -92,7 +89,7 @@ fn main() -> Result<()> {
             target.material = None;
             target.draw_cube();
         });
-    }
+    });
 
     Ok(())
 }

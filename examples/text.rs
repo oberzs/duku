@@ -8,7 +8,7 @@ use draw_it::Context;
 use draw_it::Result;
 
 fn main() -> Result<()> {
-    let (mut context, mut window) = Context::builder()
+    let (mut context, window) = Context::builder()
         .low_quality()
         .build_window(600, 400)
         .title("Draw-it example: Text")
@@ -17,8 +17,8 @@ fn main() -> Result<()> {
 
     let left = -290.0;
 
-    while window.is_open() {
-        context.poll_events(&mut window);
+    window.main_loop(move |events| {
+        context.handle_window_events(events);
 
         context.draw_on_window(None, |target| {
             target.clear_color = Color::BLACK;
@@ -29,7 +29,7 @@ fn main() -> Result<()> {
             target.text_color = Color::BLUE;
             target.draw_text("Blue text\n.. on multiple lines", (left, 130.0));
         });
-    }
+    });
 
     Ok(())
 }
