@@ -5,6 +5,15 @@
 
 use std::time::Instant;
 
+#[cfg(any(feature = "glsl", feature = "png"))]
+use std::path::Path;
+#[cfg(feature = "glsl")]
+use std::path::PathBuf;
+#[cfg(feature = "glsl")]
+use std::sync::mpsc::Receiver;
+#[cfg(feature = "glsl")]
+use std::sync::mpsc::Sender;
+
 use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
@@ -80,9 +89,9 @@ pub struct Context {
 
     // Hot Reload
     #[cfg(feature = "glsl")]
-    hot_reload_sender: std::sync::mpsc::Sender<(Handle<Shader>, std::path::PathBuf)>,
+    hot_reload_sender: Sender<(Handle<Shader>, PathBuf)>,
     #[cfg(feature = "glsl")]
-    hot_reload_receiver: std::sync::mpsc::Receiver<(Handle<Shader>, std::path::PathBuf)>,
+    hot_reload_receiver: Receiver<(Handle<Shader>, PathBuf)>,
 }
 
 #[derive(Debug, Clone)]
@@ -208,7 +217,7 @@ impl Context {
         })
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
+    pub fn handle_window_resize(&mut self, width: u32, height: u32) {
         self.device.wait_idle();
         self.surface.resize(width, height);
 
@@ -489,14 +498,14 @@ impl Context {
     pub fn handle_window_events(&mut self, events: &Events) {
         for event in events.events() {
             let Event::Resize(size) = event;
-            self.resize(size.x as u32, size.y as u32);
+            self.handle_window_resize(size.x as u32, size.y as u32);
         }
     }
 
     #[cfg(feature = "glsl")]
     pub fn create_shader_glsl(
         &mut self,
-        path: impl AsRef<std::path::Path>,
+        path: impl AsRef<Path>,
         watch: bool,
     ) -> Result<Handle<Shader>> {
         use crate::watch::watch_file;
@@ -523,11 +532,10 @@ impl Context {
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png(
-        &mut self,
-        path: impl AsRef<std::path::Path>,
-    ) -> Result<Handle<Texture>> {
-        let bytes = std::fs::read(path.as_ref())?;
+    pub fn create_texture_png(&mut self, path: impl AsRef<Path>) -> Result<Handle<Texture>> {
+        use std::fs;
+
+        let bytes = fs::read(path.as_ref())?;
         self.create_texture_png_bytes(bytes)
     }
 
@@ -538,28 +546,26 @@ impl Context {
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png_linear(
-        &mut self,
-        path: impl AsRef<std::path::Path>,
-    ) -> Result<Handle<Texture>> {
-        let bytes = std::fs::read(path.as_ref())?;
+    pub fn create_texture_png_linear(&mut self, path: impl AsRef<Path>) -> Result<Handle<Texture>> {
+        use std::fs;
+
+        let bytes = fs::read(path.as_ref())?;
         self.create_texture_png_bytes_linear(bytes)
     }
 
     #[cfg(feature = "png")]
-    pub fn set_skybox_png(
-        &mut self,
-        sides: CubemapSides<impl AsRef<std::path::Path>>,
-    ) -> Result<()> {
+    pub fn set_skybox_png(&mut self, sides: CubemapSides<impl AsRef<Path>>) -> Result<()> {
+        use std::fs;
+
         let mut cubemap = Cubemap::from_png_bytes(
             &self.device,
             CubemapSides {
-                top: std::fs::read(sides.top)?,
-                bottom: std::fs::read(sides.bottom)?,
-                front: std::fs::read(sides.front)?,
-                back: std::fs::read(sides.back)?,
-                left: std::fs::read(sides.left)?,
-                right: std::fs::read(sides.right)?,
+                top: fs::read(sides.top)?,
+                bottom: fs::read(sides.bottom)?,
+                front: fs::read(sides.front)?,
+                back: fs::read(sides.back)?,
+                left: fs::read(sides.left)?,
+                right: fs::read(sides.right)?,
             },
         )?;
         self.shader_images
