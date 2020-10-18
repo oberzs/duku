@@ -121,6 +121,7 @@ impl Controller {
                     // toggle mouse grab if needed
                     if !events.mouse_grab() {
                         events.set_mouse_grab(true);
+                        events.hide_cursor(true);
                     }
 
                     let delta = events.mouse_delta();
@@ -131,6 +132,7 @@ impl Controller {
                     // toggle mouse grab if needed
                     if events.mouse_grab() {
                         events.set_mouse_grab(false);
+                        events.hide_cursor(false);
                     }
                 }
 

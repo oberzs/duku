@@ -12,6 +12,7 @@ use std::time::Duration;
 use std::time::Instant;
 use winit::dpi::PhysicalPosition;
 use winit::dpi::PhysicalSize;
+use winit::event::DeviceEvent;
 use winit::event::ElementState;
 use winit::event::Event as WinitEvent;
 use winit::event::MouseScrollDelta;
@@ -132,16 +133,7 @@ impl Window {
 
                     // mouse position event
                     WindowEvent::CursorMoved { position, .. } => {
-                        let mouse_position = Vector2::new(position.x as f32, position.y as f32);
-                        events.mouse_delta = mouse_position - events.mouse_position;
-                        events.mouse_position = mouse_position;
-                    }
-
-                    // mouse scroll event
-                    WindowEvent::MouseWheel { delta, .. } => {
-                        if let MouseScrollDelta::PixelDelta(pos) = delta {
-                            events.scroll_delta = Vector2::new(pos.x as f32, pos.y as f32);
-                        }
+                        events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
                     }
 
                     // keyboard key event
@@ -175,6 +167,23 @@ impl Window {
                             events.buttons_clicked.remove(&button);
                         }
                     },
+
+                    _ => (),
+                },
+
+                WinitEvent::DeviceEvent { event, .. } => match event {
+                    // mouse scroll event
+                    DeviceEvent::MouseWheel { delta } => {
+                        if let MouseScrollDelta::LineDelta(x, y) = delta {
+                            events.scroll_delta = Vector2::new(x as f32, y as f32);
+                        }
+                    }
+
+                    // mouse delta event
+                    DeviceEvent::MouseMotion { delta } => {
+                        let (x, y) = delta;
+                        events.mouse_delta = Vector2::new(x as f32, y as f32);
+                    }
 
                     _ => (),
                 },
@@ -263,7 +272,7 @@ impl Events {
     }
 
     pub fn hide_cursor(&mut self, hide: bool) {
-        self.window.set_cursor_visible(hide);
+        self.window.set_cursor_visible(!hide);
     }
 
     pub fn set_cursor(&mut self, cursor: Cursor) {
