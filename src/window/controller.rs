@@ -81,16 +81,9 @@ impl Controller {
                     let delta = events.mouse_delta();
 
                     let mouse_x = delta.x * rotation_speed;
-
-                    let change_y = delta.y * rotation_speed;
-                    let upper_bound = change_y + *camera_angle <= 90.0;
-                    let lower_bound = change_y + *camera_angle >= -90.0;
-                    let mouse_y = if upper_bound && lower_bound {
-                        *camera_angle += change_y;
-                        change_y
-                    } else {
-                        0.0
-                    };
+                    let mouse_y =
+                        clamp_change(*camera_angle, delta.y * rotation_speed, -90.0, 90.0);
+                    *camera_angle += mouse_y;
 
                     let pitch = Quaternion::euler_rotation(0.0, mouse_x, 0.0);
                     let roll = Quaternion::euler_rotation(mouse_y, 0.0, 0.0);
@@ -126,6 +119,7 @@ impl Controller {
 
                     let delta = events.mouse_delta();
                     let speed = 50.0 * delta_time;
+
                     transform.move_around_point(*pivot, speed * delta.x, Vector3::UP);
                     transform.move_around_point(*pivot, speed * delta.y, transform.right());
                 } else {
@@ -146,6 +140,7 @@ impl Controller {
 
                 // vertical rotation
                 if events.is_key_pressed(Key::W) {
+                    println!("W is pressed");
                     transform.move_around_point(*pivot, angle, transform.right());
                 }
                 if events.is_key_pressed(Key::S) {
@@ -160,5 +155,13 @@ impl Controller {
                 transform.look_at(*pivot);
             }
         }
+    }
+}
+
+fn clamp_change(current: f32, change: f32, min: f32, max: f32) -> f32 {
+    if current + change > min && current + change < max {
+        change
+    } else {
+        0.0
     }
 }

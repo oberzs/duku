@@ -46,6 +46,7 @@ pub struct Events {
     buttons_pressed: HashSet<MouseButton>,
     buttons_released: HashSet<MouseButton>,
     buttons_clicked: HashSet<MouseButton>,
+    typed_char: Option<char>,
 
     mouse_position: Vector2,
     mouse_delta: Vector2,
@@ -111,108 +112,113 @@ impl Window {
             mouse_delta: Vector2::ZERO,
             mouse_grab: false,
             scroll_delta: Vector2::ZERO,
+            typed_char: None,
             window,
         };
 
         let mut last_resize = None;
 
-        event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Wait;
+        event_loop.run(move |event, _, control_flow| match event {
+            WinitEvent::WindowEvent { event, .. } => match event {
+                // close event
+                WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
 
-            match event {
-                WinitEvent::WindowEvent { event, .. } => match event {
-                    // close event
-                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-
-                    // resize event
-                    WindowEvent::Resized(size) => {
-                        if size.width != 0 && size.height != 0 {
-                            last_resize = Some(Instant::now());
-                        }
+                // resize event
+                WindowEvent::Resized(size) => {
+                    if size.width != 0 && size.height != 0 {
+                        last_resize = Some(Instant::now());
                     }
+                }
 
-                    // mouse position event
-                    WindowEvent::CursorMoved { position, .. } => {
-                        events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
-                    }
+                // mouse position event
+                WindowEvent::CursorMoved { position, .. } => {
+                    events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
+                }
 
-                    // keyboard key event
-                    WindowEvent::KeyboardInput { input, .. } => {
-                        if let Some(key) = input.virtual_keycode {
-                            match input.state {
-                                ElementState::Pressed => {
-                                    events.keys_pressed.insert(key);
-                                    events.keys_typed.insert(key);
-                                    events.keys_released.remove(&key);
-                                }
-                                ElementState::Released => {
-                                    events.keys_released.insert(key);
-                                    events.keys_pressed.remove(&key);
-                                    events.keys_typed.remove(&key);
-                                }
+                // keyboard key event
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if let Some(key) = input.virtual_keycode {
+                        match input.state {
+                            ElementState::Pressed => {
+                                events.keys_typed.insert(key);
+                                events.keys_pressed.insert(key);
+                                events.keys_released.remove(&key);
+                            }
+                            ElementState::Released => {
+                                events.keys_released.insert(key);
+                                events.keys_pressed.remove(&key);
+                                events.keys_typed.remove(&key);
                             }
                         }
                     }
-
-                    // mouse button event
-                    WindowEvent::MouseInput { state, button, .. } => match state {
-                        ElementState::Pressed => {
-                            events.buttons_pressed.insert(button);
-                            events.buttons_clicked.insert(button);
-                            events.buttons_released.remove(&button);
-                        }
-                        ElementState::Released => {
-                            events.buttons_released.insert(button);
-                            events.buttons_pressed.remove(&button);
-                            events.buttons_clicked.remove(&button);
-                        }
-                    },
-
-                    _ => (),
-                },
-
-                WinitEvent::DeviceEvent { event, .. } => match event {
-                    // mouse scroll event
-                    DeviceEvent::MouseWheel { delta } => {
-                        if let MouseScrollDelta::LineDelta(x, y) = delta {
-                            events.scroll_delta = Vector2::new(x as f32, y as f32);
-                        }
-                    }
-
-                    // mouse delta event
-                    DeviceEvent::MouseMotion { delta } => {
-                        let (x, y) = delta;
-                        events.mouse_delta = Vector2::new(x as f32, y as f32);
-                    }
-
-                    _ => (),
-                },
-
-                // draw event
-                WinitEvent::MainEventsCleared => {
-                    // check resize timing
-                    if let Some(last) = last_resize {
-                        if Instant::now().duration_since(last) >= Duration::from_millis(100) {
-                            let size = events.size();
-                            events.events.push(Event::Resize(size));
-                            last_resize = None;
-
-                            info!("resized window to {}x{}", size.x as u32, size.y as u32);
-                        }
-                    }
-
-                    let size = events.size();
-                    if size.x as i32 != 0 && size.y as i32 != 0 && last_resize == None {
-                        main_fn(&mut events);
-                    }
-
-                    events.events.clear();
-                    events.keys_typed.clear();
-                    events.mouse_delta = Vector2::new(0.0, 0.0);
-                    events.scroll_delta = Vector2::new(0.0, 0.0);
                 }
+
+                // mouse button event
+                WindowEvent::MouseInput { state, button, .. } => match state {
+                    ElementState::Pressed => {
+                        events.buttons_clicked.insert(button);
+                        events.buttons_pressed.insert(button);
+                        events.buttons_released.remove(&button);
+                    }
+                    ElementState::Released => {
+                        events.buttons_released.insert(button);
+                        events.buttons_pressed.remove(&button);
+                        events.buttons_clicked.remove(&button);
+                    }
+                },
+
+                // text input event
+                WindowEvent::ReceivedCharacter(c) => {
+                    if !c.is_ascii_control() {
+                        events.typed_char = Some(c);
+                    }
+                }
+
                 _ => (),
+            },
+
+            WinitEvent::DeviceEvent { event, .. } => match event {
+                // mouse scroll event
+                DeviceEvent::MouseWheel { delta } => {
+                    if let MouseScrollDelta::LineDelta(x, y) = delta {
+                        events.scroll_delta = Vector2::new(x as f32, y as f32);
+                    }
+                }
+
+                // mouse delta event
+                DeviceEvent::MouseMotion { delta } => {
+                    let (x, y) = delta;
+                    events.mouse_delta = Vector2::new(x as f32, y as f32);
+                }
+
+                _ => (),
+            },
+
+            // draw event
+            WinitEvent::MainEventsCleared => {
+                // check resize timing
+                if let Some(last) = last_resize {
+                    if Instant::now().duration_since(last) >= Duration::from_millis(100) {
+                        let size = events.size();
+                        events.events.push(Event::Resize(size));
+                        last_resize = None;
+
+                        info!("resized window to {}x{}", size.x as u32, size.y as u32);
+                    }
+                }
+
+                let size = events.size();
+                if size.x as i32 != 0 && size.y as i32 != 0 && last_resize == None {
+                    main_fn(&mut events);
+                }
+
+                events.events.clear();
+                events.keys_typed.clear();
+                events.typed_char = None;
+                events.mouse_delta = Vector2::new(0.0, 0.0);
+                events.scroll_delta = Vector2::new(0.0, 0.0);
             }
+            _ => (),
         });
     }
 }
@@ -290,5 +296,9 @@ impl Events {
 
     pub fn set_title(&mut self, title: impl AsRef<str>) {
         self.window.set_title(title.as_ref());
+    }
+
+    pub const fn typed_char(&self) -> Option<char> {
+        self.typed_char
     }
 }

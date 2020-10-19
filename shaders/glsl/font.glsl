@@ -4,7 +4,7 @@
 // bitmap font shader
 
 #define DEPTH write
-#define CULL back
+#define CULL disabled
 #define SHAPE filled_triangles 
 
 layout(location = 0) out vec4 frag_color;
