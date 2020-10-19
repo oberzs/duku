@@ -88,12 +88,15 @@ impl Transform {
 
     pub fn move_around_point(
         &mut self,
-        _point: impl Into<Vector3>,
+        point: impl Into<Vector3>,
         angle: f32,
         axis: impl Into<Vector3>,
     ) {
+        let point = point.into();
         let rotation = Quaternion::axis_rotation(axis, angle);
+        self.position -= point;
         self.position = rotation.rotate_vector(self.position);
+        self.position += point;
     }
 
     pub fn look_dir(&mut self, dir: impl Into<Vector3>) {
