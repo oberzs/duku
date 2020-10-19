@@ -270,7 +270,8 @@ impl Device {
         }
     }
 
-    pub(crate) fn present(&self, swapchain: &Swapchain) {
+    // returns 'true' if swapchain should be resized
+    pub(crate) fn present(&self, swapchain: &Swapchain) -> bool {
         let wait = [self.sync_release[self.current_frame]];
         let image = [swapchain.current() as u32];
         let handle = [swapchain.handle()];
@@ -286,8 +287,14 @@ impl Device {
             p_results: ptr::null(),
         };
 
-        unsafe {
-            vk::check(vk::queue_present_khr(self.queue.1, &info));
+        let present_result = unsafe { vk::queue_present_khr(self.queue.1, &info) };
+
+        // check if should resize
+        if present_result == vk::ERROR_OUT_OF_DATE_KHR {
+            true
+        } else {
+            vk::check(present_result);
+            false
         }
     }
 

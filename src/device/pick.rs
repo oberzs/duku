@@ -55,6 +55,10 @@ pub(crate) fn pick_gpu(
             if !props.supports_msaa(msaa) {
                 score = 0;
             }
+            if props.capabilities.current_extent.width == u32::max_value() {
+                // happens for Wayland window surfaces
+                score = 0;
+            }
 
             let format = props.formats.iter().find(|f| {
                 f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR

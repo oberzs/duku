@@ -46,7 +46,6 @@
 
 - [x] **Windows**
 - [x] **Linux X11**
-- [ ] **Linux Wayland** - planned, not supported
 - [ ] **MacOS** - not tested, help wanted
 
 ## Simple Example

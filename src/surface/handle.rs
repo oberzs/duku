@@ -9,8 +9,6 @@ use std::os::raw::c_void;
 #[derive(Debug, Copy, Clone)]
 pub struct WindowHandle {
     pub hwnd: *const c_void,
-    pub width: u32,
-    pub height: u32,
 }
 
 #[cfg(target_os = "linux")]
@@ -18,14 +16,10 @@ pub struct WindowHandle {
 pub struct WindowHandle {
     pub xlib_window: *mut c_void,
     pub xlib_display: *mut c_void,
-    pub width: u32,
-    pub height: u32,
 }
 
 #[cfg(target_os = "macos")]
 #[derive(Debug, Copy, Clone)]
 pub struct WindowHandle {
     pub ns_window: *mut c_void,
-    pub width: u32,
-    pub height: u32,
 }

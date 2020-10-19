@@ -6,7 +6,6 @@
 mod properties;
 mod version;
 
-use std::cmp;
 use std::ffi::CStr;
 use std::mem;
 use std::ptr;
@@ -254,17 +253,7 @@ impl Instance {
             }
 
             // pick extent
-            let mut extent = capabilities.current_extent;
-            let min_width = capabilities.min_image_extent.width;
-            let max_width = capabilities.max_image_extent.width;
-            let min_height = capabilities.min_image_extent.height;
-            let max_height = capabilities.max_image_extent.height;
-
-            if extent.width == u32::max_value() {
-                let width = cmp::max(cmp::min(surface.width(), max_width), min_width);
-                let height = cmp::max(cmp::min(surface.height(), max_height), min_height);
-                extent = vk::Extent2D { width, height };
-            }
+            let extent = capabilities.current_extent;
 
             // pick image count
             let min_image_count = capabilities.min_image_count;

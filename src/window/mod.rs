@@ -76,12 +76,8 @@ impl Window {
     pub(crate) fn handle(&self) -> WindowHandle {
         use winit::platform::windows::WindowExtWindows;
 
-        let size = self.window.inner_size();
-
         WindowHandle {
             hwnd: self.window.hwnd(),
-            width: size.width,
-            height: size.height,
         }
     }
 

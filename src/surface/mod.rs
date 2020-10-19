@@ -19,8 +19,6 @@ pub use properties::VSync;
 
 pub(crate) struct Surface {
     handle: vk::SurfaceKHR,
-    width: u32,
-    height: u32,
 }
 
 impl Surface {
@@ -36,11 +34,7 @@ impl Surface {
 
         let handle = instance.create_win32_surface(&info);
 
-        Self {
-            handle,
-            width: window.width,
-            height: window.height,
-        }
+        Self { handle }
     }
 
     #[cfg(target_os = "linux")]
@@ -55,11 +49,7 @@ impl Surface {
 
         let handle = instance.create_linux_surface(&info);
 
-        Self {
-            handle,
-            width: window.width,
-            height: window.height,
-        }
+        Self { handle }
     }
 
     #[cfg(target_os = "macos")]
@@ -75,24 +65,7 @@ impl Surface {
 
         let handle = instance.create_macos_surface(&info);
 
-        Self {
-            handle,
-            width: window.width,
-            height: window.height,
-        }
-    }
-
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
-    }
-
-    pub(crate) const fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub(crate) const fn height(&self) -> u32 {
-        self.height
+        Self { handle }
     }
 
     pub(crate) const fn handle(&self) -> vk::SurfaceKHR {

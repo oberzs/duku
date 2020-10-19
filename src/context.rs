@@ -50,8 +50,6 @@ use crate::surface::VSync;
 use crate::surface::WindowHandle;
 
 #[cfg(feature = "window")]
-use crate::window::Event;
-#[cfg(feature = "window")]
 use crate::window::Events;
 #[cfg(feature = "window")]
 use crate::window::Window;
@@ -215,29 +213,6 @@ impl Context {
             #[cfg(feature = "glsl")]
             hot_reload_receiver,
         })
-    }
-
-    pub fn handle_window_resize(&mut self, width: u32, height: u32) {
-        self.device.wait_idle();
-        self.surface.resize(width, height);
-
-        let gpu_properties = self
-            .instance
-            .gpu_properties(&self.surface)
-            .remove(self.gpu_index);
-        self.swapchain
-            .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
-
-        for framebuffer in &self.window_framebuffers {
-            framebuffer.destroy(&self.device);
-        }
-
-        self.window_framebuffers = Framebuffer::for_swapchain(
-            &self.device,
-            &self.swapchain,
-            &self.shader_layout,
-            self.msaa,
-        );
     }
 
     #[allow(single_use_lifetimes)]
@@ -481,7 +456,7 @@ impl Context {
     fn end_draw(&mut self) {
         self.render_stage = RenderStage::Before;
         self.device.submit();
-        self.device.present(&self.swapchain);
+        let should_resize = self.device.present(&self.swapchain);
 
         // update delta time
         let delta_time = self.frame_time.elapsed();
@@ -492,14 +467,35 @@ impl Context {
         self.frame_count += 1;
         self.fps =
             (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
+
+        // resize if needed
+        if should_resize {
+            self.device.wait_idle();
+
+            let gpu_properties = self
+                .instance
+                .gpu_properties(&self.surface)
+                .remove(self.gpu_index);
+            self.swapchain
+                .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
+
+            for framebuffer in &self.window_framebuffers {
+                framebuffer.destroy(&self.device);
+            }
+
+            self.window_framebuffers = Framebuffer::for_swapchain(
+                &self.device,
+                &self.swapchain,
+                &self.shader_layout,
+                self.msaa,
+            );
+        }
     }
 
     #[cfg(feature = "window")]
+    #[allow(unused, clippy::unused_self)]
     pub fn handle_window_events(&mut self, events: &Events) {
-        for event in events.events() {
-            let Event::Resize(size) = event;
-            self.handle_window_resize(size.x as u32, size.y as u32);
-        }
+        // TODO
     }
 
     #[cfg(feature = "glsl")]

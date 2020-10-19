@@ -10371,6 +10371,8 @@ pub const STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR: u32 = 1000009000;
 pub const STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK: u32 = 1000123000;
 pub const IMAGE_LAYOUT_PRESENT_SRC_KHR: u32 = 1000001002;
 
+pub const ERROR_OUT_OF_DATE_KHR: i32 = -1000001004;
+
 // Utils
 pub fn check(result: Result) {
     match result {
@@ -10387,6 +10389,6 @@ pub fn check(result: Result) {
         ERROR_TOO_MANY_OBJECTS => panic!("too many objects of type have been created"),
         ERROR_FORMAT_NOT_SUPPORTED => panic!("requested format is not supported"),
         ERROR_FRAGMENTED_POOL => panic!("pool allocation failed due to fragmentation"),
-        n => panic!("unknown Vulkan error has occured: {}", n),
+        n => panic!("unknowned error has occured: {}", n),
     }
 }
