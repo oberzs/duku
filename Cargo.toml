@@ -7,9 +7,22 @@ edition = "2018"
 [[bin]]
 name = "dic"
 path = "src/dic.rs"
+required-features = ["glsl"]
+
+[[example]]
+name = "materials"
+required-features = ["png"]
+
+[[example]]
+name = "surface"
+required-features = ["glsl"]
+
+[[example]]
+name = "textures"
+required-features = ["png"]
 
 [features]
-default = ["window", "png", "glsl"]
+default = ["window"]
 glsl = ["shaderc"]
 window = ["winit"]
 log = []
