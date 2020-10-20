@@ -83,7 +83,12 @@ impl Window {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn handle(&self) -> WindowHandle {
-        unimplemented!()
+        use winit::platform::unix::WindowExtUnix;
+
+        WindowHandle {
+            xlib_window: self.window.xlib_window().expect("Wayland not supported"),
+            xlib_display: self.window.xlib_display().expect("Wayland not supported"),
+        }
     }
 
     #[cfg(target_os = "macos")]

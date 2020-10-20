@@ -5,6 +5,9 @@
 
 use std::os::raw::c_void;
 
+#[cfg(target_os = "linux")]
+use std::os::raw::c_ulong;
+
 #[cfg(target_os = "windows")]
 #[derive(Debug, Copy, Clone)]
 pub struct WindowHandle {
@@ -14,7 +17,7 @@ pub struct WindowHandle {
 #[cfg(target_os = "linux")]
 #[derive(Debug, Copy, Clone)]
 pub struct WindowHandle {
-    pub xlib_window: *mut c_void,
+    pub xlib_window: c_ulong,
     pub xlib_display: *mut c_void,
 }
 

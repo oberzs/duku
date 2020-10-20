@@ -44,7 +44,7 @@ impl Surface {
             p_next: ptr::null(),
             flags: 0,
             dpy: window.xlib_display.cast(),
-            window: window.xlib_window as u64,
+            window: window.xlib_window,
         };
 
         let handle = instance.create_linux_surface(&info);
