@@ -42,6 +42,9 @@
 - [x] **Text** - uses Fira Mono font (upcoming support for custom fonts) 
 - [x] **No dependencies** - all Rust dependencies are optional
 - [ ] **UI** - immediate mode UI (not yet supported)
+- [ ] **Headless rendering** - rendering with no window (not yet supported)
+
+All these features will be completed for release `0.1.0`
 
 ## Support
 
