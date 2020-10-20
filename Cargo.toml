@@ -4,25 +4,8 @@ version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
 
-[[bin]]
-name = "dic"
-path = "src/dic.rs"
-required-features = ["glsl"]
-
-[[example]]
-name = "materials"
-required-features = ["png"]
-
-[[example]]
-name = "surface"
-required-features = ["glsl"]
-
-[[example]]
-name = "textures"
-required-features = ["png"]
-
 [features]
-default = ["window"]
+default = []
 glsl = ["shaderc"]
 window = ["winit"]
 log = []
@@ -32,3 +15,40 @@ log = []
 winit = { version = "0.23.0", optional = true }
 png = { version = "0.16.7", default-features = false, optional = true }
 shaderc = { version = "0.6.2", optional = true }
+
+[[bin]]
+name = "dic"
+path = "src/dic.rs"
+required-features = ["glsl"]
+
+[[example]]
+name = "dynamic"
+required-features = ["window"]
+
+[[example]]
+name = "hello"
+required-features = ["window"]
+
+[[example]]
+name = "lines"
+required-features = ["window"]
+
+[[example]]
+name = "materials"
+required-features = ["window", "png"]
+
+[[example]]
+name = "shapes"
+required-features = ["window"]
+
+[[example]]
+name = "surface"
+required-features = ["window", "glsl"]
+
+[[example]]
+name = "text"
+required-features = ["window"]
+
+[[example]]
+name = "textures"
+required-features = ["window", "png"]
