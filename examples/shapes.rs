@@ -23,6 +23,8 @@ fn main() -> Result<()> {
             target.transform.move_up(200.0);
             target.transform.scale.y = -1.0;
 
+            target.border_width = 5.0;
+
             target.shape_color = Color::GREEN;
             target.draw_rectangle((10.0, 10.0), (150.0, 100.0));
 

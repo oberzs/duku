@@ -3,8 +3,8 @@
 
 // line rendering shader
 
-#define DEPTH disabled
-#define CULL back
+#define DEPTH test_and_write
+#define CULL disabled
 #define SHAPE lines
 
 layout(location = 0) out vec4 out_color;

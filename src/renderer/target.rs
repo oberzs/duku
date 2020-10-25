@@ -42,11 +42,15 @@ pub struct Target<'a, 'b> {
 
     // lines
     pub line_color: Color,
+    pub line_width: f32,
     pub(crate) line_orders: Vec<LineOrder>,
 
     // shapes
     pub shape_color: Color,
     pub shape_mode: ShapeMode,
+    pub border_color: Color,
+    pub border_mode: BorderMode,
+    pub border_width: f32,
     pub(crate) shape_orders: Vec<ShapeOrder>,
 
     // text
@@ -67,6 +71,14 @@ pub struct Target<'a, 'b> {
 pub enum ShapeMode {
     Corner,
     Center,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum BorderMode {
+    Outside,
+    Inside,
+    Center,
+    Disabled,
 }
 
 pub(crate) struct OrdersByShader {
@@ -114,7 +126,12 @@ struct Cache {
     line_color: Color,
     shape_color: Color,
     text_color: Color,
+    border_color: Color,
     font_size: u32,
+    border_width: f32,
+    line_width: f32,
+    shape_mode: ShapeMode,
+    border_mode: BorderMode,
 }
 
 impl<'b> Target<'_, 'b> {
@@ -126,10 +143,11 @@ impl<'b> Target<'_, 'b> {
             shape_orders: vec![],
             cache: vec![],
             shape_mode: ShapeMode::Corner,
-            clear_color: Color::WHITE,
-            text_color: Color::BLACK,
-            line_color: Color::BLACK,
-            shape_color: Color::BLACK,
+            clear_color: Color::BLACK,
+            text_color: Color::WHITE,
+            line_color: Color::WHITE,
+            shape_color: Color::WHITE,
+            border_color: Color::GRAY,
             transform: Transform::default(),
             lights: [
                 Light::main((-1.0, -1.0, 1.0), Color::WHITE, 10.0),
@@ -139,6 +157,9 @@ impl<'b> Target<'_, 'b> {
             ],
             texture_filter: TextureFilter::Linear,
             texture_wrap: TextureWrap::Repeat,
+            border_width: 1.0,
+            line_width: 1.0,
+            border_mode: BorderMode::Inside,
             font_size: 24,
             font: None,
             shader: None,
@@ -159,6 +180,11 @@ impl<'b> Target<'_, 'b> {
             shape_color: self.shape_color,
             text_color: self.text_color,
             font_size: self.font_size,
+            border_color: self.border_color,
+            line_width: self.line_width,
+            border_mode: self.border_mode,
+            shape_mode: self.shape_mode,
+            border_width: self.border_width,
         });
     }
 
@@ -169,6 +195,11 @@ impl<'b> Target<'_, 'b> {
             self.shape_color = cache.shape_color;
             self.text_color = cache.text_color;
             self.font_size = cache.font_size;
+            self.border_color = cache.border_color;
+            self.line_width = cache.line_width;
+            self.border_mode = cache.border_mode;
+            self.shape_mode = cache.shape_mode;
+            self.border_width = cache.border_width;
         }
     }
 
@@ -325,7 +356,7 @@ impl<'b> Target<'_, 'b> {
                 _ => Color::rgba(255, 255, 255, 50),
             };
 
-            self.draw_line((xx, 0.0, z_min), (xx, 0.0, z_max));
+            self.draw_line_debug((xx, 0.0, z_min), (xx, 0.0, z_max));
         }
 
         for z in -half..half {
@@ -340,7 +371,7 @@ impl<'b> Target<'_, 'b> {
                 _ => Color::rgba(255, 255, 255, 50),
             };
 
-            self.draw_line((x_min, 0.0, zz), (x_max, 0.0, zz));
+            self.draw_line_debug((x_min, 0.0, zz), (x_max, 0.0, zz));
         }
 
         self.pop();
@@ -361,7 +392,7 @@ impl<'b> Target<'_, 'b> {
         });
     }
 
-    pub fn draw_line(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
+    pub fn draw_line_debug(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
         self.line_orders.push(LineOrder {
             color: self.line_color,
             points: [point_1.into(), point_2.into()],
@@ -387,6 +418,30 @@ impl<'b> Target<'_, 'b> {
                 sampler_index: 0,
             });
         }
+
+        // draw borders
+        if self.border_mode != BorderMode::Disabled {
+            self.push();
+            self.transform.move_backward(0.00001);
+            self.draw_path(
+                points,
+                true,
+                self.border_mode,
+                self.border_color,
+                self.border_width,
+            );
+            self.pop();
+        }
+    }
+
+    pub fn draw_lines(&mut self, points: &[Vector2], closed: bool) {
+        self.draw_path(
+            points,
+            closed,
+            BorderMode::Center,
+            self.line_color,
+            self.line_width,
+        );
     }
 
     pub fn draw_rectangle(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
@@ -516,6 +571,92 @@ impl<'b> Target<'_, 'b> {
         }
     }
 
+    fn draw_path(
+        &mut self,
+        path: &[Vector2],
+        closed: bool,
+        border_mode: BorderMode,
+        color: Color,
+        width: f32,
+    ) {
+        // generate normals
+        let mut normals = vec![];
+
+        let mut points = path.to_vec();
+        if closed {
+            points.push(path[0]);
+        }
+
+        for i in 1..points.len() {
+            let prev = points[i - 1];
+            let curr = points[i];
+            let next = points.get(i + 1);
+
+            let line_a = (curr - prev).unit();
+
+            if i == 1 {
+                // first segment
+                normals.push(line_a.normal());
+            }
+
+            if let Some(n) = next {
+                let line_b = (*n - curr).unit();
+                normals.push(miter(line_a, line_b));
+            } else {
+                // last segment
+                normals.push(line_a.normal());
+            }
+        }
+
+        if points.len() > 2 && closed {
+            // connect first and last normals
+            let prev = points[points.len() - 2];
+            let curr = points[0];
+            let next = points[1];
+
+            let line_a = (curr - prev).unit();
+            let line_b = (next - curr).unit();
+
+            let m = miter(line_a, line_b);
+            normals[0] = m;
+            normals[points.len() - 1] = m;
+        }
+
+        // render lines
+        self.push();
+        self.shape_color = color;
+        self.border_mode = BorderMode::Disabled;
+        for i in 0..(normals.len() - 1) {
+            let curr_norm = normals[i];
+            let next_norm = normals[i + 1];
+            let curr_point = points[i];
+            let next_point = *points.get(i + 1).unwrap_or(&points[0]);
+
+            match border_mode {
+                BorderMode::Center => self.draw_shape(&[
+                    curr_point + curr_norm * width * 0.5,
+                    next_point + next_norm * width * 0.5,
+                    next_point - next_norm * width * 0.5,
+                    curr_point - curr_norm * width * 0.5,
+                ]),
+                BorderMode::Outside => self.draw_shape(&[
+                    curr_point + curr_norm * width,
+                    next_point + next_norm * width,
+                    next_point,
+                    curr_point,
+                ]),
+                BorderMode::Inside => self.draw_shape(&[
+                    curr_point,
+                    next_point,
+                    next_point - next_norm * width,
+                    curr_point - curr_norm * width,
+                ]),
+                BorderMode::Disabled => (),
+            }
+        }
+        self.pop();
+    }
+
     const fn sampler_index(&self) -> u32 {
         use TextureFilter as F;
         use TextureWrap as W;
@@ -535,4 +676,13 @@ impl<'b> Target<'_, 'b> {
             (F::Nearest, W::ClampEdge, false) => 11,
         }
     }
+}
+
+fn miter(line_a: Vector2, line_b: Vector2) -> Vector2 {
+    let tangent = (line_a + line_b).unit();
+    let miter = tangent.normal();
+    let norm_a = line_a.normal();
+    let miter_len = 1.0 / miter.dot(norm_a);
+
+    miter * miter_len
 }

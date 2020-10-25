@@ -215,7 +215,7 @@ impl Shader {
             flags: 0,
             depth_test_enable: modes.depth.test(),
             depth_write_enable: modes.depth.write(),
-            depth_compare_op: vk::COMPARE_OP_LESS_OR_EQUAL,
+            depth_compare_op: vk::COMPARE_OP_LESS,
             depth_bounds_test_enable: vk::FALSE,
             stencil_test_enable: vk::FALSE,
             front: vk::StencilOpState {

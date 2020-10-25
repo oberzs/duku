@@ -41,6 +41,10 @@ impl Vector2 {
         *self * if scale.is_infinite() { 0.0 } else { scale }
     }
 
+    pub fn normal(&self) -> Self {
+        Vector2::new(-self.y, self.x)
+    }
+
     pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
