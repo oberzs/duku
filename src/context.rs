@@ -19,8 +19,6 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
-use crate::image::Cubemap;
-use crate::image::CubemapSides;
 use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Msaa;
@@ -48,6 +46,11 @@ use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
+
+#[cfg(feature = "png")]
+use crate::image::Cubemap;
+#[cfg(feature = "png")]
+use crate::image::CubemapSides;
 
 #[cfg(feature = "window")]
 use crate::window::Events;

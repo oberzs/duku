@@ -3,7 +3,7 @@
 
 // line rendering shader
 
-#define DEPTH test_and_write
+#define DEPTH disabled
 #define CULL back
 #define SHAPE lines
 
