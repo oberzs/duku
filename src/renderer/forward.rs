@@ -162,6 +162,11 @@ impl ForwardRenderer {
             record_meshes(cmd, &target, &stores, shader_layout);
         }
 
+        // shape rendering
+        if !target.shape_orders.is_empty() {
+            record_shapes(device, framebuffer, &target, &stores, shader_layout);
+        }
+
         // text rendering
         if !target.text_orders.is_empty() {
             record_text(device, framebuffer, &target, &stores, shader_layout);
@@ -170,11 +175,6 @@ impl ForwardRenderer {
         // line rendering
         if !target.line_orders.is_empty() {
             record_lines(device, framebuffer, &target, &stores, shader_layout);
-        }
-
-        // shape rendering
-        if !target.shape_orders.is_empty() {
-            record_shapes(device, framebuffer, &target, &stores, shader_layout);
         }
 
         // end rendering
