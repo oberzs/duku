@@ -18,7 +18,7 @@ pub(crate) struct ShaderImages {
     descriptor: Descriptor,
     samplers: Vec<Sampler>,
     images: Vec<Option<vk::ImageView>>,
-    skybox: Option<vk::ImageView>,
+    cubemaps: Vec<Option<vk::ImageView>>,
     should_update: bool,
 }
 
@@ -44,12 +44,12 @@ impl ShaderImages {
             descriptor,
             samplers,
             images: vec![],
-            skybox: None,
+            cubemaps: vec![],
             should_update: true,
         }
     }
 
-    pub(crate) fn add(&mut self, image: vk::ImageView) -> u32 {
+    pub(crate) fn add_image(&mut self, image: vk::ImageView) -> u32 {
         let next_index = self.images.len();
 
         // find free index
@@ -70,7 +70,7 @@ impl ShaderImages {
         index as u32
     }
 
-    pub(crate) fn remove(&mut self, index: u32) {
+    pub(crate) fn remove_image(&mut self, index: u32) {
         debug_assert!(
             (index as usize) < self.images.len(),
             "image index out of bounds"
@@ -82,7 +82,7 @@ impl ShaderImages {
         self.should_update = true;
     }
 
-    pub(crate) fn replace(&mut self, index: u32, image: vk::ImageView) {
+    pub(crate) fn replace_image(&mut self, index: u32, image: vk::ImageView) {
         debug_assert!(
             (index as usize) < self.images.len(),
             "image index out of bounds"
@@ -93,8 +93,36 @@ impl ShaderImages {
         self.should_update = true;
     }
 
-    pub(crate) fn set_skybox(&mut self, image: vk::ImageView) {
-        self.skybox = Some(image);
+    pub(crate) fn add_cubemap(&mut self, image: vk::ImageView) -> u32 {
+        let next_index = self.cubemaps.len();
+
+        // find free index
+        let index = self
+            .cubemaps
+            .iter()
+            .position(|img| img.is_none())
+            .unwrap_or(next_index);
+
+        // add new or replace image
+        if index == next_index {
+            self.cubemaps.push(Some(image));
+        } else {
+            self.cubemaps[index] = Some(image);
+        }
+
+        self.should_update = true;
+        index as u32
+    }
+
+    pub(crate) fn remove_cubemap(&mut self, index: u32) {
+        debug_assert!(
+            (index as usize) < self.cubemaps.len(),
+            "image index out of bounds"
+        );
+
+        // mark image as removed
+        self.cubemaps[index as usize] = None;
+
         self.should_update = true;
     }
 
@@ -155,24 +183,31 @@ impl ShaderImages {
                 p_texel_buffer_view: ptr::null(),
             });
 
-            // configure skybox write to descriptor
-            let mut skybox_info = vec![];
-            if let Some(skybox) = self.skybox {
-                skybox_info.push(vk::DescriptorImageInfo {
-                    sampler: 0,
-                    image_view: skybox,
-                    image_layout: ImageLayout::ShaderColor.flag(),
-                });
-            };
+            // configure cubemap writes to descriptor
+            let cubemap_infos: Vec<_> = (0..100)
+                .map(|i| {
+                    // get cubemap or default cubemap
+                    let cubemap = match self.cubemaps.get(i) {
+                        Some(Some(cbm)) => *cbm,
+                        _ => self.cubemaps[0].expect("bad code"),
+                    };
+
+                    vk::DescriptorImageInfo {
+                        sampler: 0,
+                        image_view: cubemap,
+                        image_layout: ImageLayout::ShaderColor.flag(),
+                    }
+                })
+                .collect();
             writes.push(vk::WriteDescriptorSet {
                 s_type: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 p_next: ptr::null(),
                 dst_set: self.descriptor.1,
                 dst_binding: 2,
                 dst_array_element: 0,
-                descriptor_count: skybox_info.len() as u32,
+                descriptor_count: cubemap_infos.len() as u32,
                 descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                p_image_info: skybox_info.as_ptr(),
+                p_image_info: cubemap_infos.as_ptr(),
                 p_buffer_info: ptr::null(),
                 p_texel_buffer_view: ptr::null(),
             });

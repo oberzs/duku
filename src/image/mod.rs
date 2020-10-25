@@ -19,12 +19,12 @@ use crate::pipeline::Attachment;
 use crate::vk;
 use properties::with_alpha;
 
-pub(crate) use cubemap::Cubemap;
 pub(crate) use properties::ImageFormat;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
 pub(crate) use size::Size;
 
+pub use cubemap::Cubemap;
 pub use cubemap::CubemapSides;
 pub use framebuffer::Framebuffer;
 pub use properties::Msaa;

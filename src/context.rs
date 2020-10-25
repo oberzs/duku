@@ -69,7 +69,6 @@ pub struct Context {
 
     // Resources
     storage: Storage,
-    skybox: Cubemap,
     builtins: Builtins,
 
     // Renderers
@@ -159,20 +158,6 @@ impl Context {
             &shader_layout,
             &mut shader_images,
         );
-        let mut skybox = Cubemap::new(
-            &device,
-            1,
-            ImageFormat::Rgba,
-            CubemapSides {
-                top: vec![255, 255, 255, 255],
-                bottom: vec![255, 255, 255, 255],
-                front: vec![255, 255, 255, 255],
-                back: vec![255, 255, 255, 255],
-                left: vec![255, 255, 255, 255],
-                right: vec![255, 255, 255, 255],
-            },
-        );
-        shader_images.set_skybox(skybox.add_view(&device));
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
@@ -203,7 +188,6 @@ impl Context {
             builtins,
             instance,
             surface,
-            skybox,
             device,
             msaa,
             vsync,
@@ -565,11 +549,15 @@ impl Context {
     }
 
     #[cfg(feature = "png")]
-    pub fn set_skybox_png(&mut self, sides: CubemapSides<impl AsRef<Path>>) -> Result<()> {
+    pub fn create_cubemap_png(
+        &mut self,
+        sides: CubemapSides<impl AsRef<Path>>,
+    ) -> Result<Handle<Cubemap>> {
         use std::fs;
 
-        let mut cubemap = Cubemap::from_png_bytes(
+        let cubemap = Cubemap::from_png_bytes(
             &self.device,
+            &mut self.shader_images,
             CubemapSides {
                 top: fs::read(sides.top)?,
                 bottom: fs::read(sides.bottom)?,
@@ -579,18 +567,13 @@ impl Context {
                 right: fs::read(sides.right)?,
             },
         )?;
-        self.shader_images
-            .set_skybox(cubemap.add_view(&self.device));
-        self.skybox.destroy(&self.device);
-        self.skybox = cubemap;
-        Ok(())
+        Ok(self.storage.add_cubemap(cubemap))
     }
 }
 
 impl Drop for Context {
     fn drop(&mut self) {
         self.device.wait_idle();
-        self.skybox.destroy(&self.device);
         self.shader_images.destroy(&self.device);
         self.storage.clear(&self.device, &mut self.shader_images);
         self.forward_renderer.destroy(&self.device);

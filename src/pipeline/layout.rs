@@ -62,6 +62,7 @@ impl ShaderLayout {
 
         // image uniform layout
         let max_image_count = 100;
+        let max_cubemap_count = 100;
         let sampler_count = 2 * 3 * 2;
         let image_binding = vk::DescriptorSetLayoutBinding {
             binding: 0,
@@ -77,14 +78,14 @@ impl ShaderLayout {
             stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
             p_immutable_samplers: ptr::null(),
         };
-        let skybox_binding = vk::DescriptorSetLayoutBinding {
+        let cubemap_binding = vk::DescriptorSetLayoutBinding {
             binding: 2,
             descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            descriptor_count: 1,
+            descriptor_count: max_cubemap_count,
             stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
             p_immutable_samplers: ptr::null(),
         };
-        let image_bindings = [image_binding, sampler_binding, skybox_binding];
+        let image_bindings = [image_binding, sampler_binding, cubemap_binding];
         let image_layout = device.create_descriptor_set_layout(&image_bindings);
 
         let image_pool_size = vk::DescriptorPoolSize {

@@ -19,6 +19,7 @@ pub(crate) struct ShaderWorld {
     pub(crate) shadow_cascades: [f32; 4],
     pub(crate) shadow_bias: f32,
     pub(crate) shadow_pcf: f32,
+    pub(crate) skybox_index: u32,
 }
 
 #[derive(Copy, Clone)]

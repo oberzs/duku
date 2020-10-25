@@ -141,6 +141,7 @@ impl ForwardRenderer {
                 camera_position: camera.transform.position,
                 world_to_view: camera.world_to_view(),
                 view_to_clip: camera.view_to_clip(),
+                skybox_index: target.skybox.map(|s| s.id()).unwrap_or(0),
                 lights,
                 shadow_pcf,
             },
@@ -152,7 +153,7 @@ impl ForwardRenderer {
         cmd.bind_descriptor(shader_layout, framebuffer.world());
 
         // skybox rendering
-        if target.skybox {
+        if target.skybox.is_some() {
             record_skybox(cmd, &target, &stores, shader_layout, camera);
         }
 
@@ -251,6 +252,7 @@ impl ForwardRenderer {
                     shadow_cascades: [0.0; 4],
                     shadow_bias: 0.0,
                     shadow_pcf: 0.0,
+                    skybox_index: 0,
                     time: 0.0,
                 },
             );

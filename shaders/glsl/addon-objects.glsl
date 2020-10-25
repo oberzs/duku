@@ -19,6 +19,7 @@ layout(set = 0, binding = 0) uniform World {
     vec4 shadow_cascades;
     float shadow_bias;
     float shadow_pcf;
+    uint skybox_index;
 } world;
 
 layout(set = 1, binding = 0) uniform Material {

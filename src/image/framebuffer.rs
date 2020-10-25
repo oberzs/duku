@@ -166,7 +166,7 @@ impl Framebuffer {
         let shape_mesh = Mesh::new(device);
 
         let mut shader_image = Image::shader(device, size);
-        let shader_index = shader_images.add(shader_image.add_view(device));
+        let shader_index = shader_images.add_image(shader_image.add_view(device));
 
         // ready image layouts
         shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -250,7 +250,7 @@ impl Framebuffer {
             };
 
             let mut shader_image = Image::shader(device, self.size);
-            shader_images.replace(
+            shader_images.replace_image(
                 self.shader_index.expect("bad shader index"),
                 shader_image.add_view(device),
             );

@@ -15,7 +15,7 @@ layout(location = 11) in mat3 in_tbn;
 
 layout(set = 2, binding = 0) uniform texture2D textures[100];
 layout(set = 2, binding = 1) uniform sampler samplers[12];
-layout(set = 2, binding = 2) uniform textureCube skybox;
+layout(set = 2, binding = 2) uniform textureCube cubemaps[100];
 layout(set = 3, binding = 0) uniform texture2D shadow_maps[4];
 
 // sampler combinations
@@ -35,6 +35,10 @@ layout(set = 3, binding = 0) uniform texture2D shadow_maps[4];
 // texture lookup functions
 vec4 tex(uint index, vec2 uv) {
     return texture(sampler2D(textures[index], samplers[object.sampler_index]), uv);
+}
+
+vec4 cub(uint index, vec3 dir) {
+    return texture(samplerCube(cubemaps[index], sampler_em), dir);
 }
 
 vec2 tex_size(uint index) {

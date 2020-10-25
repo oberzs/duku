@@ -7,6 +7,7 @@ use std::f32::consts::PI;
 
 use crate::color::Color;
 use crate::font::Font;
+use crate::image::Cubemap;
 use crate::image::Texture;
 use crate::image::TextureFilter;
 use crate::image::TextureWrap;
@@ -24,7 +25,7 @@ use crate::storage::Handle;
 pub struct Target<'a, 'b> {
     // global
     pub clear_color: Color,
-    pub skybox: bool,
+    pub skybox: Option<&'a Handle<Cubemap>>,
     pub transform: Transform,
     pub(crate) builtins: &'b Builtins,
 
@@ -143,7 +144,7 @@ impl<'b> Target<'_, 'b> {
             shader: None,
             material: None,
             texture_mipmaps: true,
-            skybox: false,
+            skybox: None,
             shadow_cascades: [0.1, 0.25, 0.7, 1.0],
             shadow_bias: 0.002,
             shadows: true,

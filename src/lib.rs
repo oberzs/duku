@@ -51,6 +51,7 @@ pub use color::Color;
 pub use context::Context;
 pub use device::Stats;
 pub use error::Result;
+pub use image::Cubemap;
 pub use image::CubemapSides;
 pub use image::Framebuffer;
 pub use image::Texture;

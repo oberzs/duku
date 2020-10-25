@@ -47,7 +47,7 @@ impl Texture {
         // destroy staging buffer
         staging_buffer.destroy(device);
 
-        let shader_index = shader_images.add(image.add_view(device));
+        let shader_index = shader_images.add_image(image.add_view(device));
 
         Self {
             image,

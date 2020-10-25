@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use crate::device::Device;
 use crate::font::Font;
+use crate::image::Cubemap;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::mesh::Mesh;
@@ -28,6 +29,7 @@ pub(crate) struct Storage {
     pub(crate) shaders: Store<Shader>,
     pub(crate) fonts: Store<Font>,
     pub(crate) textures: Store<Texture>,
+    pub(crate) cubemaps: Store<Cubemap>,
     pub(crate) framebuffers: Store<Framebuffer>,
     pub(crate) materials: Store<Material>,
     pub(crate) meshes: Store<Mesh>,
@@ -44,6 +46,7 @@ impl Storage {
             shaders: Store::new(),
             fonts: Store::new(),
             textures: Store::new(),
+            cubemaps: Store::new(),
             framebuffers: Store::new(),
             materials: Store::new(),
             meshes: Store::new(),
@@ -66,6 +69,11 @@ impl Storage {
     pub(crate) fn add_texture(&mut self, texture: Texture) -> Handle<Texture> {
         let id = texture.shader_index();
         self.textures.add(texture, id)
+    }
+
+    pub(crate) fn add_cubemap(&mut self, cubemap: Cubemap) -> Handle<Cubemap> {
+        let id = cubemap.shader_index();
+        self.cubemaps.add(cubemap, id)
     }
 
     pub(crate) fn add_framebuffer(&mut self, framebuffer: Framebuffer) -> Handle<Framebuffer> {
@@ -99,11 +107,15 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.framebuffers.clear_unused() {
-            shader_images.remove(unused.shader_index());
+            shader_images.remove_image(unused.shader_index());
             unused.destroy(device);
         }
         for unused in self.textures.clear_unused() {
-            shader_images.remove(unused.shader_index());
+            shader_images.remove_image(unused.shader_index());
+            unused.destroy(device);
+        }
+        for unused in self.cubemaps.clear_unused() {
+            shader_images.remove_cubemap(unused.shader_index());
             unused.destroy(device);
         }
     }
@@ -122,11 +134,15 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.framebuffers.clear() {
-            shader_images.remove(unused.shader_index());
+            shader_images.remove_image(unused.shader_index());
             unused.destroy(device);
         }
         for unused in self.textures.clear() {
-            shader_images.remove(unused.shader_index());
+            shader_images.remove_image(unused.shader_index());
+            unused.destroy(device);
+        }
+        for unused in self.cubemaps.clear() {
+            shader_images.remove_cubemap(unused.shader_index());
             unused.destroy(device);
         }
     }

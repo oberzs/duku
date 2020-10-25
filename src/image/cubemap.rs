@@ -10,10 +10,11 @@ use super::ImageLayout;
 use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
-use crate::vk;
+use crate::pipeline::ShaderImages;
 
-pub(crate) struct Cubemap {
+pub struct Cubemap {
     image: Image,
+    shader_index: u32,
 }
 
 pub struct CubemapSides<T> {
@@ -28,6 +29,7 @@ pub struct CubemapSides<T> {
 impl Cubemap {
     pub(crate) fn new(
         device: &Device,
+        shader_images: &mut ShaderImages,
         size: u32,
         format: ImageFormat,
         sides: CubemapSides<Vec<u8>>,
@@ -60,7 +62,7 @@ impl Cubemap {
         let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
-        let image = Image::texture(device, format, Size::new(size, size), true);
+        let mut image = Image::texture(device, format, Size::new(size, size), true);
 
         // copy images from staging buffer
         image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
@@ -80,12 +82,18 @@ impl Cubemap {
         left_staging_buffer.destroy(device);
         right_staging_buffer.destroy(device);
 
-        Self { image }
+        let shader_index = shader_images.add_cubemap(image.add_view(device));
+
+        Self {
+            image,
+            shader_index,
+        }
     }
 
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
         device: &Device,
+        shader_images: &mut ShaderImages,
         sides: CubemapSides<Vec<u8>>,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
@@ -127,6 +135,7 @@ impl Cubemap {
 
         Ok(Self::new(
             device,
+            shader_images,
             size,
             format,
             CubemapSides {
@@ -140,11 +149,11 @@ impl Cubemap {
         ))
     }
 
-    pub(crate) fn add_view(&mut self, device: &Device) -> vk::ImageView {
-        self.image.add_view(device)
-    }
-
     pub(crate) fn destroy(&self, device: &Device) {
         self.image.destroy(device);
+    }
+
+    pub(crate) const fn shader_index(&self) -> u32 {
+        self.shader_index
     }
 }

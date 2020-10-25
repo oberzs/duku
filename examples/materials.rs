@@ -39,7 +39,7 @@ fn main() -> Result<()> {
         .albedo_texture(&purple_tex)
         .build();
 
-    context.set_skybox_png(CubemapSides {
+    let skybox = context.create_cubemap_png(CubemapSides {
         top: "examples/textures/skybox/top.png",
         bottom: "examples/textures/skybox/bottom.png",
         front: "examples/textures/skybox/front.png",
@@ -52,7 +52,7 @@ fn main() -> Result<()> {
         controller.update(&mut camera, events, context.delta_time());
 
         context.draw_on_window(Some(&camera), |target| {
-            target.skybox = true;
+            target.skybox = Some(&skybox);
 
             target.draw_grid();
 

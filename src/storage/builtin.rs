@@ -10,6 +10,8 @@ use super::Handle;
 use super::Storage;
 use crate::device::Device;
 use crate::font::Font;
+use crate::image::Cubemap;
+use crate::image::CubemapSides;
 use crate::image::Framebuffer;
 use crate::image::ImageFormat;
 use crate::image::Size;
@@ -27,6 +29,9 @@ pub struct Builtins {
     // textures
     pub white_texture: Handle<Texture>,
     pub blue_texture: Handle<Texture>,
+
+    // cubemaps
+    pub white_cubemap: Handle<Cubemap>,
 
     // materials
     pub white_material: Handle<Material>,
@@ -79,6 +84,25 @@ impl Builtins {
                 ImageFormat::Rgba,
             );
             storage.add_texture(tex)
+        };
+
+        // cubemaps
+        let white_cubemap = {
+            let cub = Cubemap::new(
+                &device,
+                shader_images,
+                1,
+                ImageFormat::Rgba,
+                CubemapSides {
+                    top: vec![255, 255, 255, 255],
+                    bottom: vec![255, 255, 255, 255],
+                    front: vec![255, 255, 255, 255],
+                    back: vec![255, 255, 255, 255],
+                    left: vec![255, 255, 255, 255],
+                    right: vec![255, 255, 255, 255],
+                },
+            );
+            storage.add_cubemap(cub)
         };
 
         // materials
@@ -185,6 +209,7 @@ impl Builtins {
         Self {
             white_texture,
             blue_texture,
+            white_cubemap,
             white_material,
             surface_mesh,
             quad_mesh,
