@@ -5,10 +5,8 @@
 
 use draw_it::window::Controller;
 use draw_it::Camera;
-use draw_it::Color;
 use draw_it::Context;
 use draw_it::CubemapSides;
-use draw_it::Light;
 use draw_it::Result;
 use draw_it::Transform;
 use draw_it::Vector3;
@@ -27,53 +25,40 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit((0.0, 0.0, 0.0));
 
-    let orange_tex = context.create_texture_png("examples/textures/Orange/texture_01.png")?;
-    let painted_albedo_tex =
-        context.create_texture_png("examples/textures/painted/painted-albedo.png")?;
-    let painted_roughness_tex =
-        context.create_texture_png_linear("examples/textures/painted/painted-roughness.png")?;
-    let painted_metalness_tex =
-        context.create_texture_png_linear("examples/textures/painted/painted-metalness.png")?;
+    let light_tex = context.create_texture_png("examples/textures/prototype/light.png")?;
+    let purple_tex = context.create_texture_png("examples/textures/prototype/purple.png")?;
 
-    let orange_mat = context
-        .build_material()
-        .albedo_color((255, 255, 255))
-        .albedo_texture(&orange_tex)
-        .build();
-    let painted_mat = context
-        .build_material()
-        .albedo_color((255, 255, 255))
-        .albedo_texture(&painted_albedo_tex)
+    let light_mat = context
+        .build_material_pbr()
+        .albedo_texture(&light_tex)
         .metalness(1.0)
-        .metalness_texture(&painted_metalness_tex)
-        .roughness(1.0)
-        .roughness_texture(&painted_roughness_tex)
+        .roughness(0.5)
+        .build();
+    let purple_mat = context
+        .build_material_pbr()
+        .albedo_texture(&purple_tex)
         .build();
 
     context.set_skybox_png(CubemapSides {
-        top: "examples/textures/Skybox/glacier_up.png",
-        bottom: "examples/textures/Skybox/glacier_down.png",
-        front: "examples/textures/Skybox/glacier_front.png",
-        back: "examples/textures/Skybox/glacier_back.png",
-        left: "examples/textures/Skybox/glacier_left.png",
-        right: "examples/textures/Skybox/glacier_right.png",
+        top: "examples/textures/skybox/top.png",
+        bottom: "examples/textures/skybox/bottom.png",
+        front: "examples/textures/skybox/front.png",
+        back: "examples/textures/skybox/back.png",
+        left: "examples/textures/skybox/left.png",
+        right: "examples/textures/skybox/right.png",
     })?;
 
     window.main_loop(move |events| {
-        context.handle_window_events(events);
         controller.update(&mut camera, events, context.delta_time());
 
         context.draw_on_window(Some(&camera), |target| {
             target.skybox = true;
-            target.lights[0] = Light::main((-0.4, -1.0, -1.0), Color::WHITE, 10.0);
-            target.lights[1] = Light::point((-3.0, 0.0, 1.0), Color::BLUE, 1.0);
-            target.lights[2] = Light::point((3.0, 0.0, 1.0), Color::GREEN, 1.0);
 
             target.draw_grid();
 
             // render meshes
             target.transform.move_by((-2.0, 1.0, 0.0));
-            target.material = Some(&painted_mat);
+            target.material = Some(&light_mat);
             target.draw_sphere_uv();
 
             target.transform.move_right(2.0);
@@ -81,7 +66,7 @@ fn main() -> Result<()> {
             target.draw_sphere_ico();
 
             target.transform.move_right(2.0);
-            target.material = Some(&orange_mat);
+            target.material = Some(&purple_mat);
             target.draw_cube();
 
             // render floor

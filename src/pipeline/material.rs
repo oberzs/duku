@@ -94,6 +94,11 @@ impl Material {
         self.should_update = true;
     }
 
+    pub fn set_normal_texture(&mut self, texture: &Handle<Texture>) {
+        self.arg_3.y = texture.id() as f32;
+        self.should_update = true;
+    }
+
     pub fn set_arg_1<V: Into<Vector4>>(&mut self, arg: V) {
         self.arg_1 = arg.into();
         self.should_update = true;
@@ -195,6 +200,11 @@ impl MaterialBuilder<'_> {
 
     pub fn ambient_occlusion_texture(mut self, texture: &Handle<Texture>) -> Self {
         self.material.set_ambient_occlusion_texture(texture);
+        self
+    }
+
+    pub fn normal_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_normal_texture(texture);
         self
     }
 

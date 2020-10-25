@@ -39,7 +39,7 @@ vec3 tex_coord(int index, float bias) {
     return vec3(uv.x, uv.y, coord.z);
 }
 
-float shadow(Light light) {
+float shadow(Light light, vec3 normal) {
     float depth = in_clip_position.z;
     float blend_margin = world.shadow_cascades[3] * 0.05;
 
@@ -56,7 +56,6 @@ float shadow(Light light) {
     }
 
     vec3 light_dir = normalize(-light.coords);
-    vec3 normal = normalize(in_normal);
     float bias = world.shadow_bias * tan(acos(dot(normal, light_dir)));
 
     vec3 coord = tex_coord(cascade, bias);

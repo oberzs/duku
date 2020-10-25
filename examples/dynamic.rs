@@ -32,7 +32,6 @@ fn main() -> Result<()> {
     let time = Instant::now();
 
     window.main_loop(move |events| {
-        context.handle_window_events(events);
         controller.update(&mut camera, events, context.delta_time());
 
         // update square mesh

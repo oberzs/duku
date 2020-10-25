@@ -23,6 +23,7 @@ pub struct Mesh {
     vertices: Vec<Vector3>,
     uvs: Vec<Vector2>,
     normals: Vec<Vector3>,
+    tangents: Vec<Vector3>,
     colors: Vec<Color>,
     textures: Vec<u32>,
     indices: Vec<u32>,
@@ -48,6 +49,7 @@ impl Mesh {
             vertices: vec![Vector3::ZERO; 1],
             uvs: vec![Vector2::ZERO; 1],
             normals: vec![Vector3::ZERO; 1],
+            tangents: vec![Vector3::ZERO; 1],
             colors: vec![Color::WHITE; 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
@@ -63,6 +65,7 @@ impl Mesh {
         let mut indices = vec![];
         let mut vertices = vec![];
         let mut normals = vec![];
+        let mut tangents = vec![];
         let mut uvs = vec![];
         let mut colors = vec![];
         let mut textures = vec![];
@@ -71,6 +74,7 @@ impl Mesh {
             indices.extend(mesh.indices.iter().map(|t| t + offset));
             vertices.extend(&mesh.vertices);
             normals.extend(&mesh.normals);
+            tangents.extend(&mesh.tangents);
             uvs.extend(&mesh.uvs);
             colors.extend(&mesh.colors);
             textures.extend(&mesh.textures);
@@ -80,6 +84,7 @@ impl Mesh {
         let mut result = Self::new(device);
         result.vertices = vertices;
         result.normals = normals;
+        result.tangents = tangents;
         result.colors = colors;
         result.uvs = uvs;
         result.textures = textures;
@@ -91,22 +96,52 @@ impl Mesh {
 
     pub fn calculate_normals(&mut self) {
         self.normals = vec![Vector3::ZERO; self.vertices.len()];
+        self.tangents = vec![Vector3::ZERO; self.vertices.len()];
+
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
                 let a = tri[0] as usize;
                 let b = tri[1] as usize;
                 let c = tri[2] as usize;
+
+                // get vertices
                 let vtx_a = self.vertices[a];
                 let vtx_b = self.vertices[b];
                 let vtx_c = self.vertices[c];
+
+                // get uvs
+                let uv_a = self.uvs.get(a).copied().unwrap_or(Vector2::ZERO);
+                let uv_b = self.uvs.get(b).copied().unwrap_or(Vector2::ZERO);
+                let uv_c = self.uvs.get(c).copied().unwrap_or(Vector2::ZERO);
+
+                // calculate normal
                 let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
                 self.normals[a] += normal;
                 self.normals[b] += normal;
                 self.normals[c] += normal;
+
+                // calculate tangent
+                let edge_1 = vtx_b - vtx_a;
+                let edge_2 = vtx_c - vtx_a;
+                let duv_1 = uv_b - uv_a;
+                let duv_2 = uv_c - uv_a;
+                let f = 1.0 / (duv_1.x * duv_2.y - duv_2.x * duv_1.y);
+                let tangent = Vector3::new(
+                    duv_2.y * edge_1.x - duv_1.y * edge_2.x,
+                    duv_2.y * edge_1.y - duv_1.y * edge_2.y,
+                    duv_2.y * edge_1.z - duv_1.y * edge_2.z,
+                ) * f;
+                self.tangents[a] += tangent;
+                self.tangents[b] += tangent;
+                self.tangents[c] += tangent;
             }
             for norm in &mut self.normals {
                 *norm = norm.unit();
             }
+            for tan in &mut self.tangents {
+                *tan = tan.unit();
+            }
+
             self.should_update = true;
         }
     }
@@ -118,6 +153,11 @@ impl Mesh {
 
     pub fn set_normals(&mut self, normals: Vec<Vector3>) {
         self.normals = normals;
+        self.should_update = true;
+    }
+
+    pub fn set_tangents(&mut self, tangents: Vec<Vector3>) {
+        self.tangents = tangents;
         self.should_update = true;
     }
 
@@ -168,11 +208,13 @@ impl Mesh {
                 .iter()
                 .zip(self.uvs.iter().chain(iter::repeat(&Vector2::ZERO)))
                 .zip(self.normals.iter().chain(iter::repeat(&Vector3::ZERO)))
+                .zip(self.tangents.iter().chain(iter::repeat(&Vector3::ZERO)))
                 .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
                 .zip(self.textures.iter().chain(iter::repeat(&0)))
-                .map(|((((pos, uv), normal), col), tex)| Vertex {
+                .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {
                     in_local_position: *pos,
                     in_normal: *normal,
+                    in_tangent: *tangent,
                     in_uv: *uv,
                     in_color: col.to_rgba_norm_vec(),
                     in_texture: *tex,
@@ -223,6 +265,11 @@ impl MeshBuilder<'_> {
 
     pub fn normals(mut self, normals: Vec<Vector3>) -> Self {
         self.mesh.set_normals(normals);
+        self
+    }
+
+    pub fn tangents(mut self, tangents: Vec<Vector3>) -> Self {
+        self.mesh.set_tangents(tangents);
         self
     }
 

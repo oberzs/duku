@@ -7,7 +7,7 @@
 #define CULL back
 #define SHAPE filled_triangles
 
-#define VERTEX_POSITION_MODELSPACE
+#define VERTEX_LOCAL_POSITION
 
 layout(location = 0) out vec4 out_color;
 

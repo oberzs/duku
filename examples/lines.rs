@@ -17,9 +17,7 @@ fn main() -> Result<()> {
         .resizable()
         .build()?;
 
-    window.main_loop(move |events| {
-        context.handle_window_events(events);
-
+    window.main_loop(move |_| {
         context.draw_on_window(None, |target| {
             star(target, (0.0, 0.0), Color::BLUE);
             star(target, (50.0, 10.0), Color::GREEN);

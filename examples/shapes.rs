@@ -16,9 +16,7 @@ fn main() -> Result<()> {
         .resizable()
         .build()?;
 
-    window.main_loop(move |events| {
-        context.handle_window_events(events);
-
+    window.main_loop(move |_| {
         context.draw_on_window(None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(300.0);

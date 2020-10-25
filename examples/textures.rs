@@ -18,9 +18,7 @@ fn main() -> Result<()> {
     let texture_1 = context.create_texture_png("examples/textures/Green/texture_01.png")?;
     let texture_2 = context.create_texture_png("examples/textures/Dark/texture_13.png")?;
 
-    window.main_loop(move |events| {
-        context.handle_window_events(events);
-
+    window.main_loop(move |_| {
         context.draw_on_window(None, |target| {
             target.shape_color = Color::WHITE;
             target.texture_filter = TextureFilter::Linear;

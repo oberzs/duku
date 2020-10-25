@@ -19,8 +19,6 @@ fn main() -> Result<()> {
     let mut input = String::new();
 
     window.main_loop(move |events| {
-        context.handle_window_events(events);
-
         // update text
         if let Some(c) = events.typed_char() {
             input.push(c);

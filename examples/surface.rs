@@ -16,9 +16,7 @@ fn main() -> Result<()> {
     // read custom shader
     let shader = context.create_shader_glsl("examples/shaders/raymarch.glsl", true)?;
 
-    window.main_loop(move |events| {
-        context.handle_window_events(events);
-
+    window.main_loop(move |_| {
         context.draw_on_window(None, |target| {
             target.shader = Some(&shader);
             target.draw_surface();

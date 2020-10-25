@@ -136,4 +136,3 @@ Assets:
 
 - [Fira Mono](https://fonts.google.com/specimen/Fira+Mono?query=fira) - Builtin font
 - [Kenney](https://www.kenney.nl/assets) - Assets for examples
-- [Skybox](https://www.moddb.com/addons/cc0-skybox-pack-1) - Skybox for examples

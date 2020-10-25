@@ -58,7 +58,9 @@ void fragment() {
     float roughness = material.arg_2.g * roughness_tex.r;
 
     // calculate normal and view direction
-    vec3 normal = normalize(in_normal);
+    vec3 normal = tex(int(material.arg_3.g), in_uv).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(in_tbn * normal);
     vec3 view_dir = normalize(world.camera_position - in_world_position);
 
     vec3 light_amount = vec3(0.0);
@@ -68,7 +70,7 @@ void fragment() {
     
         float occlusion = 1.0;
         if (light.type == LIGHT_TYPE_MAIN) {
-            occlusion = shadow(light);
+            occlusion = shadow(light, normal);
         }
 
         vec3 light_dir = vec3(0.0);

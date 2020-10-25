@@ -16,9 +16,7 @@ fn main() -> Result<()> {
 
     let mut hue = 0;
 
-    window.main_loop(move |events| {
-        context.handle_window_events(events);
-
+    window.main_loop(move |_| {
         hue = (hue + 1) % 360;
 
         context.draw_on_window(None, |target| {

@@ -19,7 +19,12 @@ void vertex() {
     out_shadow_position[2] = world.world_to_shadow[2] * world_position;
     out_shadow_position[3] = world.world_to_shadow[3] * world_position;
 
-    out_normal = mat3(transpose(inverse(object.local_to_world))) * in_normal;
+    vec3 T = normalize(vec3(object.local_to_world * vec4(in_tangent, 0.0)));
+    vec3 N = normalize(vec3(object.local_to_world * vec4(in_normal, 0.0)));
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
+
+    out_tbn = mat3(T, B, N);
     out_color = {{out_color}};
     out_uv = in_uv;
     out_texture = in_texture;

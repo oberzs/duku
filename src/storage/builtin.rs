@@ -26,6 +26,7 @@ use crate::pipeline::ShaderLayout;
 pub struct Builtins {
     // textures
     pub white_texture: Handle<Texture>,
+    pub blue_texture: Handle<Texture>,
 
     // materials
     pub white_material: Handle<Material>,
@@ -40,7 +41,6 @@ pub struct Builtins {
     // shaders
     pub pbr_shader: Handle<Shader>,
     pub font_shader: Handle<Shader>,
-    pub blit_shader: Handle<Shader>,
     pub wireframe_shader: Handle<Shader>,
     pub line_shader: Handle<Shader>,
     pub shape_shader: Handle<Shader>,
@@ -70,11 +70,23 @@ impl Builtins {
             );
             storage.add_texture(tex)
         };
+        let blue_texture = {
+            let tex = Texture::new(
+                device,
+                shader_images,
+                vec![127, 127, 255, 255],
+                Size::new(1, 1),
+                ImageFormat::Rgba,
+            );
+            storage.add_texture(tex)
+        };
 
         // materials
         let white_material = {
             let mut mat = Material::new(device, layout);
             mat.set_albedo_color((255, 255, 255));
+            mat.set_albedo_texture(&white_texture);
+            mat.set_normal_texture(&blue_texture);
             mat.update_if_needed(device);
             storage.add_material(mat)
         };
@@ -104,17 +116,6 @@ impl Builtins {
                 framebuffer,
                 layout,
                 include_bytes!("../../shaders/font.spirv"),
-            )
-            .expect("bad shader");
-            storage.add_shader(shader)
-        };
-
-        let blit_shader = {
-            let shader = Shader::from_spirv_bytes(
-                device,
-                framebuffer,
-                layout,
-                include_bytes!("../../shaders/blit.spirv"),
             )
             .expect("bad shader");
             storage.add_shader(shader)
@@ -183,6 +184,7 @@ impl Builtins {
 
         Self {
             white_texture,
+            blue_texture,
             white_material,
             surface_mesh,
             quad_mesh,
@@ -191,7 +193,6 @@ impl Builtins {
             uv_sphere_mesh,
             pbr_shader,
             font_shader,
-            blit_shader,
             wireframe_shader,
             line_shader,
             shape_shader,
@@ -220,7 +221,6 @@ fn create_surface(device: &Device) -> Mesh {
     mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
     mesh.calculate_normals();
     mesh.update_if_needed(device);
-
     mesh
 }
 
@@ -242,7 +242,6 @@ fn create_quad(device: &Device) -> Mesh {
     mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
     mesh.calculate_normals();
     mesh.update_if_needed(device);
-
     mesh
 }
 
