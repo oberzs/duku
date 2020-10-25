@@ -66,6 +66,7 @@ pub use mesh::Mesh;
 pub use pipeline::Material;
 pub use pipeline::Shader;
 pub use quality::Quality;
+pub use renderer::BorderMode;
 pub use renderer::Camera;
 pub use renderer::Light;
 pub use renderer::LightType;
