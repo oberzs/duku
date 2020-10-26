@@ -6,8 +6,8 @@
 
 use std::ptr;
 
+use super::Format;
 use super::Image;
-use super::ImageFormat;
 use super::ImageLayout;
 use super::Msaa;
 use super::Size;
@@ -54,7 +54,7 @@ impl Framebuffer {
         msaa: Msaa,
     ) -> Vec<Self> {
         let size = swapchain.size();
-        let attachment_formats = &[ImageFormat::Depth, ImageFormat::Sbgra];
+        let attachment_formats = &[Format::Depth, Format::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         device
@@ -121,7 +121,7 @@ impl Framebuffer {
         device: &Device,
         shader_layout: &ShaderLayout,
         shader_images: &mut ShaderImages,
-        attachment_formats: &[ImageFormat],
+        attachment_formats: &[Format],
         msaa: Msaa,
         size: Size,
     ) -> Self {
@@ -174,7 +174,7 @@ impl Framebuffer {
             device,
             ImageLayout::Undefined,
             match stored_format {
-                Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                Some(Format::Depth) => ImageLayout::ShaderDepth,
                 _ => ImageLayout::ShaderColor,
             },
         );
@@ -261,7 +261,7 @@ impl Framebuffer {
                 device,
                 ImageLayout::Undefined,
                 match stored_format {
-                    Some(ImageFormat::Depth) => ImageLayout::ShaderDepth,
+                    Some(Format::Depth) => ImageLayout::ShaderDepth,
                     _ => ImageLayout::ShaderColor,
                 },
             );
@@ -337,8 +337,8 @@ impl Framebuffer {
         self.shader_index.expect("bad framebuffer")
     }
 
-    pub(crate) fn update_world(&self, device: &Device, data: ShaderWorld) {
-        self.world_buffer.copy_from_data(device, &[data]);
+    pub(crate) fn update_world(&self, data: ShaderWorld) {
+        self.world_buffer.copy_from_data(&[data]);
     }
 
     pub(crate) const fn world(&self) -> Descriptor {

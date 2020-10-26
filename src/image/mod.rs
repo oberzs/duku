@@ -19,7 +19,6 @@ use crate::pipeline::Attachment;
 use crate::vk;
 use properties::with_alpha;
 
-pub(crate) use properties::ImageFormat;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
 pub(crate) use size::Size;
@@ -27,6 +26,8 @@ pub(crate) use size::Size;
 pub use cubemap::Cubemap;
 pub use cubemap::CubemapSides;
 pub use framebuffer::Framebuffer;
+pub use properties::Format;
+pub use properties::Mips;
 pub use properties::Msaa;
 pub use properties::TextureFilter;
 pub use properties::TextureWrap;
@@ -39,20 +40,15 @@ pub(crate) struct Image {
     size: Size,
     mip_count: u32,
     layer_count: u32,
-    format: ImageFormat,
+    format: Format,
 }
 
 impl Image {
-    pub(crate) fn texture(device: &Device, format: ImageFormat, size: Size, cubemap: bool) -> Self {
+    pub(crate) fn texture(device: &Device, format: Format, mips: Mips, size: Size) -> Self {
         // calculate mip count
-        let mip_count = (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1;
-
-        // cubemap info
-        let layer_count = if cubemap { 6 } else { 1 };
-        let flags = if cubemap {
-            vk::IMAGE_CREATE_CUBE_COMPATIBLE_BIT
-        } else {
-            0
+        let mip_count = match mips {
+            Mips::Log2 => (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1,
+            Mips::Zero => 1,
         };
 
         // create image
@@ -74,8 +70,8 @@ impl Image {
             queue_family_index_count: 0,
             p_queue_family_indices: ptr::null(),
             initial_layout: ImageLayout::Undefined.flag(),
-            array_layers: layer_count,
-            flags,
+            array_layers: 1,
+            flags: 0,
         };
 
         let (handle, memory) = device.allocate_image(&image_info);
@@ -83,7 +79,47 @@ impl Image {
         Self {
             memory: Some(memory),
             views: vec![],
-            layer_count,
+            layer_count: 1,
+            handle,
+            mip_count,
+            format,
+            size,
+        }
+    }
+
+    pub(crate) fn cubemap(device: &Device, format: Format, size: Size) -> Self {
+        // calculate mip count
+        let mip_count = (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1;
+
+        // create image
+        let image_info = vk::ImageCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            p_next: ptr::null(),
+            image_type: vk::IMAGE_TYPE_2D,
+            format: format.flag(),
+            extent: size.into(),
+            mip_levels: mip_count,
+            samples: Msaa::Disabled.flag(),
+            tiling: vk::IMAGE_TILING_OPTIMAL,
+            usage: ImageUsage::combine(&[
+                ImageUsage::Sampled,
+                ImageUsage::TransferSrc,
+                ImageUsage::TransferDst,
+            ]),
+            sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
+            queue_family_index_count: 0,
+            p_queue_family_indices: ptr::null(),
+            initial_layout: ImageLayout::Undefined.flag(),
+            array_layers: 6,
+            flags: vk::IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        };
+
+        let (handle, memory) = device.allocate_image(&image_info);
+
+        Self {
+            memory: Some(memory),
+            views: vec![],
+            layer_count: 6,
             handle,
             mip_count,
             format,
@@ -92,7 +128,7 @@ impl Image {
     }
 
     pub(crate) fn shader(device: &Device, size: Size) -> Self {
-        let format = ImageFormat::Sbgra;
+        let format = Format::Sbgra;
 
         // create image
         let image_info = vk::ImageCreateInfo {
@@ -317,8 +353,12 @@ impl Image {
         self.handle
     }
 
+    pub(crate) const fn format(&self) -> Format {
+        self.format
+    }
+
     pub(crate) fn has_depth_format(&self) -> bool {
-        self.format == ImageFormat::Depth || self.format == ImageFormat::DepthStencil
+        self.format == Format::Depth || self.format == Format::DepthStencil
     }
 
     pub(crate) const fn all_aspects(&self) -> vk::ImageAspectFlags {
@@ -331,5 +371,9 @@ impl Image {
 
     pub(crate) const fn size(&self) -> Size {
         self.size
+    }
+
+    pub(crate) const fn mip_count(&self) -> u32 {
+        self.mip_count
     }
 }

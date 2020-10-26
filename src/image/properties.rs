@@ -6,7 +6,7 @@
 use crate::vk;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum ImageFormat {
+pub enum Format {
     Rgb,
     Rgba,
     Srgb,
@@ -16,6 +16,12 @@ pub(crate) enum ImageFormat {
     DepthStencil,
     Float2,
     Gray,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Mips {
+    Log2,
+    Zero,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -78,7 +84,7 @@ impl ImageUsage {
     }
 }
 
-impl ImageFormat {
+impl Format {
     pub(crate) const fn flag(&self) -> vk::Format {
         match *self {
             Self::Rgb => vk::FORMAT_R8G8B8_UNORM,

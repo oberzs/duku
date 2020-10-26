@@ -7,7 +7,7 @@ use std::ffi::CStr;
 
 use crate::error::Error;
 use crate::error::Result;
-use crate::image::ImageFormat;
+use crate::image::Format;
 use crate::image::Msaa;
 use crate::instance::GPUProperties;
 use crate::instance::Version;
@@ -62,7 +62,7 @@ pub(crate) fn pick_gpu(
 
             let format = props.formats.iter().find(|f| {
                 f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
-                    && f.format == ImageFormat::Sbgra.flag()
+                    && f.format == Format::Sbgra.flag()
             });
             if format.is_none() {
                 score = 0;

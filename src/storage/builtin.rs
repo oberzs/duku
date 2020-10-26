@@ -12,8 +12,9 @@ use crate::device::Device;
 use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
+use crate::image::Format;
 use crate::image::Framebuffer;
-use crate::image::ImageFormat;
+use crate::image::Mips;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector2;
@@ -72,7 +73,8 @@ impl Builtins {
                 shader_images,
                 vec![255, 255, 255, 255],
                 Size::new(1, 1),
-                ImageFormat::Rgba,
+                Format::Rgba,
+                Mips::Zero,
             );
             storage.add_texture(tex)
         };
@@ -82,7 +84,8 @@ impl Builtins {
                 shader_images,
                 vec![127, 127, 255, 255],
                 Size::new(1, 1),
-                ImageFormat::Rgba,
+                Format::Rgba,
+                Mips::Zero,
             );
             storage.add_texture(tex)
         };
@@ -93,7 +96,7 @@ impl Builtins {
                 &device,
                 shader_images,
                 1,
-                ImageFormat::Rgba,
+                Format::Rgba,
                 CubemapSides {
                     top: vec![255, 255, 255, 255],
                     bottom: vec![255, 255, 255, 255],
@@ -112,7 +115,7 @@ impl Builtins {
             mat.set_albedo_color((255, 255, 255));
             mat.set_albedo_texture(&white_texture);
             mat.set_normal_texture(&blue_texture);
-            mat.update_if_needed(device);
+            mat.update_if_needed();
             storage.add_material(mat)
         };
 

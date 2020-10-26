@@ -5,8 +5,8 @@
 
 use draw_it::Color;
 use draw_it::Context;
+use draw_it::Mips;
 use draw_it::Result;
-use draw_it::TextureFilter;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
@@ -15,15 +15,24 @@ fn main() -> Result<()> {
         .resizable()
         .build()?;
 
-    let texture_1 = context.create_texture_png("examples/textures/Green/texture_01.png")?;
-    let texture_2 = context.create_texture_png("examples/textures/Dark/texture_13.png")?;
+    let texture_1 =
+        context.create_texture_png("examples/textures/prototype/green.png", Mips::Log2)?;
+    let texture_2 =
+        context.create_texture_png("examples/textures/prototype/dark.png", Mips::Zero)?;
+
+    let mut hue = 0;
 
     window.main_loop(move |_| {
+        hue = (hue + 1) % 360;
+
+        let tex = context.texture_mut(&texture_2);
+        tex.set_pixel(10, 10, Color::hsv(hue, 255, 255));
+        tex.set_pixel(11, 10, Color::hsv(hue, 255, 255));
+        tex.set_pixel(10, 11, Color::hsv(hue, 255, 255));
+        tex.set_pixel(11, 11, Color::hsv(hue, 255, 255));
+
         context.draw_on_window(None, |target| {
-            target.shape_color = Color::WHITE;
-            target.texture_filter = TextureFilter::Linear;
             target.draw_texture(&texture_1, (-400.0, -200.0), (400.0, 400.0));
-            target.texture_filter = TextureFilter::Nearest;
             target.draw_texture(&texture_2, (0.0, -200.0), (400.0, 400.0));
         });
     });

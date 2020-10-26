@@ -21,7 +21,7 @@ pub(crate) use commands::Commands;
 pub use commands::Stats;
 pub(crate) use pick::pick_gpu;
 
-use crate::buffer::BufferAccess;
+use crate::buffer::MemoryAccess;
 use crate::error::Error;
 use crate::error::Result;
 use crate::instance::GPUProperties;
@@ -378,7 +378,7 @@ impl Device {
     pub(crate) fn allocate_buffer(
         &self,
         info: &vk::BufferCreateInfo,
-        access: BufferAccess,
+        access: MemoryAccess,
     ) -> (vk::Buffer, vk::DeviceMemory) {
         // create buffer handle
         let mut buffer = 0;
@@ -438,7 +438,7 @@ impl Device {
         unsafe {
             vk::get_image_memory_requirements(self.handle, image, &mut requirements);
         }
-        let mem_type = self.find_memory_type(&requirements, BufferAccess::Gpu);
+        let mem_type = self.find_memory_type(&requirements, MemoryAccess::Gpu);
 
         // allocate memory
         let alloc_info = vk::MemoryAllocateInfo {
@@ -487,12 +487,7 @@ impl Device {
         }
     }
 
-    pub(crate) fn map_memory(
-        &self,
-        memory: vk::DeviceMemory,
-        size: usize,
-        fun: impl Fn(*mut c_void),
-    ) {
+    pub(crate) fn map_memory(&self, memory: vk::DeviceMemory, size: usize) -> *mut c_void {
         let mut data = ptr::null_mut();
         unsafe {
             vk::check(vk::map_memory(
@@ -503,7 +498,12 @@ impl Device {
                 0,
                 &mut data,
             ));
-            fun(data);
+        }
+        data
+    }
+
+    pub(crate) fn unmap_memory(&self, memory: vk::DeviceMemory) {
+        unsafe {
             vk::unmap_memory(self.handle, memory);
         }
     }
@@ -826,7 +826,7 @@ impl Device {
         destroyed_images.clear();
     }
 
-    fn find_memory_type(&self, requirements: &vk::MemoryRequirements, access: BufferAccess) -> u32 {
+    fn find_memory_type(&self, requirements: &vk::MemoryRequirements, access: MemoryAccess) -> u32 {
         self.memory_types
             .iter()
             .enumerate()

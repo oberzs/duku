@@ -5,7 +5,7 @@
 
 use super::Clear;
 use super::Store;
-use crate::image::ImageFormat;
+use crate::image::Format;
 use crate::image::ImageLayout;
 use crate::image::Msaa;
 use crate::vk;
@@ -13,7 +13,7 @@ use crate::vk;
 pub(crate) struct Attachment {
     description: vk::AttachmentDescription,
     reference: vk::AttachmentReference,
-    format: ImageFormat,
+    format: Format,
     layout: ImageLayout,
     msaa: Msaa,
     store: Store,
@@ -23,7 +23,7 @@ impl Attachment {
     pub(crate) const fn new(
         index: u32,
         layout: ImageLayout,
-        format: ImageFormat,
+        format: Format,
         msaa: Msaa,
         clear: Clear,
         store: Store,
@@ -70,7 +70,7 @@ impl Attachment {
         self.reference
     }
 
-    pub(crate) const fn format(&self) -> ImageFormat {
+    pub(crate) const fn format(&self) -> Format {
         self.format
     }
 

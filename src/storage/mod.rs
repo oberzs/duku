@@ -155,12 +155,17 @@ impl Storage {
 
         // update materials
         for value in self.materials.stored.values_mut() {
-            value.update_if_needed(device);
+            value.update_if_needed();
         }
 
         // update framebuffers
         for value in self.framebuffers.stored.values_mut() {
             value.update_if_needed(device, shader_images);
+        }
+
+        // update textures
+        for value in self.textures.stored.values_mut() {
+            value.update_if_needed(device);
         }
     }
 }

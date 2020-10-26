@@ -4,8 +4,8 @@
 // Cubemap - image with 6 layers to render a skybox
 
 use super::with_alpha;
+use super::Format;
 use super::Image;
-use super::ImageFormat;
 use super::ImageLayout;
 use super::Size;
 use crate::buffer::Buffer;
@@ -31,11 +31,11 @@ impl Cubemap {
         device: &Device,
         shader_images: &mut ShaderImages,
         size: u32,
-        format: ImageFormat,
+        format: Format,
         sides: CubemapSides<Vec<u8>>,
     ) -> Self {
         // convert 3-byte data to 4-byte data
-        let sides = if matches!(format, ImageFormat::Srgb | ImageFormat::Rgb) {
+        let sides = if matches!(format, Format::Srgb | Format::Rgb) {
             CubemapSides {
                 top: with_alpha(sides.top),
                 bottom: with_alpha(sides.bottom),
@@ -48,8 +48,8 @@ impl Cubemap {
             sides
         };
         let format = match format {
-            ImageFormat::Srgb => ImageFormat::Srgba,
-            ImageFormat::Rgb => ImageFormat::Rgba,
+            Format::Srgb => Format::Srgba,
+            Format::Rgb => Format::Rgba,
             f => f,
         };
 
@@ -62,7 +62,7 @@ impl Cubemap {
         let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
-        let mut image = Image::texture(device, format, Size::new(size, size), true);
+        let mut image = Image::cubemap(device, format, Size::new(size, size));
 
         // copy images from staging buffer
         image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
@@ -106,9 +106,9 @@ impl Cubemap {
             let (info, _) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
 
             let f = match info.color_type {
-                ColorType::RGBA => ImageFormat::Srgba,
-                ColorType::RGB => ImageFormat::Srgb,
-                ColorType::Grayscale => ImageFormat::Gray,
+                ColorType::RGBA => Format::Srgba,
+                ColorType::RGB => Format::Srgb,
+                ColorType::Grayscale => Format::Gray,
                 _ => return Err(Error::UnsupportedColorType),
             };
             (f, info.width)

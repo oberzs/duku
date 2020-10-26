@@ -4,17 +4,21 @@
 // Texture - simple image that can be used for rendering
 
 use super::with_alpha;
+use super::Format;
 use super::Image;
-use super::ImageFormat;
 use super::ImageLayout;
+use super::Mips;
 use super::Size;
 use crate::buffer::Buffer;
+use crate::color::Color;
 use crate::device::Device;
 use crate::pipeline::ShaderImages;
 
 pub struct Texture {
     image: Image,
+    data: Vec<u8>,
     shader_index: u32,
+    should_update: bool,
 }
 
 impl Texture {
@@ -23,26 +27,32 @@ impl Texture {
         shader_images: &mut ShaderImages,
         data: Vec<u8>,
         size: Size,
-        format: ImageFormat,
+        format: Format,
+        mips: Mips,
     ) -> Self {
         // convert 3-byte data to 4-byte data
         let image_data = match format {
-            ImageFormat::Srgb | ImageFormat::Rgb => with_alpha(data),
+            Format::Srgb | Format::Rgb => with_alpha(data),
             _ => data,
         };
         let format = match format {
-            ImageFormat::Srgb => ImageFormat::Srgba,
-            ImageFormat::Rgb => ImageFormat::Rgba,
+            Format::Srgb => Format::Srgba,
+            Format::Rgb => Format::Rgba,
             f => f,
         };
 
         let staging_buffer = Buffer::staging(device, &image_data);
-        let mut image = Image::texture(device, format, size, false);
+        let mut image = Image::texture(device, format, mips, size);
 
         // copy image from staging buffer
         image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
         image.copy_from_buffer(device, &staging_buffer, 0);
-        image.generate_mipmaps(device);
+        match mips {
+            Mips::Log2 => image.generate_mipmaps(device),
+            Mips::Zero => {
+                image.change_layout(device, ImageLayout::TransferDst, ImageLayout::ShaderColor)
+            }
+        }
 
         // destroy staging buffer
         staging_buffer.destroy(device);
@@ -50,6 +60,8 @@ impl Texture {
         let shader_index = shader_images.add_image(image.add_view(device));
 
         Self {
+            data: image_data,
+            should_update: false,
             image,
             shader_index,
         }
@@ -61,6 +73,7 @@ impl Texture {
         shader_images: &mut ShaderImages,
         bytes: Vec<u8>,
         linear: bool,
+        mips: Mips,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
         use png::Decoder;
@@ -75,15 +88,70 @@ impl Texture {
         reader.next_frame(&mut data).expect("bad read");
 
         let format = match info.color_type {
-            ColorType::RGBA if linear => ImageFormat::Rgba,
-            ColorType::RGBA => ImageFormat::Srgba,
-            ColorType::RGB if linear => ImageFormat::Rgb,
-            ColorType::RGB => ImageFormat::Srgb,
-            ColorType::Grayscale => ImageFormat::Gray,
+            ColorType::RGBA if linear => Format::Rgba,
+            ColorType::RGBA => Format::Srgba,
+            ColorType::RGB if linear => Format::Rgb,
+            ColorType::RGB => Format::Srgb,
+            ColorType::Grayscale => Format::Gray,
             _ => return Err(Error::UnsupportedColorType),
         };
 
-        Ok(Self::new(device, shader_images, data, size, format))
+        Ok(Self::new(device, shader_images, data, size, format, mips))
+    }
+
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
+        debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
+
+        let size = self.image.size();
+        if x < size.width && y < size.height {
+            let i = (x + y * size.width) as usize * 4;
+            self.data[i] = color.r;
+            self.data[i + 1] = color.g;
+            self.data[i + 2] = color.b;
+            self.data[i + 3] = color.a;
+            self.should_update = true;
+        }
+    }
+
+    pub fn pixel(&self, x: u32, y: u32) -> Color {
+        debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
+
+        let size = self.image.size();
+        if x < size.width && y < size.height {
+            let i = (x + y * size.width) as usize * 4;
+            Color::rgba(
+                self.data[i],
+                self.data[i + 1],
+                self.data[i + 2],
+                self.data[i + 3],
+            )
+        } else {
+            Color::BLACK
+        }
+    }
+
+    pub(crate) fn update_if_needed(&mut self, device: &Device) {
+        if self.should_update {
+            let staging_buffer = Buffer::staging(device, &self.data);
+
+            self.image
+                .change_layout(device, ImageLayout::ShaderColor, ImageLayout::TransferDst);
+            self.image.copy_from_buffer(device, &staging_buffer, 0);
+
+            if self.image.mip_count() > 1 {
+                self.image.generate_mipmaps(device);
+            } else {
+                self.image.change_layout(
+                    device,
+                    ImageLayout::TransferDst,
+                    ImageLayout::ShaderColor,
+                );
+            }
+
+            staging_buffer.destroy(device);
+
+            self.should_update = false;
+        }
     }
 
     pub(crate) fn destroy(&self, device: &Device) {

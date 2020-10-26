@@ -9,7 +9,7 @@ use super::Attachment;
 use super::Clear;
 use super::Store;
 use crate::device::Device;
-use crate::image::ImageFormat;
+use crate::image::Format;
 use crate::image::ImageLayout;
 use crate::image::Msaa;
 use crate::vk;
@@ -22,11 +22,11 @@ pub(crate) struct RenderPass {
 impl RenderPass {
     pub(crate) fn new(
         device: &Device,
-        attachment_formats: &[ImageFormat],
+        attachment_formats: &[Format],
         msaa: Msaa,
         present: bool,
     ) -> Self {
-        let depth = attachment_formats.contains(&ImageFormat::Depth);
+        let depth = attachment_formats.contains(&Format::Depth);
 
         debug_assert!(
             !present || attachment_formats.len() == 2,
@@ -56,7 +56,7 @@ impl RenderPass {
             let a = Attachment::new(
                 attachments.len() as u32,
                 layout,
-                ImageFormat::Depth,
+                Format::Depth,
                 msaa,
                 Clear::Enabled,
                 Store::from(attachment_formats.len() == 1),

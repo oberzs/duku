@@ -8,7 +8,8 @@ mod fira_mono;
 use std::collections::HashMap;
 
 use crate::device::Device;
-use crate::image::ImageFormat;
+use crate::image::Format;
+use crate::image::Mips;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector4;
@@ -40,7 +41,8 @@ impl Font {
             shader_images,
             fira_mono::DATA.to_vec(),
             Size::new(atlas_width, atlas_height),
-            ImageFormat::Gray,
+            Format::Gray,
+            Mips::Zero,
         );
 
         let mut char_data = HashMap::new();

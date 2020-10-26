@@ -14,7 +14,7 @@ pub(crate) enum BufferUsage {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) enum BufferAccess {
+pub(crate) enum MemoryAccess {
     Gpu,
     Cpu,
 }
@@ -30,7 +30,7 @@ impl BufferUsage {
     }
 }
 
-impl BufferAccess {
+impl MemoryAccess {
     pub(crate) const fn flag(&self) -> vk::MemoryPropertyFlags {
         match *self {
             Self::Gpu => vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

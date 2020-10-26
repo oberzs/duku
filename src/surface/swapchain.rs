@@ -8,7 +8,7 @@ use std::ptr;
 use super::Surface;
 use super::VSync;
 use crate::device::Device;
-use crate::image::ImageFormat;
+use crate::image::Format;
 use crate::image::ImageUsage;
 use crate::image::Size;
 use crate::instance::GPUProperties;
@@ -38,7 +38,7 @@ impl Swapchain {
             flags: 0,
             surface: surface.handle(),
             min_image_count: image_count,
-            image_format: ImageFormat::Sbgra.flag(),
+            image_format: Format::Sbgra.flag(),
             image_color_space: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
             image_extent: extent,
             image_array_layers: 1,
@@ -82,7 +82,7 @@ impl Swapchain {
             flags: 0,
             surface: surface.handle(),
             min_image_count: image_count,
-            image_format: ImageFormat::Sbgra.flag(),
+            image_format: Format::Sbgra.flag(),
             image_color_space: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
             image_extent: extent,
             image_array_layers: 1,

@@ -54,6 +54,7 @@ pub use error::Result;
 pub use image::Cubemap;
 pub use image::CubemapSides;
 pub use image::Framebuffer;
+pub use image::Mips;
 pub use image::Texture;
 pub use image::TextureFilter;
 pub use image::TextureWrap;

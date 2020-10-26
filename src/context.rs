@@ -19,8 +19,9 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
+use crate::image::Format;
 use crate::image::Framebuffer;
-use crate::image::ImageFormat;
+use crate::image::Mips;
 use crate::image::Msaa;
 use crate::image::Size;
 use crate::image::Texture;
@@ -279,7 +280,13 @@ impl Context {
         );
     }
 
-    pub fn create_texture(&mut self, pixels: &[Color], width: u32, height: u32) -> Handle<Texture> {
+    pub fn create_texture(
+        &mut self,
+        pixels: &[Color],
+        width: u32,
+        height: u32,
+        mips: Mips,
+    ) -> Handle<Texture> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -290,9 +297,18 @@ impl Context {
             &mut self.shader_images,
             data,
             Size::new(width, height),
-            ImageFormat::Rgba,
+            Format::Rgba,
+            mips,
         );
         self.storage.add_texture(tex)
+    }
+
+    pub fn texture(&self, tex: &Handle<Texture>) -> &Texture {
+        self.storage.textures.get(tex)
+    }
+
+    pub fn texture_mut(&mut self, tex: &Handle<Texture>) -> &mut Texture {
+        self.storage.textures.get_mut(tex)
     }
 
     pub fn create_mesh(&mut self) -> Handle<Mesh> {
@@ -389,7 +405,7 @@ impl Context {
             &self.device,
             &self.shader_layout,
             &mut self.shader_images,
-            &[ImageFormat::Depth, ImageFormat::Sbgra],
+            &[Format::Depth, Format::Sbgra],
             self.msaa,
             Size::new(width, height),
         );
@@ -524,31 +540,49 @@ impl Context {
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png_bytes(&mut self, bytes: Vec<u8>) -> Result<Handle<Texture>> {
-        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, false)?;
+    pub fn create_texture_png_bytes(
+        &mut self,
+        bytes: Vec<u8>,
+        mips: Mips,
+    ) -> Result<Handle<Texture>> {
+        let tex =
+            Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, false, mips)?;
         Ok(self.storage.add_texture(tex))
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png(&mut self, path: impl AsRef<Path>) -> Result<Handle<Texture>> {
+    pub fn create_texture_png(
+        &mut self,
+        path: impl AsRef<Path>,
+        mips: Mips,
+    ) -> Result<Handle<Texture>> {
         use std::fs;
 
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes(bytes)
+        self.create_texture_png_bytes(bytes, mips)
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png_bytes_linear(&mut self, bytes: Vec<u8>) -> Result<Handle<Texture>> {
-        let tex = Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, true)?;
+    pub fn create_texture_png_bytes_linear(
+        &mut self,
+        bytes: Vec<u8>,
+        mips: Mips,
+    ) -> Result<Handle<Texture>> {
+        let tex =
+            Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, true, mips)?;
         Ok(self.storage.add_texture(tex))
     }
 
     #[cfg(feature = "png")]
-    pub fn create_texture_png_linear(&mut self, path: impl AsRef<Path>) -> Result<Handle<Texture>> {
+    pub fn create_texture_png_linear(
+        &mut self,
+        path: impl AsRef<Path>,
+        mips: Mips,
+    ) -> Result<Handle<Texture>> {
         use std::fs;
 
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes_linear(bytes)
+        self.create_texture_png_bytes_linear(bytes, mips)
     }
 
     #[cfg(feature = "png")]

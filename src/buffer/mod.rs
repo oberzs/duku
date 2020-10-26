@@ -12,12 +12,13 @@ use std::ptr;
 
 use crate::device::Device;
 use crate::vk;
-pub(crate) use properties::BufferAccess;
 pub(crate) use properties::BufferUsage;
+pub(crate) use properties::MemoryAccess;
 
 pub(crate) struct Buffer<T: Copy> {
     handle: vk::Buffer,
     memory: vk::DeviceMemory,
+    mapped: *mut c_void,
     usage: BufferUsage,
     size: usize,
     marker: PhantomData<*const T>,
@@ -39,12 +40,15 @@ impl<T: Copy> Buffer<T> {
             p_queue_family_indices: ptr::null(),
         };
 
-        let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
+        let (handle, memory) = device.allocate_buffer(&info, MemoryAccess::Cpu);
+
+        let mapped = device.map_memory(memory, size);
 
         Self {
             marker: PhantomData,
             handle,
             memory,
+            mapped,
             size,
             usage,
         }
@@ -66,16 +70,19 @@ impl<T: Copy> Buffer<T> {
             p_queue_family_indices: ptr::null(),
         };
 
-        let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
+        let (handle, memory) = device.allocate_buffer(&info, MemoryAccess::Cpu);
+
+        let mapped = device.map_memory(memory, size);
 
         let buffer = Self {
             marker: PhantomData,
             handle,
             memory,
+            mapped,
             size,
             usage,
         };
-        buffer.copy_from_data(device, data);
+        buffer.copy_from_data(data);
         buffer
     }
 
@@ -100,21 +107,22 @@ impl<T: Copy> Buffer<T> {
         };
 
         self.destroy(device);
-        let (handle, memory) = device.allocate_buffer(&info, BufferAccess::Cpu);
+        let (handle, memory) = device.allocate_buffer(&info, MemoryAccess::Cpu);
+        self.mapped = device.map_memory(memory, size);
         self.handle = handle;
         self.memory = memory;
         self.size = size;
     }
 
-    pub(crate) fn copy_from_data(&self, device: &Device, data: &[T]) {
+    pub(crate) fn copy_from_data(&self, data: &[T]) {
         let size = mem::size_of::<T>() * data.len();
 
         debug_assert!(self.size >= size, "buffer needs to be resized");
         debug_assert!(size > 0, "buffer update data must not be empty");
 
-        device.map_memory(self.memory, size, |mem| unsafe {
-            ptr::copy_nonoverlapping(data as *const [T] as *const c_void, mem, size);
-        });
+        unsafe {
+            ptr::copy_nonoverlapping(data as *const [T] as *const c_void, self.mapped, size);
+        }
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {
@@ -130,6 +138,7 @@ impl<T: Copy> Buffer<T> {
     }
 
     pub(crate) fn destroy(&self, device: &Device) {
+        device.unmap_memory(self.memory);
         device.free_buffer(self.handle, self.memory);
     }
 }

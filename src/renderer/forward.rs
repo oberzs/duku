@@ -13,8 +13,8 @@ use crate::device::Commands;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
 use crate::font::Font;
+use crate::image::Format;
 use crate::image::Framebuffer;
-use crate::image::ImageFormat;
 use crate::image::Msaa;
 use crate::image::Size;
 use crate::image::Texture;
@@ -131,21 +131,18 @@ impl ForwardRenderer {
         ];
 
         // update world uniform
-        framebuffer.update_world(
-            device,
-            ShaderWorld {
-                shadow_cascades: self.shadow_frames[current].cascades,
-                world_to_shadow: self.shadow_frames[current].world_to_shadow,
-                shadow_bias: target.shadow_bias,
-                time: self.start_time.elapsed().as_secs_f32(),
-                camera_position: camera.transform.position,
-                world_to_view: camera.world_to_view(),
-                view_to_clip: camera.view_to_clip(),
-                skybox_index: target.skybox.map(|s| s.id()).unwrap_or(0),
-                lights,
-                shadow_pcf,
-            },
-        );
+        framebuffer.update_world(ShaderWorld {
+            shadow_cascades: self.shadow_frames[current].cascades,
+            world_to_shadow: self.shadow_frames[current].world_to_shadow,
+            shadow_bias: target.shadow_bias,
+            time: self.start_time.elapsed().as_secs_f32(),
+            camera_position: camera.transform.position,
+            world_to_view: camera.world_to_view(),
+            view_to_clip: camera.view_to_clip(),
+            skybox_index: target.skybox.map(|s| s.id()).unwrap_or(0),
+            lights,
+            shadow_pcf,
+        });
 
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear_color.to_rgba_norm());
@@ -241,21 +238,18 @@ impl ForwardRenderer {
 
             // update world uniform
             let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.update_world(
-                device,
-                ShaderWorld {
-                    world_to_shadow: [Matrix4::identity(); 4],
-                    camera_position: Vector3::default(),
-                    lights: [Default::default(); 4],
-                    world_to_view: light_view_matrix,
-                    view_to_clip: light_ortho_matrix,
-                    shadow_cascades: [0.0; 4],
-                    shadow_bias: 0.0,
-                    shadow_pcf: 0.0,
-                    skybox_index: 0,
-                    time: 0.0,
-                },
-            );
+            framebuffer.update_world(ShaderWorld {
+                world_to_shadow: [Matrix4::identity(); 4],
+                camera_position: Vector3::default(),
+                lights: [Default::default(); 4],
+                world_to_view: light_view_matrix,
+                view_to_clip: light_ortho_matrix,
+                shadow_cascades: [0.0; 4],
+                shadow_bias: 0.0,
+                shadow_pcf: 0.0,
+                skybox_index: 0,
+                time: 0.0,
+            });
 
             // do render pass
             cmd.begin_render_pass(framebuffer, (1.0, 1.0, 1.0, 1.0));
@@ -328,7 +322,7 @@ impl ShadowMapSet {
             device,
             shader_layout,
             shader_images,
-            &[ImageFormat::Depth],
+            &[Format::Depth],
             Msaa::Disabled,
             Size::new(size, size),
         )

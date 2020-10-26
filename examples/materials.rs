@@ -7,6 +7,7 @@ use draw_it::window::Controller;
 use draw_it::Camera;
 use draw_it::Context;
 use draw_it::CubemapSides;
+use draw_it::Mips;
 use draw_it::Result;
 use draw_it::Transform;
 use draw_it::Vector3;
@@ -25,8 +26,10 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit((0.0, 0.0, 0.0));
 
-    let light_tex = context.create_texture_png("examples/textures/prototype/light.png")?;
-    let purple_tex = context.create_texture_png("examples/textures/prototype/purple.png")?;
+    let light_tex =
+        context.create_texture_png("examples/textures/prototype/light.png", Mips::Log2)?;
+    let purple_tex =
+        context.create_texture_png("examples/textures/prototype/purple.png", Mips::Log2)?;
 
     let light_mat = context
         .build_material_pbr()

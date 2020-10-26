@@ -230,8 +230,8 @@ impl Mesh {
             }
 
             if !vertices.is_empty() && !self.indices.is_empty() {
-                self.vertex_buffer.copy_from_data(device, &vertices);
-                self.index_buffer.copy_from_data(device, &self.indices);
+                self.vertex_buffer.copy_from_data(&vertices);
+                self.index_buffer.copy_from_data(&self.indices);
             }
             self.index_count = self.indices.len();
 

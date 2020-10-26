@@ -145,21 +145,18 @@ impl Material {
         self.should_update = true;
     }
 
-    pub(crate) fn update_if_needed(&mut self, device: &Device) {
+    pub(crate) fn update_if_needed(&mut self) {
         if self.should_update {
-            self.buffer.copy_from_data(
-                device,
-                &[ShaderMaterial {
-                    arg_1: self.arg_1,
-                    arg_2: self.arg_2,
-                    arg_3: self.arg_3,
-                    arg_4: self.arg_4,
-                    arg_5: self.arg_5,
-                    arg_6: self.arg_6,
-                    arg_7: self.arg_7,
-                    arg_8: self.arg_8,
-                }],
-            );
+            self.buffer.copy_from_data(&[ShaderMaterial {
+                arg_1: self.arg_1,
+                arg_2: self.arg_2,
+                arg_3: self.arg_3,
+                arg_4: self.arg_4,
+                arg_5: self.arg_5,
+                arg_6: self.arg_6,
+                arg_7: self.arg_7,
+                arg_8: self.arg_8,
+            }]);
             self.should_update = false;
         }
     }
