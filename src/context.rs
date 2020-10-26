@@ -72,7 +72,7 @@ pub struct Context {
 
     // Resources
     storage: Storage,
-    builtins: Builtins,
+    pub builtins: Builtins,
 
     // Renderers
     forward_renderer: ForwardRenderer,

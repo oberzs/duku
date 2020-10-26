@@ -337,6 +337,25 @@ impl<'b> Target<'_, 'b> {
         );
     }
 
+    pub fn draw_fullscreen(&mut self) {
+        let shader = self.builtins.fullscreen_shader.clone();
+        let material = self
+            .material
+            .unwrap_or(&self.builtins.white_material)
+            .clone();
+
+        self.add_mesh_order(
+            material,
+            shader,
+            MeshOrder {
+                mesh: self.builtins.surface_mesh.clone(),
+                local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
+                shadows: false,
+                sampler_index: self.sampler_index(),
+            },
+        );
+    }
+
     pub fn draw_grid(&mut self) {
         let size = 100;
         let half = size / 2;

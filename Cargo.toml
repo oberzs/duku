@@ -26,6 +26,10 @@ name = "dynamic"
 required-features = ["window"]
 
 [[example]]
+name = "framebuffer"
+required-features = ["window"]
+
+[[example]]
 name = "hello"
 required-features = ["window"]
 

@@ -51,6 +51,7 @@ pub struct Builtins {
     pub shape_shader: Handle<Shader>,
     pub unshaded_shader: Handle<Shader>,
     pub skybox_shader: Handle<Shader>,
+    pub fullscreen_shader: Handle<Shader>,
 
     // fonts
     pub fira_font: Handle<Font>,
@@ -200,6 +201,17 @@ impl Builtins {
             storage.add_shader(shader)
         };
 
+        let fullscreen_shader = {
+            let shader = Shader::from_spirv_bytes(
+                device,
+                framebuffer,
+                layout,
+                include_bytes!("../../shaders/fullscreen.spirv"),
+            )
+            .expect("bad shader");
+            storage.add_shader(shader)
+        };
+
         // fonts
         let fira_font = {
             let font = Font::fira_mono(device, shader_images);
@@ -223,6 +235,7 @@ impl Builtins {
             shape_shader,
             unshaded_shader,
             skybox_shader,
+            fullscreen_shader,
             fira_font,
         }
     }

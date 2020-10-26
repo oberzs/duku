@@ -10,6 +10,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
 use crate::device::Device;
+use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Vector4;
 use crate::storage::Handle;
@@ -66,6 +67,11 @@ impl Material {
 
     pub fn set_albedo_texture(&mut self, texture: &Handle<Texture>) {
         self.arg_1.w = texture.id() as f32;
+        self.should_update = true;
+    }
+
+    pub fn set_albedo_framebuffer(&mut self, f: &Handle<Framebuffer>) {
+        self.arg_1.w = f.id() as f32;
         self.should_update = true;
     }
 
@@ -175,6 +181,11 @@ impl MaterialBuilder<'_> {
 
     pub fn albedo_texture(mut self, texture: &Handle<Texture>) -> Self {
         self.material.set_albedo_texture(texture);
+        self
+    }
+
+    pub fn albedo_framebuffer(mut self, framebuffer: &Handle<Framebuffer>) -> Self {
+        self.material.set_albedo_framebuffer(framebuffer);
         self
     }
 
