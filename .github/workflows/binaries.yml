@@ -1,0 +1,51 @@
+name: Binaries
+
+on: workflow_dispatch
+
+jobs:
+  windows:
+    name: "Windows"
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          override: true
+
+      - name: Build
+        run: cargo build --release --bin dic --features="glsl"
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: dic-windows
+          path: target/release/dic.exe
+
+  linux:
+    name: "Linux"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          override: true
+
+      - name: Build
+        run: cargo build --release --bin dic --features="glsl"
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: dic-linux
+          path: target/release/dic
