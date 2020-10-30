@@ -3,6 +3,7 @@
 
 // represents a whole transform. position + scale + rotation
 
+use super::Matrix3;
 use super::Matrix4;
 use super::Quaternion;
 use super::Vector3;
@@ -40,10 +41,6 @@ impl Transform {
             rotation: Quaternion::euler_rotation(roll, pitch, yaw),
             ..Default::default()
         }
-    }
-
-    pub fn as_matrix(self) -> Matrix4 {
-        Matrix4::translation(self.position) * Matrix4::scale(self.scale) * self.rotation.as_matrix()
     }
 
     pub fn up(self) -> Vector3 {
@@ -124,9 +121,33 @@ impl Default for Transform {
     }
 }
 
+impl From<Matrix4> for Transform {
+    fn from(m: Matrix4) -> Self {
+        let position = Vector3::new(m.col_w.x, m.col_w.y, m.col_w.z);
+
+        let mut i = Matrix3::from_columns(m.col_x.shrink(), m.col_y.shrink(), m.col_z.shrink());
+
+        let sx = i.col_x.length();
+        let sy = i.col_y.length();
+        let sz = i.col_z.length() * i.determinant().signum();
+        let scale = Vector3::new(sx, sy, sz);
+
+        i.col_x *= 1.0 / sx;
+        i.col_y *= 1.0 / sy;
+        i.col_z *= 1.0 / sz;
+
+        let rotation = Quaternion::from(i);
+
+        Self {
+            position,
+            scale,
+            rotation,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::Matrix4;
     use super::Quaternion;
     use super::Transform;
     use super::Vector3;
@@ -148,12 +169,6 @@ mod test {
     }
 
     #[test]
-    fn as_matrix() {
-        let t = Transform::positioned(1.0, 2.0, 3.0);
-        assert_eq!(t.as_matrix(), Matrix4::translation((1.0, 2.0, 3.0)));
-    }
-
-    #[test]
     fn direction() {
         let t = Transform::positioned(1.0, 0.0, 0.0);
         assert_eq!(t.up(), Vector3::new(0.0, 1.0, 0.0));
@@ -164,7 +179,7 @@ mod test {
     #[test]
     fn move_by() {
         let mut t = Transform::default();
-        t.move_by((1.0, 2.0, 3.0));
+        t.move_by([1.0, 2.0, 3.0]);
         assert_eq!(t, Transform::positioned(1.0, 2.0, 3.0));
     }
 }

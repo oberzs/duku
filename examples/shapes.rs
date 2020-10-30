@@ -26,21 +26,21 @@ fn main() -> Result<()> {
             target.border_width = 5.0;
 
             target.shape_color = Color::GREEN;
-            target.draw_rectangle((10.0, 10.0), (150.0, 100.0));
+            target.draw_rectangle([10.0, 10.0], [150.0, 100.0]);
 
             target.shape_color = Color::RED;
-            target.draw_square((250.0, 50.0), 50.0);
+            target.draw_square([250.0, 50.0], 50.0);
 
             target.shape_mode = ShapeMode::Center;
 
             target.push();
             target.shape_color = Color::TEAL;
             target.transform.move_forward(1.0);
-            target.draw_ellipse((300.0, 200.0), (100.0, 50.0));
+            target.draw_ellipse([300.0, 200.0], [100.0, 50.0]);
             target.pop();
 
             target.shape_color = Color::AQUA;
-            target.draw_circle((300.0, 200.0), 25.0);
+            target.draw_circle([300.0, 200.0], 25.0);
 
             target.shape_color = Color::BLUE;
             target.draw_shape(&[

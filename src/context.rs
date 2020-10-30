@@ -395,7 +395,7 @@ impl Context {
         .metalness_texture(&self.builtins.white_texture)
         .roughness_texture(&self.builtins.white_texture)
         .ambient_occlusion_texture(&self.builtins.white_texture)
-        .albedo_color((255, 255, 255))
+        .albedo_color([255, 255, 255])
         .metalness(0.0)
         .roughness(0.0)
     }
@@ -637,8 +637,8 @@ impl ContextBuilder {
         self
     }
 
-    pub const fn quality(mut self, quality: Quality) -> Self {
-        self.quality = quality;
+    pub const fn quality(mut self, quality: QualitySettings) -> Self {
+        self.quality = Quality::Custom(quality);
         self
     }
 

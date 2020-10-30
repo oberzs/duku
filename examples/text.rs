@@ -39,19 +39,19 @@ fn main() -> Result<()> {
             target.transform.move_down(10.0);
 
             target.text_color = Color::WHITE;
-            target.draw_text("Bitmap 24p text", (0.0, 0.0));
+            target.draw_text("Bitmap 24p text", [0.0, 0.0]);
             target.text_color = Color::RED;
             target.transform.move_down(40.0);
-            target.draw_text("Red text!", (0.0, 0.0));
+            target.draw_text("Red text!", [0.0, 0.0]);
             target.text_color = Color::BLUE;
             target.transform.move_down(40.0);
             target.draw_text(
                 "Blue text\n.. on multiple lines.\nTry writing some text",
-                (0.0, 0.0),
+                [0.0, 0.0],
             );
             target.text_color = Color::ORANGE;
             target.transform.move_down(80.0);
-            target.draw_text(&input, (0.0, 0.0));
+            target.draw_text(&input, [0.0, 0.0]);
         });
     });
 

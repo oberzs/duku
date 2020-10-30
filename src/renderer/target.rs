@@ -39,6 +39,7 @@ pub struct Target<'a, 'b> {
     pub shadow_cascades: [f32; 4],
     pub shadows: bool,
     pub lights: [Light; 4],
+    pub ambient_color: Color,
 
     // lines
     pub line_color: Color,
@@ -148,9 +149,10 @@ impl<'b> Target<'_, 'b> {
             line_color: Color::WHITE,
             shape_color: Color::WHITE,
             border_color: Color::GRAY,
+            ambient_color: Color::WHITE,
             transform: Transform::default(),
             lights: [
-                Light::main((-1.0, -1.0, 1.0), Color::WHITE, 10.0),
+                Light::main([-1.0, -1.0, 1.0], Color::WHITE, 10.0),
                 Light::NONE,
                 Light::NONE,
                 Light::NONE,
@@ -220,7 +222,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: mesh.clone(),
-                local_to_world: self.transform.as_matrix(),
+                local_to_world: Matrix4::from(self.transform),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -236,7 +238,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: mesh.clone(),
-                local_to_world: self.transform.as_matrix(),
+                local_to_world: Matrix4::from(self.transform),
                 shadows: false,
                 sampler_index: 0,
             },
@@ -260,7 +262,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: self.builtins.cube_mesh.clone(),
-                local_to_world: self.transform.as_matrix(),
+                local_to_world: Matrix4::from(self.transform),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -284,7 +286,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: self.builtins.ico_sphere_mesh.clone(),
-                local_to_world: self.transform.as_matrix(),
+                local_to_world: Matrix4::from(self.transform),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -308,7 +310,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: self.builtins.uv_sphere_mesh.clone(),
-                local_to_world: self.transform.as_matrix(),
+                local_to_world: Matrix4::from(self.transform),
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -330,7 +332,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
+                local_to_world: Matrix4::identity(),
                 shadows: false,
                 sampler_index: self.sampler_index(),
             },
@@ -349,7 +351,7 @@ impl<'b> Target<'_, 'b> {
             shader,
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Transform::positioned(0.0, 0.0, 0.0).as_matrix(),
+                local_to_world: Matrix4::identity(),
                 shadows: false,
                 sampler_index: self.sampler_index(),
             },
@@ -375,7 +377,7 @@ impl<'b> Target<'_, 'b> {
                 _ => Color::rgba(255, 255, 255, 50),
             };
 
-            self.draw_line_debug((xx, 0.0, z_min), (xx, 0.0, z_max));
+            self.draw_line_debug([xx, 0.0, z_min], [xx, 0.0, z_max]);
         }
 
         for z in -half..half {
@@ -390,7 +392,7 @@ impl<'b> Target<'_, 'b> {
                 _ => Color::rgba(255, 255, 255, 50),
             };
 
-            self.draw_line_debug((x_min, 0.0, zz), (x_max, 0.0, zz));
+            self.draw_line_debug([x_min, 0.0, zz], [x_max, 0.0, zz]);
         }
 
         self.pop();

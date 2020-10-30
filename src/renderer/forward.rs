@@ -140,6 +140,7 @@ impl ForwardRenderer {
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
             skybox_index: target.skybox.map(|s| s.id()).unwrap_or(0),
+            ambient_color: Vector3::from(target.ambient_color),
             lights,
             shadow_pcf,
         });
@@ -241,6 +242,7 @@ impl ForwardRenderer {
             framebuffer.update_world(ShaderWorld {
                 world_to_shadow: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
+                ambient_color: Vector3::default(),
                 lights: [Default::default(); 4],
                 world_to_view: light_view_matrix,
                 view_to_clip: light_ortho_matrix,
@@ -252,7 +254,7 @@ impl ForwardRenderer {
             });
 
             // do render pass
-            cmd.begin_render_pass(framebuffer, (1.0, 1.0, 1.0, 1.0));
+            cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
             cmd.set_view(framebuffer.size());
             cmd.bind_descriptor(shader_layout, framebuffer.world());
             cmd.bind_shader(&self.shadow_shader);
@@ -365,12 +367,11 @@ fn record_skybox(
     let mesh = stores.meshes.get(&target.builtins.cube_mesh);
     cmd.bind_mesh(mesh);
 
-    let local_to_world = (Transform {
+    let local_to_world = Matrix4::from(Transform {
         position: camera.transform.position,
         scale: Vector3::uniform(camera.depth * 2.0 - 0.1),
         ..Default::default()
-    })
-    .as_matrix();
+    });
     cmd.push_constants(
         shader_layout,
         ShaderConstants {
@@ -504,7 +505,7 @@ fn record_lines(
     let mut indices = vec![];
 
     for order in line_orders {
-        let matrix = order.transform.as_matrix();
+        let matrix = Matrix4::from(order.transform);
         let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
         let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
 
@@ -563,7 +564,7 @@ fn record_shapes(
     let mut indices = vec![];
 
     for order in shape_orders {
-        let matrix = order.transform.as_matrix();
+        let matrix = Matrix4::from(order.transform);
         let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
         let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
         let point_3 = (matrix * order.points[2].extend(1.0)).shrink();

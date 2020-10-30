@@ -112,7 +112,7 @@ impl Builtins {
         // materials
         let white_material = {
             let mut mat = Material::new(device, layout);
-            mat.set_albedo_color((255, 255, 255));
+            mat.set_albedo_color([255, 255, 255]);
             mat.set_albedo_texture(&white_texture);
             mat.set_normal_texture(&blue_texture);
             mat.update_if_needed();
@@ -289,50 +289,50 @@ fn create_quad(device: &Device) -> Mesh {
 pub(crate) fn create_cube(device: &Device) -> Mesh {
     let top = create_rectangle(
         device,
-        (-0.5, 0.5, 0.5),
-        (0.5, 0.5, 0.5),
-        (0.5, 0.5, -0.5),
-        (-0.5, 0.5, -0.5),
+        [-0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, -0.5],
+        [-0.5, 0.5, -0.5],
     );
 
     let bottom = create_rectangle(
         device,
-        (0.5, -0.5, 0.5),
-        (-0.5, -0.5, 0.5),
-        (-0.5, -0.5, -0.5),
-        (0.5, -0.5, -0.5),
+        [0.5, -0.5, 0.5],
+        [-0.5, -0.5, 0.5],
+        [-0.5, -0.5, -0.5],
+        [0.5, -0.5, -0.5],
     );
 
     let back = create_rectangle(
         device,
-        (0.5, 0.5, 0.5),
-        (-0.5, 0.5, 0.5),
-        (-0.5, -0.5, 0.5),
-        (0.5, -0.5, 0.5),
+        [0.5, 0.5, 0.5],
+        [-0.5, 0.5, 0.5],
+        [-0.5, -0.5, 0.5],
+        [0.5, -0.5, 0.5],
     );
 
     let front = create_rectangle(
         device,
-        (-0.5, 0.5, -0.5),
-        (0.5, 0.5, -0.5),
-        (0.5, -0.5, -0.5),
-        (-0.5, -0.5, -0.5),
+        [-0.5, 0.5, -0.5],
+        [0.5, 0.5, -0.5],
+        [0.5, -0.5, -0.5],
+        [-0.5, -0.5, -0.5],
     );
 
     let left = create_rectangle(
         device,
-        (-0.5, 0.5, 0.5),
-        (-0.5, 0.5, -0.5),
-        (-0.5, -0.5, -0.5),
-        (-0.5, -0.5, 0.5),
+        [-0.5, 0.5, 0.5],
+        [-0.5, 0.5, -0.5],
+        [-0.5, -0.5, -0.5],
+        [-0.5, -0.5, 0.5],
     );
 
     let right = create_rectangle(
         device,
-        (0.5, 0.5, -0.5),
-        (0.5, 0.5, 0.5),
-        (0.5, -0.5, 0.5),
-        (0.5, -0.5, -0.5),
+        [0.5, 0.5, -0.5],
+        [0.5, 0.5, 0.5],
+        [0.5, -0.5, 0.5],
+        [0.5, -0.5, -0.5],
     );
 
     let mesh = Mesh::combine(device, &[&top, &bottom, &front, &back, &left, &right]);

@@ -3,6 +3,7 @@
 
 // linear math and math utilities
 
+mod matrix_3;
 mod matrix_4;
 mod quaternion;
 mod sphere;
@@ -13,6 +14,7 @@ mod vector_4;
 
 pub(crate) use sphere::Sphere;
 
+pub use matrix_3::Matrix3;
 pub use matrix_4::Matrix4;
 pub use quaternion::Quaternion;
 pub use transform::Transform;

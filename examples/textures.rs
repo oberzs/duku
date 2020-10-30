@@ -32,8 +32,8 @@ fn main() -> Result<()> {
         tex.set_pixel(11, 11, Color::hsv(hue, 255, 255));
 
         context.draw_on_window(None, |target| {
-            target.draw_texture(&texture_1, (-400.0, -200.0), (400.0, 400.0));
-            target.draw_texture(&texture_2, (0.0, -200.0), (400.0, 400.0));
+            target.draw_texture(&texture_1, [-400.0, -200.0], [400.0, 400.0]);
+            target.draw_texture(&texture_2, [0.0, -200.0], [400.0, 400.0]);
         });
     });
 

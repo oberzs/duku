@@ -120,10 +120,7 @@ void fragment() {
     }
 
     vec3 ambient = vec3(0.03) * albedo * ambient_occlusion;
-    vec3 color = ambient + light_amount;
-
-    // Reinhard tonemapping
-    color = color / (color + vec3(1.0));
+    vec3 color = (ambient + light_amount) * world.ambient_color;
 
     out_color = vec4(color, 1.0);
 }

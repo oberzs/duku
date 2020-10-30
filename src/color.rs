@@ -5,9 +5,6 @@
 
 use std::cmp;
 
-use crate::math::Vector3;
-use crate::math::Vector4;
-
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
@@ -67,29 +64,21 @@ impl Color {
         Self::rgb_norm(v, v, v)
     }
 
-    pub fn to_rgb_norm(&self) -> (f32, f32, f32) {
-        (to_norm(self.r), to_norm(self.g), to_norm(self.b))
+    pub fn to_rgb_norm(&self) -> [f32; 3] {
+        [to_norm(self.r), to_norm(self.g), to_norm(self.b)]
     }
 
-    pub fn to_rgba_norm(&self) -> (f32, f32, f32, f32) {
-        (
+    pub fn to_rgba_norm(&self) -> [f32; 4] {
+        [
             to_norm(self.r),
             to_norm(self.g),
             to_norm(self.b),
             to_norm(self.a),
-        )
-    }
-
-    pub fn to_rgb_norm_vec(&self) -> Vector3 {
-        self.to_rgb_norm().into()
-    }
-
-    pub fn to_rgba_norm_vec(&self) -> Vector4 {
-        self.to_rgba_norm().into()
+        ]
     }
 
     pub fn to_hsv(&self) -> (u16, u8, u8) {
-        let (r, g, b) = self.to_rgb_norm();
+        let [r, g, b] = self.to_rgb_norm();
 
         let min = cmp::min(self.r, cmp::min(self.g, self.b));
         let max = cmp::max(self.r, cmp::max(self.g, self.b));
@@ -122,6 +111,48 @@ impl Color {
         (hue as u16, saturation, value)
     }
 
+    pub fn to_srgb(&self) -> Self {
+        fn map(value: f32) -> f32 {
+            let l = match value {
+                v if v < 0.0 => 0.0,
+                v if v > 1.0 => 1.0,
+                v => v,
+            };
+            let cutoff = 0.0031308;
+            let gamma = 2.2;
+
+            if l <= cutoff {
+                l * 12.92
+            } else {
+                1.055 * l.powf(1.0 / gamma) - 0.055
+            }
+        }
+
+        let [r, g, b, a] = self.to_rgba_norm();
+        Self::rgba_norm(map(r), map(g), map(b), a)
+    }
+
+    pub fn to_linear(&self) -> Self {
+        fn map(value: f32) -> f32 {
+            let s = match value {
+                v if v < 0.0 => 0.0,
+                v if v > 1.0 => 1.0,
+                v => v,
+            };
+            let cutoff = 0.04045;
+            let gamma = 2.2;
+
+            if s <= cutoff {
+                s / 12.92
+            } else {
+                ((s + 0.055) / 1.055).powf(gamma)
+            }
+        }
+
+        let [r, g, b, a] = self.to_rgba_norm();
+        Self::rgba_norm(map(r), map(g), map(b), a)
+    }
+
     pub const WHITE: Self = Self::rgb(255, 255, 255);
     pub const SILVER: Self = Self::rgb(192, 192, 192);
     pub const GRAY: Self = Self::rgb(128, 128, 128);
@@ -142,27 +173,27 @@ impl Color {
     pub const ORANGE: Self = Self::rgb(255, 127, 0);
 }
 
-impl From<(u8, u8, u8)> for Color {
-    fn from(value: (u8, u8, u8)) -> Self {
-        Self::rgb(value.0, value.1, value.2)
+impl From<[u8; 3]> for Color {
+    fn from(value: [u8; 3]) -> Self {
+        Self::rgb(value[0], value[1], value[2])
     }
 }
 
-impl From<(u8, u8, u8, u8)> for Color {
-    fn from(value: (u8, u8, u8, u8)) -> Self {
-        Self::rgba(value.0, value.1, value.2, value.3)
+impl From<[u8; 4]> for Color {
+    fn from(value: [u8; 4]) -> Self {
+        Self::rgba(value[0], value[1], value[2], value[3])
     }
 }
 
-impl From<(f32, f32, f32)> for Color {
-    fn from(value: (f32, f32, f32)) -> Self {
-        Self::rgb_norm(value.0, value.1, value.2)
+impl From<[f32; 3]> for Color {
+    fn from(value: [f32; 3]) -> Self {
+        Self::rgb_norm(value[0], value[1], value[2])
     }
 }
 
-impl From<(f32, f32, f32, f32)> for Color {
-    fn from(value: (f32, f32, f32, f32)) -> Self {
-        Self::rgba_norm(value.0, value.1, value.2, value.3)
+impl From<[f32; 4]> for Color {
+    fn from(value: [f32; 4]) -> Self {
+        Self::rgba_norm(value[0], value[1], value[2], value[3])
     }
 }
 

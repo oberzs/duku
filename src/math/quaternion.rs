@@ -3,6 +3,7 @@
 
 // quaternion rotation struct
 
+use super::Matrix3;
 use super::Matrix4;
 use super::Vector3;
 
@@ -11,10 +12,10 @@ use std::ops::MulAssign;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Quaternion {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
 }
 
 impl Quaternion {
@@ -92,17 +93,6 @@ impl Quaternion {
         result
     }
 
-    pub fn as_matrix(self) -> Matrix4 {
-        let angle = 2.0 * self.w.acos().to_degrees();
-        let scale = (1.0 - self.w * self.w).sqrt();
-        let axis = if scale < 0.001 {
-            Vector3::new(1.0, 0.0, 0.0)
-        } else {
-            Vector3::new(self.x, self.y, self.z) / scale
-        };
-        Matrix4::axis_rotation(axis, angle)
-    }
-
     pub fn rotate_vector(self, v: Vector3) -> Vector3 {
         let u = Vector3::new(self.x, self.y, self.z);
         let s = self.w;
@@ -138,9 +128,43 @@ impl MulAssign<Self> for Quaternion {
     }
 }
 
+impl From<Matrix3> for Quaternion {
+    fn from(m: Matrix3) -> Self {
+        let trace = m.col_x.x + m.col_y.y + m.col_z.z;
+        if trace >= 0.0 {
+            let s = 0.5 / (1.0 + trace).sqrt();
+            let qw = 0.25 / s;
+            let qx = (m.col_y.z - m.col_z.y) * s;
+            let qy = (m.col_z.x - m.col_x.z) * s;
+            let qz = (m.col_x.y - m.col_y.z) * s;
+            Self::new(qx, qy, qz, qw)
+        } else if (m.col_x.x > m.col_y.y) && (m.col_x.x > m.col_z.z) {
+            let s = 0.5 / ((m.col_x.x - m.col_y.y - m.col_z.z) + 1.0).sqrt();
+            let qx = 0.25 / s;
+            let qy = (m.col_y.x + m.col_x.y) * s;
+            let qz = (m.col_x.z + m.col_z.x) * s;
+            let qw = (m.col_y.z - m.col_z.y) * s;
+            Self::new(qx, qy, qz, qw)
+        } else if m.col_y.y > m.col_z.z {
+            let s = 0.5 / ((m.col_y.y - m.col_x.x - m.col_z.z) + 1.0).sqrt();
+            let qy = 0.25 / s;
+            let qz = (m.col_z.y + m.col_y.z) * s;
+            let qx = (m.col_y.x + m.col_x.y) * s;
+            let qw = (m.col_z.x - m.col_x.z) * s;
+            Self::new(qx, qy, qz, qw)
+        } else {
+            let s = 0.5 / ((m.col_z.z - m.col_x.x - m.col_y.y) + 1.0).sqrt();
+            let qz = 0.25 / s;
+            let qx = (m.col_x.z + m.col_z.x) * s;
+            let qy = (m.col_z.y + m.col_y.z) * s;
+            let qw = (m.col_x.y - m.col_y.x) * s;
+            Self::new(qx, qy, qz, qw)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::Matrix4;
     use super::Quaternion;
     use super::Vector3;
 
@@ -151,7 +175,7 @@ mod test {
 
     #[test]
     fn axis_rotation() {
-        let q = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0);
+        let q = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
         assert_eq!(q, Quaternion::new(0.707_106_77, 0.0, 0.0, 0.707_106_77));
     }
 
@@ -163,20 +187,20 @@ mod test {
 
     #[test]
     fn look_rotation() {
-        let q = Quaternion::look_rotation((1.0, 0.0, 0.0), Vector3::UP);
+        let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::UP);
         assert_eq!(q, Quaternion::new(0.0, 0.707_106_77, 0.0, 0.707_106_77));
     }
 
     #[test]
     fn rotate_vector() {
-        let q = Quaternion::axis_rotation((0.0, 1.0, 0.0), 90.0);
+        let q = Quaternion::axis_rotation([0.0, 1.0, 0.0], 90.0);
         let v = Vector3::new(1.0, 2.0, 3.0);
         assert_eq!(
             q.rotate_vector(v),
             Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
         );
 
-        let q1 = Quaternion::look_rotation((1.0, 0.0, 0.0), (0.0, 1.0, 0.0));
+        let q1 = Quaternion::look_rotation([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
         assert_eq!(
             q1.rotate_vector(v),
             Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
@@ -184,18 +208,8 @@ mod test {
     }
 
     #[test]
-    fn as_matrix() {
-        let m3 = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0).as_matrix();
-        let m4 = Matrix4::axis_rotation((1.0, 0.0, 0.0), 90.0);
-        assert_eq!(m3.col_x, m4.col_x);
-        assert_eq!(m3.col_y, m4.col_y);
-        assert_eq!(m3.col_z, m4.col_z);
-        assert_eq!(m3.col_w, m4.col_w);
-    }
-
-    #[test]
     fn operator() {
-        let mut q1 = Quaternion::axis_rotation((1.0, 0.0, 0.0), 90.0);
+        let mut q1 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
         let r = q1 * q1;
         q1 *= q1;
         assert_eq!(r, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));

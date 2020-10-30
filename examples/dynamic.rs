@@ -22,7 +22,7 @@ fn main() -> Result<()> {
     let mut controller = Controller::fly();
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_backward(10.0);
-    camera.transform.look_at((0.0, 0.0, 0.0));
+    camera.transform.look_at([0.0, 0.0, 0.0]);
 
     let square = context
         .build_mesh()
@@ -45,7 +45,7 @@ fn main() -> Result<()> {
 
             // draw square
             let offset = -(square_size as f32 / 2.0);
-            target.transform.move_by((offset, offset, 0.0));
+            target.transform.move_by([offset, offset, 0.0]);
             target.draw_mesh(&square);
             target.draw_mesh_wireframe(&square);
         });

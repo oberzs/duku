@@ -13,6 +13,7 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::storage::Handle;
 use crate::storage::Storage;
 use crate::vk;
@@ -96,6 +97,36 @@ impl Mesh {
 
     pub fn calculate_normals(&mut self) {
         self.normals = vec![Vector3::ZERO; self.vertices.len()];
+
+        if self.indices.len() % 3 == 0 {
+            for tri in self.indices.chunks(3) {
+                let a = tri[0] as usize;
+                let b = tri[1] as usize;
+                let c = tri[2] as usize;
+
+                // get vertices
+                let vtx_a = self.vertices[a];
+                let vtx_b = self.vertices[b];
+                let vtx_c = self.vertices[c];
+
+                // calculate normal
+                let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
+                self.normals[a] += normal;
+                self.normals[b] += normal;
+                self.normals[c] += normal;
+            }
+            for norm in &mut self.normals {
+                *norm = norm.unit();
+            }
+
+            self.should_update = true;
+        }
+
+        // calculate tangents for the new normals
+        self.calculate_tangents();
+    }
+
+    pub fn calculate_tangents(&mut self) {
         self.tangents = vec![Vector3::ZERO; self.vertices.len()];
 
         if self.indices.len() % 3 == 0 {
@@ -114,12 +145,6 @@ impl Mesh {
                 let uv_b = self.uvs.get(b).copied().unwrap_or(Vector2::ZERO);
                 let uv_c = self.uvs.get(c).copied().unwrap_or(Vector2::ZERO);
 
-                // calculate normal
-                let normal = (vtx_b - vtx_a).cross(vtx_c - vtx_a);
-                self.normals[a] += normal;
-                self.normals[b] += normal;
-                self.normals[c] += normal;
-
                 // calculate tangent
                 let edge_1 = vtx_b - vtx_a;
                 let edge_2 = vtx_c - vtx_a;
@@ -134,9 +159,6 @@ impl Mesh {
                 self.tangents[a] += tangent;
                 self.tangents[b] += tangent;
                 self.tangents[c] += tangent;
-            }
-            for norm in &mut self.normals {
-                *norm = norm.unit();
             }
             for tan in &mut self.tangents {
                 *tan = tan.unit();
@@ -216,7 +238,7 @@ impl Mesh {
                     in_normal: *normal,
                     in_tangent: *tangent,
                     in_uv: *uv,
-                    in_color: col.to_rgba_norm_vec(),
+                    in_color: Vector4::from(*col),
                     in_texture: *tex,
                 })
                 .collect();
@@ -290,6 +312,11 @@ impl MeshBuilder<'_> {
 
     pub fn calculated_normals(mut self) -> Self {
         self.mesh.calculate_normals();
+        self
+    }
+
+    pub fn calculated_tangents(mut self) -> Self {
+        self.mesh.calculate_tangents();
         self
     }
 

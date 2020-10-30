@@ -21,10 +21,10 @@ fn main() -> Result<()> {
         .build()?;
 
     let mut camera = Camera::perspective_autosized(90);
-    camera.transform.move_by((1.0, 3.0, -3.0));
+    camera.transform.move_by([1.0, 3.0, -3.0]);
     camera.transform.look_dir(Vector3::FORWARD);
 
-    let mut controller = Controller::orbit((0.0, 0.0, 0.0));
+    let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     let light_tex =
         context.create_texture_png("examples/textures/prototype/light.png", Mips::Log2)?;
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
             target.draw_grid();
 
             // render meshes
-            target.transform.move_by((-2.0, 1.0, 0.0));
+            target.transform.move_by([-2.0, 1.0, 0.0]);
             target.material = Some(&light_mat);
             target.draw_sphere_uv();
 

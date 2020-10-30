@@ -14,6 +14,7 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use super::Vector3;
+use crate::color::Color;
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -50,9 +51,15 @@ impl Vector4 {
     pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 0.0);
 }
 
-impl From<(f32, f32, f32, f32)> for Vector4 {
-    fn from(tuple: (f32, f32, f32, f32)) -> Self {
-        Self::new(tuple.0, tuple.1, tuple.2, tuple.3)
+impl From<[f32; 4]> for Vector4 {
+    fn from(a: [f32; 4]) -> Self {
+        Self::new(a[0], a[1], a[2], a[3])
+    }
+}
+
+impl From<Color> for Vector4 {
+    fn from(c: Color) -> Self {
+        Self::from(c.to_rgba_norm())
     }
 }
 

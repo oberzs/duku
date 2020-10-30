@@ -5,6 +5,7 @@
 
 use crate::color::Color;
 use crate::math::Vector3;
+use crate::math::Vector4;
 use crate::pipeline::ShaderLight;
 
 #[derive(Copy, Clone, Debug)]
@@ -63,7 +64,7 @@ impl Light {
 
         ShaderLight {
             coords: self.coords,
-            color: self.color.to_rgba_norm_vec() * self.brightness,
+            color: Vector4::from(self.color) * self.brightness,
             light_type,
         }
     }

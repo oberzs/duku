@@ -17,6 +17,7 @@ layout(set = 0, binding = 0) uniform World {
     float time;
     mat4 world_to_shadow[4];
     vec4 shadow_cascades;
+    vec3 ambient_color;
     float shadow_bias;
     float shadow_pcf;
     uint skybox_index;

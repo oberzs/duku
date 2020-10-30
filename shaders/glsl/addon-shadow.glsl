@@ -40,7 +40,7 @@ vec3 tex_coord(int index, float bias) {
 }
 
 float shadow(Light light, vec3 normal) {
-    float depth = in_clip_position.z;
+    float depth = in_view_position.z;
     float blend_margin = world.shadow_cascades[3] * 0.05;
 
     // choose shadow map

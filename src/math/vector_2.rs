@@ -58,9 +58,9 @@ impl Vector2 {
     pub const ZERO: Self = Self::new(0.0, 0.0);
 }
 
-impl From<(f32, f32)> for Vector2 {
-    fn from(tuple: (f32, f32)) -> Self {
-        Self::new(tuple.0, tuple.1)
+impl From<[f32; 2]> for Vector2 {
+    fn from(a: [f32; 2]) -> Self {
+        Self::new(a[0], a[1])
     }
 }
 

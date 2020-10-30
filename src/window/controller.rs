@@ -140,7 +140,6 @@ impl Controller {
 
                 // vertical rotation
                 if events.is_key_pressed(Key::W) {
-                    println!("W is pressed");
                     transform.move_around_point(*pivot, angle, transform.right());
                 }
                 if events.is_key_pressed(Key::S) {

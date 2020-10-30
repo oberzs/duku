@@ -12,6 +12,7 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::image::Framebuffer;
 use crate::image::Texture;
+use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::storage::Handle;
 use crate::storage::Storage;
@@ -58,10 +59,7 @@ impl Material {
     }
 
     pub fn set_albedo_color(&mut self, color: impl Into<Color>) {
-        let c = color.into().to_rgb_norm_vec();
-        self.arg_1.x = c.x;
-        self.arg_1.y = c.y;
-        self.arg_1.z = c.z;
+        self.arg_1 = Vector3::from(color.into()).extend(self.arg_1.w);
         self.should_update = true;
     }
 
