@@ -228,8 +228,8 @@ impl Context {
             meshes: &self.storage.meshes,
         };
 
-        // draw
-        self.forward_renderer.draw(
+        // render
+        self.forward_renderer.render(
             &self.device,
             framebuffer,
             &cam,
@@ -269,8 +269,8 @@ impl Context {
             meshes: &self.storage.meshes,
         };
 
-        // draw
-        self.forward_renderer.draw(
+        // render
+        self.forward_renderer.render(
             &self.device,
             frame,
             &cam,

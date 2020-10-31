@@ -4,7 +4,6 @@
 // Camera - struct to hold matrix transforms for a camera
 
 use crate::math::Matrix4;
-use crate::math::Sphere;
 use crate::math::Transform;
 use crate::math::Vector3;
 
@@ -108,67 +107,21 @@ impl Camera {
     pub(crate) fn view_to_clip(&self) -> Matrix4 {
         match self.projection {
             Projection::Orthographic => {
-                Matrix4::orthographic_center(self.width, self.height, -0.001, self.depth)
+                Matrix4::orthographic_center(self.width, self.height, self.near(), self.depth)
             }
-            Projection::Perspective => {
-                Matrix4::perspective(self.fov as f32, self.width / self.height, 0.001, self.depth)
-            }
+            Projection::Perspective => Matrix4::perspective(
+                self.fov as f32,
+                self.width / self.height,
+                self.near(),
+                self.depth,
+            ),
         }
     }
 
-    pub(crate) fn bounding_sphere_for_split(&self, near: f32, far: f32) -> Sphere {
-        let mut frustum_corners = [
-            Vector3::new(-1.0, 1.0, 0.0),
-            Vector3::new(1.0, 1.0, 0.0),
-            Vector3::new(1.0, -1.0, 0.0),
-            Vector3::new(-1.0, -1.0, 0.0),
-            Vector3::new(-1.0, 1.0, 1.0),
-            Vector3::new(1.0, 1.0, 1.0),
-            Vector3::new(1.0, -1.0, 1.0),
-            Vector3::new(-1.0, -1.0, 1.0),
-        ];
-
-        let view_to_clip = self.view_to_clip();
-        let world_to_view = self.world_to_view();
-
-        let inverse_projection = view_to_clip.inverse().expect("bad projection");
-
-        // get projection frustum corners from NDC
-        for corner in &mut frustum_corners {
-            let point = inverse_projection * corner.extend(1.0);
-            *corner = point.shrink() / point.w;
+    pub(crate) const fn near(&self) -> f32 {
+        match self.projection {
+            Projection::Orthographic => -0.001,
+            Projection::Perspective => 0.001,
         }
-
-        // cut out a section (near -> far) from the frustum
-        for i in 0..4 {
-            let corner_ray = frustum_corners[i + 4] - frustum_corners[i];
-            let near_corner_ray = corner_ray * near;
-            let far_corner_ray = corner_ray * far;
-            frustum_corners[i + 4] = frustum_corners[i] + far_corner_ray;
-            frustum_corners[i] += near_corner_ray;
-        }
-
-        let frustum_center = frustum_corners.iter().sum::<Vector3>() / frustum_corners.len() as f32;
-
-        // get bounding sphere radius
-        // sphere makes it axis-aligned
-        let mut radius = 0.0;
-        for corner in &frustum_corners {
-            let distance = (*corner - frustum_center).length();
-            if distance > radius {
-                radius = distance;
-            }
-        }
-
-        // round radius to 1/16 increments
-        radius = (radius * 16.0).ceil() / 16.0;
-
-        // transform frustum center into view space
-        let center = world_to_view
-            .inverse()
-            .expect("no inverse")
-            .transform_vector(frustum_center);
-
-        Sphere { center, radius }
     }
 }

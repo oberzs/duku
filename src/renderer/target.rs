@@ -35,8 +35,8 @@ pub struct Target<'a, 'b> {
     pub(crate) mesh_orders: Vec<OrdersByShader>,
 
     // shadows & lights
-    pub shadow_bias: f32,
-    pub shadow_cascades: [f32; 4],
+    pub shadow_split_coef: f32,
+    pub shadow_depth: f32,
     pub shadows: bool,
     pub lights: [Light; 4],
     pub ambient_color: Color,
@@ -65,7 +65,7 @@ pub struct Target<'a, 'b> {
     pub texture_wrap: TextureWrap,
     pub texture_mipmaps: bool,
 
-    cache: Vec<Cache>,
+    cache: Vec<Cache<'a>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -122,7 +122,7 @@ pub(crate) struct ShapeOrder {
     pub(crate) sampler_index: u32,
 }
 
-struct Cache {
+struct Cache<'a> {
     transform: Transform,
     line_color: Color,
     shape_color: Color,
@@ -133,6 +133,8 @@ struct Cache {
     line_width: f32,
     shape_mode: ShapeMode,
     border_mode: BorderMode,
+    shader: Option<&'a Handle<Shader>>,
+    material: Option<&'a Handle<Material>>,
 }
 
 impl<'b> Target<'_, 'b> {
@@ -168,8 +170,8 @@ impl<'b> Target<'_, 'b> {
             material: None,
             texture_mipmaps: true,
             skybox: None,
-            shadow_cascades: [0.1, 0.25, 0.7, 1.0],
-            shadow_bias: 0.002,
+            shadow_depth: 50.0,
+            shadow_split_coef: 0.5,
             shadows: true,
             builtins,
         }
@@ -187,6 +189,8 @@ impl<'b> Target<'_, 'b> {
             border_mode: self.border_mode,
             shape_mode: self.shape_mode,
             border_width: self.border_width,
+            shader: self.shader,
+            material: self.material,
         });
     }
 
@@ -202,6 +206,8 @@ impl<'b> Target<'_, 'b> {
             self.border_mode = cache.border_mode;
             self.shape_mode = cache.shape_mode;
             self.border_width = cache.border_width;
+            self.shader = cache.shader;
+            self.material = cache.material;
         }
     }
 

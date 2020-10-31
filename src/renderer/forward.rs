@@ -6,25 +6,18 @@
 use std::time::Instant;
 
 use super::Camera;
-use super::LightType;
-use super::MeshOrder;
+use super::ShadowRenderer;
 use super::Target;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::device::FRAMES_IN_FLIGHT;
 use crate::font::Font;
-use crate::image::Format;
 use crate::image::Framebuffer;
-use crate::image::Msaa;
-use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::math::Vector4;
 use crate::mesh::Mesh;
-use crate::pipeline::Descriptor;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
@@ -34,8 +27,7 @@ use crate::pipeline::ShaderWorld;
 use crate::storage::Store;
 
 pub(crate) struct ForwardRenderer {
-    shadow_frames: [ShadowMapSet; FRAMES_IN_FLIGHT],
-    shadow_shader: Shader,
+    shadow_renderer: ShadowRenderer,
     shadow_pcf: Pcf,
     start_time: Instant,
 }
@@ -55,14 +47,6 @@ pub(crate) struct RenderStores<'s> {
     pub(crate) meshes: &'s Store<Mesh>,
 }
 
-struct ShadowMapSet {
-    framebuffers: [Framebuffer; 4],
-    descriptor: Descriptor,
-    world_to_shadow: [Matrix4; 4],
-    cascades: [f32; 4],
-    map_size: u32,
-}
-
 impl ForwardRenderer {
     pub(crate) fn new(
         device: &Device,
@@ -71,28 +55,17 @@ impl ForwardRenderer {
         shadow_map_size: u32,
         shadow_pcf: Pcf,
     ) -> Self {
-        let shadow_frames = [
-            ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
-            ShadowMapSet::new(device, shader_layout, shader_images, shadow_map_size),
-        ];
-
-        let shadow_shader = Shader::from_spirv_bytes(
-            device,
-            &shadow_frames[0].framebuffers[0],
-            shader_layout,
-            include_bytes!("../../shaders/shadow.spirv"),
-        )
-        .expect("bad shader");
+        let shadow_renderer =
+            ShadowRenderer::new(device, shader_layout, shader_images, shadow_map_size);
 
         Self {
             start_time: Instant::now(),
-            shadow_frames,
-            shadow_shader,
+            shadow_renderer,
             shadow_pcf,
         }
     }
 
-    pub(crate) fn draw(
+    pub(crate) fn render(
         &mut self,
         device: &Device,
         framebuffer: &mut Framebuffer,
@@ -101,21 +74,17 @@ impl ForwardRenderer {
         shader_layout: &ShaderLayout,
         target: Target<'_, '_>,
     ) {
-        let current = device.current_frame();
-
-        // reset current matrices and cascades
-        self.shadow_frames[current].world_to_shadow = [Matrix4::identity(); 4];
-        self.shadow_frames[current].cascades = [0.0; 4];
-
         // shadow mapping pass
         let mut view = camera.clone();
-        view.depth = 50.0;
-        self.shadow_pass(device, shader_layout, stores.meshes, &target, &view);
+        view.depth = target.shadow_depth;
+        let shadow_params =
+            self.shadow_renderer
+                .render(device, shader_layout, stores.meshes, &target, view);
 
         let cmd = device.commands();
 
         // bind current shadow map set
-        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
+        // cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
 
         let shadow_pcf = match self.shadow_pcf {
             Pcf::Disabled => 2.0,
@@ -132,9 +101,10 @@ impl ForwardRenderer {
 
         // update world uniform
         framebuffer.update_world(ShaderWorld {
-            shadow_cascades: self.shadow_frames[current].cascades,
-            world_to_shadow: self.shadow_frames[current].world_to_shadow,
-            shadow_bias: target.shadow_bias,
+            shadow_splits: shadow_params.splits,
+            shadow_texels: shadow_params.texels,
+            shadow_diameters: shadow_params.diameters,
+            world_to_shadow: shadow_params.world_to_shadow,
             time: self.start_time.elapsed().as_secs_f32(),
             camera_position: camera.transform.position,
             world_to_view: camera.world_to_view(),
@@ -180,154 +150,8 @@ impl ForwardRenderer {
         framebuffer.blit_to_texture(cmd);
     }
 
-    fn shadow_pass(
-        &mut self,
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        meshes: &Store<Mesh>,
-        target: &Target<'_, '_>,
-        view: &Camera,
-    ) {
-        let light_dir = target
-            .lights
-            .iter()
-            .find(|l| l.light_type == LightType::Main)
-            .map(|l| l.coords)
-            .unwrap_or_default();
-
-        let cmd = device.commands();
-        let current = device.current_frame();
-
-        // bind temp shadow map set so we can write to main one
-        cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
-
-        // render shadow map for each cascade
-        let mut prev_cs = 0.0;
-        for (i, cs) in target.shadow_cascades.iter().enumerate() {
-            let map_size = self.shadow_frames[current].map_size;
-
-            // get view frustum bounding sphere
-            let bounds = view.bounding_sphere_for_split(prev_cs, *cs);
-            let diameter = bounds.radius * 2.0;
-            let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
-                Vector3::UP
-            } else {
-                Vector3::FORWARD
-            };
-            let light_position = bounds.center - light_dir * bounds.radius;
-            let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
-                * Matrix4::translation(-light_position);
-            let mut light_ortho_matrix =
-                Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
-
-            // stabilize shadow map by using texel units
-            let shadow_matrix = light_ortho_matrix * light_view_matrix;
-            let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
-            shadow_origin = shadow_matrix * shadow_origin;
-            shadow_origin *= map_size as f32 / 2.0;
-            let rounded_origin = shadow_origin.round();
-            let mut round_offset = rounded_origin - shadow_origin;
-            round_offset *= 2.0 / map_size as f32;
-            light_ortho_matrix.col_w.x += round_offset.x;
-            light_ortho_matrix.col_w.y += round_offset.y;
-            let light_matrix = light_ortho_matrix * light_view_matrix;
-
-            // set uniform variables for normal render
-            self.shadow_frames[current].world_to_shadow[i] = light_matrix;
-            self.shadow_frames[current].cascades[i] = view.depth * cs;
-            prev_cs = *cs;
-
-            // update world uniform
-            let framebuffer = &mut self.shadow_frames[current].framebuffers[i];
-            framebuffer.update_world(ShaderWorld {
-                world_to_shadow: [Matrix4::identity(); 4],
-                camera_position: Vector3::default(),
-                ambient_color: Vector3::default(),
-                lights: [Default::default(); 4],
-                world_to_view: light_view_matrix,
-                view_to_clip: light_ortho_matrix,
-                shadow_cascades: [0.0; 4],
-                shadow_bias: 0.0,
-                shadow_pcf: 0.0,
-                skybox_index: 0,
-                time: 0.0,
-            });
-
-            // do render pass
-            cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
-            cmd.set_view(framebuffer.size());
-            cmd.bind_descriptor(shader_layout, framebuffer.world());
-            cmd.bind_shader(&self.shadow_shader);
-
-            for s_order in &target.mesh_orders {
-                for m_order in &s_order.orders {
-                    for order in &m_order.orders {
-                        if order.shadows {
-                            record_order(cmd, meshes, shader_layout, order);
-                        }
-                    }
-                }
-            }
-            cmd.end_render_pass();
-        }
-    }
-
     pub(crate) fn destroy(&self, device: &Device) {
-        self.shadow_shader.destroy(device);
-        for frame in &self.shadow_frames {
-            for framebuffer in &frame.framebuffers {
-                framebuffer.destroy(device);
-            }
-        }
-    }
-}
-
-impl ShadowMapSet {
-    pub(crate) fn new(
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
-        map_size: u32,
-    ) -> Self {
-        let framebuffers = [
-            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
-            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
-            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
-            Self::shadow_framebuffer(device, shader_layout, shader_images, map_size),
-        ];
-        let descriptor = shader_layout.shadow_map_set(
-            device,
-            [
-                framebuffers[0].stored_view(),
-                framebuffers[1].stored_view(),
-                framebuffers[2].stored_view(),
-                framebuffers[3].stored_view(),
-            ],
-        );
-
-        Self {
-            world_to_shadow: [Matrix4::identity(); 4],
-            cascades: [0.0; 4],
-            framebuffers,
-            descriptor,
-            map_size,
-        }
-    }
-
-    fn shadow_framebuffer(
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
-        size: u32,
-    ) -> Framebuffer {
-        Framebuffer::new(
-            device,
-            shader_layout,
-            shader_images,
-            &[Format::Depth],
-            Msaa::Disabled,
-            Size::new(size, size),
-        )
+        self.shadow_renderer.destroy(device);
     }
 }
 
@@ -348,7 +172,17 @@ fn record_meshes(
             cmd.bind_material(shader_layout, material);
 
             for order in &m_order.orders {
-                record_order(cmd, stores.meshes, shader_layout, order);
+                let mesh = stores.meshes.get(&order.mesh);
+
+                cmd.push_constants(
+                    shader_layout,
+                    ShaderConstants {
+                        local_to_world: order.local_to_world,
+                        sampler_index: order.sampler_index,
+                    },
+                );
+                cmd.bind_mesh(mesh);
+                cmd.draw(mesh.index_count(), 0);
             }
         }
     }
@@ -609,23 +443,4 @@ fn record_shapes(
         },
     );
     cmd.draw(shape_mesh.index_count(), 0);
-}
-
-fn record_order(
-    cmd: &Commands,
-    meshes: &Store<Mesh>,
-    shader_layout: &ShaderLayout,
-    order: &MeshOrder,
-) {
-    let mesh = meshes.get(&order.mesh);
-
-    cmd.push_constants(
-        shader_layout,
-        ShaderConstants {
-            local_to_world: order.local_to_world,
-            sampler_index: order.sampler_index,
-        },
-    );
-    cmd.bind_mesh(mesh);
-    cmd.draw(mesh.index_count(), 0);
 }

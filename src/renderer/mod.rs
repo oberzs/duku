@@ -6,11 +6,12 @@
 mod camera;
 mod forward;
 mod light;
+mod shadow;
 mod target;
 
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use forward::RenderStores;
-pub(crate) use target::MeshOrder;
+pub(crate) use shadow::ShadowRenderer;
 
 pub use camera::Camera;
 pub use camera::Projection;

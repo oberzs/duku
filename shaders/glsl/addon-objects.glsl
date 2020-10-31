@@ -16,9 +16,10 @@ layout(set = 0, binding = 0) uniform World {
     vec3 camera_position;
     float time;
     mat4 world_to_shadow[4];
-    vec4 shadow_cascades;
+    vec4 shadow_splits;
+    vec4 shadow_texels;
+    vec4 shadow_diameters;
     vec3 ambient_color;
-    float shadow_bias;
     float shadow_pcf;
     uint skybox_index;
 } world;
