@@ -82,7 +82,7 @@ impl Builtins {
             let tex = Texture::new(
                 device,
                 shader_images,
-                vec![127, 127, 255, 255],
+                vec![128, 128, 255, 255],
                 Size::new(1, 1),
                 Format::Rgba,
                 Mips::Zero,

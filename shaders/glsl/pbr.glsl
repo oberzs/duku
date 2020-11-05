@@ -13,64 +13,62 @@ layout(location = 0) out vec4 out_color;
 
 const float PI = 3.14159265359;
 
-// calculates reflected light percentage
 // uses Fresnel-Schlick approximation
-vec3 fresnel_schlick(float cos_theta, vec3 direct_refl) {
-    return direct_refl + (1.0 - direct_refl) * pow(1.0 - cos_theta, 5.0);
+// calculates the reflected lights contribution (also Fresnel effect)
+vec3 specular_part(float h_dot_v, vec3 base_refl) {
+    return base_refl + (1.0 - base_refl) * pow(1.0 - h_dot_v, 5.0);
 }
 
-float distribution_ggx(float dot_nh, float roughness) {
+// uses Trowbridge-Reitz GGX approximation
+// calculates what proportion of microfacets
+// align with bisecting vector
+float normal_distribution(float n_dot_h, float roughness) {
     float a = roughness * roughness;
     float a2 = a * a;
-    float dot_nh2 = dot_nh * dot_nh;
-
-    float num = a2;
-    float denom = (dot_nh2 * (a2 - 1.0) + 1.0);
+    float denom = n_dot_h * n_dot_h * (a2 - 1.0) + 1.0;
     denom = PI * denom * denom;
-
-    return num / denom;
+    return a2 / max(denom, 0.0000001);
 }
 
-float geometry_schlick_ggx(float dot_nv, float roughness) {
+// uses Smith's method and Schlick-GGX geometry approximation
+// calculates the amount of microfacet self-shadowing
+float self_shadowing(float n_dot_v, float n_dot_l, float roughness) {
+    // Schlick-GGX
     float r = roughness + 1.0;
     float k = (r * r) / 8.0;
+    float ggx2 = n_dot_v / (n_dot_v * (1.0 - k) + k);
+    float ggx1 = n_dot_l / (n_dot_l * (1.0 - k) + k);
 
-    float num = dot_nv;
-    float denom = dot_nv * (1.0 - k) + k;
-
-    return num / denom;
-}
-
-float geometry_smith(float dot_nv, float dot_nl, float roughness) {
-    float ggx2 = geometry_schlick_ggx(dot_nv, roughness);
-    float ggx1 = geometry_schlick_ggx(dot_nl, roughness);
-
+    // Smith's method
     return ggx1 * ggx2;
 }
 
 void fragment() {
     vec4 albedo_tex = tex(int(material.arg_1.a), in_uv);
-    vec4 roughness_tex = tex(int(material.arg_2.b), in_uv);
-    vec4 metalness_tex = tex(int(material.arg_2.a), in_uv);
-    float ambient_occlusion = tex(int(material.arg_3.r), in_uv).r;
+    vec4 met_rough_tex = tex(int(material.arg_2.b), in_uv);
+    float ambient_occlusion = tex(int(material.arg_2.a), in_uv).r;
     vec3 albedo = material.arg_1.rgb * albedo_tex.rgb;
-    float metalness = material.arg_2.r * metalness_tex.r;
-    float roughness = material.arg_2.g * roughness_tex.r;
+    float metalness = material.arg_2.r * met_rough_tex.b;
+    float roughness = material.arg_2.g * met_rough_tex.g;
 
     // calculate normal and view direction
-    vec3 normal = tex(int(material.arg_3.g), in_uv).rgb;
-    normal = normal * 2.0 - 1.0;
+    vec3 normal = tex(int(material.arg_3.r), in_uv).xyz * (255.0 / 128.0) - 1.0;
     normal = normalize(in_tbn * normal);
     vec3 view_dir = normalize(world.camera_position - in_world_position);
 
+    // calculate how much surface reflects
+    // when looking directly at it
+    // non-metallics get constant 0.04, metalics get their albedo
+    vec3 base_refl = mix(vec3(0.04), albedo, metalness);
+
     vec3 light_amount = vec3(0.0);
+    float shadow_occlusion = 1.0;
 
     for (int i = 0; i < 4; ++i) {
         Light light = world.lights[i];
     
-        float occlusion = 1.0;
         if (light.type == LIGHT_TYPE_MAIN) {
-            occlusion = shadow(light, normal);
+            shadow_occlusion *= shadow(light, normal);
         }
 
         vec3 light_dir = vec3(0.0);
@@ -90,37 +88,29 @@ void fragment() {
         vec3 half_dir = normalize(view_dir + light_dir);
 
         // calculate angles between vectors
-        float dot_hv = max(dot(half_dir, view_dir), 0.0);
-        float dot_nl = max(dot(normal, light_dir), 0.0);
-        float dot_nv = max(dot(normal, view_dir), 0.0);
-        float dot_nh = max(dot(normal, half_dir), 0.0);
-
-        // calculate how much surface reflects
-        // when looking directly at it
-        // non-metallics get constant 0.04, metalics get their albedo
-        vec3 direct_refl = vec3(0.04);
-        direct_refl = mix(direct_refl, albedo, metalness);
+        float h_dot_v = max(dot(half_dir, view_dir), 0.0);
+        float n_dot_l = max(dot(normal, light_dir), 0.0);
+        float n_dot_v = max(dot(normal, view_dir), 0.0);
+        float n_dot_h = max(dot(normal, half_dir), 0.0);
 
         // calculate light's specular (reflected)
         // and diffuse (refracted) parts
-        vec3 specular_part = fresnel_schlick(dot_hv, direct_refl);
-        vec3 diffuse_part = vec3(1.0) - specular_part;
-        diffuse_part *= 1.0 - metalness;
+        vec3 s_part = specular_part(h_dot_v, base_refl);
+        vec3 d_part = (vec3(1.0) - s_part) * (1.0 - metalness);
 
-        float NDF = distribution_ggx(dot_nh, roughness);
-        float G = geometry_smith(dot_nv, dot_nl, roughness);
+        float nd = normal_distribution(n_dot_h, roughness);
+        float ss = self_shadowing(n_dot_v, n_dot_l, roughness);
 
         // calculate Cook-Torrance BRDF
-        vec3 num = NDF * G * specular_part;
-        float denom = 4.0 * dot_nv * dot_nl;
-        vec3 specular = num / max(denom, 0.001);
-        vec3 diffuse = diffuse_part * albedo / PI;
+        // only diffuse light gets the color from the material
+        vec3 specular = (s_part * nd * ss) / max(0.001, 4.0 * n_dot_v * n_dot_l);
+        vec3 diffuse = d_part * albedo / PI;
 
-        light_amount += (diffuse + specular) * radiance * dot_nl * occlusion;
+        light_amount += (diffuse + specular) * radiance * n_dot_l;
     }
 
-    vec3 ambient = vec3(0.03) * albedo * ambient_occlusion;
-    vec3 color = (ambient + light_amount) * world.ambient_color;
+    vec3 ambient = vec3(0.03) * albedo;
+    vec3 color = ambient + light_amount * ambient_occlusion * shadow_occlusion;
 
     out_color = vec4(color, 1.0);
 }

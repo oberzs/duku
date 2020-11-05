@@ -392,8 +392,7 @@ impl Context {
         }
         .albedo_texture(&self.builtins.white_texture)
         .normal_texture(&self.builtins.blue_texture)
-        .metalness_texture(&self.builtins.white_texture)
-        .roughness_texture(&self.builtins.white_texture)
+        .metalness_roughness_texture(&self.builtins.white_texture)
         .ambient_occlusion_texture(&self.builtins.white_texture)
         .albedo_color([255, 255, 255])
         .metalness(0.0)

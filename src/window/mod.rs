@@ -120,80 +120,80 @@ impl Window {
         let mut last_resize = None;
 
         event_loop.run(move |event, _, control_flow| match event {
-            WinitEvent::WindowEvent { event, .. } => match event {
-                // close event
-                WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+            WinitEvent::WindowEvent { event, window_id } if window_id == events.window.id() => {
+                match event {
+                    // close event
+                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
 
-                // resize event
-                WindowEvent::Resized(size) => {
-                    if size.width != 0 && size.height != 0 {
-                        last_resize = Some(Instant::now());
+                    // resize event
+                    WindowEvent::Resized(size) => {
+                        if size.width != 0 && size.height != 0 {
+                            last_resize = Some(Instant::now());
+                        }
                     }
-                }
 
-                // mouse position event
-                WindowEvent::CursorMoved { position, .. } => {
-                    events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
-                }
+                    // mouse position event
+                    WindowEvent::CursorMoved { position, .. } => {
+                        events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
+                    }
 
-                // keyboard key event
-                WindowEvent::KeyboardInput { input, .. } => {
-                    if let Some(key) = input.virtual_keycode {
-                        match input.state {
-                            ElementState::Pressed => {
-                                events.keys_typed.insert(key);
-                                events.keys_pressed.insert(key);
-                                events.keys_released.remove(&key);
-                            }
-                            ElementState::Released => {
-                                events.keys_released.insert(key);
-                                events.keys_pressed.remove(&key);
-                                events.keys_typed.remove(&key);
+                    // keyboard key event
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let Some(key) = input.virtual_keycode {
+                            match input.state {
+                                ElementState::Pressed => {
+                                    events.keys_typed.insert(key);
+                                    events.keys_pressed.insert(key);
+                                    events.keys_released.remove(&key);
+                                }
+                                ElementState::Released => {
+                                    events.keys_released.insert(key);
+                                    events.keys_pressed.remove(&key);
+                                    events.keys_typed.remove(&key);
+                                }
                             }
                         }
                     }
+
+                    // mouse button event
+                    WindowEvent::MouseInput { state, button, .. } => match state {
+                        ElementState::Pressed => {
+                            events.buttons_clicked.insert(button);
+                            events.buttons_pressed.insert(button);
+                            events.buttons_released.remove(&button);
+                        }
+                        ElementState::Released => {
+                            events.buttons_released.insert(button);
+                            events.buttons_pressed.remove(&button);
+                            events.buttons_clicked.remove(&button);
+                        }
+                    },
+
+                    // text input event
+                    WindowEvent::ReceivedCharacter(c) => {
+                        if !c.is_ascii_control() {
+                            events.typed_char = Some(c);
+                        }
+                    }
+
+                    // mouse scroll event
+                    WindowEvent::MouseWheel { delta, .. } => {
+                        if let MouseScrollDelta::LineDelta(x, y) = delta {
+                            events.scroll_delta = Vector2::new(x as f32, y as f32);
+                        }
+                    }
+
+                    _ => (),
                 }
+            }
 
-                // mouse button event
-                WindowEvent::MouseInput { state, button, .. } => match state {
-                    ElementState::Pressed => {
-                        events.buttons_clicked.insert(button);
-                        events.buttons_pressed.insert(button);
-                        events.buttons_released.remove(&button);
-                    }
-                    ElementState::Released => {
-                        events.buttons_released.insert(button);
-                        events.buttons_pressed.remove(&button);
-                        events.buttons_clicked.remove(&button);
-                    }
-                },
-
-                // text input event
-                WindowEvent::ReceivedCharacter(c) => {
-                    if !c.is_ascii_control() {
-                        events.typed_char = Some(c);
-                    }
-                }
-
-                _ => (),
-            },
-
-            WinitEvent::DeviceEvent { event, .. } => match event {
-                // mouse scroll event
-                DeviceEvent::MouseWheel { delta } => {
-                    if let MouseScrollDelta::LineDelta(x, y) = delta {
-                        events.scroll_delta = Vector2::new(x as f32, y as f32);
-                    }
-                }
-
-                // mouse delta event
-                DeviceEvent::MouseMotion { delta } => {
+            // mouse delta event
+            WinitEvent::DeviceEvent { event, .. } => {
+                if let DeviceEvent::MouseMotion { delta } = event {
                     let (x, y) = delta;
                     events.mouse_delta = Vector2::new(x as f32, y as f32);
                 }
-
-                _ => (),
-            },
+            }
 
             // draw event
             WinitEvent::MainEventsCleared => {
