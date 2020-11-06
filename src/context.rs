@@ -394,7 +394,9 @@ impl Context {
         .normal_texture(&self.builtins.blue_texture)
         .metalness_roughness_texture(&self.builtins.white_texture)
         .ambient_occlusion_texture(&self.builtins.white_texture)
+        .emissive_texture(&self.builtins.black_texture)
         .albedo_color([255, 255, 255])
+        .emissive([0, 0, 0])
         .metalness(0.0)
         .roughness(0.0)
     }

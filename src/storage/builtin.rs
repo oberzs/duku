@@ -30,6 +30,7 @@ pub struct Builtins {
     // textures
     pub white_texture: Handle<Texture>,
     pub blue_texture: Handle<Texture>,
+    pub black_texture: Handle<Texture>,
 
     // cubemaps
     pub white_cubemap: Handle<Cubemap>,
@@ -83,6 +84,17 @@ impl Builtins {
                 device,
                 shader_images,
                 vec![128, 128, 255, 255],
+                Size::new(1, 1),
+                Format::Rgba,
+                Mips::Zero,
+            );
+            storage.add_texture(tex)
+        };
+        let black_texture = {
+            let tex = Texture::new(
+                device,
+                shader_images,
+                vec![0, 0, 0, 255],
                 Size::new(1, 1),
                 Format::Rgba,
                 Mips::Zero,
@@ -224,6 +236,7 @@ impl Builtins {
         Self {
             white_texture,
             blue_texture,
+            black_texture,
             white_cubemap,
             white_material,
             surface_mesh,

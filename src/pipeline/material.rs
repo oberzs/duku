@@ -83,6 +83,11 @@ impl Material {
         self.should_update = true;
     }
 
+    pub fn set_emissive(&mut self, color: impl Into<Color>) {
+        self.arg_4 = Vector3::from(color.into()).extend(self.arg_4.w);
+        self.should_update = true;
+    }
+
     pub fn set_metalness_roughness_texture(&mut self, texture: &Handle<Texture>) {
         self.arg_2.z = texture.id() as f32;
         self.should_update = true;
@@ -95,6 +100,11 @@ impl Material {
 
     pub fn set_normal_texture(&mut self, texture: &Handle<Texture>) {
         self.arg_3.x = texture.id() as f32;
+        self.should_update = true;
+    }
+
+    pub fn set_emissive_texture(&mut self, texture: &Handle<Texture>) {
+        self.arg_3.y = texture.id() as f32;
         self.should_update = true;
     }
 
@@ -189,6 +199,11 @@ impl MaterialBuilder<'_> {
         self
     }
 
+    pub fn emissive(mut self, color: impl Into<Color>) -> Self {
+        self.material.set_emissive(color);
+        self
+    }
+
     pub fn metalness_roughness_texture(mut self, texture: &Handle<Texture>) -> Self {
         self.material.set_metalness_roughness_texture(texture);
         self
@@ -201,6 +216,11 @@ impl MaterialBuilder<'_> {
 
     pub fn normal_texture(mut self, texture: &Handle<Texture>) -> Self {
         self.material.set_normal_texture(texture);
+        self
+    }
+
+    pub fn emissive_texture(mut self, texture: &Handle<Texture>) -> Self {
+        self.material.set_emissive_texture(texture);
         self
     }
 
