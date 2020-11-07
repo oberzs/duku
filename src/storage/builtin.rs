@@ -22,8 +22,7 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderLayout;
+use crate::pipeline::Uniforms;
 
 #[derive(Debug)]
 pub struct Builtins {
@@ -64,14 +63,13 @@ impl Builtins {
         device: &Device,
         storage: &mut Storage,
         framebuffer: &Framebuffer,
-        layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
     ) -> Self {
         // textures
         let white_texture = {
             let tex = Texture::new(
                 device,
-                shader_images,
+                uniforms,
                 vec![255, 255, 255, 255],
                 Size::new(1, 1),
                 Format::Rgba,
@@ -82,7 +80,7 @@ impl Builtins {
         let blue_texture = {
             let tex = Texture::new(
                 device,
-                shader_images,
+                uniforms,
                 vec![128, 128, 255, 255],
                 Size::new(1, 1),
                 Format::Rgba,
@@ -93,7 +91,7 @@ impl Builtins {
         let black_texture = {
             let tex = Texture::new(
                 device,
-                shader_images,
+                uniforms,
                 vec![0, 0, 0, 255],
                 Size::new(1, 1),
                 Format::Rgba,
@@ -106,7 +104,7 @@ impl Builtins {
         let white_cubemap = {
             let cub = Cubemap::new(
                 &device,
-                shader_images,
+                uniforms,
                 1,
                 Format::Rgba,
                 CubemapSides {
@@ -123,7 +121,7 @@ impl Builtins {
 
         // materials
         let white_material = {
-            let mut mat = Material::new(device, layout);
+            let mut mat = Material::new(device, uniforms);
             mat.set_albedo_color([255, 255, 255]);
             mat.set_albedo_texture(&white_texture);
             mat.set_normal_texture(&blue_texture);
@@ -143,7 +141,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/pbr.spirv"),
             )
             .expect("bad shader");
@@ -154,7 +152,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/font.spirv"),
             )
             .expect("bad shader");
@@ -165,7 +163,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/wireframe.spirv"),
             )
             .expect("bad shader");
@@ -176,7 +174,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/lines.spirv"),
             )
             .expect("bad shader");
@@ -187,7 +185,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/shape.spirv"),
             )
             .expect("bad shader");
@@ -198,7 +196,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/unshaded.spirv"),
             )
             .expect("bad shader");
@@ -209,7 +207,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/skybox.spirv"),
             )
             .expect("bad shader");
@@ -220,7 +218,7 @@ impl Builtins {
             let shader = Shader::from_spirv_bytes(
                 device,
                 framebuffer,
-                layout,
+                uniforms,
                 include_bytes!("../../shaders/fullscreen.spirv"),
             )
             .expect("bad shader");
@@ -229,7 +227,7 @@ impl Builtins {
 
         // fonts
         let fira_font = {
-            let font = Font::fira_mono(device, shader_images);
+            let font = Font::fira_mono(device, uniforms);
             storage.add_font(font)
         };
 

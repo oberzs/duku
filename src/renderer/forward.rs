@@ -6,6 +6,7 @@
 use std::time::Instant;
 
 use super::Camera;
+use super::Pcf;
 use super::ShadowRenderer;
 use super::Target;
 use crate::device::Commands;
@@ -21,22 +22,13 @@ use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
-use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
+use crate::pipeline::Uniforms;
 use crate::storage::Store;
 
 pub(crate) struct ForwardRenderer {
     shadow_renderer: ShadowRenderer,
-    shadow_pcf: Pcf,
     start_time: Instant,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Pcf {
-    X16,
-    X4,
-    Disabled,
 }
 
 pub(crate) struct RenderStores<'s> {
@@ -48,20 +40,12 @@ pub(crate) struct RenderStores<'s> {
 }
 
 impl ForwardRenderer {
-    pub(crate) fn new(
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
-        shadow_map_size: u32,
-        shadow_pcf: Pcf,
-    ) -> Self {
-        let shadow_renderer =
-            ShadowRenderer::new(device, shader_layout, shader_images, shadow_map_size);
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, shadow_map_size: u32) -> Self {
+        let shadow_renderer = ShadowRenderer::new(device, uniforms, shadow_map_size);
 
         Self {
             start_time: Instant::now(),
             shadow_renderer,
-            shadow_pcf,
         }
     }
 
@@ -71,7 +55,7 @@ impl ForwardRenderer {
         framebuffer: &mut Framebuffer,
         camera: &Camera,
         stores: RenderStores<'_>,
-        shader_layout: &ShaderLayout,
+        uniforms: &Uniforms,
         target: Target<'_, '_>,
     ) {
         // shadow mapping pass
@@ -79,14 +63,14 @@ impl ForwardRenderer {
         view.depth = target.shadow_depth;
         let shadow_params =
             self.shadow_renderer
-                .render(device, shader_layout, stores.meshes, &target, view);
+                .render(device, uniforms, stores.meshes, &target, view);
 
         let cmd = device.commands();
 
         // bind current shadow map set
         // cmd.bind_descriptor(shader_layout, self.shadow_frames[current].descriptor);
 
-        let shadow_pcf = match self.shadow_pcf {
+        let shadow_pcf = match target.shadow_pcf {
             Pcf::Disabled => 2.0,
             Pcf::X4 => 0.0,
             Pcf::X16 => 1.0,
@@ -118,31 +102,31 @@ impl ForwardRenderer {
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear_color.to_rgba_norm());
         cmd.set_view(framebuffer.size());
-        cmd.bind_descriptor(shader_layout, framebuffer.world());
+        cmd.bind_descriptor(uniforms, framebuffer.world());
 
         // skybox rendering
         if target.skybox.is_some() {
-            record_skybox(cmd, &target, &stores, shader_layout, camera);
+            record_skybox(cmd, &target, &stores, uniforms, camera);
         }
 
         // normal mesh rendering
         if !target.mesh_orders.is_empty() {
-            record_meshes(cmd, &target, &stores, shader_layout);
+            record_meshes(cmd, &target, &stores, uniforms);
         }
 
         // shape rendering
         if !target.shape_orders.is_empty() {
-            record_shapes(device, framebuffer, &target, &stores, shader_layout);
+            record_shapes(device, framebuffer, &target, &stores, uniforms);
         }
 
         // text rendering
         if !target.text_orders.is_empty() {
-            record_text(device, framebuffer, &target, &stores, shader_layout);
+            record_text(device, framebuffer, &target, &stores, uniforms);
         }
 
         // line rendering
         if !target.line_orders.is_empty() {
-            record_lines(device, framebuffer, &target, &stores, shader_layout);
+            record_lines(device, framebuffer, &target, &stores, uniforms);
         }
 
         // end rendering
@@ -150,8 +134,8 @@ impl ForwardRenderer {
         framebuffer.blit_to_texture(cmd);
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
-        self.shadow_renderer.destroy(device);
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
+        self.shadow_renderer.destroy(device, uniforms);
     }
 }
 
@@ -159,7 +143,7 @@ fn record_meshes(
     cmd: &Commands,
     target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
-    shader_layout: &ShaderLayout,
+    uniforms: &Uniforms,
 ) {
     for s_order in &target.mesh_orders {
         // bind shader
@@ -169,13 +153,13 @@ fn record_meshes(
         for m_order in &s_order.orders {
             // bind material
             let material = stores.materials.get(&m_order.material);
-            cmd.bind_material(shader_layout, material);
+            cmd.bind_material(uniforms, material);
 
             for order in &m_order.orders {
                 let mesh = stores.meshes.get(&order.mesh);
 
                 cmd.push_constants(
-                    shader_layout,
+                    uniforms,
                     ShaderConstants {
                         local_to_world: order.local_to_world,
                         sampler_index: order.sampler_index,
@@ -192,7 +176,7 @@ fn record_skybox(
     cmd: &Commands,
     target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
-    shader_layout: &ShaderLayout,
+    uniforms: &Uniforms,
     camera: &Camera,
 ) {
     let shader = stores.shaders.get(&target.builtins.skybox_shader);
@@ -207,7 +191,7 @@ fn record_skybox(
         ..Default::default()
     });
     cmd.push_constants(
-        shader_layout,
+        uniforms,
         ShaderConstants {
             sampler_index: 0,
             local_to_world,
@@ -221,7 +205,7 @@ fn record_text(
     framebuffer: &mut Framebuffer,
     target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
-    shader_layout: &ShaderLayout,
+    uniforms: &Uniforms,
 ) {
     let cmd = device.commands();
     let Target {
@@ -297,7 +281,7 @@ fn record_text(
 
     // bind material
     let material = stores.materials.get(&builtins.white_material);
-    cmd.bind_material(shader_layout, material);
+    cmd.bind_material(uniforms, material);
 
     // bind and draw mesh
     let text_mesh = framebuffer.text_mesh();
@@ -310,7 +294,7 @@ fn record_text(
 
     cmd.bind_mesh(text_mesh);
     cmd.push_constants(
-        shader_layout,
+        uniforms,
         ShaderConstants {
             local_to_world: Matrix4::identity(),
             sampler_index: 7,
@@ -324,7 +308,7 @@ fn record_lines(
     framebuffer: &mut Framebuffer,
     target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
-    shader_layout: &ShaderLayout,
+    uniforms: &Uniforms,
 ) {
     let cmd = device.commands();
     let Target {
@@ -355,7 +339,7 @@ fn record_lines(
 
     // bind material
     let material = stores.materials.get(&builtins.white_material);
-    cmd.bind_material(shader_layout, material);
+    cmd.bind_material(uniforms, material);
 
     // bind and draw mesh
     let line_mesh = framebuffer.line_mesh();
@@ -366,7 +350,7 @@ fn record_lines(
 
     cmd.bind_mesh(line_mesh);
     cmd.push_constants(
-        shader_layout,
+        uniforms,
         ShaderConstants {
             local_to_world: Matrix4::identity(),
             sampler_index: 0,
@@ -380,7 +364,7 @@ fn record_shapes(
     framebuffer: &mut Framebuffer,
     target: &Target<'_, '_>,
     stores: &RenderStores<'_>,
-    shader_layout: &ShaderLayout,
+    uniforms: &Uniforms,
 ) {
     let cmd = device.commands();
     let Target {
@@ -422,7 +406,7 @@ fn record_shapes(
 
     // bind material
     let material = stores.materials.get(&builtins.white_material);
-    cmd.bind_material(shader_layout, material);
+    cmd.bind_material(uniforms, material);
 
     // bind and draw mesh
     let shape_mesh = framebuffer.shape_mesh();
@@ -436,7 +420,7 @@ fn record_shapes(
 
     cmd.bind_mesh(shape_mesh);
     cmd.push_constants(
-        shader_layout,
+        uniforms,
         ShaderConstants {
             local_to_world: Matrix4::identity(),
             sampler_index: 0,

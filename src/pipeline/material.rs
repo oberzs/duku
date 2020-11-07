@@ -4,8 +4,8 @@
 // Material - struct to pass additional data to shader
 
 use super::Descriptor;
-use super::ShaderLayout;
 use super::ShaderMaterial;
+use super::Uniforms;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
@@ -39,9 +39,9 @@ pub struct MaterialBuilder<'s> {
 }
 
 impl Material {
-    pub(crate) fn new(device: &Device, shader_layout: &ShaderLayout) -> Self {
+    pub(crate) fn new(device: &Device, uniforms: &Uniforms) -> Self {
         let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let descriptor = shader_layout.material_set(device, &buffer);
+        let descriptor = uniforms.material_set(device, &buffer);
 
         Self {
             arg_1: Vector4::ZERO,

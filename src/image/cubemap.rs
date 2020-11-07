@@ -10,7 +10,7 @@ use super::ImageLayout;
 use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
-use crate::pipeline::ShaderImages;
+use crate::pipeline::Uniforms;
 
 pub struct Cubemap {
     image: Image,
@@ -29,7 +29,7 @@ pub struct CubemapSides<T> {
 impl Cubemap {
     pub(crate) fn new(
         device: &Device,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
         size: u32,
         format: Format,
         sides: CubemapSides<Vec<u8>>,
@@ -82,7 +82,7 @@ impl Cubemap {
         left_staging_buffer.destroy(device);
         right_staging_buffer.destroy(device);
 
-        let shader_index = shader_images.add_cubemap(image.add_view(device));
+        let shader_index = uniforms.add_cubemap(image.add_view(device));
 
         Self {
             image,
@@ -93,7 +93,7 @@ impl Cubemap {
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
         device: &Device,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
         sides: CubemapSides<Vec<u8>>,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
@@ -135,7 +135,7 @@ impl Cubemap {
 
         Ok(Self::new(
             device,
-            shader_images,
+            uniforms,
             size,
             format,
             CubemapSides {
@@ -149,7 +149,8 @@ impl Cubemap {
         ))
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
+        uniforms.remove_cubemap(self.shader_index);
         self.image.destroy(device);
     }
 

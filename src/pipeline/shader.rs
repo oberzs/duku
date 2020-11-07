@@ -11,8 +11,8 @@ use std::ptr;
 
 use super::CullMode;
 use super::DepthMode;
-use super::ShaderLayout;
 use super::ShapeMode;
+use super::Uniforms;
 use crate::device::Device;
 use crate::error::Error;
 use crate::error::Result;
@@ -34,7 +34,7 @@ impl Shader {
     pub(crate) fn from_spirv_bytes(
         device: &Device,
         framebuffer: &Framebuffer,
-        layout: &ShaderLayout,
+        uniforms: &Uniforms,
         bytes: &[u8],
     ) -> Result<Self> {
         let mut cursor = Cursor::new(&bytes[..]);
@@ -62,7 +62,7 @@ impl Shader {
         Self::new(
             device,
             framebuffer,
-            layout,
+            uniforms,
             &vert_source,
             &frag_source,
             ShaderModes {
@@ -77,7 +77,7 @@ impl Shader {
     pub(crate) fn from_glsl_string(
         device: &Device,
         framebuffer: &Framebuffer,
-        layout: &ShaderLayout,
+        uniforms: &Uniforms,
         source: String,
     ) -> Result<Self> {
         use super::glsl::compile_glsl;
@@ -89,13 +89,13 @@ impl Shader {
             cull: mode_bytes[2].try_into()?,
         };
 
-        Self::new(device, framebuffer, layout, &vert, &frag, modes)
+        Self::new(device, framebuffer, uniforms, &vert, &frag, modes)
     }
 
     fn new(
         device: &Device,
         framebuffer: &Framebuffer,
-        layout: &ShaderLayout,
+        uniforms: &Uniforms,
         vert_source: &[u8],
         frag_source: &[u8],
         modes: ShaderModes,
@@ -292,7 +292,7 @@ impl Shader {
             p_depth_stencil_state: &depth_stencil_state,
             p_color_blend_state: &color_blending,
             p_dynamic_state: &dynamic_state,
-            layout: layout.handle(),
+            layout: uniforms.pipeline_layout(),
             render_pass: framebuffer.render_pass(),
             subpass: 0,
             base_pipeline_handle: 0,

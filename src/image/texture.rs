@@ -12,7 +12,7 @@ use super::Size;
 use crate::buffer::Buffer;
 use crate::color::Color;
 use crate::device::Device;
-use crate::pipeline::ShaderImages;
+use crate::pipeline::Uniforms;
 
 pub struct Texture {
     image: Image,
@@ -24,7 +24,7 @@ pub struct Texture {
 impl Texture {
     pub(crate) fn new(
         device: &Device,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
         data: Vec<u8>,
         size: Size,
         format: Format,
@@ -57,7 +57,7 @@ impl Texture {
         // destroy staging buffer
         staging_buffer.destroy(device);
 
-        let shader_index = shader_images.add_image(image.add_view(device));
+        let shader_index = uniforms.add_image(image.add_view(device));
 
         Self {
             data: image_data,
@@ -70,7 +70,7 @@ impl Texture {
     #[cfg(feature = "png")]
     pub(crate) fn from_png_bytes(
         device: &Device,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
         bytes: Vec<u8>,
         linear: bool,
         mips: Mips,
@@ -96,7 +96,7 @@ impl Texture {
             _ => return Err(Error::UnsupportedColorType),
         };
 
-        Ok(Self::new(device, shader_images, data, size, format, mips))
+        Ok(Self::new(device, uniforms, data, size, format, mips))
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
@@ -154,7 +154,8 @@ impl Texture {
         }
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
+        uniforms.remove_image(self.shader_index);
         self.image.destroy(device);
     }
 

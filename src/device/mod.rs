@@ -559,8 +559,8 @@ impl Device {
     pub(crate) fn create_descriptor_pool(
         &self,
         pool_sizes: &[vk::DescriptorPoolSize],
-        max_sets: u32,
     ) -> vk::DescriptorPool {
+        let max_sets = pool_sizes.iter().fold(0, |acc, x| acc + x.descriptor_count);
         let info = vk::DescriptorPoolCreateInfo {
             s_type: vk::STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             p_next: ptr::null(),

@@ -31,10 +31,7 @@ use crate::mesh::MeshBuilder;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
-use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderLayout;
-use crate::quality::Quality;
-use crate::quality::QualitySettings;
+use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::RenderStores;
@@ -54,8 +51,6 @@ use crate::image::Cubemap;
 use crate::image::CubemapSides;
 
 #[cfg(feature = "window")]
-use crate::window::Events;
-#[cfg(feature = "window")]
 use crate::window::Window;
 
 const FPS_SAMPLE_COUNT: usize = 64;
@@ -67,9 +62,8 @@ pub struct Context {
     gpu_index: usize,
     surface: Surface,
     swapchain: Swapchain,
-    shader_layout: ShaderLayout,
+    uniforms: Uniforms,
     window_framebuffers: Vec<Framebuffer>,
-    shader_images: ShaderImages,
 
     // Resources
     storage: Storage,
@@ -97,7 +91,10 @@ pub struct Context {
 
 #[derive(Debug, Clone)]
 pub struct ContextBuilder {
-    quality: Quality,
+    shadow_map_size: u32,
+    max_render_targets: u32,
+    anisotropy: f32,
+    msaa: Msaa,
     vsync: VSync,
     window: Option<WindowHandle>,
 }
@@ -119,88 +116,15 @@ enum RenderStage {
 }
 
 impl Context {
-    pub fn builder() -> ContextBuilder {
-        ContextBuilder::default()
-    }
-
-    fn new(window: WindowHandle, quality: Quality, vsync: VSync) -> Result<Self> {
-        let instance = Instance::new();
-        let surface = Surface::new(&instance, window);
-
-        let QualitySettings {
-            anisotropy,
-            msaa,
-            pcf,
-            shadow_map_size,
-        } = quality.settings();
-
-        // setup device stuff
-        let mut gpu_properties_list = instance.gpu_properties(&surface);
-        let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
-        let gpu_properties = gpu_properties_list.remove(gpu_index);
-        let device = Device::new(&instance, &gpu_properties, gpu_index);
-        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync);
-
-        info!("using anisotropy level {}", anisotropy);
-        info!("using msaa level {:?}", msaa);
-        info!("using vsync {:?}", vsync);
-
-        // setup shader stuff
-        let shader_layout = ShaderLayout::new(&device);
-        let mut shader_images = ShaderImages::new(&device, &shader_layout, anisotropy);
-
-        // setup framebuffers
-        let window_framebuffers =
-            Framebuffer::for_swapchain(&device, &swapchain, &shader_layout, msaa);
-
-        // setup storage
-        let mut storage = Storage::new();
-        let builtins = Builtins::new(
-            &device,
-            &mut storage,
-            &window_framebuffers[0],
-            &shader_layout,
-            &mut shader_images,
-        );
-
-        // setup renderer
-        let forward_renderer = ForwardRenderer::new(
-            &device,
-            &shader_layout,
-            &mut shader_images,
-            shadow_map_size,
-            pcf,
-        );
-
-        #[cfg(feature = "glsl")]
-        let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
-
-        Ok(Self {
-            fps_samples: [0; FPS_SAMPLE_COUNT],
-            render_stage: RenderStage::Before,
-            frame_time: Instant::now(),
-            fps: 0,
-            delta_time: 0.0,
-            frame_count: 0,
-            window_framebuffers,
-            forward_renderer,
-            shader_images,
-            shader_layout,
-            storage,
-            swapchain,
-            gpu_index,
-            builtins,
-            instance,
-            surface,
-            device,
-            msaa,
-            vsync,
-
-            #[cfg(feature = "glsl")]
-            hot_reload_sender,
-            #[cfg(feature = "glsl")]
-            hot_reload_receiver,
-        })
+    pub const fn builder() -> ContextBuilder {
+        ContextBuilder {
+            shadow_map_size: 2048,
+            max_render_targets: 3,
+            anisotropy: 4.0,
+            msaa: Msaa::X4,
+            vsync: VSync::On,
+            window: None,
+        }
     }
 
     #[allow(single_use_lifetimes)]
@@ -234,7 +158,7 @@ impl Context {
             framebuffer,
             &cam,
             stores,
-            &self.shader_layout,
+            &self.uniforms,
             target,
         );
 
@@ -270,14 +194,8 @@ impl Context {
         };
 
         // render
-        self.forward_renderer.render(
-            &self.device,
-            frame,
-            &cam,
-            stores,
-            &self.shader_layout,
-            target,
-        );
+        self.forward_renderer
+            .render(&self.device, frame, &cam, stores, &self.uniforms, target);
     }
 
     pub fn create_texture(
@@ -294,7 +212,7 @@ impl Context {
             .collect::<Vec<_>>();
         let tex = Texture::new(
             &self.device,
-            &mut self.shader_images,
+            &mut self.uniforms,
             data,
             Size::new(width, height),
             Format::Rgba,
@@ -366,7 +284,7 @@ impl Context {
     }
 
     pub fn create_material(&mut self) -> Handle<Material> {
-        let mat = Material::new(&self.device, &self.shader_layout);
+        let mat = Material::new(&self.device, &self.uniforms);
         self.storage.add_material(mat)
     }
 
@@ -381,14 +299,14 @@ impl Context {
     pub fn build_material(&mut self) -> MaterialBuilder<'_> {
         MaterialBuilder {
             storage: &mut self.storage,
-            material: Material::new(&self.device, &self.shader_layout),
+            material: Material::new(&self.device, &self.uniforms),
         }
     }
 
     pub fn build_material_pbr(&mut self) -> MaterialBuilder<'_> {
         MaterialBuilder {
             storage: &mut self.storage,
-            material: Material::new(&self.device, &self.shader_layout),
+            material: Material::new(&self.device, &self.uniforms),
         }
         .albedo_texture(&self.builtins.white_texture)
         .normal_texture(&self.builtins.blue_texture)
@@ -404,8 +322,7 @@ impl Context {
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Handle<Framebuffer> {
         let framebuffer = Framebuffer::new(
             &self.device,
-            &self.shader_layout,
-            &mut self.shader_images,
+            &mut self.uniforms,
             &[Format::Depth, Format::Sbgra],
             self.msaa,
             Size::new(width, height),
@@ -421,7 +338,7 @@ impl Context {
         let shader = Shader::from_spirv_bytes(
             &self.device,
             &self.window_framebuffers[0],
-            &self.shader_layout,
+            &self.uniforms,
             source,
         )?;
         Ok(self.storage.add_shader(shader))
@@ -442,10 +359,9 @@ impl Context {
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain);
+        self.storage.clear_unused(&self.device, &mut self.uniforms);
         self.storage
-            .clear_unused(&self.device, &mut self.shader_images);
-        self.storage
-            .update_if_needed(&self.device, &mut self.shader_images);
+            .update_if_needed(&self.device, &mut self.uniforms);
 
         // hot-reload shaders
         #[cfg(feature = "glsl")]
@@ -455,7 +371,7 @@ impl Context {
             match Shader::from_glsl_string(
                 &self.device,
                 &self.window_framebuffers[0],
-                &self.shader_layout,
+                &self.uniforms,
                 source,
             ) {
                 Ok(new_shader) => {
@@ -466,10 +382,10 @@ impl Context {
             }
         }
 
-        self.shader_images.update_if_needed(&self.device);
+        self.uniforms.update_if_needed(&self.device);
         self.device
             .commands()
-            .bind_descriptor(&self.shader_layout, self.shader_images.descriptor());
+            .bind_descriptor(&self.uniforms, self.uniforms.image_descriptor());
     }
 
     fn end_draw(&mut self) {
@@ -499,22 +415,16 @@ impl Context {
                 .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
 
             for framebuffer in &self.window_framebuffers {
-                framebuffer.destroy(&self.device);
+                framebuffer.destroy(&self.device, &mut self.uniforms);
             }
 
             self.window_framebuffers = Framebuffer::for_swapchain(
                 &self.device,
                 &self.swapchain,
-                &self.shader_layout,
+                &self.uniforms,
                 self.msaa,
             );
         }
-    }
-
-    #[cfg(feature = "window")]
-    #[allow(unused, clippy::unused_self)]
-    pub fn handle_window_events(&mut self, events: &Events) {
-        // TODO
     }
 
     #[cfg(feature = "glsl")]
@@ -529,7 +439,7 @@ impl Context {
         let handle = self.storage.add_shader(Shader::from_glsl_string(
             &self.device,
             &self.window_framebuffers[0],
-            &self.shader_layout,
+            &self.uniforms,
             source,
         )?);
 
@@ -546,8 +456,7 @@ impl Context {
         bytes: Vec<u8>,
         mips: Mips,
     ) -> Result<Handle<Texture>> {
-        let tex =
-            Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, false, mips)?;
+        let tex = Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, false, mips)?;
         Ok(self.storage.add_texture(tex))
     }
 
@@ -569,8 +478,7 @@ impl Context {
         bytes: Vec<u8>,
         mips: Mips,
     ) -> Result<Handle<Texture>> {
-        let tex =
-            Texture::from_png_bytes(&self.device, &mut self.shader_images, bytes, true, mips)?;
+        let tex = Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, true, mips)?;
         Ok(self.storage.add_texture(tex))
     }
 
@@ -595,7 +503,7 @@ impl Context {
 
         let cubemap = Cubemap::from_png_bytes(
             &self.device,
-            &mut self.shader_images,
+            &mut self.uniforms,
             CubemapSides {
                 top: fs::read(sides.top)?,
                 bottom: fs::read(sides.bottom)?,
@@ -612,13 +520,13 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {
         self.device.wait_idle();
-        self.shader_images.destroy(&self.device);
-        self.storage.clear(&self.device, &mut self.shader_images);
-        self.forward_renderer.destroy(&self.device);
-        self.shader_layout.destroy(&self.device);
+        self.storage.clear(&self.device, &mut self.uniforms);
+        self.forward_renderer
+            .destroy(&self.device, &mut self.uniforms);
         for framebuffer in &self.window_framebuffers {
-            framebuffer.destroy(&self.device);
+            framebuffer.destroy(&self.device, &mut self.uniforms);
         }
+        self.uniforms.destroy(&self.device);
         self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);
 
@@ -638,23 +546,28 @@ impl ContextBuilder {
         self
     }
 
-    pub const fn quality(mut self, quality: QualitySettings) -> Self {
-        self.quality = Quality::Custom(quality);
+    pub const fn shadow_map_size(mut self, size: u32) -> Self {
+        self.shadow_map_size = size;
         self
     }
 
-    pub const fn low_quality(mut self) -> Self {
-        self.quality = Quality::Low;
+    pub const fn max_render_targets(mut self, max: u32) -> Self {
+        self.max_render_targets = max;
         self
     }
 
-    pub const fn medium_quality(mut self) -> Self {
-        self.quality = Quality::Medium;
+    pub const fn msaa(mut self, msaa: Msaa) -> Self {
+        self.msaa = msaa;
         self
     }
 
-    pub const fn high_quality(mut self) -> Self {
-        self.quality = Quality::High;
+    pub const fn no_msaa(mut self) -> Self {
+        self.msaa = Msaa::Disabled;
+        self
+    }
+
+    pub const fn anisotropy(mut self, value: f32) -> Self {
+        self.anisotropy = value;
         self
     }
 
@@ -664,11 +577,83 @@ impl ContextBuilder {
     }
 
     pub fn build(self) -> Result<Context> {
-        let window = match self.window {
+        let Self {
+            vsync,
+            msaa,
+            anisotropy,
+            max_render_targets,
+            shadow_map_size,
+            window,
+        } = self;
+
+        let window_handle = match window {
             Some(w) => w,
             None => unimplemented!(),
         };
-        Context::new(window, self.quality, self.vsync)
+        let instance = Instance::new();
+        let surface = Surface::new(&instance, window_handle);
+
+        // setup device stuff
+        let mut gpu_properties_list = instance.gpu_properties(&surface);
+        let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
+        let gpu_properties = gpu_properties_list.remove(gpu_index);
+        let device = Device::new(&instance, &gpu_properties, gpu_index);
+        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync);
+
+        info!("using anisotropy level {}", anisotropy);
+        info!("using msaa level {:?}", msaa);
+        info!("using vsync {:?}", vsync);
+
+        // setup uniforms
+        let mut uniforms = Uniforms::new(
+            &device,
+            max_render_targets + gpu_properties.image_count - 1,
+            anisotropy,
+        );
+
+        // setup framebuffers
+        let window_framebuffers = Framebuffer::for_swapchain(&device, &swapchain, &uniforms, msaa);
+
+        // setup storage
+        let mut storage = Storage::new();
+        let builtins = Builtins::new(
+            &device,
+            &mut storage,
+            &window_framebuffers[0],
+            &mut uniforms,
+        );
+
+        // setup renderer
+        let forward_renderer = ForwardRenderer::new(&device, &mut uniforms, shadow_map_size);
+
+        #[cfg(feature = "glsl")]
+        let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
+
+        Ok(Context {
+            fps_samples: [0; FPS_SAMPLE_COUNT],
+            render_stage: RenderStage::Before,
+            frame_time: Instant::now(),
+            fps: 0,
+            delta_time: 0.0,
+            frame_count: 0,
+            window_framebuffers,
+            forward_renderer,
+            uniforms,
+            storage,
+            swapchain,
+            gpu_index,
+            builtins,
+            instance,
+            surface,
+            device,
+            msaa,
+            vsync,
+
+            #[cfg(feature = "glsl")]
+            hot_reload_sender,
+            #[cfg(feature = "glsl")]
+            hot_reload_receiver,
+        })
     }
 
     #[cfg(feature = "window")]
@@ -679,16 +664,6 @@ impl ContextBuilder {
             resizable: false,
             width,
             height,
-        }
-    }
-}
-
-impl Default for ContextBuilder {
-    fn default() -> Self {
-        Self {
-            window: None,
-            quality: Quality::Medium,
-            vsync: VSync::On,
         }
     }
 }
@@ -707,7 +682,9 @@ impl WindowBuilder {
 
     pub fn build(self) -> Result<(Context, Window)> {
         let window = Window::new(&self.title, self.width, self.height, self.resizable);
-        let context = Context::new(window.handle(), self.context.quality, self.context.vsync)?;
+        let mut context_builder = self.context;
+        context_builder.window = Some(window.handle());
+        let context = context_builder.build()?;
         Ok((context, window))
     }
 }

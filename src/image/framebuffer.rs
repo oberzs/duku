@@ -18,9 +18,8 @@ use crate::device::Device;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::RenderPass;
-use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
+use crate::pipeline::Uniforms;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -50,7 +49,7 @@ impl Framebuffer {
     pub(crate) fn for_swapchain(
         device: &Device,
         swapchain: &Swapchain,
-        shader_layout: &ShaderLayout,
+        uniforms: &Uniforms,
         msaa: Msaa,
     ) -> Vec<Self> {
         let size = swapchain.size();
@@ -92,7 +91,7 @@ impl Framebuffer {
                 let handle = device.create_framebuffer(&info);
 
                 let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-                let world_descriptor = shader_layout.world_set(device, &world_buffer);
+                let world_descriptor = uniforms.world_set(device, &world_buffer);
                 let text_mesh = Mesh::new(device);
                 let line_mesh = Mesh::new(device);
                 let shape_mesh = Mesh::new(device);
@@ -119,8 +118,7 @@ impl Framebuffer {
 
     pub(crate) fn new(
         device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
+        uniforms: &mut Uniforms,
         attachment_formats: &[Format],
         msaa: Msaa,
         size: Size,
@@ -160,13 +158,13 @@ impl Framebuffer {
         let handle = device.create_framebuffer(&info);
 
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let world_descriptor = shader_layout.world_set(device, &world_buffer);
+        let world_descriptor = uniforms.world_set(device, &world_buffer);
         let text_mesh = Mesh::new(device);
         let line_mesh = Mesh::new(device);
         let shape_mesh = Mesh::new(device);
 
         let mut shader_image = Image::shader(device, size);
-        let shader_index = shader_images.add_image(shader_image.add_view(device));
+        let shader_index = uniforms.add_image(shader_image.add_view(device));
 
         // ready image layouts
         shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -202,7 +200,7 @@ impl Framebuffer {
         self.should_update = true;
     }
 
-    pub(crate) fn update_if_needed(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+    pub(crate) fn update_if_needed(&mut self, device: &Device, uniforms: &mut Uniforms) {
         debug_assert!(
             self.render_pass.attachments().count() == self.images.len(),
             "trying to resize swapchain framebuffer"
@@ -250,7 +248,7 @@ impl Framebuffer {
             };
 
             let mut shader_image = Image::shader(device, self.size);
-            shader_images.replace_image(
+            uniforms.replace_image(
                 self.shader_index.expect("bad shader index"),
                 shader_image.add_view(device),
             );
@@ -294,7 +292,10 @@ impl Framebuffer {
         }
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
+        if let Some(index) = self.shader_index {
+            uniforms.remove_image(index);
+        }
         for image in &self.images {
             image.destroy(device);
         }

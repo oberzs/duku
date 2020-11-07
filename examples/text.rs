@@ -10,7 +10,7 @@ use draw_it::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
-        .low_quality()
+        .no_msaa()
         .build_window(600, 400)
         .title("Draw-it example: Text")
         .resizable()

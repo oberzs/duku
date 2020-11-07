@@ -13,7 +13,7 @@ use crate::image::Mips;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector4;
-use crate::pipeline::ShaderImages;
+use crate::pipeline::Uniforms;
 
 pub struct Font {
     char_data: HashMap<char, CharData>,
@@ -31,14 +31,14 @@ pub(crate) struct CharData {
 }
 
 impl Font {
-    pub(crate) fn fira_mono(device: &Device, shader_images: &mut ShaderImages) -> Self {
+    pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Self {
         let atlas_width = fira_mono::ATLAS_WIDTH;
         let atlas_height = fira_mono::ATLAS_HEIGHT;
         let line_height = fira_mono::LINE_HEIGHT;
 
         let texture = Texture::new(
             device,
-            shader_images,
+            uniforms,
             fira_mono::DATA.to_vec(),
             Size::new(atlas_width, atlas_height),
             Format::Gray,
@@ -87,7 +87,7 @@ impl Font {
         }
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
-        self.texture.destroy(device);
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
+        self.texture.destroy(device, uniforms);
     }
 }

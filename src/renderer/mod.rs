@@ -15,9 +15,9 @@ pub(crate) use shadow::ShadowRenderer;
 
 pub use camera::Camera;
 pub use camera::Projection;
-pub use forward::Pcf;
 pub use light::Light;
 pub use light::LightType;
+pub use shadow::Pcf;
 pub use target::BorderMode;
 pub use target::ShapeMode;
 pub use target::Target;

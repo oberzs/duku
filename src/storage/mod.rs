@@ -16,7 +16,7 @@ use crate::image::Texture;
 use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-use crate::pipeline::ShaderImages;
+use crate::pipeline::Uniforms;
 
 pub(crate) use builtin::create_cube;
 pub(crate) use builtin::create_ico_sphere;
@@ -93,9 +93,9 @@ impl Storage {
         self.meshes.add(mesh, id)
     }
 
-    pub(crate) fn clear_unused(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+    pub(crate) fn clear_unused(&mut self, device: &Device, uniforms: &mut Uniforms) {
         for unused in self.fonts.clear_unused() {
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.meshes.clear_unused() {
             unused.destroy(device);
@@ -107,22 +107,19 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.framebuffers.clear_unused() {
-            shader_images.remove_image(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.textures.clear_unused() {
-            shader_images.remove_image(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.cubemaps.clear_unused() {
-            shader_images.remove_cubemap(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
     }
 
-    pub(crate) fn clear(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+    pub(crate) fn clear(&mut self, device: &Device, uniforms: &mut Uniforms) {
         for unused in self.fonts.clear() {
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.meshes.clear() {
             unused.destroy(device);
@@ -134,20 +131,17 @@ impl Storage {
             unused.destroy(device);
         }
         for unused in self.framebuffers.clear() {
-            shader_images.remove_image(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.textures.clear() {
-            shader_images.remove_image(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
         for unused in self.cubemaps.clear() {
-            shader_images.remove_cubemap(unused.shader_index());
-            unused.destroy(device);
+            unused.destroy(device, uniforms);
         }
     }
 
-    pub(crate) fn update_if_needed(&mut self, device: &Device, shader_images: &mut ShaderImages) {
+    pub(crate) fn update_if_needed(&mut self, device: &Device, uniforms: &mut Uniforms) {
         // update meshes
         for value in self.meshes.stored.values_mut() {
             value.update_if_needed(device);
@@ -160,7 +154,7 @@ impl Storage {
 
         // update framebuffers
         for value in self.framebuffers.stored.values_mut() {
-            value.update_if_needed(device, shader_images);
+            value.update_if_needed(device, uniforms);
         }
 
         // update textures

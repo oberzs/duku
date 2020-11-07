@@ -5,6 +5,7 @@
 
 use std::f32::consts::PI;
 
+use super::Pcf;
 use crate::color::Color;
 use crate::font::Font;
 use crate::image::Cubemap;
@@ -37,6 +38,7 @@ pub struct Target<'a, 'b> {
     // shadows & lights
     pub shadow_split_coef: f32,
     pub shadow_depth: f32,
+    pub shadow_pcf: Pcf,
     pub shadows: bool,
     pub lights: [Light; 4],
     pub ambient_color: Color,
@@ -173,6 +175,7 @@ impl<'b> Target<'_, 'b> {
             shadow_depth: 50.0,
             shadow_split_coef: 0.5,
             shadows: true,
+            shadow_pcf: Pcf::X16,
             builtins,
         }
     }

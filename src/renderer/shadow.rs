@@ -20,12 +20,18 @@ use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
-use crate::pipeline::ShaderImages;
-use crate::pipeline::ShaderLayout;
 use crate::pipeline::ShaderWorld;
+use crate::pipeline::Uniforms;
 use crate::storage::Store;
 
 const SHADOW_SPLIT_COUNT: usize = 4;
+
+#[derive(Debug, Copy, Clone)]
+pub enum Pcf {
+    X16,
+    X4,
+    Disabled,
+}
 
 pub(crate) struct ShadowRenderer {
     sets: [MapSet; FRAMES_IN_FLIGHT],
@@ -51,21 +57,16 @@ struct Sphere {
 }
 
 impl ShadowRenderer {
-    pub(crate) fn new(
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
-        map_size: u32,
-    ) -> Self {
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
         let sets = [
-            MapSet::new(device, shader_layout, shader_images, map_size),
-            MapSet::new(device, shader_layout, shader_images, map_size),
+            MapSet::new(device, uniforms, map_size),
+            MapSet::new(device, uniforms, map_size),
         ];
 
         let shader = Shader::from_spirv_bytes(
             device,
             &sets[0].maps[0],
-            shader_layout,
+            uniforms,
             include_bytes!("../../shaders/shadow.spirv"),
         )
         .expect("bad shader");
@@ -80,7 +81,7 @@ impl ShadowRenderer {
     pub(crate) fn render(
         &self,
         device: &Device,
-        shader_layout: &ShaderLayout,
+        uniforms: &Uniforms,
         meshes: &Store<Mesh>,
         target: &Target<'_, '_>,
         view: Camera,
@@ -103,7 +104,7 @@ impl ShadowRenderer {
             .map(|l| l.coords)
             .unwrap_or_default();
 
-        cmd.bind_descriptor(shader_layout, self.sets[current].descriptor);
+        cmd.bind_descriptor(uniforms, self.sets[current].descriptor);
 
         // calculate shadow map splits
         for i in 1..=SHADOW_SPLIT_COUNT {
@@ -163,7 +164,7 @@ impl ShadowRenderer {
             // do render pass
             cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
             cmd.set_view(framebuffer.size());
-            cmd.bind_descriptor(shader_layout, framebuffer.world());
+            cmd.bind_descriptor(uniforms, framebuffer.world());
             cmd.bind_shader(&self.shader);
 
             for s_order in &target.mesh_orders {
@@ -173,7 +174,7 @@ impl ShadowRenderer {
                             let mesh = meshes.get(&order.mesh);
 
                             cmd.push_constants(
-                                shader_layout,
+                                uniforms,
                                 ShaderConstants {
                                     local_to_world: order.local_to_world,
                                     sampler_index: order.sampler_index,
@@ -191,28 +192,23 @@ impl ShadowRenderer {
         params
     }
 
-    pub(crate) fn destroy(&self, device: &Device) {
+    pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         self.shader.destroy(device);
         for set in &self.sets {
-            set.destroy(device);
+            set.destroy(device, uniforms);
         }
     }
 }
 
 impl MapSet {
-    fn new(
-        device: &Device,
-        shader_layout: &ShaderLayout,
-        shader_images: &mut ShaderImages,
-        map_size: u32,
-    ) -> Self {
+    fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
         let maps = [
-            create_map(device, shader_layout, shader_images, map_size),
-            create_map(device, shader_layout, shader_images, map_size),
-            create_map(device, shader_layout, shader_images, map_size),
-            create_map(device, shader_layout, shader_images, map_size),
+            create_map(device, uniforms, map_size),
+            create_map(device, uniforms, map_size),
+            create_map(device, uniforms, map_size),
+            create_map(device, uniforms, map_size),
         ];
-        let descriptor = shader_layout.shadow_map_set(
+        let descriptor = uniforms.shadow_map_set(
             device,
             [
                 maps[0].stored_view(),
@@ -225,23 +221,17 @@ impl MapSet {
         Self { maps, descriptor }
     }
 
-    fn destroy(&self, device: &Device) {
+    fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         for map in &self.maps {
-            map.destroy(device);
+            map.destroy(device, uniforms);
         }
     }
 }
 
-fn create_map(
-    device: &Device,
-    shader_layout: &ShaderLayout,
-    shader_images: &mut ShaderImages,
-    map_size: u32,
-) -> Framebuffer {
+fn create_map(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Framebuffer {
     Framebuffer::new(
         device,
-        shader_layout,
-        shader_images,
+        uniforms,
         &[Format::Depth],
         Msaa::Disabled,
         Size::new(map_size, map_size),

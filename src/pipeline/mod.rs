@@ -4,14 +4,12 @@
 // pipeline is responsible for the whole rendering pass
 
 mod attachment;
-mod images;
-mod layout;
 mod material;
 mod properties;
 mod render_pass;
 mod sampler;
 mod shader;
-mod uniform;
+mod uniforms;
 
 #[cfg(feature = "glsl")]
 mod glsl;
@@ -23,15 +21,14 @@ use properties::ShapeMode;
 use properties::Store;
 
 pub(crate) use attachment::Attachment;
-pub(crate) use images::ShaderImages;
-pub(crate) use layout::Descriptor;
-pub(crate) use layout::ShaderLayout;
 pub(crate) use render_pass::RenderPass;
 pub(crate) use sampler::Sampler;
-pub(crate) use uniform::ShaderConstants;
-pub(crate) use uniform::ShaderLight;
-pub(crate) use uniform::ShaderMaterial;
-pub(crate) use uniform::ShaderWorld;
+pub(crate) use uniforms::Descriptor;
+pub(crate) use uniforms::ShaderConstants;
+pub(crate) use uniforms::ShaderLight;
+pub(crate) use uniforms::ShaderMaterial;
+pub(crate) use uniforms::ShaderWorld;
+pub(crate) use uniforms::Uniforms;
 
 pub use material::Material;
 pub use material::MaterialBuilder;

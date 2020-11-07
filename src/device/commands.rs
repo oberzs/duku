@@ -21,7 +21,7 @@ use crate::pipeline::Descriptor;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConstants;
-use crate::pipeline::ShaderLayout;
+use crate::pipeline::Uniforms;
 use crate::vk;
 
 pub(crate) struct Commands {
@@ -214,7 +214,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn bind_material(&self, layout: &ShaderLayout, material: &Material) {
+    pub(crate) fn bind_material(&self, uniforms: &Uniforms, material: &Material) {
         // update stats
         let mut stats = self.stats.get();
         let mut used = self.used_materials.borrow_mut();
@@ -226,16 +226,16 @@ impl Commands {
         self.stats.set(stats);
 
         // bind material
-        self.bind_descriptor(layout, material.descriptor());
+        self.bind_descriptor(uniforms, material.descriptor());
     }
 
-    pub(crate) fn bind_descriptor(&self, layout: &ShaderLayout, descriptor: Descriptor) {
+    pub(crate) fn bind_descriptor(&self, uniforms: &Uniforms, descriptor: Descriptor) {
         let sets = [descriptor.1];
         unsafe {
             vk::cmd_bind_descriptor_sets(
                 self.buffer.get(),
                 vk::PIPELINE_BIND_POINT_GRAPHICS,
-                layout.handle(),
+                uniforms.pipeline_layout(),
                 descriptor.0,
                 1,
                 sets.as_ptr(),
@@ -270,7 +270,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn push_constants(&self, layout: &ShaderLayout, constants: ShaderConstants) {
+    pub(crate) fn push_constants(&self, uniforms: &Uniforms, constants: ShaderConstants) {
         unsafe {
             let data: &[u8] = slice::from_raw_parts(
                 &constants as *const ShaderConstants as *const u8,
@@ -279,7 +279,7 @@ impl Commands {
 
             vk::cmd_push_constants(
                 self.buffer.get(),
-                layout.handle(),
+                uniforms.pipeline_layout(),
                 vk::SHADER_STAGE_VERTEX_BIT | vk::SHADER_STAGE_FRAGMENT_BIT,
                 0,
                 data.len() as u32,
