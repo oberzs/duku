@@ -34,7 +34,6 @@ use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
 use crate::renderer::ForwardRenderer;
-use crate::renderer::RenderStores;
 use crate::renderer::Target;
 use crate::storage;
 use crate::storage::Builtins;
@@ -92,7 +91,6 @@ pub struct Context {
 #[derive(Debug, Clone)]
 pub struct ContextBuilder {
     shadow_map_size: u32,
-    max_render_targets: u32,
     anisotropy: f32,
     msaa: Msaa,
     vsync: VSync,
@@ -119,7 +117,6 @@ impl Context {
     pub const fn builder() -> ContextBuilder {
         ContextBuilder {
             shadow_map_size: 2048,
-            max_render_targets: 3,
             anisotropy: 4.0,
             msaa: Msaa::X4,
             vsync: VSync::On,
@@ -137,30 +134,16 @@ impl Context {
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins);
+        let mut target = Target::new(&self.builtins, &self.storage);
         draw_callback(&mut target);
 
-        let framebuffer = &mut self.window_framebuffers[self.swapchain.current()];
+        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
 
         let cam = get_camera(camera, framebuffer.size());
 
-        let stores = RenderStores {
-            shaders: &self.storage.shaders,
-            fonts: &self.storage.fonts,
-            materials: &self.storage.materials,
-            textures: &self.storage.textures,
-            meshes: &self.storage.meshes,
-        };
-
         // render
-        self.forward_renderer.render(
-            &self.device,
-            framebuffer,
-            &cam,
-            stores,
-            &self.uniforms,
-            target,
-        );
+        self.forward_renderer
+            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
 
         self.end_draw();
     }
@@ -179,23 +162,15 @@ impl Context {
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins);
+        let mut target = Target::new(&self.builtins, &self.storage);
         draw_callback(&mut target);
 
-        let frame = self.storage.framebuffers.get_mut(framebuffer);
+        let frame = self.storage.framebuffers.get(framebuffer);
         let cam = get_camera(camera, frame.size());
-
-        let stores = RenderStores {
-            shaders: &self.storage.shaders,
-            fonts: &self.storage.fonts,
-            materials: &self.storage.materials,
-            textures: &self.storage.textures,
-            meshes: &self.storage.meshes,
-        };
 
         // render
         self.forward_renderer
-            .render(&self.device, frame, &cam, stores, &self.uniforms, target);
+            .render(&self.device, frame, &cam, &self.uniforms, target);
     }
 
     pub fn create_texture(
@@ -327,6 +302,8 @@ impl Context {
             self.msaa,
             Size::new(width, height),
         );
+        self.forward_renderer
+            .add_target(&self.device, &mut self.uniforms);
         self.storage.add_framebuffer(framebuffer)
     }
 
@@ -418,12 +395,8 @@ impl Context {
                 framebuffer.destroy(&self.device, &mut self.uniforms);
             }
 
-            self.window_framebuffers = Framebuffer::for_swapchain(
-                &self.device,
-                &self.swapchain,
-                &self.uniforms,
-                self.msaa,
-            );
+            self.window_framebuffers =
+                Framebuffer::for_swapchain(&self.device, &self.swapchain, self.msaa);
         }
     }
 
@@ -551,11 +524,6 @@ impl ContextBuilder {
         self
     }
 
-    pub const fn max_render_targets(mut self, max: u32) -> Self {
-        self.max_render_targets = max;
-        self
-    }
-
     pub const fn msaa(mut self, msaa: Msaa) -> Self {
         self.msaa = msaa;
         self
@@ -581,7 +549,6 @@ impl ContextBuilder {
             vsync,
             msaa,
             anisotropy,
-            max_render_targets,
             shadow_map_size,
             window,
         } = self;
@@ -605,14 +572,10 @@ impl ContextBuilder {
         info!("using vsync {:?}", vsync);
 
         // setup uniforms
-        let mut uniforms = Uniforms::new(
-            &device,
-            max_render_targets + gpu_properties.image_count - 1,
-            anisotropy,
-        );
+        let mut uniforms = Uniforms::new(&device, anisotropy);
 
         // setup framebuffers
-        let window_framebuffers = Framebuffer::for_swapchain(&device, &swapchain, &uniforms, msaa);
+        let window_framebuffers = Framebuffer::for_swapchain(&device, &swapchain, msaa);
 
         // setup storage
         let mut storage = Storage::new();
@@ -624,7 +587,12 @@ impl ContextBuilder {
         );
 
         // setup renderer
-        let forward_renderer = ForwardRenderer::new(&device, &mut uniforms, shadow_map_size);
+        let forward_renderer = ForwardRenderer::new(
+            &device,
+            &mut uniforms,
+            shadow_map_size,
+            gpu_properties.image_count,
+        );
 
         #[cfg(feature = "glsl")]
         let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();

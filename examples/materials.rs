@@ -6,7 +6,6 @@
 use draw_it::window::Controller;
 use draw_it::Camera;
 use draw_it::Context;
-use draw_it::CubemapSides;
 use draw_it::Mips;
 use draw_it::Result;
 use draw_it::Transform;
@@ -42,21 +41,10 @@ fn main() -> Result<()> {
         .albedo_texture(&purple_tex)
         .build();
 
-    let skybox = context.create_cubemap_png(CubemapSides {
-        top: "examples/textures/skybox/top.png",
-        bottom: "examples/textures/skybox/bottom.png",
-        front: "examples/textures/skybox/front.png",
-        back: "examples/textures/skybox/back.png",
-        left: "examples/textures/skybox/left.png",
-        right: "examples/textures/skybox/right.png",
-    })?;
-
     window.main_loop(move |events| {
         controller.update(&mut camera, events, context.delta_time());
 
         context.draw_on_window(Some(&camera), |target| {
-            target.skybox = Some(&skybox);
-
             target.draw_grid();
 
             // render meshes

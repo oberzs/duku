@@ -22,6 +22,7 @@ use crate::pipeline::Shader;
 use crate::renderer::Light;
 use crate::storage::Builtins;
 use crate::storage::Handle;
+use crate::storage::Storage;
 
 pub struct Target<'a, 'b> {
     // global
@@ -29,6 +30,7 @@ pub struct Target<'a, 'b> {
     pub skybox: Option<&'a Handle<Cubemap>>,
     pub transform: Transform,
     pub(crate) builtins: &'b Builtins,
+    pub(crate) storage: &'b Storage,
 
     // meshes
     pub shader: Option<&'a Handle<Shader>>,
@@ -140,7 +142,7 @@ struct Cache<'a> {
 }
 
 impl<'b> Target<'_, 'b> {
-    pub(crate) fn new(builtins: &'b Builtins) -> Self {
+    pub(crate) fn new(builtins: &'b Builtins, storage: &'b Storage) -> Self {
         Self {
             mesh_orders: vec![],
             text_orders: vec![],
@@ -177,6 +179,7 @@ impl<'b> Target<'_, 'b> {
             shadows: true,
             shadow_pcf: Pcf::X16,
             builtins,
+            storage,
         }
     }
 

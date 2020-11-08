@@ -11,14 +11,9 @@ use super::Image;
 use super::ImageLayout;
 use super::Msaa;
 use super::Size;
-use crate::buffer::Buffer;
-use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::mesh::Mesh;
-use crate::pipeline::Descriptor;
 use crate::pipeline::RenderPass;
-use crate::pipeline::ShaderWorld;
 use crate::pipeline::Uniforms;
 use crate::surface::Swapchain;
 use crate::vk;
@@ -31,14 +26,6 @@ pub struct Framebuffer {
     shader_image: Option<Image>,
     shader_index: Option<u32>,
 
-    // resources needed for each
-    // framebuffer in rendering
-    world_descriptor: Descriptor,
-    world_buffer: Buffer<ShaderWorld>,
-    text_mesh: Mesh,
-    line_mesh: Mesh,
-    shape_mesh: Mesh,
-
     msaa: Msaa,
     size: Size,
 
@@ -46,12 +33,7 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
-    pub(crate) fn for_swapchain(
-        device: &Device,
-        swapchain: &Swapchain,
-        uniforms: &Uniforms,
-        msaa: Msaa,
-    ) -> Vec<Self> {
+    pub(crate) fn for_swapchain(device: &Device, swapchain: &Swapchain, msaa: Msaa) -> Vec<Self> {
         let size = swapchain.size();
         let attachment_formats = &[Format::Depth, Format::Sbgra];
 
@@ -90,22 +72,11 @@ impl Framebuffer {
 
                 let handle = device.create_framebuffer(&info);
 
-                let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-                let world_descriptor = uniforms.world_set(device, &world_buffer);
-                let text_mesh = Mesh::new(device);
-                let line_mesh = Mesh::new(device);
-                let shape_mesh = Mesh::new(device);
-
                 Self {
                     shader_image: None,
                     shader_index: None,
                     stored_index: 0,
                     should_update: false,
-                    world_buffer,
-                    world_descriptor,
-                    text_mesh,
-                    line_mesh,
-                    shape_mesh,
                     render_pass,
                     handle,
                     size,
@@ -157,12 +128,6 @@ impl Framebuffer {
 
         let handle = device.create_framebuffer(&info);
 
-        let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let world_descriptor = uniforms.world_set(device, &world_buffer);
-        let text_mesh = Mesh::new(device);
-        let line_mesh = Mesh::new(device);
-        let shape_mesh = Mesh::new(device);
-
         let mut shader_image = Image::shader(device, size);
         let shader_index = uniforms.add_image(shader_image.add_view(device));
 
@@ -181,11 +146,6 @@ impl Framebuffer {
             shader_image: Some(shader_image),
             shader_index: Some(shader_index),
             should_update: false,
-            world_buffer,
-            world_descriptor,
-            text_mesh,
-            line_mesh,
-            shape_mesh,
             stored_index,
             render_pass,
             handle,
@@ -302,10 +262,6 @@ impl Framebuffer {
         if let Some(image) = &self.shader_image {
             image.destroy(device);
         }
-        self.world_buffer.destroy(device);
-        self.text_mesh.destroy(device);
-        self.line_mesh.destroy(device);
-        self.shape_mesh.destroy(device);
         self.render_pass.destroy(device);
         device.destroy_framebuffer(self.handle);
     }
@@ -336,25 +292,5 @@ impl Framebuffer {
 
     pub(crate) fn shader_index(&self) -> u32 {
         self.shader_index.expect("bad framebuffer")
-    }
-
-    pub(crate) fn update_world(&self, data: ShaderWorld) {
-        self.world_buffer.copy_from_data(&[data]);
-    }
-
-    pub(crate) const fn world(&self) -> Descriptor {
-        self.world_descriptor
-    }
-
-    pub(crate) fn text_mesh(&mut self) -> &mut Mesh {
-        &mut self.text_mesh
-    }
-
-    pub(crate) fn line_mesh(&mut self) -> &mut Mesh {
-        &mut self.line_mesh
-    }
-
-    pub(crate) fn shape_mesh(&mut self) -> &mut Mesh {
-        &mut self.shape_mesh
     }
 }

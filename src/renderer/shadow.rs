@@ -7,8 +7,9 @@
 use super::Camera;
 use super::LightType;
 use super::Target;
+use crate::buffer::Buffer;
+use crate::buffer::BufferUsage;
 use crate::device::Device;
-use crate::device::FRAMES_IN_FLIGHT;
 use crate::image::Format;
 use crate::image::Framebuffer;
 use crate::image::Msaa;
@@ -34,7 +35,7 @@ pub enum Pcf {
 }
 
 pub(crate) struct ShadowRenderer {
-    sets: [MapSet; FRAMES_IN_FLIGHT],
+    target_resources: Vec<TargetResources>,
     shader: Shader,
     map_size: u32,
 }
@@ -46,9 +47,11 @@ pub(crate) struct ShadowSplitParams {
     pub(crate) diameters: [f32; SHADOW_SPLIT_COUNT],
 }
 
-struct MapSet {
-    maps: [Framebuffer; SHADOW_SPLIT_COUNT],
-    descriptor: Descriptor,
+struct TargetResources {
+    world_descriptors: [Descriptor; SHADOW_SPLIT_COUNT],
+    world_buffers: [Buffer<ShaderWorld>; SHADOW_SPLIT_COUNT],
+    shadow_descriptor: Descriptor,
+    shadow_maps: [Framebuffer; SHADOW_SPLIT_COUNT],
 }
 
 struct Sphere {
@@ -57,34 +60,44 @@ struct Sphere {
 }
 
 impl ShadowRenderer {
-    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
-        let sets = [
-            MapSet::new(device, uniforms, map_size),
-            MapSet::new(device, uniforms, map_size),
-        ];
+    pub(crate) fn new(
+        device: &Device,
+        uniforms: &mut Uniforms,
+        map_size: u32,
+        target_count: u32,
+    ) -> Self {
+        let target_resources: Vec<_> = (0..target_count)
+            .map(|_| TargetResources::new(device, uniforms, map_size))
+            .collect();
 
         let shader = Shader::from_spirv_bytes(
             device,
-            &sets[0].maps[0],
+            &target_resources[0].shadow_maps[0],
             uniforms,
             include_bytes!("../../shaders/shadow.spirv"),
         )
         .expect("bad shader");
 
         Self {
-            sets,
+            target_resources,
             shader,
             map_size,
         }
     }
 
+    pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) {
+        self.target_resources
+            .push(TargetResources::new(device, uniforms, self.map_size));
+    }
+
     pub(crate) fn render(
-        &self,
+        &mut self,
         device: &Device,
         uniforms: &Uniforms,
         meshes: &Store<Mesh>,
         target: &Target<'_, '_>,
         view: Camera,
+        target_index: usize,
     ) -> ShadowSplitParams {
         let mut params = ShadowSplitParams {
             world_to_shadow: [Matrix4::identity(); SHADOW_SPLIT_COUNT],
@@ -93,8 +106,8 @@ impl ShadowRenderer {
             diameters: [0.0; SHADOW_SPLIT_COUNT],
         };
 
+        let target_resources = &mut self.target_resources[target_index];
         let cmd = device.commands();
-        let current = device.current_frame();
 
         // get main light direction
         let light_dir = target
@@ -104,7 +117,7 @@ impl ShadowRenderer {
             .map(|l| l.coords)
             .unwrap_or_default();
 
-        cmd.bind_descriptor(uniforms, self.sets[current].descriptor);
+        cmd.bind_descriptor(uniforms, target_resources.shadow_descriptor);
 
         // calculate shadow map splits
         for i in 1..=SHADOW_SPLIT_COUNT {
@@ -145,8 +158,7 @@ impl ShadowRenderer {
             params.diameters[i] = diameter;
 
             // update world uniform
-            let framebuffer = &self.sets[current].maps[i];
-            framebuffer.update_world(ShaderWorld {
+            target_resources.world_buffers[i].copy_from_data(&[ShaderWorld {
                 world_to_shadow: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 ambient_color: Vector3::default(),
@@ -159,12 +171,13 @@ impl ShadowRenderer {
                 shadow_pcf: 0.0,
                 skybox_index: 0,
                 time: 0.0,
-            });
+            }]);
 
             // do render pass
+            let framebuffer = &target_resources.shadow_maps[i];
             cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
             cmd.set_view(framebuffer.size());
-            cmd.bind_descriptor(uniforms, framebuffer.world());
+            cmd.bind_descriptor(uniforms, target_resources.world_descriptors[i]);
             cmd.bind_shader(&self.shader);
 
             for s_order in &target.mesh_orders {
@@ -194,35 +207,56 @@ impl ShadowRenderer {
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         self.shader.destroy(device);
-        for set in &self.sets {
-            set.destroy(device, uniforms);
+        for resources in &self.target_resources {
+            resources.destroy(device, uniforms);
         }
     }
 }
 
-impl MapSet {
+impl TargetResources {
     fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
-        let maps = [
+        let shadow_maps = [
             create_map(device, uniforms, map_size),
             create_map(device, uniforms, map_size),
             create_map(device, uniforms, map_size),
             create_map(device, uniforms, map_size),
         ];
-        let descriptor = uniforms.shadow_map_set(
+        let shadow_descriptor = uniforms.shadow_map_set(
             device,
             [
-                maps[0].stored_view(),
-                maps[1].stored_view(),
-                maps[2].stored_view(),
-                maps[3].stored_view(),
+                shadow_maps[0].stored_view(),
+                shadow_maps[1].stored_view(),
+                shadow_maps[2].stored_view(),
+                shadow_maps[3].stored_view(),
             ],
         );
 
-        Self { maps, descriptor }
+        let world_buffers = [
+            Buffer::dynamic(device, BufferUsage::Uniform, 1),
+            Buffer::dynamic(device, BufferUsage::Uniform, 1),
+            Buffer::dynamic(device, BufferUsage::Uniform, 1),
+            Buffer::dynamic(device, BufferUsage::Uniform, 1),
+        ];
+        let world_descriptors = [
+            uniforms.world_set(device, &world_buffers[0]),
+            uniforms.world_set(device, &world_buffers[1]),
+            uniforms.world_set(device, &world_buffers[2]),
+            uniforms.world_set(device, &world_buffers[3]),
+        ];
+
+        Self {
+            world_descriptors,
+            world_buffers,
+            shadow_maps,
+            shadow_descriptor,
+        }
     }
 
     fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
-        for map in &self.maps {
+        for buffer in &self.world_buffers {
+            buffer.destroy(device);
+        }
+        for map in &self.shadow_maps {
             map.destroy(device, uniforms);
         }
     }

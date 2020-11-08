@@ -83,8 +83,8 @@ pub(crate) struct Uniforms {
 pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl Uniforms {
-    pub(crate) fn new(device: &Device, max_render_targets: u32, anisotropy: f32) -> Self {
-        let world_set_count = max_render_targets;
+    pub(crate) fn new(device: &Device, anisotropy: f32) -> Self {
+        let world_set_count = 100;
         let material_set_count = 100;
         let image_set_count = 1;
         let shadow_map_set_count = FRAMES_IN_FLIGHT as u32;
