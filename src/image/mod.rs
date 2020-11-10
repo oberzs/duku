@@ -357,10 +357,6 @@ impl Image {
         self.format
     }
 
-    pub(crate) fn has_depth_format(&self) -> bool {
-        self.format == Format::Depth || self.format == Format::DepthStencil
-    }
-
     pub(crate) const fn all_aspects(&self) -> vk::ImageAspectFlags {
         self.format.all_aspects()
     }

@@ -13,8 +13,8 @@ use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Format;
-use crate::image::Framebuffer;
 use crate::image::Mips;
+use crate::image::Msaa;
 use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector2;
@@ -62,8 +62,8 @@ impl Builtins {
     pub(crate) fn new(
         device: &Device,
         storage: &mut Storage,
-        framebuffer: &Framebuffer,
         uniforms: &mut Uniforms,
+        msaa: Msaa,
     ) -> Self {
         // textures
         let white_texture = {
@@ -140,8 +140,8 @@ impl Builtins {
         let pbr_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/pbr.spirv"),
             )
             .expect("bad shader");
@@ -151,8 +151,8 @@ impl Builtins {
         let font_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/font.spirv"),
             )
             .expect("bad shader");
@@ -162,8 +162,8 @@ impl Builtins {
         let wireframe_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/wireframe.spirv"),
             )
             .expect("bad shader");
@@ -173,8 +173,8 @@ impl Builtins {
         let line_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/lines.spirv"),
             )
             .expect("bad shader");
@@ -184,8 +184,8 @@ impl Builtins {
         let shape_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/shape.spirv"),
             )
             .expect("bad shader");
@@ -195,8 +195,8 @@ impl Builtins {
         let unshaded_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/unshaded.spirv"),
             )
             .expect("bad shader");
@@ -206,8 +206,8 @@ impl Builtins {
         let skybox_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/skybox.spirv"),
             )
             .expect("bad shader");
@@ -217,8 +217,8 @@ impl Builtins {
         let fullscreen_shader = {
             let shader = Shader::from_spirv_bytes(
                 device,
-                framebuffer,
                 uniforms,
+                msaa,
                 include_bytes!("../../shaders/fullscreen.spirv"),
             )
             .expect("bad shader");

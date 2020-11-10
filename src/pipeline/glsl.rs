@@ -18,10 +18,10 @@ struct Defines {
     values: HashMap<String, String>,
 }
 
-pub(crate) fn compile_glsl(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 3])> {
+pub(crate) fn compile_glsl(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 4])> {
     let defines = Defines::new(src);
 
-    let modes = [
+    let bytes = [
         match defines.get("DEPTH") {
             "test" => 0,
             "write" => 1,
@@ -71,12 +71,13 @@ pub(crate) fn compile_glsl(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 3])> {
                 )))
             }
         },
+        src.matches("out vec4").count() as u8,
     ];
 
     let vert_bin = compile_vert(&src, &defines)?;
     let frag_bin = compile_frag(&src, &defines)?;
 
-    Ok((vert_bin, frag_bin, modes))
+    Ok((vert_bin, frag_bin, bytes))
 }
 
 fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {

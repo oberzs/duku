@@ -17,6 +17,15 @@ impl Size {
     }
 }
 
+impl From<u32> for Size {
+    fn from(side: u32) -> Self {
+        Self {
+            width: side,
+            height: side,
+        }
+    }
+}
+
 impl From<vk::Extent2D> for Size {
     fn from(extent: vk::Extent2D) -> Self {
         Self {

@@ -23,6 +23,7 @@ use properties::Store;
 pub(crate) use attachment::Attachment;
 pub(crate) use render_pass::RenderPass;
 pub(crate) use sampler::Sampler;
+pub(crate) use shader::ShaderConfig;
 pub(crate) use uniforms::Descriptor;
 pub(crate) use uniforms::ShaderConstants;
 pub(crate) use uniforms::ShaderLight;

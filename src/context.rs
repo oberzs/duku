@@ -295,11 +295,29 @@ impl Context {
     }
 
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Handle<Framebuffer> {
+        let shader_config = self.storage.shaders.get(&self.builtins.pbr_shader).config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
-            &[Format::Depth, Format::Sbgra],
-            self.msaa,
+            shader_config,
+            Size::new(width, height),
+        );
+        self.forward_renderer
+            .add_target(&self.device, &mut self.uniforms);
+        self.storage.add_framebuffer(framebuffer)
+    }
+
+    pub fn create_framebuffer_for_shader(
+        &mut self,
+        shader: &Handle<Shader>,
+        width: u32,
+        height: u32,
+    ) -> Handle<Framebuffer> {
+        let shader_config = self.storage.shaders.get(shader).config();
+        let framebuffer = Framebuffer::new(
+            &self.device,
+            &mut self.uniforms,
+            shader_config,
             Size::new(width, height),
         );
         self.forward_renderer
@@ -312,12 +330,7 @@ impl Context {
     }
 
     pub fn create_shader_spirv(&mut self, source: &[u8]) -> Result<Handle<Shader>> {
-        let shader = Shader::from_spirv_bytes(
-            &self.device,
-            &self.window_framebuffers[0],
-            &self.uniforms,
-            source,
-        )?;
+        let shader = Shader::from_spirv_bytes(&self.device, &self.uniforms, self.msaa, source)?;
         Ok(self.storage.add_shader(shader))
     }
 
@@ -345,12 +358,7 @@ impl Context {
         for (handle, path) in self.hot_reload_receiver.try_iter() {
             let source = std::fs::read_to_string(&path).expect("bad read");
 
-            match Shader::from_glsl_string(
-                &self.device,
-                &self.window_framebuffers[0],
-                &self.uniforms,
-                source,
-            ) {
+            match Shader::from_glsl_string(&self.device, &self.uniforms, self.msaa, source) {
                 Ok(new_shader) => {
                     *self.storage.shaders.get_mut(&handle) = new_shader;
                     info!("shader {:?} was reloaded", path);
@@ -395,8 +403,9 @@ impl Context {
                 framebuffer.destroy(&self.device, &mut self.uniforms);
             }
 
+            let shader_config = self.storage.shaders.get(&self.builtins.pbr_shader).config();
             self.window_framebuffers =
-                Framebuffer::for_swapchain(&self.device, &self.swapchain, self.msaa);
+                Framebuffer::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
     }
 
@@ -411,8 +420,8 @@ impl Context {
         let source = std::fs::read_to_string(&path)?;
         let handle = self.storage.add_shader(Shader::from_glsl_string(
             &self.device,
-            &self.window_framebuffers[0],
             &self.uniforms,
+            self.msaa,
             source,
         )?);
 
@@ -574,17 +583,13 @@ impl ContextBuilder {
         // setup uniforms
         let mut uniforms = Uniforms::new(&device, anisotropy);
 
-        // setup framebuffers
-        let window_framebuffers = Framebuffer::for_swapchain(&device, &swapchain, msaa);
-
         // setup storage
         let mut storage = Storage::new();
-        let builtins = Builtins::new(
-            &device,
-            &mut storage,
-            &window_framebuffers[0],
-            &mut uniforms,
-        );
+        let builtins = Builtins::new(&device, &mut storage, &mut uniforms, msaa);
+
+        // setup framebuffers
+        let shader_config = storage.shaders.get(&builtins.pbr_shader).config();
+        let window_framebuffers = Framebuffer::for_swapchain(&device, shader_config, &swapchain);
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(

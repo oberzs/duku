@@ -99,15 +99,16 @@ fn main() {
 
     // compile shader
     let shader_src = fs::read_to_string(&in_path).expect("bad read");
-    let (vert, frag, modes) = match compile_glsl(&shader_src) {
+    let (vert, frag, bytes) = match compile_glsl(&shader_src) {
         Ok(bin) => bin,
         Err(err) => error(format!("{}", err), no_color),
     };
     let mut binary = vec![];
     binary.extend(&encode_u32(0x5a45ffff));
-    binary.push(modes[0]);
-    binary.push(modes[1]);
-    binary.push(modes[2]);
+    binary.push(bytes[0]);
+    binary.push(bytes[1]);
+    binary.push(bytes[2]);
+    binary.push(bytes[3]);
     binary.extend(&encode_u32(vert.len() as u32));
     binary.extend(&encode_u32(frag.len() as u32));
     binary.extend(&vert);

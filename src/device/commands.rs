@@ -152,9 +152,9 @@ impl Commands {
     pub(crate) fn begin_render_pass(&self, framebuffer: &Framebuffer, clear: [f32; 4]) {
         // create clear values based on framebuffer image formats
         let clear_values: Vec<_> = framebuffer
-            .iter_images()
-            .map(|image| {
-                if image.has_depth_format() {
+            .attachments()
+            .map(|format| {
+                if format.is_depth() {
                     vk::ClearValue {
                         depth_stencil: vk::ClearDepthStencilValue {
                             depth: 1.0,

@@ -1,19 +1,18 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Framebuffer - image that can be used as a render target
-// also manages world uniform and camera
+// Framebuffer - images that can be used as a render targets
 
 use std::ptr;
 
 use super::Format;
 use super::Image;
 use super::ImageLayout;
-use super::Msaa;
 use super::Size;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::pipeline::RenderPass;
+use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
 use crate::surface::Swapchain;
 use crate::vk;
@@ -21,42 +20,49 @@ use crate::vk;
 pub struct Framebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
-    images: Vec<Image>,
-    stored_index: usize,
-    shader_image: Option<Image>,
-    shader_index: Option<u32>,
-
-    msaa: Msaa,
+    attachments: Vec<Format>,
     size: Size,
+
+    transient_images: Vec<Image>,
+    stored_images: Vec<Image>,
+    shader_image: Option<(u32, Image)>,
 
     should_update: bool,
 }
 
 impl Framebuffer {
-    pub(crate) fn for_swapchain(device: &Device, swapchain: &Swapchain, msaa: Msaa) -> Vec<Self> {
+    pub(crate) fn for_swapchain(
+        device: &Device,
+        config: ShaderConfig,
+        swapchain: &Swapchain,
+    ) -> Vec<Self> {
         let size = swapchain.size();
-        let attachment_formats = &[Format::Depth, Format::Sbgra];
 
         // create a framebuffer for each image in the swapchain
         device
             .get_swapchain_images(swapchain)
             .into_iter()
             .map(|img| {
-                let render_pass = RenderPass::new(device, attachment_formats, msaa, true);
-                let mut images: Vec<_> = render_pass
-                    .attachments()
-                    .map(|attachment| {
-                        let handle = if attachment.is_stored() {
-                            Some(img)
-                        } else {
-                            None
-                        };
+                let render_pass = RenderPass::new(device, config, true);
 
-                        Image::attachment(device, &attachment, size, handle)
-                    })
-                    .collect();
+                let mut transient_images = vec![];
+                let mut stored_images = vec![];
+                let mut attachments = vec![];
+                let mut views = vec![];
 
-                let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
+                for attachment in render_pass.attachments() {
+                    attachments.push(attachment.format());
+
+                    if attachment.is_stored() {
+                        let mut image = Image::attachment(device, &attachment, size, Some(img));
+                        views.push(image.add_view(device));
+                        stored_images.push(image);
+                    } else {
+                        let mut image = Image::attachment(device, &attachment, size, None);
+                        views.push(image.add_view(device));
+                        transient_images.push(image);
+                    };
+                }
 
                 let info = vk::FramebufferCreateInfo {
                     s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -74,14 +80,13 @@ impl Framebuffer {
 
                 Self {
                     shader_image: None,
-                    shader_index: None,
-                    stored_index: 0,
                     should_update: false,
+                    attachments,
+                    transient_images,
+                    stored_images,
                     render_pass,
                     handle,
                     size,
-                    images,
-                    msaa,
                 }
             })
             .collect()
@@ -90,29 +95,27 @@ impl Framebuffer {
     pub(crate) fn new(
         device: &Device,
         uniforms: &mut Uniforms,
-        attachment_formats: &[Format],
-        msaa: Msaa,
+        config: ShaderConfig,
         size: Size,
     ) -> Self {
-        let render_pass = RenderPass::new(device, attachment_formats, msaa, false);
+        let render_pass = RenderPass::new(device, config, true);
 
-        let mut stored_format = None;
-        let mut stored_index = 0;
+        let mut transient_images = vec![];
+        let mut stored_images = vec![];
+        let mut attachments = vec![];
+        let mut views = vec![];
 
-        let mut images: Vec<_> = render_pass
-            .attachments()
-            .enumerate()
-            .map(|(i, attachment)| {
-                if attachment.is_stored() {
-                    stored_format = Some(attachment.format());
-                    stored_index = i;
-                }
+        for attachment in render_pass.attachments() {
+            let mut image = Image::attachment(device, &attachment, size, None);
+            views.push(image.add_view(device));
+            attachments.push(attachment.format());
 
-                Image::attachment(device, &attachment, size, None)
-            })
-            .collect();
-
-        let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
+            if attachment.is_stored() {
+                stored_images.push(image);
+            } else {
+                transient_images.push(image);
+            };
+        }
 
         let info = vk::FramebufferCreateInfo {
             s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -133,25 +136,26 @@ impl Framebuffer {
 
         // ready image layouts
         shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
-        images[stored_index].change_layout(
-            device,
-            ImageLayout::Undefined,
-            match stored_format {
-                Some(Format::Depth) => ImageLayout::ShaderDepth,
-                _ => ImageLayout::ShaderColor,
-            },
-        );
+        for image in &stored_images {
+            image.change_layout(
+                device,
+                ImageLayout::Undefined,
+                match image.format() {
+                    Format::Depth => ImageLayout::ShaderDepth,
+                    _ => ImageLayout::ShaderColor,
+                },
+            );
+        }
 
         Self {
-            shader_image: Some(shader_image),
-            shader_index: Some(shader_index),
+            shader_image: Some((shader_index, shader_image)),
             should_update: false,
-            stored_index,
+            attachments,
+            transient_images,
+            stored_images,
             render_pass,
             handle,
             size,
-            images,
-            msaa,
         }
     }
 
@@ -162,38 +166,37 @@ impl Framebuffer {
 
     pub(crate) fn update_if_needed(&mut self, device: &Device, uniforms: &mut Uniforms) {
         debug_assert!(
-            self.render_pass.attachments().count() == self.images.len(),
+            self.shader_image.is_some(),
             "trying to resize swapchain framebuffer"
         );
 
         if self.should_update {
             // cleanup images
-            for image in &self.images {
+            for image in &self.transient_images {
                 image.destroy(device);
             }
-            if let Some(image) = &self.shader_image {
+            for image in &self.stored_images {
+                image.destroy(device);
+            }
+            if let Some((_, image)) = &self.shader_image {
                 image.destroy(device);
             }
 
             // recreate framebuffer images
-            let mut stored_format = None;
-            let mut stored_index = 0;
+            let mut transient_images = vec![];
+            let mut stored_images = vec![];
+            let mut views = vec![];
 
-            let mut images: Vec<_> = self
-                .render_pass
-                .attachments()
-                .enumerate()
-                .map(|(i, attachment)| {
-                    if attachment.is_stored() {
-                        stored_format = Some(attachment.format());
-                        stored_index = i;
-                    }
+            for attachment in self.render_pass.attachments() {
+                let mut image = Image::attachment(device, &attachment, self.size, None);
+                views.push(image.add_view(device));
 
-                    Image::attachment(device, attachment, self.size, None)
-                })
-                .collect();
-
-            let views: Vec<_> = images.iter_mut().map(|i| i.add_view(device)).collect();
+                if attachment.is_stored() {
+                    stored_images.push(image);
+                } else {
+                    transient_images.push(image);
+                };
+            }
 
             let info = vk::FramebufferCreateInfo {
                 s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -208,36 +211,37 @@ impl Framebuffer {
             };
 
             let mut shader_image = Image::shader(device, self.size);
-            uniforms.replace_image(
-                self.shader_index.expect("bad shader index"),
-                shader_image.add_view(device),
-            );
+            let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
+            uniforms.replace_image(shader_index, shader_image.add_view(device));
 
             // ready image layouts
             shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
-            images[stored_index].change_layout(
-                device,
-                ImageLayout::Undefined,
-                match stored_format {
-                    Some(Format::Depth) => ImageLayout::ShaderDepth,
-                    _ => ImageLayout::ShaderColor,
-                },
-            );
+            for image in &stored_images {
+                image.change_layout(
+                    device,
+                    ImageLayout::Undefined,
+                    match image.format() {
+                        Format::Depth => ImageLayout::ShaderDepth,
+                        _ => ImageLayout::ShaderColor,
+                    },
+                );
+            }
 
             // reassign new values
             device.destroy_framebuffer(self.handle);
             self.handle = device.create_framebuffer(&info);
-            self.images = images;
-            self.stored_index = stored_index;
-            self.shader_image = Some(shader_image);
+            self.transient_images = transient_images;
+            self.stored_images = stored_images;
+            self.shader_image = Some((shader_index, shader_image));
 
             self.should_update = false;
         }
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
-        if let Some(dst) = &self.shader_image {
-            let src = &self.images[self.stored_index];
+        if let Some((_, dst)) = &self.shader_image {
+            // transfer only first stored image to shader for now
+            let src = &self.stored_images[0];
 
             // prepare images for transfer
             src.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferSrc);
@@ -253,13 +257,14 @@ impl Framebuffer {
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
-        if let Some(index) = self.shader_index {
-            uniforms.remove_image(index);
-        }
-        for image in &self.images {
+        if let Some((index, image)) = &self.shader_image {
+            uniforms.remove_image(*index);
             image.destroy(device);
         }
-        if let Some(image) = &self.shader_image {
+        for image in &self.transient_images {
+            image.destroy(device);
+        }
+        for image in &self.stored_images {
             image.destroy(device);
         }
         self.render_pass.destroy(device);
@@ -274,23 +279,19 @@ impl Framebuffer {
         self.render_pass.handle()
     }
 
-    pub(crate) const fn msaa(&self) -> Msaa {
-        self.msaa
-    }
-
     pub(crate) const fn size(&self) -> Size {
         self.size
     }
 
     pub(crate) fn stored_view(&self) -> vk::ImageView {
-        self.images[self.stored_index].get_view(0)
+        self.stored_images[0].get_view(0)
     }
 
-    pub(crate) fn iter_images(&self) -> impl Iterator<Item = &Image> {
-        self.images.iter()
+    pub(crate) fn attachments(&self) -> impl Iterator<Item = &Format> {
+        self.attachments.iter()
     }
 
     pub(crate) fn shader_index(&self) -> u32 {
-        self.shader_index.expect("bad framebuffer")
+        self.shader_image.as_ref().expect("bad shader image").0
     }
 }

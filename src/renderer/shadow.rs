@@ -10,16 +10,15 @@ use super::Target;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
-use crate::image::Format;
 use crate::image::Framebuffer;
 use crate::image::Msaa;
-use crate::image::Size;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Shader;
+use crate::pipeline::ShaderConfig;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderWorld;
 use crate::pipeline::Uniforms;
@@ -66,17 +65,17 @@ impl ShadowRenderer {
         map_size: u32,
         target_count: u32,
     ) -> Self {
-        let target_resources: Vec<_> = (0..target_count)
-            .map(|_| TargetResources::new(device, uniforms, map_size))
-            .collect();
-
         let shader = Shader::from_spirv_bytes(
             device,
-            &target_resources[0].shadow_maps[0],
             uniforms,
+            Msaa::Disabled,
             include_bytes!("../../shaders/shadow.spirv"),
         )
         .expect("bad shader");
+
+        let target_resources: Vec<_> = (0..target_count)
+            .map(|_| TargetResources::new(device, uniforms, shader.config(), map_size))
+            .collect();
 
         Self {
             target_resources,
@@ -86,8 +85,12 @@ impl ShadowRenderer {
     }
 
     pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) {
-        self.target_resources
-            .push(TargetResources::new(device, uniforms, self.map_size));
+        self.target_resources.push(TargetResources::new(
+            device,
+            uniforms,
+            self.shader.config(),
+            self.map_size,
+        ));
     }
 
     pub(crate) fn render(
@@ -214,12 +217,12 @@ impl ShadowRenderer {
 }
 
 impl TargetResources {
-    fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
+    fn new(device: &Device, uniforms: &mut Uniforms, config: ShaderConfig, map_size: u32) -> Self {
         let shadow_maps = [
-            create_map(device, uniforms, map_size),
-            create_map(device, uniforms, map_size),
-            create_map(device, uniforms, map_size),
-            create_map(device, uniforms, map_size),
+            Framebuffer::new(device, uniforms, config, map_size.into()),
+            Framebuffer::new(device, uniforms, config, map_size.into()),
+            Framebuffer::new(device, uniforms, config, map_size.into()),
+            Framebuffer::new(device, uniforms, config, map_size.into()),
         ];
         let shadow_descriptor = uniforms.shadow_map_set(
             device,
@@ -260,16 +263,6 @@ impl TargetResources {
             map.destroy(device, uniforms);
         }
     }
-}
-
-fn create_map(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Framebuffer {
-    Framebuffer::new(
-        device,
-        uniforms,
-        &[Format::Depth],
-        Msaa::Disabled,
-        Size::new(map_size, map_size),
-    )
 }
 
 fn pssm_split(near: f32, far: f32, i: usize, split_coef: f32) -> f32 {

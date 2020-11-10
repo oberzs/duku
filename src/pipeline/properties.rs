@@ -9,21 +9,21 @@ use crate::error;
 use crate::error::Result;
 use crate::vk;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum CullMode {
     Back,
     Front,
     Disabled,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum ShapeMode {
     LinedTriangles,
     FilledTriangles,
     Lines,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum DepthMode {
     Test,
     Write,

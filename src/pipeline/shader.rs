@@ -11,30 +11,35 @@ use std::ptr;
 
 use super::CullMode;
 use super::DepthMode;
+use super::RenderPass;
 use super::ShapeMode;
 use super::Uniforms;
 use crate::device::Device;
 use crate::error::Error;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::Msaa;
 use crate::mesh::Vertex;
 use crate::vk;
 
 pub struct Shader {
     handle: vk::Pipeline,
+    config: ShaderConfig,
 }
 
-pub(crate) struct ShaderModes {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct ShaderConfig {
     pub(crate) depth: DepthMode,
     pub(crate) shape: ShapeMode,
     pub(crate) cull: CullMode,
+    pub(crate) msaa: Msaa,
+    pub(crate) outputs: u8,
 }
 
 impl Shader {
     pub(crate) fn from_spirv_bytes(
         device: &Device,
-        framebuffer: &Framebuffer,
         uniforms: &Uniforms,
+        msaa: Msaa,
         bytes: &[u8],
     ) -> Result<Self> {
         let mut cursor = Cursor::new(&bytes[..]);
@@ -47,6 +52,7 @@ impl Shader {
         let depth_byte = read_u8(&mut cursor)?;
         let shape_byte = read_u8(&mut cursor)?;
         let cull_byte = read_u8(&mut cursor)?;
+        let output_byte = read_u8(&mut cursor)?;
         let vert_size = read_u32(&mut cursor)? as usize;
         let frag_size = read_u32(&mut cursor)? as usize;
 
@@ -59,50 +65,50 @@ impl Shader {
             .read_exact(&mut frag_source)
             .map_err(|_| Error::InvalidSpirv)?;
 
-        Self::new(
-            device,
-            framebuffer,
-            uniforms,
-            &vert_source,
-            &frag_source,
-            ShaderModes {
-                depth: depth_byte.try_into()?,
-                shape: shape_byte.try_into()?,
-                cull: cull_byte.try_into()?,
-            },
-        )
+        let config = ShaderConfig {
+            depth: depth_byte.try_into()?,
+            shape: shape_byte.try_into()?,
+            cull: cull_byte.try_into()?,
+            outputs: output_byte,
+            msaa,
+        };
+
+        Self::new(device, uniforms, &vert_source, &frag_source, config)
     }
 
     #[cfg(feature = "glsl")]
     pub(crate) fn from_glsl_string(
         device: &Device,
-        framebuffer: &Framebuffer,
         uniforms: &Uniforms,
+        msaa: Msaa,
         source: String,
     ) -> Result<Self> {
         use super::glsl::compile_glsl;
 
-        let (vert, frag, mode_bytes) = compile_glsl(&source)?;
-        let modes = ShaderModes {
-            depth: mode_bytes[0].try_into()?,
-            shape: mode_bytes[1].try_into()?,
-            cull: mode_bytes[2].try_into()?,
+        let (vert, frag, bytes) = compile_glsl(&source)?;
+        let config = ShaderConfig {
+            depth: bytes[0].try_into()?,
+            shape: bytes[1].try_into()?,
+            cull: bytes[2].try_into()?,
+            outputs: bytes[3],
+            msaa,
         };
 
-        Self::new(device, framebuffer, uniforms, &vert, &frag, modes)
+        Self::new(device, uniforms, &vert, &frag, config)
     }
 
     fn new(
         device: &Device,
-        framebuffer: &Framebuffer,
         uniforms: &Uniforms,
         vert_source: &[u8],
         frag_source: &[u8],
-        modes: ShaderModes,
+        config: ShaderConfig,
     ) -> Result<Self> {
         let vert_module = device.create_shader_module(vert_source)?;
         let frag_module = device.create_shader_module(frag_source)?;
         let entry_point = CString::new("main").expect("bad code");
+
+        let render_pass = RenderPass::new(device, config, false);
 
         // configure stages
         let stages = [
@@ -146,7 +152,7 @@ impl Shader {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: 0,
-            topology: modes.shape.topology(),
+            topology: config.shape.topology(),
             primitive_restart_enable: vk::FALSE,
         };
 
@@ -185,8 +191,8 @@ impl Shader {
             flags: 0,
             depth_clamp_enable: vk::FALSE,
             rasterizer_discard_enable: vk::FALSE,
-            polygon_mode: modes.shape.polygon(),
-            cull_mode: modes.cull.flag(),
+            polygon_mode: config.shape.polygon(),
+            cull_mode: config.cull.flag(),
             front_face: vk::FRONT_FACE_CLOCKWISE,
             depth_bias_enable: vk::FALSE,
             depth_bias_constant_factor: 0.0,
@@ -200,7 +206,7 @@ impl Shader {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: 0,
-            rasterization_samples: framebuffer.msaa().flag(),
+            rasterization_samples: config.msaa.flag(),
             sample_shading_enable: vk::FALSE,
             min_sample_shading: 0.0,
             p_sample_mask: ptr::null(),
@@ -213,8 +219,8 @@ impl Shader {
             s_type: vk::STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             p_next: ptr::null(),
             flags: 0,
-            depth_test_enable: modes.depth.test(),
-            depth_write_enable: modes.depth.write(),
+            depth_test_enable: config.depth.test(),
+            depth_write_enable: config.depth.write(),
             depth_compare_op: vk::COMPARE_OP_LESS,
             depth_bounds_test_enable: vk::FALSE,
             stencil_test_enable: vk::FALSE,
@@ -293,7 +299,7 @@ impl Shader {
             p_color_blend_state: &color_blending,
             p_dynamic_state: &dynamic_state,
             layout: uniforms.pipeline_layout(),
-            render_pass: framebuffer.render_pass(),
+            render_pass: render_pass.handle(),
             subpass: 0,
             base_pipeline_handle: 0,
             base_pipeline_index: 0,
@@ -301,14 +307,20 @@ impl Shader {
 
         let handle = device.create_pipeline(pipeline_info);
 
+        // destroy temporary objects
         device.destroy_shader_module(vert_module);
         device.destroy_shader_module(frag_module);
+        render_pass.destroy(device);
 
-        Ok(Self { handle })
+        Ok(Self { handle, config })
     }
 
     pub(crate) fn destroy(&self, device: &Device) {
         device.destroy_pipeline(self.handle);
+    }
+
+    pub(crate) const fn config(&self) -> ShaderConfig {
+        self.config
     }
 
     pub(crate) const fn handle(&self) -> vk::Pipeline {
