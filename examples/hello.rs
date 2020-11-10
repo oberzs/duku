@@ -1,16 +1,16 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // "Hello, World!" example to open a transparent rainbow window
 
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Result;
+use duku::Color;
+use duku::Context;
+use duku::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .build_window(500, 500)
-        .title("Draw-it example: Hello")
+        .title("Duku example: Hello")
         .resizable()
         .build()?;
 

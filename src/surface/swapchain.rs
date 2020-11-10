@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // Swapchain - struct that holds images for specific surface
 

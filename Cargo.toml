@@ -1,5 +1,5 @@
 [package]
-name = "draw-it"
+name = "duku"
 version = "0.1.0"
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
@@ -17,8 +17,8 @@ png = { version = "0.16.7", default-features = false, optional = true }
 shaderc = { version = "0.6.2", optional = true }
 
 [[bin]]
-name = "dic"
-path = "src/dic.rs"
+name = "dc"
+path = "src/dc.rs"
 required-features = ["glsl"]
 
 [[example]]

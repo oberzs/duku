@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // Texture - simple image that can be used for rendering
 

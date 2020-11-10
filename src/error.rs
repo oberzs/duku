@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
-// draw-it error types
+// duku error types
 
 use std::error;
 use std::fmt;

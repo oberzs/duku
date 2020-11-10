@@ -1,21 +1,21 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // Material drawing example
 
-use draw_it::window::Controller;
-use draw_it::Camera;
-use draw_it::Context;
-use draw_it::Mips;
-use draw_it::Result;
-use draw_it::Transform;
-use draw_it::Vector3;
+use duku::window::Controller;
+use duku::Camera;
+use duku::Context;
+use duku::Mips;
+use duku::Result;
+use duku::Transform;
+use duku::Vector3;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .no_vsync()
         .build_window(720, 640)
-        .title("Draw-it example: Materials")
+        .title("Duku example: Materials")
         .resizable()
         .build()?;
 

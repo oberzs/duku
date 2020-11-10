@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
-// Context - draw-it application entrypoint
+// Context - duku application entrypoint
 
 use std::time::Instant;
 

@@ -1,5 +1,5 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // CLI utility to compile a glsl shader to spirv
 
@@ -119,7 +119,7 @@ fn main() {
 
 fn show_help(no_color: bool) {
     eprintln!(
-        r#"Draw-it Shader compiler
+        r#"Duku Shader compiler
     
 {}
     {}

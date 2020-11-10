@@ -1,7 +1,7 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
-// Draw-it is a Vulkan rendering engine
+// Duku is a Vulkan rendering engine
 
 #![warn(
     rust_2018_idioms,

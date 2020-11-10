@@ -1,17 +1,17 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // example that draws textures
 
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Mips;
-use draw_it::Result;
+use duku::Color;
+use duku::Context;
+use duku::Mips;
+use duku::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .build_window(800, 400)
-        .title("Draw-it example: Textures")
+        .title("Duku example: Textures")
         .resizable()
         .build()?;
 

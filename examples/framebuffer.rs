@@ -1,17 +1,17 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // Framebuffer drawing example
 
-use draw_it::Camera;
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Result;
+use duku::Camera;
+use duku::Color;
+use duku::Context;
+use duku::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .build_window(500, 500)
-        .title("Draw-it example: Framebuffer")
+        .title("Duku example: Framebuffer")
         .build()?;
 
     let mut camera = Camera::perspective_autosized(90);

@@ -1,15 +1,15 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // example that draws a framebuffer with a custom ray-marching shader
 
-use draw_it::Context;
-use draw_it::Result;
+use duku::Context;
+use duku::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .build_window(500, 500)
-        .title("Draw-it example: Surface")
+        .title("Duku example: Surface")
         .resizable()
         .build()?;
 

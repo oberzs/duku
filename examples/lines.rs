@@ -1,19 +1,19 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // example that draws lines
 
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Result;
-use draw_it::Target;
-use draw_it::Vector2;
+use duku::Color;
+use duku::Context;
+use duku::Result;
+use duku::Target;
+use duku::Vector2;
 use std::f32::consts::PI;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .build_window(600, 400)
-        .title("Draw-it example: Lines")
+        .title("Duku example: Lines")
         .resizable()
         .build()?;
 

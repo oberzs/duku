@@ -1,18 +1,18 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // example that draws text
 
-use draw_it::window::Key;
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Result;
+use duku::window::Key;
+use duku::Color;
+use duku::Context;
+use duku::Result;
 
 fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .no_msaa()
         .build_window(600, 400)
-        .title("Draw-it example: Text")
+        .title("Duku example: Text")
         .resizable()
         .build()?;
 

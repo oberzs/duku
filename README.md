@@ -1,7 +1,7 @@
-<h1 align="center">Draw it 🎨</h1>
+<h1 align="center">Duku Renderer 🎨</h1>
 
 <div align="center">
-  <strong>Easy to use 2D and 3D rendering library for Rust</strong>
+  <strong>Easy to use rendering library for Rust</strong>
 </div>
 
 <br />
@@ -13,15 +13,15 @@
   </span>
   <!-- Build status -->
   <span>
-    <img src="https://img.shields.io/github/workflow/status/oberzs/draw-it/Full%20Build?style=flat-square" alt="Build Status" />
+    <img src="https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square" alt="Build Status" />
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
     <img src="https://img.shields.io/badge/rust-1.46.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
-  <a href="https://github.com/oberzs/draw-it/blob/develop/LICENSE">
-    <img src="https://img.shields.io/github/license/oberzs/draw-it?style=flat-square" alt="License" />
+  <a href="https://github.com/oberzs/duku/blob/develop/LICENSE">
+    <img src="https://img.shields.io/github/license/oberzs/duku?style=flat-square" alt="License" />
   </a>
 </div>
 
@@ -53,17 +53,17 @@ All these features will be completed for release `0.1.0`
 
 ## Simple Example
 
-A simple example that creates the draw-it context, sets up a 3D camera
+A simple example that creates the duku context, sets up a 3D camera
 and draws a cube on the screen.
 
 ```rust
-use draw_it::Color;
-use draw_it::Camera;
-use draw_it::Context;
-use draw_it::Result;
+use duku::Color;
+use duku::Camera;
+use duku::Context;
+use duku::Result;
 
 fn main() -> Result<()> {
-    // create draw-it context and OS window with a size of 500x500
+    // create duku context and OS window with a size of 500x500
     let (mut context, window) = Context::builder().build_window(500, 500).build()?;
 
     // create a 3D perspective camera with an FOV of 90
@@ -92,7 +92,7 @@ fn main() -> Result<()> {
 
 This example uses the optional feature `window` for OS window creation.
 
-Want more? Check out these other [examples](https://github.com/oberzs/draw-it/tree/develop/examples).
+Want more? Check out these other [examples](https://github.com/oberzs/duku/tree/develop/examples).
 
 ## Usage
 
@@ -100,7 +100,7 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 
 ```toml
 [dependencies]
-draw-it = { git = "https://github.com/oberzs/draw-it" }
+duku = { git = "https://github.com/oberzs/duku" }
 ```
 
 This crate will be added to the [crates.io](https://crates.io) upon
@@ -113,7 +113,7 @@ to your dependency in your `Cargo.toml` file.
 
 ```toml
 [dependencies]
-draw-it = { ... , features = ["feature-name"] }
+duku = { ... , features = ["feature-name"] }
 ```
 
 The optional features include:

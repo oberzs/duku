@@ -1,14 +1,14 @@
 // Oliver Berzs
-// https://github.com/oberzs/draw-it
+// https://github.com/oberzs/duku
 
 // example with dynamicly changing mesh vertices
 
-use draw_it::window::Controller;
-use draw_it::Camera;
-use draw_it::Color;
-use draw_it::Context;
-use draw_it::Result;
-use draw_it::Vector3;
+use duku::window::Controller;
+use duku::Camera;
+use duku::Color;
+use duku::Context;
+use duku::Result;
+use duku::Vector3;
 use std::time::Instant;
 
 fn main() -> Result<()> {
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
 
     let (mut context, window) = Context::builder()
         .build_window(720, 640)
-        .title("Draw-it example: Dynamic")
+        .title("Duku example: Dynamic")
         .build()?;
 
     let mut controller = Controller::fly();

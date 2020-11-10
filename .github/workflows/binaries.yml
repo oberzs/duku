@@ -20,13 +20,13 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release --bin dic --features="glsl"
+        run: cargo build --release --bin dc --features="glsl"
 
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: dic-windows
-          path: target/release/dic.exe
+          name: dc-windows
+          path: target/release/dc.exe
 
   linux:
     name: "Linux"
