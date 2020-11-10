@@ -71,8 +71,8 @@ fn main() -> Result<()> {
 
     // move the camera to some location
     // and make it look at the center of the world
-    camera.transform.move_by((2.0, 1.5, -2.0));
-    camera.transform.look_at((0.0, 0.0, 0.0));
+    camera.transform.move_by([2.0, 1.5, -2.0]);
+    camera.transform.look_at([0.0, 0.0, 0.0]);
 
     // start up the main event loop
     window.main_loop(move |_| {
