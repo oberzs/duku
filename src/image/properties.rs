@@ -19,6 +19,12 @@ pub enum Format {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ColorSpace {
+    Linear,
+    Srgb,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mips {
     Log2,
     Zero,
@@ -55,13 +61,13 @@ pub enum Msaa {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TextureFilter {
+pub enum Filter {
     Linear,
     Nearest,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TextureWrap {
+pub enum Wrap {
     ClampBorder,
     ClampEdge,
     Repeat,
@@ -180,7 +186,7 @@ impl Msaa {
     }
 }
 
-impl TextureWrap {
+impl Wrap {
     pub(crate) const fn flag(&self) -> vk::SamplerAddressMode {
         match *self {
             Self::ClampBorder => vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -190,7 +196,7 @@ impl TextureWrap {
     }
 }
 
-impl TextureFilter {
+impl Filter {
     pub(crate) const fn flag(&self) -> vk::Filter {
         match *self {
             Self::Linear => vk::FILTER_LINEAR,

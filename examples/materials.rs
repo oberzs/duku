@@ -5,6 +5,7 @@
 
 use duku::window::Controller;
 use duku::Camera;
+use duku::ColorSpace;
 use duku::Context;
 use duku::Mips;
 use duku::Result;
@@ -25,10 +26,16 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
-    let light_tex =
-        context.create_texture_png("examples/textures/prototype/light.png", Mips::Log2)?;
-    let purple_tex =
-        context.create_texture_png("examples/textures/prototype/purple.png", Mips::Log2)?;
+    let light_tex = context.create_texture_png(
+        "examples/textures/prototype/light.png",
+        ColorSpace::Srgb,
+        Mips::Log2,
+    )?;
+    let purple_tex = context.create_texture_png(
+        "examples/textures/prototype/purple.png",
+        ColorSpace::Srgb,
+        Mips::Log2,
+    )?;
 
     let light_mat = context
         .build_material_pbr()

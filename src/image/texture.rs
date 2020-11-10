@@ -14,6 +14,9 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::pipeline::Uniforms;
 
+#[cfg(feature = "png")]
+use super::ColorSpace;
+
 pub struct Texture {
     image: Image,
     data: Vec<u8>,
@@ -72,7 +75,7 @@ impl Texture {
         device: &Device,
         uniforms: &mut Uniforms,
         bytes: Vec<u8>,
-        linear: bool,
+        color_space: ColorSpace,
         mips: Mips,
     ) -> crate::error::Result<Self> {
         use png::ColorType;
@@ -88,9 +91,9 @@ impl Texture {
         reader.next_frame(&mut data).expect("bad read");
 
         let format = match info.color_type {
-            ColorType::RGBA if linear => Format::Rgba,
+            ColorType::RGBA if color_space == ColorSpace::Linear => Format::Rgba,
             ColorType::RGBA => Format::Srgba,
-            ColorType::RGB if linear => Format::Rgb,
+            ColorType::RGB if color_space == ColorSpace::Linear => Format::Rgb,
             ColorType::RGB => Format::Srgb,
             ColorType::Grayscale => Format::Gray,
             _ => return Err(Error::UnsupportedColorType),

@@ -9,9 +9,9 @@ use super::Pcf;
 use crate::color::Color;
 use crate::font::Font;
 use crate::image::Cubemap;
+use crate::image::Filter;
 use crate::image::Texture;
-use crate::image::TextureFilter;
-use crate::image::TextureWrap;
+use crate::image::Wrap;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector2;
@@ -65,8 +65,8 @@ pub struct Target<'a, 'b> {
     pub(crate) text_orders: Vec<TextOrder>,
 
     // textures
-    pub texture_filter: TextureFilter,
-    pub texture_wrap: TextureWrap,
+    pub texture_filter: Filter,
+    pub texture_wrap: Wrap,
     pub texture_mipmaps: bool,
 
     cache: Vec<Cache<'a>>,
@@ -163,8 +163,8 @@ impl<'b> Target<'_, 'b> {
                 Light::NONE,
                 Light::NONE,
             ],
-            texture_filter: TextureFilter::Linear,
-            texture_wrap: TextureWrap::Repeat,
+            texture_filter: Filter::Linear,
+            texture_wrap: Wrap::Repeat,
             border_width: 1.0,
             line_width: 1.0,
             border_mode: BorderMode::Inside,
@@ -691,22 +691,19 @@ impl<'b> Target<'_, 'b> {
     }
 
     const fn sampler_index(&self) -> u32 {
-        use TextureFilter as F;
-        use TextureWrap as W;
-
         match (self.texture_filter, self.texture_wrap, self.texture_mipmaps) {
-            (F::Linear, W::Repeat, true) => 0,
-            (F::Linear, W::Repeat, false) => 1,
-            (F::Linear, W::ClampBorder, true) => 2,
-            (F::Linear, W::ClampBorder, false) => 3,
-            (F::Linear, W::ClampEdge, true) => 4,
-            (F::Linear, W::ClampEdge, false) => 5,
-            (F::Nearest, W::Repeat, true) => 6,
-            (F::Nearest, W::Repeat, false) => 7,
-            (F::Nearest, W::ClampBorder, true) => 8,
-            (F::Nearest, W::ClampBorder, false) => 9,
-            (F::Nearest, W::ClampEdge, true) => 10,
-            (F::Nearest, W::ClampEdge, false) => 11,
+            (Filter::Linear, Wrap::Repeat, true) => 0,
+            (Filter::Linear, Wrap::Repeat, false) => 1,
+            (Filter::Linear, Wrap::ClampBorder, true) => 2,
+            (Filter::Linear, Wrap::ClampBorder, false) => 3,
+            (Filter::Linear, Wrap::ClampEdge, true) => 4,
+            (Filter::Linear, Wrap::ClampEdge, false) => 5,
+            (Filter::Nearest, Wrap::Repeat, true) => 6,
+            (Filter::Nearest, Wrap::Repeat, false) => 7,
+            (Filter::Nearest, Wrap::ClampBorder, true) => 8,
+            (Filter::Nearest, Wrap::ClampBorder, false) => 9,
+            (Filter::Nearest, Wrap::ClampEdge, true) => 10,
+            (Filter::Nearest, Wrap::ClampEdge, false) => 11,
         }
     }
 }

@@ -10,9 +10,9 @@ use super::Sampler;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
+use crate::image::Filter;
 use crate::image::ImageLayout;
-use crate::image::TextureFilter;
-use crate::image::TextureWrap;
+use crate::image::Wrap;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
@@ -197,12 +197,8 @@ impl Uniforms {
 
         // create sampler combinations
         let mut samplers = vec![];
-        for filter in &[TextureFilter::Linear, TextureFilter::Nearest] {
-            for wrap in &[
-                TextureWrap::Repeat,
-                TextureWrap::ClampBorder,
-                TextureWrap::ClampEdge,
-            ] {
+        for filter in &[Filter::Linear, Filter::Nearest] {
+            for wrap in &[Wrap::Repeat, Wrap::ClampBorder, Wrap::ClampEdge] {
                 for mipmaps in &[true, false] {
                     samplers.push(Sampler::new(device, *wrap, *filter, *mipmaps, anisotropy));
                 }

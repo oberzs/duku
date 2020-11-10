@@ -6,8 +6,8 @@
 use std::ptr;
 
 use crate::device::Device;
-use crate::image::TextureFilter;
-use crate::image::TextureWrap;
+use crate::image::Filter;
+use crate::image::Wrap;
 use crate::vk;
 
 pub(crate) struct Sampler {
@@ -17,8 +17,8 @@ pub(crate) struct Sampler {
 impl Sampler {
     pub(crate) fn new(
         device: &Device,
-        wrap: TextureWrap,
-        filter: TextureFilter,
+        wrap: Wrap,
+        filter: Filter,
         mipmaps: bool,
         anisotropy: f32,
     ) -> Self {

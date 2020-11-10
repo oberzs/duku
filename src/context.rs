@@ -19,6 +19,7 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
+use crate::image::ColorSpace;
 use crate::image::Format;
 use crate::image::Framebuffer;
 use crate::image::Mips;
@@ -176,6 +177,7 @@ impl Context {
     pub fn create_texture(
         &mut self,
         pixels: &[Color],
+        color_space: ColorSpace,
         width: u32,
         height: u32,
         mips: Mips,
@@ -190,7 +192,11 @@ impl Context {
             &mut self.uniforms,
             data,
             Size::new(width, height),
-            Format::Rgba,
+            if color_space == ColorSpace::Linear {
+                Format::Rgba
+            } else {
+                Format::Srgba
+            },
             mips,
         );
         self.storage.add_texture(tex)
@@ -436,9 +442,11 @@ impl Context {
     pub fn create_texture_png_bytes(
         &mut self,
         bytes: Vec<u8>,
+        color_space: ColorSpace,
         mips: Mips,
     ) -> Result<Handle<Texture>> {
-        let tex = Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, false, mips)?;
+        let tex =
+            Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, color_space, mips)?;
         Ok(self.storage.add_texture(tex))
     }
 
@@ -446,34 +454,13 @@ impl Context {
     pub fn create_texture_png(
         &mut self,
         path: impl AsRef<Path>,
+        color_space: ColorSpace,
         mips: Mips,
     ) -> Result<Handle<Texture>> {
         use std::fs;
 
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes(bytes, mips)
-    }
-
-    #[cfg(feature = "png")]
-    pub fn create_texture_png_bytes_linear(
-        &mut self,
-        bytes: Vec<u8>,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        let tex = Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, true, mips)?;
-        Ok(self.storage.add_texture(tex))
-    }
-
-    #[cfg(feature = "png")]
-    pub fn create_texture_png_linear(
-        &mut self,
-        path: impl AsRef<Path>,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        use std::fs;
-
-        let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes_linear(bytes, mips)
+        self.create_texture_png_bytes(bytes, color_space, mips)
     }
 
     #[cfg(feature = "png")]
