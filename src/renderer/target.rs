@@ -24,17 +24,22 @@ use crate::storage::Builtins;
 use crate::storage::Handle;
 use crate::storage::Storage;
 
-pub struct Target<'a, 'b> {
+#[cfg(feature = "gltf")]
+use crate::mesh::Model;
+#[cfg(feature = "gltf")]
+use crate::mesh::ModelNode;
+
+pub struct Target<'b> {
     // global
     pub clear_color: Color,
-    pub skybox: Option<&'a Handle<Cubemap>>,
     pub transform: Transform,
+    pub(crate) skybox: Option<Handle<Cubemap>>,
     pub(crate) builtins: &'b Builtins,
     pub(crate) storage: &'b Storage,
 
     // meshes
-    pub shader: Option<&'a Handle<Shader>>,
-    pub material: Option<&'a Handle<Material>>,
+    pub(crate) shader: Option<Handle<Shader>>,
+    pub(crate) material: Option<Handle<Material>>,
     pub(crate) mesh_orders: Vec<OrdersByShader>,
 
     // shadows & lights
@@ -60,8 +65,8 @@ pub struct Target<'a, 'b> {
 
     // text
     pub font_size: u32,
-    pub font: Option<&'a Handle<Font>>,
     pub text_color: Color,
+    pub(crate) font: Option<Handle<Font>>,
     pub(crate) text_orders: Vec<TextOrder>,
 
     // textures
@@ -69,7 +74,7 @@ pub struct Target<'a, 'b> {
     pub texture_wrap: Wrap,
     pub texture_mipmaps: bool,
 
-    cache: Vec<Cache<'a>>,
+    cache: Vec<Cache>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -126,7 +131,7 @@ pub(crate) struct ShapeOrder {
     pub(crate) sampler_index: u32,
 }
 
-struct Cache<'a> {
+struct Cache {
     transform: Transform,
     line_color: Color,
     shape_color: Color,
@@ -137,11 +142,11 @@ struct Cache<'a> {
     line_width: f32,
     shape_mode: ShapeMode,
     border_mode: BorderMode,
-    shader: Option<&'a Handle<Shader>>,
-    material: Option<&'a Handle<Material>>,
+    shader: Option<Handle<Shader>>,
+    material: Option<Handle<Material>>,
 }
 
-impl<'b> Target<'_, 'b> {
+impl<'b> Target<'b> {
     pub(crate) fn new(builtins: &'b Builtins, storage: &'b Storage) -> Self {
         Self {
             mesh_orders: vec![],
@@ -195,8 +200,8 @@ impl<'b> Target<'_, 'b> {
             border_mode: self.border_mode,
             shape_mode: self.shape_mode,
             border_width: self.border_width,
-            shader: self.shader,
-            material: self.material,
+            shader: self.shader.clone(),
+            material: self.material.clone(),
         });
     }
 
@@ -217,15 +222,32 @@ impl<'b> Target<'_, 'b> {
         }
     }
 
+    pub fn set_material(&mut self, material: &Handle<Material>) {
+        self.material = Some(material.clone());
+    }
+
+    pub fn unset_material(&mut self) {
+        self.material = None;
+    }
+
+    pub fn set_shader(&mut self, shader: &Handle<Shader>) {
+        self.shader = Some(shader.clone());
+    }
+
+    pub fn unset_shader(&mut self) {
+        self.shader = None;
+    }
+
     pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
         } else {
             &self.builtins.unshaded_shader
         };
-        let shader = self.shader.unwrap_or(default_shader).clone();
+        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -263,9 +285,10 @@ impl<'b> Target<'_, 'b> {
         } else {
             &self.builtins.unshaded_shader
         };
-        let shader = self.shader.unwrap_or(default_shader).clone();
+        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -287,9 +310,10 @@ impl<'b> Target<'_, 'b> {
         } else {
             &self.builtins.unshaded_shader
         };
-        let shader = self.shader.unwrap_or(default_shader).clone();
+        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -311,9 +335,10 @@ impl<'b> Target<'_, 'b> {
         } else {
             &self.builtins.unshaded_shader
         };
-        let shader = self.shader.unwrap_or(default_shader).clone();
+        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -332,10 +357,12 @@ impl<'b> Target<'_, 'b> {
     pub fn draw_surface(&mut self) {
         let shader = self
             .shader
+            .as_ref()
             .unwrap_or(&self.builtins.unshaded_shader)
             .clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -355,6 +382,7 @@ impl<'b> Target<'_, 'b> {
         let shader = self.builtins.fullscreen_shader.clone();
         let material = self
             .material
+            .as_ref()
             .unwrap_or(&self.builtins.white_material)
             .clone();
 
@@ -411,7 +439,11 @@ impl<'b> Target<'_, 'b> {
     }
 
     pub fn draw_text(&mut self, text: impl AsRef<str>, position: impl Into<Vector2>) {
-        let font = self.font.unwrap_or(&self.builtins.fira_font).clone();
+        let font = self
+            .font
+            .as_ref()
+            .unwrap_or(&self.builtins.fira_font)
+            .clone();
 
         let mut transform = self.transform;
         transform.position += position.into().extend(0.0);
@@ -578,6 +610,32 @@ impl<'b> Target<'_, 'b> {
         });
 
         self.pop();
+    }
+
+    #[cfg(feature = "gltf")]
+    pub fn draw_model(&mut self, model: &Handle<Model>) {
+        let m = self.storage.models.get(model);
+
+        self.push();
+        for node in m.nodes() {
+            self.draw_model_node(node, Matrix4::from(self.transform));
+        }
+        self.pop();
+    }
+
+    #[cfg(feature = "gltf")]
+    fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Matrix4) {
+        let matrix = parent_matrix * node.matrix();
+        self.transform = Transform::from(matrix);
+
+        for (mesh, material) in node.orders() {
+            self.set_material(material);
+            self.draw_mesh(mesh);
+        }
+
+        for child in node.children() {
+            self.draw_model_node(child, matrix);
+        }
     }
 
     fn add_mesh_order(

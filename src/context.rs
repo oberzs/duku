@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-#[cfg(any(feature = "glsl", feature = "png"))]
+#[cfg(any(feature = "glsl", feature = "png", feature = "gltf"))]
 use std::path::Path;
 #[cfg(feature = "glsl")]
 use std::path::PathBuf;
@@ -52,6 +52,9 @@ use crate::image::CubemapSides;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
+
+#[cfg(feature = "gltf")]
+use crate::mesh::Model;
 
 const FPS_SAMPLE_COUNT: usize = 64;
 
@@ -125,38 +128,35 @@ impl Context {
         }
     }
 
-    #[allow(single_use_lifetimes)]
-    pub fn draw_on_window<'target, F>(&mut self, camera: Option<&Camera>, draw_callback: F)
+    pub fn draw_on_window<F>(&mut self, camera: Option<&Camera>, draw_callback: F)
     where
-        F: Fn(&mut Target<'target, '_>),
+        F: Fn(&mut Target<'_>),
     {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins, &self.storage);
-        draw_callback(&mut target);
-
-        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-
-        let cam = get_camera(camera, framebuffer.size());
-
-        // render
-        self.forward_renderer
-            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
+        {
+            let mut target = Target::new(&self.builtins, &self.storage);
+            draw_callback(&mut target);
+            let framebuffer = &self.window_framebuffers[self.swapchain.current()];
+            let cam = get_camera(camera, framebuffer.size());
+            // render
+            self.forward_renderer
+                .render(&self.device, framebuffer, &cam, &self.uniforms, target);
+        }
 
         self.end_draw();
     }
 
-    #[allow(single_use_lifetimes)]
-    pub fn draw<'target, F>(
+    pub fn draw<F>(
         &mut self,
         framebuffer: &Handle<Framebuffer>,
         camera: Option<&Camera>,
         draw_callback: F,
     ) where
-        F: Fn(&mut Target<'target, '_>),
+        F: Fn(&mut Target<'_>),
     {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
@@ -441,7 +441,7 @@ impl Context {
     #[cfg(feature = "png")]
     pub fn create_texture_png_bytes(
         &mut self,
-        bytes: Vec<u8>,
+        bytes: &[u8],
         color_space: ColorSpace,
         mips: Mips,
     ) -> Result<Handle<Texture>> {
@@ -460,7 +460,7 @@ impl Context {
         use std::fs;
 
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes(bytes, color_space, mips)
+        self.create_texture_png_bytes(&bytes, color_space, mips)
     }
 
     #[cfg(feature = "png")]
@@ -483,6 +483,31 @@ impl Context {
             },
         )?;
         Ok(self.storage.add_cubemap(cubemap))
+    }
+
+    #[cfg(feature = "gltf")]
+    pub fn create_model_gltf_bytes(&mut self, bytes: &[u8]) -> Result<Handle<Model>> {
+        let model =
+            Model::from_gltf_bytes(&self.device, &mut self.uniforms, &mut self.storage, bytes)?;
+        Ok(self.storage.add_model(model))
+    }
+
+    #[cfg(feature = "gltf")]
+    pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
+        use std::fs;
+
+        let bytes = fs::read(path.as_ref())?;
+        self.create_model_gltf_bytes(&bytes)
+    }
+
+    #[cfg(feature = "gltf")]
+    pub fn model(&self, model: &Handle<Model>) -> &Model {
+        self.storage.models.get(model)
+    }
+
+    #[cfg(feature = "gltf")]
+    pub fn model_mut(&mut self, model: &Handle<Model>) -> &mut Model {
+        self.storage.models.get_mut(model)
     }
 }
 

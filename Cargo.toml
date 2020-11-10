@@ -10,11 +10,24 @@ glsl = ["shaderc"]
 window = ["winit"]
 log = []
 
-# optional dependencies
-[dependencies]
-winit = { version = "0.23.0", optional = true }
-png = { version = "0.16.7", default-features = false, optional = true }
-shaderc = { version = "0.6.2", optional = true }
+[dependencies.winit]
+version = "0.23.0"
+optional = true
+
+[dependencies.png]
+version = "0.16.7"
+optional = true
+default-features = false
+
+[dependencies.shaderc]
+version = "0.7.0"
+optional = true
+
+[dependencies.gltf]
+version = "0.15.2"
+optional = true
+default-features = false
+features = ["utils"]
 
 [[bin]]
 name = "dc"
@@ -28,6 +41,10 @@ required-features = ["window"]
 [[example]]
 name = "framebuffer"
 required-features = ["window"]
+
+[[example]]
+name = "gltf"
+required-features = ["window", "png", "gltf"]
 
 [[example]]
 name = "hello"

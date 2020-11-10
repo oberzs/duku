@@ -5,6 +5,9 @@
 
 mod vertex;
 
+#[cfg(feature = "gltf")]
+mod model;
+
 use std::iter;
 
 use crate::buffer::Buffer;
@@ -19,6 +22,12 @@ use crate::storage::Storage;
 use crate::vk;
 
 pub(crate) use vertex::Vertex;
+
+#[cfg(feature = "gltf")]
+pub(crate) use model::ModelNode;
+
+#[cfg(feature = "gltf")]
+pub use model::Model;
 
 pub struct Mesh {
     vertices: Vec<Vector3>,

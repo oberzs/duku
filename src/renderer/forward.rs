@@ -71,7 +71,7 @@ impl ForwardRenderer {
         framebuffer: &Framebuffer,
         camera: &Camera,
         uniforms: &Uniforms,
-        target: Target<'_, '_>,
+        target: Target<'_>,
     ) {
         // shadow mapping pass
         let mut view = camera.clone();
@@ -111,7 +111,7 @@ impl ForwardRenderer {
             camera_position: camera.transform.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
-            skybox_index: target.skybox.map(|s| s.id()).unwrap_or(0),
+            skybox_index: target.skybox.as_ref().map(|s| s.id()).unwrap_or(0),
             ambient_color: Vector3::from(target.ambient_color),
             lights,
             shadow_pcf,
@@ -154,7 +154,7 @@ impl ForwardRenderer {
         self.target_index = (self.target_index + 1) % self.target_resources.len();
     }
 
-    fn record_text(&mut self, device: &Device, target: &Target<'_, '_>, uniforms: &Uniforms) {
+    fn record_text(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             text_orders,
@@ -239,7 +239,7 @@ impl ForwardRenderer {
         cmd.draw(text_mesh.index_count(), 0);
     }
 
-    fn record_lines(&mut self, device: &Device, target: &Target<'_, '_>, uniforms: &Uniforms) {
+    fn record_lines(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             line_orders,
@@ -281,7 +281,7 @@ impl ForwardRenderer {
         );
         cmd.draw(line_mesh.index_count(), 0);
     }
-    fn record_shapes(&mut self, device: &Device, target: &Target<'_, '_>, uniforms: &Uniforms) {
+    fn record_shapes(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             shape_orders,
@@ -370,7 +370,7 @@ impl TargetResources {
     }
 }
 
-fn record_meshes(cmd: &Commands, target: &Target<'_, '_>, uniforms: &Uniforms) {
+fn record_meshes(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms) {
     for s_order in &target.mesh_orders {
         // bind shader
         let shader = target.storage.shaders.get(&s_order.shader);
@@ -398,7 +398,7 @@ fn record_meshes(cmd: &Commands, target: &Target<'_, '_>, uniforms: &Uniforms) {
     }
 }
 
-fn record_skybox(cmd: &Commands, target: &Target<'_, '_>, uniforms: &Uniforms, camera: &Camera) {
+fn record_skybox(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms, camera: &Camera) {
     let shader = target.storage.shaders.get(&target.builtins.skybox_shader);
     cmd.bind_shader(shader);
 

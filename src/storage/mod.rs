@@ -18,6 +18,9 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
 
+#[cfg(feature = "gltf")]
+use crate::mesh::Model;
+
 pub(crate) use builtin::create_cube;
 pub(crate) use builtin::create_ico_sphere;
 pub(crate) use builtin::create_uv_sphere;
@@ -33,6 +36,8 @@ pub(crate) struct Storage {
     pub(crate) framebuffers: Store<Framebuffer>,
     pub(crate) materials: Store<Material>,
     pub(crate) meshes: Store<Mesh>,
+    #[cfg(feature = "gltf")]
+    pub(crate) models: Store<Model>,
     next_id: u32,
 }
 
@@ -50,6 +55,8 @@ impl Storage {
             framebuffers: Store::new(),
             materials: Store::new(),
             meshes: Store::new(),
+            #[cfg(feature = "gltf")]
+            models: Store::new(),
             next_id: 0,
         }
     }
@@ -93,7 +100,19 @@ impl Storage {
         self.meshes.add(mesh, id)
     }
 
+    #[cfg(feature = "gltf")]
+    pub(crate) fn add_model(&mut self, model: Model) -> Handle<Model> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.models.add(model, id)
+    }
+
     pub(crate) fn clear_unused(&mut self, device: &Device, uniforms: &mut Uniforms) {
+        #[cfg(feature = "gltf")]
+        {
+            self.models.clear_unused().for_each(|_| {});
+        }
+
         for unused in self.fonts.clear_unused() {
             unused.destroy(device, uniforms);
         }
@@ -118,6 +137,10 @@ impl Storage {
     }
 
     pub(crate) fn clear(&mut self, device: &Device, uniforms: &mut Uniforms) {
+        #[cfg(feature = "gltf")]
+        {
+            self.models.clear().for_each(|_| {});
+        }
         for unused in self.fonts.clear() {
             unused.destroy(device, uniforms);
         }

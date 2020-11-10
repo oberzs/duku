@@ -18,7 +18,7 @@ fn main() -> Result<()> {
 
     window.main_loop(move |_| {
         context.draw_on_window(None, |target| {
-            target.shader = Some(&shader);
+            target.set_shader(&shader);
             target.draw_surface();
         });
     });

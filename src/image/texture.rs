@@ -74,7 +74,7 @@ impl Texture {
     pub(crate) fn from_png_bytes(
         device: &Device,
         uniforms: &mut Uniforms,
-        bytes: Vec<u8>,
+        bytes: &[u8],
         color_space: ColorSpace,
         mips: Mips,
     ) -> crate::error::Result<Self> {
@@ -83,7 +83,7 @@ impl Texture {
 
         use crate::error::Error;
 
-        let decoder = Decoder::new(bytes.as_slice());
+        let decoder = Decoder::new(bytes);
         let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
         let size = Size::new(info.width, info.height);
 

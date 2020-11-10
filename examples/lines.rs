@@ -42,7 +42,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn star(target: &mut Target<'_, '_>, position: impl Into<Vector2>, color: impl Into<Color>) {
+fn star(target: &mut Target<'_>, position: impl Into<Vector2>, color: impl Into<Color>) {
     target.push();
 
     target.transform.move_by(position.into().extend(0.0));

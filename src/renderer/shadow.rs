@@ -98,7 +98,7 @@ impl ShadowRenderer {
         device: &Device,
         uniforms: &Uniforms,
         meshes: &Store<Mesh>,
-        target: &Target<'_, '_>,
+        target: &Target<'_>,
         view: Camera,
         target_index: usize,
     ) -> ShadowSplitParams {

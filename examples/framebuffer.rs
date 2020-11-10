@@ -37,7 +37,7 @@ fn main() -> Result<()> {
             target.draw_grid();
             target.draw_cube();
 
-            target.material = Some(&material);
+            target.set_material(&material);
             target.draw_fullscreen();
         });
     });

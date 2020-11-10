@@ -56,20 +56,20 @@ fn main() -> Result<()> {
 
             // render meshes
             target.transform.move_by([-2.0, 1.0, 0.0]);
-            target.material = Some(&light_mat);
+            target.set_material(&light_mat);
             target.draw_sphere_uv();
 
             target.transform.move_right(2.0);
-            target.material = None;
+            target.unset_material();
             target.draw_sphere_ico();
 
             target.transform.move_right(2.0);
-            target.material = Some(&purple_mat);
+            target.set_material(&purple_mat);
             target.draw_cube();
 
             // render floor
             target.transform = Transform::scaled(10.0, 0.2, 10.0);
-            target.material = None;
+            target.unset_material();
             target.draw_cube();
         });
     });

@@ -19,6 +19,7 @@ pub enum Error {
 
     #[cfg(feature = "png")]
     UnsupportedColorType,
+    #[cfg(feature = "png")]
     InvalidPng,
 
     #[cfg(feature = "glsl")]
@@ -26,6 +27,13 @@ pub enum Error {
 
     #[cfg(feature = "window")]
     InternalGlfw,
+
+    #[cfg(feature = "gltf")]
+    InvalidGltf,
+    #[cfg(feature = "gltf")]
+    UnsupportedMimeType(String),
+    #[cfg(feature = "gltf")]
+    UnsupportedPrimitive,
 }
 
 impl error::Error for Error {}
