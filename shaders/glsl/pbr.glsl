@@ -13,6 +13,27 @@ layout(location = 0) out vec4 out_color;
 
 const float PI = 3.14159265359;
 
+// calculates a color's luminance
+float luminance(vec3 color) {
+    return dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
+}
+
+// changes the color's luminance to the specified one
+vec3 change_luminance(vec3 color, float lum) {
+    float lum_in = luminance(color);
+    return color * (lum / lum_in);
+}
+
+// uses Extended Reinhard (Luminance Tone Map)
+// tone maps the input color
+vec3 tone_map(vec3 color) {
+    float max_white = world.max_white_point;
+    float lum = luminance(color);
+    float num = lum * (1.0 + (lum / (max_white * max_white)));
+    float new_lum = num / (1.0 + lum);
+    return change_luminance(color, new_lum);
+}
+
 // uses Fresnel-Schlick approximation
 // calculates the reflected lights contribution (also Fresnel effect)
 vec3 specular_part(float h_dot_v, vec3 base_refl) {
@@ -112,6 +133,9 @@ void fragment() {
 
     vec3 ambient = vec3(0.03) * albedo;
     vec3 color = ambient + emissive + light_amount * ambient_occlusion * shadow_occlusion;
+
+    // tone mapping
+    color = tone_map(color);
 
     out_color = vec4(color, 1.0);
 }

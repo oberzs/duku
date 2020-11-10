@@ -171,6 +171,7 @@ impl ShadowRenderer {
                 shadow_splits: [0.0; 4],
                 shadow_texels: [0.0; 4],
                 shadow_diameters: [0.0; 4],
+                max_white_point: 0.0,
                 shadow_pcf: 0.0,
                 skybox_index: 0,
                 time: 0.0,

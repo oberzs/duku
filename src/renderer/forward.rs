@@ -113,6 +113,7 @@ impl ForwardRenderer {
             view_to_clip: camera.view_to_clip(),
             skybox_index: target.skybox.as_ref().map(|s| s.id()).unwrap_or(0),
             ambient_color: Vector3::from(target.ambient_color),
+            max_white_point: target.max_white_point,
             lights,
             shadow_pcf,
         }]);

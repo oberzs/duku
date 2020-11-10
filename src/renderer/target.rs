@@ -48,6 +48,7 @@ pub struct Target<'b> {
     pub shadow_pcf: Pcf,
     pub shadows: bool,
     pub lights: [Light; 4],
+    pub max_white_point: f32,
     pub ambient_color: Color,
 
     // lines
@@ -163,13 +164,14 @@ impl<'b> Target<'b> {
             ambient_color: Color::WHITE,
             transform: Transform::default(),
             lights: [
-                Light::main([-1.0, -1.0, 1.0], Color::WHITE, 10.0),
+                Light::main([-1.0, -1.0, 1.0], Color::WHITE, 1.0),
                 Light::NONE,
                 Light::NONE,
                 Light::NONE,
             ],
             texture_filter: Filter::Linear,
             texture_wrap: Wrap::Repeat,
+            max_white_point: 1.0,
             border_width: 1.0,
             line_width: 1.0,
             border_mode: BorderMode::Inside,

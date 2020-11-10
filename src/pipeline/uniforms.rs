@@ -33,6 +33,7 @@ pub(crate) struct ShaderWorld {
     pub(crate) ambient_color: Vector3,
     pub(crate) shadow_pcf: f32,
     pub(crate) skybox_index: u32,
+    pub(crate) max_white_point: f32,
 }
 
 #[derive(Copy, Clone)]

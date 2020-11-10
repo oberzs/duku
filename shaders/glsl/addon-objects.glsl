@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform World {
     vec3 ambient_color;
     float shadow_pcf;
     uint skybox_index;
+    float max_white_point;
 } world;
 
 layout(set = 1, binding = 0) uniform Material {
