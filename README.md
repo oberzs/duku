@@ -120,6 +120,7 @@ The optional features include:
 
 - `window` - adds OS window creation support
 - `png` - adds png file loading support
+- `gltf` - adds gltf file loading support
 - `glsl` - adds custom glsl file loading support
 
 ## Credits
@@ -128,6 +129,7 @@ Open source projects:
 
 - [Vulkan SDK](https://vulkan.lunarg.com/) - Vulkan API support
 - [Png](https://github.com/image-rs/image-png) - Png image loading **(optional)**
+- [Gltf](https://github.com/gltf-rs/gltf) - Gltf model loading **(optional)**
 - [Shaderc](https://github.com/google/shaderc-rs) - Glsl shader loading **(optional)**
 - [Winit](https://github.com/rust-windowing/winit) - OS windowing **(optional)**
 
