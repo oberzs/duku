@@ -28,9 +28,14 @@ fn main() -> Result<()> {
         let fps = context.fps();
 
         context.draw(&framebuffer, None, |target| {
+            // move (0, 0) to top left
+            target.transform.move_left(250.0);
+            target.transform.move_up(250.0);
+
             target.clear_color = Color::rgba_norm(0.0, 0.0, 0.0, 0.0);
             target.text_color = Color::ORANGE;
-            target.draw_text(format!("Fps: {}", fps), [-250.0, 250.0]);
+
+            target.draw_text(format!("Fps: {}", fps));
         });
 
         context.draw_on_window(Some(&camera), |target| {

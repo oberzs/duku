@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     let (mut context, window) = Context::builder()
         .no_vsync()
         .build_window(500, 500)
-        .title("Twitch Example")
+        .title("Duku example: Materials")
         .resizable()
         .build()?;
 
@@ -86,11 +86,9 @@ fn main() -> Result<()> {
             target.transform.move_down(10.0);
 
             target.text_color = Color::ORANGE;
-            target.draw_text(format!("Max White Point: {}", max_white_point), [0.0, 0.0]);
-            target.draw_text(
-                format!("Light Brightness: {}", light_brightness),
-                [0.0, -40.0],
-            );
+            target.draw_text(format!("Max White Point: {}", max_white_point));
+            target.new_line();
+            target.draw_text(format!("Light Brightness: {}", light_brightness));
         });
 
         // render 3D scene

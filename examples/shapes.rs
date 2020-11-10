@@ -26,10 +26,10 @@ fn main() -> Result<()> {
             target.border_width = 5.0;
 
             target.shape_color = Color::GREEN;
-            target.draw_rectangle([10.0, 10.0], [150.0, 100.0]);
+            target.draw_rectangle([150.0, 100.0]);
 
             target.shape_color = Color::RED;
-            target.draw_square([250.0, 50.0], 50.0);
+            target.draw_square(50.0);
 
             target.shape_mode = ShapeMode::Center;
 

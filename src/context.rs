@@ -19,6 +19,7 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
+use crate::font::Font;
 use crate::image::ColorSpace;
 use crate::image::Format;
 use crate::image::Framebuffer;
@@ -208,6 +209,10 @@ impl Context {
 
     pub fn texture_mut(&mut self, tex: &Handle<Texture>) -> &mut Texture {
         self.storage.textures.get_mut(tex)
+    }
+
+    pub fn font(&self, font: &Handle<Font>) -> &Font {
+        self.storage.fonts.get(font)
     }
 
     pub fn create_mesh(&mut self) -> Handle<Mesh> {

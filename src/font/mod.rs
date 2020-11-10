@@ -17,6 +17,7 @@ use crate::pipeline::Uniforms;
 
 pub struct Font {
     char_data: HashMap<char, CharData>,
+    line_height: u32,
     texture: Texture,
 }
 
@@ -73,7 +74,35 @@ impl Font {
             );
         }
 
-        Self { char_data, texture }
+        Self {
+            char_data,
+            line_height,
+            texture,
+        }
+    }
+
+    pub const fn line_height(&self) -> u32 {
+        self.line_height
+    }
+
+    pub const fn space_width(&self) -> u32 {
+        self.line_height / 3
+    }
+
+    pub fn text_width(&self, text: impl AsRef<str>) -> u32 {
+        let t = text.as_ref();
+        let mut width = 0;
+
+        for c in t.chars() {
+            if c == ' ' {
+                width += self.space_width();
+            } else {
+                let data = self.char_data(c);
+                width += (data.advance * self.line_height as f32).round() as u32;
+            }
+        }
+
+        width
     }
 
     pub(crate) const fn texture(&self) -> &Texture {

@@ -440,23 +440,29 @@ impl<'b> Target<'b> {
         self.pop();
     }
 
-    pub fn draw_text(&mut self, text: impl AsRef<str>, position: impl Into<Vector2>) {
+    pub fn draw_text(&mut self, text: impl AsRef<str>) {
         let font = self
             .font
             .as_ref()
             .unwrap_or(&self.builtins.fira_font)
             .clone();
 
-        let mut transform = self.transform;
-        transform.position += position.into().extend(0.0);
-
         self.text_orders.push(TextOrder {
             size: self.font_size,
             color: self.text_color,
             text: text.as_ref().to_string(),
-            transform,
+            transform: self.transform,
             font,
         });
+    }
+
+    pub fn new_line(&mut self) {
+        let font = self
+            .storage
+            .fonts
+            .get(self.font.as_ref().unwrap_or(&self.builtins.fira_font));
+        let line_height = font.line_height();
+        self.transform.move_down(line_height as f32);
     }
 
     pub fn draw_line_debug(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
@@ -511,8 +517,7 @@ impl<'b> Target<'b> {
         );
     }
 
-    pub fn draw_rectangle(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
-        let pos = position.into();
+    pub fn draw_rectangle(&mut self, size: impl Into<Vector2>) {
         let s = size.into();
 
         self.push();
@@ -522,17 +527,17 @@ impl<'b> Target<'b> {
         }
 
         self.draw_shape(&[
-            Vector2::new(pos.x, pos.y + s.y),
-            pos + s,
-            Vector2::new(pos.x + s.x, pos.y),
-            pos,
+            Vector2::new(0.0, s.y),
+            s,
+            Vector2::new(s.x, 0.0),
+            Vector2::ZERO,
         ]);
 
         self.pop();
     }
 
-    pub fn draw_square(&mut self, position: impl Into<Vector2>, size: f32) {
-        self.draw_rectangle(position, Vector2::new(size, size));
+    pub fn draw_square(&mut self, size: f32) {
+        self.draw_rectangle(Vector2::new(size, size));
     }
 
     pub fn draw_ellipse(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
