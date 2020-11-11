@@ -17,10 +17,14 @@ pub enum Error {
     InvalidFile,
     NoSuitableGpu,
 
-    #[cfg(feature = "png")]
-    UnsupportedColorType,
+    #[cfg(any(feature = "png", feature = "jpeg"))]
+    UnsupportedFormat,
+
     #[cfg(feature = "png")]
     InvalidPng,
+
+    #[cfg(feature = "jpeg")]
+    InvalidJpeg,
 
     #[cfg(feature = "glsl")]
     InvalidGlsl(String),

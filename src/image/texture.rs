@@ -14,7 +14,7 @@ use crate::color::Color;
 use crate::device::Device;
 use crate::pipeline::Uniforms;
 
-#[cfg(feature = "png")]
+#[cfg(any(feature = "png", feature = "jpeg"))]
 use super::ColorSpace;
 
 pub struct Texture {
@@ -96,7 +96,34 @@ impl Texture {
             ColorType::RGB if color_space == ColorSpace::Linear => Format::Rgb,
             ColorType::RGB => Format::Srgb,
             ColorType::Grayscale => Format::Gray,
-            _ => return Err(Error::UnsupportedColorType),
+            _ => return Err(Error::UnsupportedFormat),
+        };
+
+        Ok(Self::new(device, uniforms, data, size, format, mips))
+    }
+
+    #[cfg(feature = "jpeg")]
+    pub(crate) fn from_jpeg_bytes(
+        device: &Device,
+        uniforms: &mut Uniforms,
+        bytes: &[u8],
+        color_space: ColorSpace,
+        mips: Mips,
+    ) -> crate::error::Result<Self> {
+        use jpeg_decoder::Decoder;
+        use jpeg_decoder::PixelFormat;
+
+        use crate::error::Error;
+
+        let mut decoder = Decoder::new(bytes);
+        let data = decoder.decode().map_err(|_| Error::InvalidJpeg)?;
+        let info = decoder.info().ok_or(Error::InvalidJpeg)?;
+        let size = Size::new(u32::from(info.width), u32::from(info.height));
+
+        let format = match info.pixel_format {
+            PixelFormat::RGB24 if color_space == ColorSpace::Linear => Format::Rgb,
+            PixelFormat::RGB24 => Format::Srgb,
+            _ => return Err(Error::UnsupportedFormat),
         };
 
         Ok(Self::new(device, uniforms, data, size, format, mips))

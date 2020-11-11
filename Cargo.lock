@@ -284,6 +284,7 @@ name = "duku"
 version = "0.1.0"
 dependencies = [
  "gltf",
+ "jpeg-decoder",
  "png",
  "shaderc",
  "winit",
@@ -402,6 +403,15 @@ name = "jni-sys"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8eaf4bc02d17cbdd7ff4c7438cafcdf7fb9a4613313ad11b4f8fefe7d3fa0130"
+
+[[package]]
+name = "jpeg-decoder"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc797adac5f083b8ff0ca6f6294a999393d76e197c36488e2ef732c4715f6fa3"
+dependencies = [
+ "byteorder",
+]
 
 [[package]]
 name = "kernel32-sys"

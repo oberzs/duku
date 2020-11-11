@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 default = []
+jpeg = ["jpeg-decoder"]
 glsl = ["shaderc"]
 window = ["winit"]
 log = []
@@ -16,6 +17,11 @@ optional = true
 
 [dependencies.png]
 version = "0.16.7"
+optional = true
+default-features = false
+
+[dependencies.jpeg-decoder]
+version = "0.1.20"
 optional = true
 default-features = false
 
@@ -72,4 +78,4 @@ required-features = ["window"]
 
 [[example]]
 name = "textures"
-required-features = ["window", "png"]
+required-features = ["window", "png", "jpeg"]

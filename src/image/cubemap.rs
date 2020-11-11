@@ -109,7 +109,7 @@ impl Cubemap {
                 ColorType::RGBA => Format::Srgba,
                 ColorType::RGB => Format::Srgb,
                 ColorType::Grayscale => Format::Gray,
-                _ => return Err(Error::UnsupportedColorType),
+                _ => return Err(Error::UnsupportedFormat),
             };
             (f, info.width)
         };
