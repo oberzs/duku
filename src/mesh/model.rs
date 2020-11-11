@@ -11,6 +11,7 @@ use gltf::mesh::Mode;
 use gltf::Gltf;
 use gltf::Node;
 use std::collections::HashMap;
+use std::fs;
 
 use super::Mesh;
 use crate::device::Device;
@@ -44,6 +45,7 @@ impl Model {
         device: &Device,
         uniforms: &mut Uniforms,
         storage: &mut Storage,
+        root: &str,
         bytes: &[u8],
     ) -> Result<Self> {
         let gltf = Gltf::from_slice(bytes).map_err(|_| Error::InvalidGltf)?;
@@ -54,8 +56,8 @@ impl Model {
             match buffer.source() {
                 // external data
                 buffer::Source::Uri(uri) => {
-                    println!("uri: '{}'", uri);
-                    unimplemented!();
+                    let bytes = fs::read(format!("{}/{}", root, uri))?;
+                    buffers.push(bytes);
                 }
 
                 // internal data
@@ -121,12 +123,33 @@ impl Model {
         // load textures
         let mut texture_data = HashMap::new();
         for texture in gltf.textures() {
-            if let image::Source::View { view, mime_type } = texture.source().source() {
-                let start = view.offset() as usize;
-                let end = start + view.length() as usize;
-                let buffer = &buffers[view.buffer().index()][start..end];
+            match texture.source().source() {
+                // internal data
+                image::Source::View { view, mime_type } => {
+                    let start = view.offset() as usize;
+                    let end = start + view.length() as usize;
+                    let buffer = &buffers[view.buffer().index()][start..end];
+                    texture_data.insert(texture.index(), (mime_type, buffer.to_vec()));
+                }
 
-                texture_data.insert(texture.index(), (mime_type, buffer));
+                // external data
+                image::Source::Uri { uri, mime_type } => {
+                    // check if mime type was provided
+                    let mime = match mime_type {
+                        Some(m) => m,
+                        None => {
+                            let ext = uri.split('.').last().ok_or(Error::InvalidGltf)?;
+                            match ext {
+                                "png" => "image/png",
+                                "jpg" | "jpeg" => "image/jpeg",
+                                _ => return Err(Error::UnsupportedMimeType(ext.to_string())),
+                            }
+                        }
+                    };
+
+                    let bytes = fs::read(format!("{}/{}", root, uri))?;
+                    texture_data.insert(texture.index(), (mime, bytes));
+                }
             }
         }
 
@@ -226,10 +249,7 @@ impl Model {
             mat.set_arg_4([emissive[0], emissive[1], emissive[2], 0.0]);
             mat.update_if_needed();
 
-            materials.insert(
-                material.index().ok_or(Error::InvalidGltf)?,
-                storage.add_material(mat),
-            );
+            materials.insert(material.index().unwrap_or(0), storage.add_material(mat));
         }
 
         // load scenes
@@ -245,9 +265,6 @@ impl Model {
             draw_nodes,
         })
     }
-
-    #[allow(clippy::unused_self)]
-    pub fn fix_color_space(&mut self) {}
 
     pub(crate) fn nodes(&self) -> impl Iterator<Item = &ModelNode> {
         self.draw_nodes.iter()
@@ -276,7 +293,7 @@ impl ModelNode {
                     .cloned()
                     .ok_or(Error::InvalidGltf)?;
                 let mat = materials
-                    .get(&primitive.material().index().ok_or(Error::InvalidGltf)?)
+                    .get(&primitive.material().index().unwrap_or(0))
                     .cloned()
                     .ok_or(Error::InvalidGltf)?;
                 ms.push(m);
@@ -315,7 +332,7 @@ fn load_texture(
     device: &Device,
     uniforms: &mut Uniforms,
     textures: &mut HashMap<usize, Handle<Texture>>,
-    texture_data: &mut HashMap<usize, (&str, &[u8])>,
+    texture_data: &mut HashMap<usize, (&str, Vec<u8>)>,
     storage: &mut Storage,
     color_space: ColorSpace,
     index: usize,
@@ -328,7 +345,11 @@ fn load_texture(
         let tex = match mime_type {
             #[cfg(feature = "png")]
             "image/png" => {
-                Texture::from_png_bytes(device, uniforms, data, color_space, Mips::Log2)?
+                Texture::from_png_bytes(device, uniforms, &data, color_space, Mips::Log2)?
+            }
+            #[cfg(feature = "jpeg")]
+            "image/jpeg" => {
+                Texture::from_jpeg_bytes(device, uniforms, &data, color_space, Mips::Log2)?
             }
             _ => return Err(Error::UnsupportedMimeType(mime_type.to_string())),
         };

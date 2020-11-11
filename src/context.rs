@@ -516,9 +516,14 @@ impl Context {
     }
 
     #[cfg(feature = "gltf")]
-    pub fn create_model_gltf_bytes(&mut self, bytes: &[u8]) -> Result<Handle<Model>> {
-        let model =
-            Model::from_gltf_bytes(&self.device, &mut self.uniforms, &mut self.storage, bytes)?;
+    pub fn create_model_gltf_bytes(&mut self, bytes: &[u8], root: &str) -> Result<Handle<Model>> {
+        let model = Model::from_gltf_bytes(
+            &self.device,
+            &mut self.uniforms,
+            &mut self.storage,
+            root,
+            bytes,
+        )?;
         Ok(self.storage.add_model(model))
     }
 
@@ -526,8 +531,15 @@ impl Context {
     pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
         use std::fs;
 
-        let bytes = fs::read(path.as_ref())?;
-        self.create_model_gltf_bytes(&bytes)
+        let p = path.as_ref();
+        let bytes = fs::read(p)?;
+        self.create_model_gltf_bytes(
+            &bytes,
+            p.parent()
+                .unwrap_or_else(|| Path::new("./"))
+                .to_str()
+                .expect("bad path"),
+        )
     }
 
     #[cfg(feature = "gltf")]
