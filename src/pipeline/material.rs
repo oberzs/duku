@@ -108,6 +108,13 @@ impl Material {
         self.should_update = true;
     }
 
+    pub fn fix_albedo_color_space(&mut self) {
+        let old = Color::rgb_norm(self.arg_1.x, self.arg_1.y, self.arg_1.z);
+        let new = old.to_linear();
+        self.arg_1 = Vector3::from(new).extend(self.arg_1.w);
+        self.should_update = true;
+    }
+
     pub fn set_arg_1<V: Into<Vector4>>(&mut self, arg: V) {
         self.arg_1 = arg.into();
         self.should_update = true;

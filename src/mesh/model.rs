@@ -12,6 +12,7 @@ use gltf::Gltf;
 use gltf::Node;
 use std::collections::HashMap;
 use std::fs;
+use std::slice::Iter;
 
 use super::Mesh;
 use crate::device::Device;
@@ -30,7 +31,7 @@ use crate::storage::Storage;
 
 pub struct Model {
     draw_nodes: Vec<ModelNode>,
-    _textures: HashMap<usize, Handle<Texture>>,
+    textures: HashMap<usize, Handle<Texture>>,
 }
 
 pub(crate) struct ModelNode {
@@ -38,6 +39,10 @@ pub(crate) struct ModelNode {
     materials: Vec<Handle<Material>>,
     matrix: Matrix4,
     children: Vec<Self>,
+}
+
+struct ChildIter<'a> {
+    stack: Vec<Iter<'a, ModelNode>>,
 }
 
 impl Model {
@@ -261,13 +266,25 @@ impl Model {
         }
 
         Ok(Self {
-            _textures: textures,
+            textures,
             draw_nodes,
         })
     }
 
     pub(crate) fn nodes(&self) -> impl Iterator<Item = &ModelNode> {
         self.draw_nodes.iter()
+    }
+
+    pub fn textures(&self) -> impl Iterator<Item = &Handle<Texture>> {
+        self.textures.values()
+    }
+
+    pub fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {
+        self.nodes().map(|node| node.meshes()).flatten()
+    }
+
+    pub fn materials(&self) -> impl Iterator<Item = &Handle<Material>> {
+        self.nodes().map(|node| node.materials()).flatten()
     }
 }
 
@@ -325,6 +342,48 @@ impl ModelNode {
 
     pub(crate) const fn matrix(&self) -> Matrix4 {
         self.matrix
+    }
+
+    fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {
+        self.meshes
+            .iter()
+            .chain(self.child_iter().map(|node| node.meshes.iter()).flatten())
+    }
+
+    fn materials(&self) -> impl Iterator<Item = &Handle<Material>> {
+        self.materials.iter().chain(
+            self.child_iter()
+                .map(|node| node.materials.iter())
+                .flatten(),
+        )
+    }
+
+    fn child_iter(&self) -> ChildIter<'_> {
+        ChildIter {
+            stack: vec![self.children.iter()],
+        }
+    }
+}
+
+impl<'a> Iterator for ChildIter<'a> {
+    type Item = &'a ModelNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(mut top_iter) = self.stack.pop() {
+                if let Some(node) = top_iter.next() {
+                    // put iter back on stack
+                    self.stack.push(top_iter);
+
+                    // put node's children on stack
+                    self.stack.push(node.children.iter());
+                    return Some(&node);
+                }
+            } else {
+                // stack emtpy
+                return None;
+            }
+        }
     }
 }
 

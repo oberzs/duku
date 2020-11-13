@@ -543,6 +543,15 @@ impl Context {
     }
 
     #[cfg(feature = "gltf")]
+    pub fn fix_model_color_space(&mut self, model: &Handle<Model>) {
+        let mdl = self.storage.models.get(model);
+        for material in mdl.materials() {
+            let mat = self.storage.materials.get_mut(material);
+            mat.fix_albedo_color_space();
+        }
+    }
+
+    #[cfg(feature = "gltf")]
     pub fn model(&self, model: &Handle<Model>) -> &Model {
         self.storage.models.get(model)
     }
