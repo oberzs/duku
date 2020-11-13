@@ -3,7 +3,7 @@
 
 // sRGB and linear conversions
 
-float srgb_to_linear(float value) {
+float to_linear(float value) {
     float s = clamp(value, 0.0, 1.0);
     float cutoff = 0.04045;
     float gamma = 2.2;
@@ -15,7 +15,19 @@ float srgb_to_linear(float value) {
     }
 }
 
-float linear_to_srgb(float value) {
+vec3 to_linear(vec3 color) {
+    float r = to_linear(color.r);
+    float g = to_linear(color.g);
+    float b = to_linear(color.b);
+
+    return vec3(r, g, b);
+}
+
+vec4 to_linear(vec4 color) {
+    return vec4(to_linear(color.rgb), color.a);
+}
+
+float to_srgb(float value) {
     float l = clamp(value, 0.0, 1.0);
     float cutoff = 0.0031308;
     float gamma = 2.2;
@@ -27,18 +39,14 @@ float linear_to_srgb(float value) {
     }
 }
 
-vec4 srgb_to_linear_color(vec4 color) {
-    float r = srgb_to_linear(color.r);
-    float g = srgb_to_linear(color.g);
-    float b = srgb_to_linear(color.b);
+vec3 to_srgb(vec3 color) {
+    float r = to_srgb(color.r);
+    float g = to_srgb(color.g);
+    float b = to_srgb(color.b);
 
-    return vec4(r, g, b, color.a);
+    return vec3(r, g, b);
 }
 
-vec4 linear_to_srgb_color(vec4 color) {
-    float r = linear_to_srgb(color.r);
-    float g = linear_to_srgb(color.g);
-    float b = linear_to_srgb(color.b);
-
-    return vec4(r, g, b, color.a);
+vec4 to_srgb(vec4 color) {
+    return vec4(to_srgb(color.rgb), color.a);
 }

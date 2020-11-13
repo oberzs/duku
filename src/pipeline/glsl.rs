@@ -85,7 +85,6 @@ fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
         include_str!("../../shaders/glsl/addon-default-vert.glsl").to_string();
     let vert_glsl = include_str!("../../shaders/glsl/addon-vert.glsl");
     let objects_glsl = include_str!("../../shaders/glsl/addon-objects.glsl");
-    let srgb_glsl = include_str!("../../shaders/glsl/addon-srgb.glsl");
 
     // create real glsl code
     let mut real_src = "#version 450\n".to_string();
@@ -99,15 +98,6 @@ fn compile_vert(src: &str, defines: &Defines) -> Result<Vec<u8>> {
         "clip_position"
     };
     default_vert_glsl = default_vert_glsl.replace("{{out_position}}", out_position);
-
-    // pick output color
-    let out_color = if defines.exists("VERTEX_SRGB_COLOR") {
-        real_src.push_str(srgb_glsl);
-        "srgb_to_linear_color(in_color)"
-    } else {
-        "in_color"
-    };
-    default_vert_glsl = default_vert_glsl.replace("{{out_color}}", out_color);
 
     // add source
     real_src.push_str(objects_glsl);

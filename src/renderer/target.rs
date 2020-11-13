@@ -540,8 +540,7 @@ impl<'b> Target<'b> {
         self.draw_rectangle(Vector2::new(size, size));
     }
 
-    pub fn draw_ellipse(&mut self, position: impl Into<Vector2>, size: impl Into<Vector2>) {
-        let pos = position.into();
+    pub fn draw_ellipse(&mut self, size: impl Into<Vector2>) {
         let s = size.into() / 2.0;
         let resolution = 50;
 
@@ -556,7 +555,7 @@ impl<'b> Target<'b> {
                 let q = 2.0 * PI * (i as f32 / resolution as f32);
                 let x = s.x * q.cos();
                 let y = s.y * q.sin();
-                pos + Vector2::new(x, y)
+                Vector2::new(x, y)
             })
             .collect();
         self.draw_shape(&points);
@@ -564,8 +563,8 @@ impl<'b> Target<'b> {
         self.pop();
     }
 
-    pub fn draw_circle(&mut self, position: impl Into<Vector2>, size: f32) {
-        self.draw_ellipse(position, Vector2::new(size, size));
+    pub fn draw_circle(&mut self, size: f32) {
+        self.draw_ellipse(Vector2::new(size, size));
     }
 
     pub fn draw_texture(

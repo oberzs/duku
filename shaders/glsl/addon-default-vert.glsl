@@ -26,7 +26,7 @@ void vertex() {
     vec3 bitangent = cross(tangent, normal);
 
     out_tbn = mat3(tangent, bitangent, normal);
-    out_color = {{out_color}};
+    out_color = in_color;
     out_uv = in_uv;
     out_texture = in_texture;
 

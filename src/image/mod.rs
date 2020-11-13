@@ -129,7 +129,7 @@ impl Image {
     }
 
     pub(crate) fn shader(device: &Device, size: Size) -> Self {
-        let format = Format::Sbgra;
+        let format = Format::Bgra;
 
         // create image
         let image_info = vk::ImageCreateInfo {

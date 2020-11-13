@@ -8,6 +8,7 @@
 #define CULL back
 
 #define SHADOW
+#define SRGB
 
 layout(location = 0) out vec4 out_color;
 
@@ -136,6 +137,9 @@ void fragment() {
 
     // tone mapping
     color = tone_map(color);
+
+    // convert to sRGB
+    color = to_srgb(color);
 
     out_color = vec4(color, 1.0);
 }

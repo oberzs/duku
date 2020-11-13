@@ -62,7 +62,7 @@ impl RenderPass {
             let a = Attachment::new(
                 attachments.len() as u32,
                 layout,
-                Format::Sbgra,
+                Format::Bgra,
                 Msaa::Disabled,
                 Clear::from(!multisampled),
                 Store::Enabled,
@@ -81,7 +81,7 @@ impl RenderPass {
                 let a_msaa = Attachment::new(
                     attachments.len() as u32,
                     ImageLayout::Color,
-                    Format::Sbgra,
+                    Format::Bgra,
                     config.msaa,
                     Clear::Enabled,
                     Store::Disabled,

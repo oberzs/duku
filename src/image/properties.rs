@@ -11,7 +11,7 @@ pub enum Format {
     Rgba,
     Srgb,
     Srgba,
-    Sbgra,
+    Bgra,
     Depth,
     DepthStencil,
     Float2,
@@ -97,7 +97,7 @@ impl Format {
             Self::Rgba => vk::FORMAT_R8G8B8A8_UNORM,
             Self::Srgb => vk::FORMAT_R8G8B8_SRGB,
             Self::Srgba => vk::FORMAT_R8G8B8A8_SRGB,
-            Self::Sbgra => vk::FORMAT_B8G8R8A8_SRGB,
+            Self::Bgra => vk::FORMAT_B8G8R8A8_UNORM,
             Self::Depth => vk::FORMAT_D32_SFLOAT_S8_UINT,
             Self::DepthStencil => vk::FORMAT_D32_SFLOAT_S8_UINT,
             Self::Float2 => vk::FORMAT_R32G32_SFLOAT,
@@ -107,7 +107,7 @@ impl Format {
 
     pub(crate) const fn aspect(&self) -> vk::ImageAspectFlags {
         match *self {
-            Self::Sbgra
+            Self::Bgra
             | Self::Rgb
             | Self::Rgba
             | Self::Srgba

@@ -62,7 +62,7 @@ pub(crate) fn pick_gpu(
 
             let format = props.formats.iter().find(|f| {
                 f.color_space == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
-                    && f.format == Format::Sbgra.flag()
+                    && f.format == Format::Bgra.flag()
             });
             if format.is_none() {
                 score = 0;
