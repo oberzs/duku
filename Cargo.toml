@@ -18,7 +18,6 @@ optional = true
 [dependencies.png]
 version = "0.16.7"
 optional = true
-default-features = false
 
 [dependencies.jpeg-decoder]
 version = "0.1.20"

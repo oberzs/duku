@@ -7,12 +7,14 @@
 #define CULL disabled
 #define SHAPE filled_triangles
 
+#define SRGB
+
 layout(location = 0) out vec4 out_color;
 
 void fragment() {
     uint sindex = uint(in_local_position.x);
     vec4 tex_color = texture(sampler2D(textures[in_texture], samplers[sindex]), in_uv);
-    out_color = tex_color * in_color;
+    out_color = to_srgb(tex_color) * in_color;
 }
 
 void vertex() {

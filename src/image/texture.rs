@@ -3,6 +3,9 @@
 
 // Texture - simple image that can be used for rendering
 
+#[cfg(feature = "png")]
+use std::path::Path;
+
 use super::with_alpha;
 use super::Format;
 use super::Image;
@@ -183,6 +186,30 @@ impl Texture {
 
             self.should_update = false;
         }
+    }
+
+    #[cfg(feature = "png")]
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        use png::BitDepth;
+        use png::ColorType;
+        use png::Encoder;
+        use std::fs::File;
+        use std::io::BufWriter;
+
+        let file = File::create(path.as_ref())?;
+
+        let mut encoder = Encoder::new(
+            BufWriter::new(file),
+            self.image.size().width,
+            self.image.size().height,
+        );
+        encoder.set_color(ColorType::RGBA);
+        encoder.set_depth(BitDepth::Eight);
+        let mut writer = encoder.write_header().expect("bad write");
+
+        writer.write_image_data(&self.data).expect("bad write");
+
+        Ok(())
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
