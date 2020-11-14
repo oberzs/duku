@@ -8,7 +8,6 @@ use duku::Camera;
 use duku::Color;
 use duku::Duku;
 use duku::Light;
-use duku::Quaternion;
 use duku::Result;
 
 fn main() -> Result<()> {
@@ -34,7 +33,6 @@ fn main() -> Result<()> {
             target.shadow_depth = 5.0;
 
             target.draw_grid();
-            target.transform.rotation = Quaternion::euler_rotation(180.0, 0.0, 0.0);
             target.draw_model(&helmet);
         });
     });

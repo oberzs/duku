@@ -174,6 +174,13 @@ mod test {
     }
 
     #[test]
+    fn angle_between() {
+        let v1 = Vector2::new(1.0, 3.0);
+        let v2 = Vector2::new(-3.0, 1.0);
+        assert_eq!(v1.angle_between(v2), 90.0);
+    }
+
+    #[test]
     fn operators() {
         let v1 = Vector2::new(2.0, 3.0);
         let v2 = Vector2::new(2.0, 8.0);

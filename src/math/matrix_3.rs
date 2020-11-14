@@ -61,6 +61,7 @@ impl Matrix3 {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod test {
     use super::Matrix3;
     use super::Vector3;
@@ -95,5 +96,11 @@ mod test {
         assert_eq!(m.row_x(), Vector3::new(1.0, 0.0, 0.0));
         assert_eq!(m.row_y(), Vector3::new(0.0, 1.0, 0.0));
         assert_eq!(m.row_z(), Vector3::new(0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn determinant() {
+        let m = Matrix3::from_rows([2.0, 3.0, 1.0], [7.0, 2.0, 3.0], [1.0, 8.0, 4.0]);
+        assert_eq!(m.determinant(), -53.0);
     }
 }

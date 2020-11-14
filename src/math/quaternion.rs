@@ -130,40 +130,28 @@ impl MulAssign<Self> for Quaternion {
 
 impl From<Matrix3> for Quaternion {
     fn from(m: Matrix3) -> Self {
-        let trace = m.col_x.x + m.col_y.y + m.col_z.z;
-        if trace >= 0.0 {
-            let s = 0.5 / (1.0 + trace).sqrt();
-            let qw = 0.25 / s;
-            let qx = (m.col_y.z - m.col_z.y) * s;
-            let qy = (m.col_z.x - m.col_x.z) * s;
-            let qz = (m.col_x.y - m.col_y.z) * s;
-            Self::new(qx, qy, qz, qw)
-        } else if (m.col_x.x > m.col_y.y) && (m.col_x.x > m.col_z.z) {
-            let s = 0.5 / ((m.col_x.x - m.col_y.y - m.col_z.z) + 1.0).sqrt();
-            let qx = 0.25 / s;
-            let qy = (m.col_y.x + m.col_x.y) * s;
-            let qz = (m.col_x.z + m.col_z.x) * s;
-            let qw = (m.col_y.z - m.col_z.y) * s;
-            Self::new(qx, qy, qz, qw)
-        } else if m.col_y.y > m.col_z.z {
-            let s = 0.5 / ((m.col_y.y - m.col_x.x - m.col_z.z) + 1.0).sqrt();
-            let qy = 0.25 / s;
-            let qz = (m.col_z.y + m.col_y.z) * s;
-            let qx = (m.col_y.x + m.col_x.y) * s;
-            let qw = (m.col_z.x - m.col_x.z) * s;
-            Self::new(qx, qy, qz, qw)
-        } else {
-            let s = 0.5 / ((m.col_z.z - m.col_x.x - m.col_y.y) + 1.0).sqrt();
-            let qz = 0.25 / s;
-            let qx = (m.col_x.z + m.col_z.x) * s;
-            let qy = (m.col_z.y + m.col_y.z) * s;
-            let qw = (m.col_x.y - m.col_y.x) * s;
-            Self::new(qx, qy, qz, qw)
+        fn pos(value: f32) -> f32 {
+            if value < 0.0 {
+                0.0
+            } else {
+                value
+            }
         }
+
+        let qw = pos(1.0 + m.col_x.x + m.col_y.y + m.col_z.z).sqrt() / 2.0;
+        let mut qx = pos(1.0 + m.col_x.x - m.col_y.y - m.col_z.z).sqrt() / 2.0;
+        let mut qy = pos(1.0 - m.col_x.x + m.col_y.y - m.col_z.z).sqrt() / 2.0;
+        let mut qz = pos(1.0 - m.col_x.x - m.col_y.y + m.col_z.z).sqrt() / 2.0;
+        qx = qx.copysign(m.col_z.y - m.col_y.z);
+        qy = qy.copysign(m.col_x.z - m.col_z.x);
+        qz = qz.copysign(m.col_y.x - m.col_x.y);
+
+        Self::new(qx, qy, qz, qw)
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod test {
     use super::Quaternion;
     use super::Vector3;
@@ -215,4 +203,19 @@ mod test {
         assert_eq!(r, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));
         assert_eq!(q1, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));
     }
+
+    // #[test]
+    // fn from_matrix3() {
+    //     use std::f32::consts::FRAC_1_SQRT_2;
+
+    //     let m = Matrix3::from_rows(
+    //         [FRAC_1_SQRT_2, 0.0, FRAC_1_SQRT_2],
+    //         [0.5, FRAC_1_SQRT_2, -0.5],
+    //         [-0.5, FRAC_1_SQRT_2, 0.5],
+    //     );
+    //     assert_eq!(
+    //         Quaternion::from(m),
+    //         Quaternion::new(0.3535534, 0.3535534, 0.1464466, 0.8535534)
+    //     );
+    // }
 }

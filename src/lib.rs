@@ -46,9 +46,9 @@ mod vk;
 mod watch;
 
 // normal exports
+pub use self::duku::Duku;
 pub use color::Color;
 pub use device::Stats;
-pub use duku::Duku;
 pub use error::Result;
 pub use image::ColorSpace;
 pub use image::Cubemap;

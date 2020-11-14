@@ -563,9 +563,6 @@ mod test {
     fn from_quaternion() {
         let m3 = Matrix4::from(Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0));
         let m4 = Matrix4::axis_rotation([1.0, 0.0, 0.0], 90.0);
-        assert_eq!(m3.col_x, m4.col_x);
-        assert_eq!(m3.col_y, m4.col_y);
-        assert_eq!(m3.col_z, m4.col_z);
-        assert_eq!(m3.col_w, m4.col_w);
+        assert_eq!(m3, m4);
     }
 }
