@@ -27,8 +27,8 @@ fn main() -> Result<()> {
     camera.transform.move_by([1.0, 3.0, -3.0]);
     camera.transform.look_dir(Vector3::FORWARD);
 
-    let ui = duku.create_framebuffer(500, 500);
-    let ui_mat = duku.build_material().albedo_framebuffer(&ui).build();
+    let ui = duku.create_framebuffer(500, 500)?;
+    let ui_mat = duku.build_material()?.albedo_framebuffer(&ui).build();
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
@@ -53,13 +53,13 @@ fn main() -> Result<()> {
     )?;
 
     let light_mat = duku
-        .build_material_pbr()
+        .build_material_pbr()?
         .albedo_texture(&light_tex)
         .metalness(1.0)
         .roughness(0.5)
         .build();
     let purple_mat = duku
-        .build_material_pbr()
+        .build_material_pbr()?
         .albedo_texture(&purple_tex)
         .build();
 

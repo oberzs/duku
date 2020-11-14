@@ -10,6 +10,8 @@ use super::Sampler;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
+use crate::error::Error;
+use crate::error::Result;
 use crate::image::Filter;
 use crate::image::ImageLayout;
 use crate::image::Wrap;
@@ -17,6 +19,11 @@ use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::vk;
+
+const MAX_WORLDS: u32 = 100;
+const MAX_MATERIALS: u32 = 100;
+const MAX_TEXTURES: u32 = 100;
+const MAX_CUBEMAPS: u32 = 100;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -71,12 +78,15 @@ pub(crate) struct Uniforms {
     image_layout: vk::DescriptorSetLayout,
     shadow_map_layout: vk::DescriptorSetLayout,
 
+    world_count: u32,
+    material_count: u32,
+
     descriptor_pool: vk::DescriptorPool,
     image_descriptor: Descriptor,
     should_update_images: bool,
 
     samplers: Vec<Sampler>,
-    images: Vec<Option<vk::ImageView>>,
+    textures: Vec<Option<vk::ImageView>>,
     cubemaps: Vec<Option<vk::ImageView>>,
 }
 
@@ -85,11 +95,6 @@ pub(crate) struct Descriptor(pub(crate) u32, pub(crate) vk::DescriptorSet);
 
 impl Uniforms {
     pub(crate) fn new(device: &Device, anisotropy: f32) -> Self {
-        let world_set_count = 100;
-        let material_set_count = 100;
-        let image_set_count = 1;
-        let shadow_map_set_count = FRAMES_IN_FLIGHT as u32;
-
         // world uniform layout
         let world_layout = device.create_descriptor_set_layout(&[vk::DescriptorSetLayoutBinding {
             binding: 0,
@@ -111,13 +116,15 @@ impl Uniforms {
 
         // image uniform layout
         let image_layout = device.create_descriptor_set_layout(&[
+            // textures
             vk::DescriptorSetLayoutBinding {
                 binding: 0,
                 descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                descriptor_count: 100,
+                descriptor_count: MAX_TEXTURES,
                 stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
                 p_immutable_samplers: ptr::null(),
             },
+            // samplers
             vk::DescriptorSetLayoutBinding {
                 binding: 1,
                 descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLER,
@@ -125,10 +132,11 @@ impl Uniforms {
                 stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
                 p_immutable_samplers: ptr::null(),
             },
+            // cubemaps
             vk::DescriptorSetLayoutBinding {
                 binding: 2,
                 descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                descriptor_count: 100,
+                descriptor_count: MAX_CUBEMAPS,
                 stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
                 p_immutable_samplers: ptr::null(),
             },
@@ -148,19 +156,19 @@ impl Uniforms {
         let descriptor_pool = device.create_descriptor_pool(&[
             vk::DescriptorPoolSize {
                 vk_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                descriptor_count: world_set_count,
+                descriptor_count: MAX_WORLDS,
             },
             vk::DescriptorPoolSize {
                 vk_type: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                descriptor_count: material_set_count,
+                descriptor_count: MAX_MATERIALS,
             },
             vk::DescriptorPoolSize {
                 vk_type: vk::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                descriptor_count: image_set_count,
+                descriptor_count: 1,
             },
             vk::DescriptorPoolSize {
                 vk_type: vk::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                descriptor_count: shadow_map_set_count,
+                descriptor_count: FRAMES_IN_FLIGHT as u32,
             },
         ]);
 
@@ -215,57 +223,69 @@ impl Uniforms {
             descriptor_pool,
             image_descriptor,
             samplers,
-            images: vec![],
+            world_count: 0,
+            material_count: 0,
+            textures: vec![],
             cubemaps: vec![],
             should_update_images: true,
         }
     }
 
-    pub(crate) fn add_image(&mut self, image: vk::ImageView) -> u32 {
-        let next_index = self.images.len();
+    pub(crate) fn add_texture(&mut self, image: vk::ImageView) -> Result<u32> {
+        // check if full
+        if self.textures.len() == MAX_TEXTURES as usize {
+            return Err(Error::TextureLimit);
+        }
+
+        let next_index = self.textures.len();
 
         // find free index
         let index = self
-            .images
+            .textures
             .iter()
             .position(|img| img.is_none())
             .unwrap_or(next_index);
 
         // add new or replace image
         if index == next_index {
-            self.images.push(Some(image));
+            self.textures.push(Some(image));
         } else {
-            self.images[index] = Some(image);
+            self.textures[index] = Some(image);
         }
 
         self.should_update_images = true;
-        index as u32
+        Ok(index as u32)
     }
 
-    pub(crate) fn remove_image(&mut self, index: u32) {
+    pub(crate) fn remove_texture(&mut self, index: u32) {
         debug_assert!(
-            (index as usize) < self.images.len(),
+            (index as usize) < self.textures.len(),
             "image index out of bounds"
         );
 
         // mark image as removed
-        self.images[index as usize] = None;
+        self.textures[index as usize] = None;
 
         self.should_update_images = true;
     }
 
-    pub(crate) fn replace_image(&mut self, index: u32, image: vk::ImageView) {
+    pub(crate) fn replace_texture(&mut self, index: u32, image: vk::ImageView) {
         debug_assert!(
-            (index as usize) < self.images.len(),
+            (index as usize) < self.textures.len(),
             "image index out of bounds"
         );
 
-        self.images[index as usize] = Some(image);
+        self.textures[index as usize] = Some(image);
 
         self.should_update_images = true;
     }
 
-    pub(crate) fn add_cubemap(&mut self, image: vk::ImageView) -> u32 {
+    pub(crate) fn add_cubemap(&mut self, image: vk::ImageView) -> Result<u32> {
+        // check if full
+        if self.cubemaps.len() == MAX_CUBEMAPS as usize {
+            return Err(Error::CubemapLimit);
+        }
+
         let next_index = self.cubemaps.len();
 
         // find free index
@@ -283,7 +303,7 @@ impl Uniforms {
         }
 
         self.should_update_images = true;
-        index as u32
+        Ok(index as u32)
     }
 
     pub(crate) fn remove_cubemap(&mut self, index: u32) {
@@ -304,12 +324,12 @@ impl Uniforms {
             let mut writes = vec![];
 
             // configure image writes to descriptor
-            let image_infos: Vec<_> = (0..100)
+            let image_infos: Vec<_> = (0..MAX_TEXTURES)
                 .map(|i| {
                     // get image or default image
-                    let image = match self.images.get(i) {
+                    let image = match self.textures.get(i as usize) {
                         Some(Some(img)) => *img,
-                        _ => self.images[0].expect("bad code"),
+                        _ => self.textures[0].expect("bad code"),
                     };
 
                     vk::DescriptorImageInfo {
@@ -356,10 +376,10 @@ impl Uniforms {
             });
 
             // configure cubemap writes to descriptor
-            let cubemap_infos: Vec<_> = (0..100)
+            let cubemap_infos: Vec<_> = (0..MAX_CUBEMAPS)
                 .map(|i| {
                     // get cubemap or default cubemap
-                    let cubemap = match self.cubemaps.get(i) {
+                    let cubemap = match self.cubemaps.get(i as usize) {
                         Some(Some(cbm)) => *cbm,
                         _ => self.cubemaps[0].expect("bad code"),
                     };
@@ -390,7 +410,17 @@ impl Uniforms {
         }
     }
 
-    pub(crate) fn world_set(&self, device: &Device, buffer: &Buffer<ShaderWorld>) -> Descriptor {
+    pub(crate) fn world_set(
+        &mut self,
+        device: &Device,
+        buffer: &Buffer<ShaderWorld>,
+    ) -> Result<Descriptor> {
+        // check limits
+        if self.world_count == MAX_WORLDS {
+            return Err(Error::FramebufferLimit);
+        }
+        self.world_count += 1;
+
         let set = device.allocate_descriptor_set(self.world_layout, self.descriptor_pool);
 
         let buffer_info = [vk::DescriptorBufferInfo {
@@ -413,14 +443,20 @@ impl Uniforms {
 
         device.update_descriptor_sets(&write);
 
-        Descriptor(0, set)
+        Ok(Descriptor(0, set))
     }
 
     pub(crate) fn material_set(
-        &self,
+        &mut self,
         device: &Device,
         buffer: &Buffer<ShaderMaterial>,
-    ) -> Descriptor {
+    ) -> Result<Descriptor> {
+        // check limits
+        if self.material_count == MAX_MATERIALS {
+            return Err(Error::MaterialLimit);
+        }
+        self.material_count += 1;
+
         let set = device.allocate_descriptor_set(self.material_layout, self.descriptor_pool);
 
         let buffer_info = [vk::DescriptorBufferInfo {
@@ -443,7 +479,7 @@ impl Uniforms {
 
         device.update_descriptor_sets(&write);
 
-        Descriptor(1, set)
+        Ok(Descriptor(1, set))
     }
 
     pub(crate) fn shadow_map_set(&self, device: &Device, views: [vk::ImageView; 4]) -> Descriptor {

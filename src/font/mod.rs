@@ -8,6 +8,7 @@ mod fira_mono;
 use std::collections::HashMap;
 
 use crate::device::Device;
+use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Size;
@@ -32,7 +33,7 @@ pub(crate) struct CharData {
 }
 
 impl Font {
-    pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Self {
+    pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
         let atlas_width = fira_mono::ATLAS_WIDTH;
         let atlas_height = fira_mono::ATLAS_HEIGHT;
         let line_height = fira_mono::LINE_HEIGHT;
@@ -44,7 +45,7 @@ impl Font {
             Size::new(atlas_width, atlas_height),
             Format::Gray,
             Mips::Zero,
-        );
+        )?;
 
         let mut char_data = HashMap::new();
         for (c, metrics) in fira_mono::metrics() {
@@ -74,11 +75,11 @@ impl Font {
             );
         }
 
-        Self {
+        Ok(Self {
             char_data,
             line_height,
             texture,
-        }
+        })
     }
 
     pub const fn line_height(&self) -> u32 {

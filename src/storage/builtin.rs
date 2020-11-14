@@ -9,6 +9,7 @@ use std::f32::consts::PI;
 use super::Handle;
 use super::Storage;
 use crate::device::Device;
+use crate::error::Result;
 use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
@@ -64,7 +65,7 @@ impl Builtins {
         storage: &mut Storage,
         uniforms: &mut Uniforms,
         msaa: Msaa,
-    ) -> Self {
+    ) -> Result<Self> {
         // textures
         let white_texture = {
             let tex = Texture::new(
@@ -74,7 +75,7 @@ impl Builtins {
                 Size::new(1, 1),
                 Format::Rgba,
                 Mips::Zero,
-            );
+            )?;
             storage.add_texture(tex)
         };
         let blue_texture = {
@@ -85,7 +86,7 @@ impl Builtins {
                 Size::new(1, 1),
                 Format::Rgba,
                 Mips::Zero,
-            );
+            )?;
             storage.add_texture(tex)
         };
         let black_texture = {
@@ -96,7 +97,7 @@ impl Builtins {
                 Size::new(1, 1),
                 Format::Rgba,
                 Mips::Zero,
-            );
+            )?;
             storage.add_texture(tex)
         };
 
@@ -115,13 +116,13 @@ impl Builtins {
                     left: vec![255, 255, 255, 255],
                     right: vec![255, 255, 255, 255],
                 },
-            );
+            )?;
             storage.add_cubemap(cub)
         };
 
         // materials
         let white_material = {
-            let mut mat = Material::new(device, uniforms);
+            let mut mat = Material::new(device, uniforms)?;
             mat.set_albedo_color([255, 255, 255]);
             mat.set_albedo_texture(&white_texture);
             mat.set_normal_texture(&blue_texture);
@@ -227,11 +228,11 @@ impl Builtins {
 
         // fonts
         let fira_font = {
-            let font = Font::fira_mono(device, uniforms);
+            let font = Font::fira_mono(device, uniforms)?;
             storage.add_font(font)
         };
 
-        Self {
+        Ok(Self {
             white_texture,
             blue_texture,
             black_texture,
@@ -251,7 +252,7 @@ impl Builtins {
             skybox_shader,
             fullscreen_shader,
             fira_font,
-        }
+        })
     }
 }
 

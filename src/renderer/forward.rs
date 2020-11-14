@@ -13,6 +13,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
+use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::math::Matrix4;
 use crate::math::Transform;
@@ -45,24 +46,26 @@ impl ForwardRenderer {
         uniforms: &mut Uniforms,
         shadow_map_size: u32,
         target_count: u32,
-    ) -> Self {
-        let shadow_renderer = ShadowRenderer::new(device, uniforms, shadow_map_size, target_count);
+    ) -> Result<Self> {
+        let shadow_renderer = ShadowRenderer::new(device, uniforms, shadow_map_size, target_count)?;
         let target_resources: Vec<_> = (0..target_count)
             .map(|_| TargetResources::new(device, uniforms))
-            .collect();
+            .collect::<Result<_>>()?;
 
-        Self {
+        Ok(Self {
             start_time: Instant::now(),
             target_index: 0,
             target_resources,
             shadow_renderer,
-        }
+        })
     }
 
-    pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) {
+    pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) -> Result<()> {
         self.target_resources
-            .push(TargetResources::new(device, uniforms));
-        self.shadow_renderer.add_target(device, uniforms);
+            .push(TargetResources::new(device, uniforms)?);
+        self.shadow_renderer.add_target(device, uniforms)?;
+
+        Ok(())
     }
 
     pub(crate) fn render(
@@ -347,20 +350,20 @@ impl ForwardRenderer {
 }
 
 impl TargetResources {
-    fn new(device: &Device, uniforms: &Uniforms) -> Self {
+    fn new(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let world_descriptor = uniforms.world_set(device, &world_buffer);
+        let world_descriptor = uniforms.world_set(device, &world_buffer)?;
         let text_mesh = Mesh::new(device);
         let line_mesh = Mesh::new(device);
         let shape_mesh = Mesh::new(device);
 
-        Self {
+        Ok(Self {
             world_buffer,
             world_descriptor,
             text_mesh,
             line_mesh,
             shape_mesh,
-        }
+        })
     }
 
     fn destroy(&self, device: &Device) {

@@ -12,6 +12,7 @@ use super::Size;
 use crate::buffer::Buffer;
 use crate::color::Color;
 use crate::device::Device;
+use crate::error::Result;
 use crate::pipeline::Uniforms;
 
 #[cfg(any(feature = "png", feature = "jpeg"))]
@@ -32,7 +33,7 @@ impl Texture {
         size: Size,
         format: Format,
         mips: Mips,
-    ) -> Self {
+    ) -> Result<Self> {
         // convert 3-byte data to 4-byte data
         let image_data = match format {
             Format::Srgb | Format::Rgb => with_alpha(data),
@@ -60,14 +61,14 @@ impl Texture {
         // destroy staging buffer
         staging_buffer.destroy(device);
 
-        let shader_index = uniforms.add_image(image.add_view(device));
+        let shader_index = uniforms.add_texture(image.add_view(device))?;
 
-        Self {
+        Ok(Self {
             data: image_data,
             should_update: false,
             image,
             shader_index,
-        }
+        })
     }
 
     #[cfg(feature = "png")]
@@ -77,7 +78,7 @@ impl Texture {
         bytes: &[u8],
         color_space: ColorSpace,
         mips: Mips,
-    ) -> crate::error::Result<Self> {
+    ) -> Result<Self> {
         use png::ColorType;
         use png::Decoder;
 
@@ -99,7 +100,7 @@ impl Texture {
             _ => return Err(Error::UnsupportedFormat),
         };
 
-        Ok(Self::new(device, uniforms, data, size, format, mips))
+        Self::new(device, uniforms, data, size, format, mips)
     }
 
     #[cfg(feature = "jpeg")]
@@ -109,7 +110,7 @@ impl Texture {
         bytes: &[u8],
         color_space: ColorSpace,
         mips: Mips,
-    ) -> crate::error::Result<Self> {
+    ) -> Result<Self> {
         use jpeg_decoder::Decoder;
         use jpeg_decoder::PixelFormat;
 
@@ -126,7 +127,7 @@ impl Texture {
             _ => return Err(Error::UnsupportedFormat),
         };
 
-        Ok(Self::new(device, uniforms, data, size, format, mips))
+        Self::new(device, uniforms, data, size, format, mips)
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
@@ -185,7 +186,7 @@ impl Texture {
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
-        uniforms.remove_image(self.shader_index);
+        uniforms.remove_texture(self.shader_index);
         self.image.destroy(device);
     }
 

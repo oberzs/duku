@@ -10,6 +10,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Color;
 use crate::device::Device;
+use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Vector3;
@@ -39,11 +40,11 @@ pub struct MaterialBuilder<'s> {
 }
 
 impl Material {
-    pub(crate) fn new(device: &Device, uniforms: &Uniforms) -> Self {
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
         let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let descriptor = uniforms.material_set(device, &buffer);
+        let descriptor = uniforms.material_set(device, &buffer)?;
 
-        Self {
+        Ok(Self {
             arg_1: Vector4::ZERO,
             arg_2: Vector4::ZERO,
             arg_3: Vector4::ZERO,
@@ -55,7 +56,7 @@ impl Material {
             should_update: true,
             buffer,
             descriptor,
-        }
+        })
     }
 
     pub fn set_albedo_color(&mut self, color: impl Into<Color>) {

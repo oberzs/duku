@@ -10,6 +10,7 @@ use super::ImageLayout;
 use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
+use crate::error::Result;
 use crate::pipeline::Uniforms;
 
 pub struct Cubemap {
@@ -33,7 +34,7 @@ impl Cubemap {
         size: u32,
         format: Format,
         sides: CubemapSides<Vec<u8>>,
-    ) -> Self {
+    ) -> Result<Self> {
         // convert 3-byte data to 4-byte data
         let sides = if matches!(format, Format::Srgb | Format::Rgb) {
             CubemapSides {
@@ -82,12 +83,12 @@ impl Cubemap {
         left_staging_buffer.destroy(device);
         right_staging_buffer.destroy(device);
 
-        let shader_index = uniforms.add_cubemap(image.add_view(device));
+        let shader_index = uniforms.add_cubemap(image.add_view(device))?;
 
-        Self {
+        Ok(Self {
             image,
             shader_index,
-        }
+        })
     }
 
     #[cfg(feature = "png")]
@@ -95,7 +96,7 @@ impl Cubemap {
         device: &Device,
         uniforms: &mut Uniforms,
         sides: CubemapSides<Vec<u8>>,
-    ) -> crate::error::Result<Self> {
+    ) -> Result<Self> {
         use png::ColorType;
         use png::Decoder;
 
@@ -131,9 +132,9 @@ impl Cubemap {
             reader.next_frame(&mut data).expect("bad read");
             Ok(data)
         })
-        .collect::<crate::error::Result<_>>()?;
+        .collect::<Result<_>>()?;
 
-        Ok(Self::new(
+        Self::new(
             device,
             uniforms,
             size,
@@ -146,7 +147,7 @@ impl Cubemap {
                 left: side_data.remove(0),
                 right: side_data.remove(0),
             },
-        ))
+        )
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {

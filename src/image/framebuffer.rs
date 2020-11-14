@@ -11,6 +11,7 @@ use super::ImageLayout;
 use super::Size;
 use crate::device::Commands;
 use crate::device::Device;
+use crate::error::Result;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
@@ -97,7 +98,7 @@ impl Framebuffer {
         uniforms: &mut Uniforms,
         config: ShaderConfig,
         size: Size,
-    ) -> Self {
+    ) -> Result<Self> {
         let render_pass = RenderPass::new(device, config, true);
 
         let mut transient_images = vec![];
@@ -132,7 +133,7 @@ impl Framebuffer {
         let handle = device.create_framebuffer(&info);
 
         let mut shader_image = Image::shader(device, size);
-        let shader_index = uniforms.add_image(shader_image.add_view(device));
+        let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
 
         // ready image layouts
         shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -147,7 +148,7 @@ impl Framebuffer {
             );
         }
 
-        Self {
+        Ok(Self {
             shader_image: Some((shader_index, shader_image)),
             should_update: false,
             attachments,
@@ -156,7 +157,7 @@ impl Framebuffer {
             render_pass,
             handle,
             size,
-        }
+        })
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -212,7 +213,7 @@ impl Framebuffer {
 
             let mut shader_image = Image::shader(device, self.size);
             let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
-            uniforms.replace_image(shader_index, shader_image.add_view(device));
+            uniforms.replace_texture(shader_index, shader_image.add_view(device));
 
             // ready image layouts
             shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
@@ -258,7 +259,7 @@ impl Framebuffer {
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         if let Some((index, image)) = &self.shader_image {
-            uniforms.remove_image(*index);
+            uniforms.remove_texture(*index);
             image.destroy(device);
         }
         for image in &self.transient_images {

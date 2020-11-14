@@ -18,9 +18,9 @@ fn main() -> Result<()> {
     camera.transform.move_by([-2.0, 2.0, -2.0]);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
-    let framebuffer = duku.create_framebuffer(500, 500);
+    let framebuffer = duku.create_framebuffer(500, 500)?;
     let material = duku
-        .build_material()
+        .build_material()?
         .albedo_framebuffer(&framebuffer)
         .build();
 

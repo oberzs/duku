@@ -16,6 +16,10 @@ pub enum Error {
     InvalidSpirv,
     InvalidFile,
     NoSuitableGpu,
+    TextureLimit,
+    CubemapLimit,
+    MaterialLimit,
+    FramebufferLimit,
 
     #[cfg(any(feature = "png", feature = "jpeg"))]
     UnsupportedFormat,

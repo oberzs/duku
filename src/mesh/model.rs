@@ -247,7 +247,7 @@ impl Model {
                 })
                 .unwrap_or(Ok(0.0))?;
 
-            let mut mat = Material::new(device, uniforms);
+            let mut mat = Material::new(device, uniforms)?;
             mat.set_arg_1([albedo[0], albedo[1], albedo[2], albedo_tex]);
             mat.set_arg_2([metalness, roughness, met_rough_tex, occlusion_tex]);
             mat.set_arg_3([normal_tex, emissive_tex, 0.0, 0.0]);

@@ -182,7 +182,7 @@ impl Duku {
         width: u32,
         height: u32,
         mips: Mips,
-    ) -> Handle<Texture> {
+    ) -> Result<Handle<Texture>> {
         let data = pixels
             .iter()
             .map(|p| vec![p.r, p.g, p.b, p.a])
@@ -199,8 +199,8 @@ impl Duku {
                 Format::Srgba
             },
             mips,
-        );
-        self.storage.add_texture(tex)
+        )?;
+        Ok(self.storage.add_texture(tex))
     }
 
     pub fn texture(&self, tex: &Handle<Texture>) -> &Texture {
@@ -269,9 +269,9 @@ impl Duku {
         self.storage.add_mesh(mesh)
     }
 
-    pub fn create_material(&mut self) -> Handle<Material> {
-        let mat = Material::new(&self.device, &self.uniforms);
-        self.storage.add_material(mat)
+    pub fn create_material(&mut self) -> Result<Handle<Material>> {
+        let mat = Material::new(&self.device, &mut self.uniforms)?;
+        Ok(self.storage.add_material(mat))
     }
 
     pub fn material(&self, material: &Handle<Material>) -> &Material {
@@ -282,17 +282,17 @@ impl Duku {
         self.storage.materials.get_mut(material)
     }
 
-    pub fn build_material(&mut self) -> MaterialBuilder<'_> {
-        MaterialBuilder {
+    pub fn build_material(&mut self) -> Result<MaterialBuilder<'_>> {
+        Ok(MaterialBuilder {
             storage: &mut self.storage,
-            material: Material::new(&self.device, &self.uniforms),
-        }
+            material: Material::new(&self.device, &mut self.uniforms)?,
+        })
     }
 
-    pub fn build_material_pbr(&mut self) -> MaterialBuilder<'_> {
-        MaterialBuilder {
+    pub fn build_material_pbr(&mut self) -> Result<MaterialBuilder<'_>> {
+        Ok(MaterialBuilder {
             storage: &mut self.storage,
-            material: Material::new(&self.device, &self.uniforms),
+            material: Material::new(&self.device, &mut self.uniforms)?,
         }
         .albedo_texture(&self.builtins.white_texture)
         .normal_texture(&self.builtins.blue_texture)
@@ -302,20 +302,20 @@ impl Duku {
         .albedo_color([255, 255, 255])
         .emissive([0, 0, 0])
         .metalness(0.0)
-        .roughness(0.0)
+        .roughness(0.0))
     }
 
-    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Handle<Framebuffer> {
+    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Handle<Framebuffer>> {
         let shader_config = self.storage.shaders.get(&self.builtins.pbr_shader).config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             Size::new(width, height),
-        );
+        )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms);
-        self.storage.add_framebuffer(framebuffer)
+        Ok(self.storage.add_framebuffer(framebuffer))
     }
 
     pub fn create_framebuffer_for_shader(
@@ -323,17 +323,17 @@ impl Duku {
         shader: &Handle<Shader>,
         width: u32,
         height: u32,
-    ) -> Handle<Framebuffer> {
+    ) -> Result<Handle<Framebuffer>> {
         let shader_config = self.storage.shaders.get(shader).config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             Size::new(width, height),
-        );
+        )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms);
-        self.storage.add_framebuffer(framebuffer)
+        Ok(self.storage.add_framebuffer(framebuffer))
     }
 
     pub fn framebuffer_mut(&mut self, framebuffer: &Handle<Framebuffer>) -> &mut Framebuffer {
@@ -648,7 +648,7 @@ impl DukuBuilder {
 
         // setup storage
         let mut storage = Storage::new();
-        let builtins = Builtins::new(&device, &mut storage, &mut uniforms, msaa);
+        let builtins = Builtins::new(&device, &mut storage, &mut uniforms, msaa)?;
 
         // setup framebuffers
         let shader_config = storage.shaders.get(&builtins.pbr_shader).config();
@@ -660,7 +660,7 @@ impl DukuBuilder {
             &mut uniforms,
             shadow_map_size,
             gpu_properties.image_count,
-        );
+        )?;
 
         #[cfg(feature = "glsl")]
         let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
