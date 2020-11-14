@@ -6,13 +6,13 @@
 use duku::window::Controller;
 use duku::Camera;
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Light;
 use duku::Quaternion;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(500, 500)
         .title("Duku example: Gltf")
         .build()?;
@@ -23,12 +23,12 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
-    let helmet = context.create_model_gltf("examples/models/helmet/DamagedHelmet.gltf")?;
+    let helmet = duku.create_model_gltf("examples/models/helmet/DamagedHelmet.gltf")?;
 
     window.main_loop(move |events| {
-        controller.update(&mut camera, events, context.delta_time());
+        controller.update(&mut camera, events, duku.delta_time());
 
-        context.draw_on_window(Some(&camera), |target| {
+        duku.draw_on_window(Some(&camera), |target| {
             target.clear_color = Color::gray(50);
             target.lights[0] = Light::main([-1.0, -2.0, 1.0], Color::rgb(255, 250, 235), 5.0);
             target.shadow_depth = 5.0;

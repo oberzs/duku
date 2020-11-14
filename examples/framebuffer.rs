@@ -5,11 +5,11 @@
 
 use duku::Camera;
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(500, 500)
         .title("Duku example: Framebuffer")
         .build()?;
@@ -18,16 +18,16 @@ fn main() -> Result<()> {
     camera.transform.move_by([-2.0, 2.0, -2.0]);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
-    let framebuffer = context.create_framebuffer(500, 500);
-    let material = context
+    let framebuffer = duku.create_framebuffer(500, 500);
+    let material = duku
         .build_material()
         .albedo_framebuffer(&framebuffer)
         .build();
 
     window.main_loop(move |_| {
-        let fps = context.fps();
+        let fps = duku.fps();
 
-        context.draw(&framebuffer, None, |target| {
+        duku.draw(&framebuffer, None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(250.0);
             target.transform.move_up(250.0);
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
             target.draw_text(format!("Fps: {}", fps));
         });
 
-        context.draw_on_window(Some(&camera), |target| {
+        duku.draw_on_window(Some(&camera), |target| {
             target.draw_grid();
             target.draw_cube();
 

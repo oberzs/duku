@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Context - duku application entrypoint
+// Duku - duku application entrypoint
 
 use std::time::Instant;
 
@@ -59,7 +59,7 @@ use crate::mesh::Model;
 
 const FPS_SAMPLE_COUNT: usize = 64;
 
-pub struct Context {
+pub struct Duku {
     // Vulkan
     instance: Instance,
     device: Device,
@@ -94,7 +94,7 @@ pub struct Context {
 }
 
 #[derive(Debug, Clone)]
-pub struct ContextBuilder {
+pub struct DukuBuilder {
     shadow_map_size: u32,
     anisotropy: f32,
     msaa: Msaa,
@@ -105,7 +105,7 @@ pub struct ContextBuilder {
 #[cfg(feature = "window")]
 #[derive(Debug, Clone)]
 pub struct WindowBuilder {
-    context: ContextBuilder,
+    duku: DukuBuilder,
     title: String,
     resizable: bool,
     width: u32,
@@ -118,9 +118,9 @@ enum RenderStage {
     During,
 }
 
-impl Context {
-    pub const fn builder() -> ContextBuilder {
-        ContextBuilder {
+impl Duku {
+    pub const fn builder() -> DukuBuilder {
+        DukuBuilder {
             shadow_map_size: 2048,
             anisotropy: 4.0,
             msaa: Msaa::X4,
@@ -562,7 +562,7 @@ impl Context {
     }
 }
 
-impl Drop for Context {
+impl Drop for Duku {
     fn drop(&mut self) {
         self.device.wait_idle();
         self.storage.clear(&self.device, &mut self.uniforms);
@@ -580,7 +580,7 @@ impl Drop for Context {
     }
 }
 
-impl ContextBuilder {
+impl DukuBuilder {
     pub const fn vsync(mut self, vsync: VSync) -> Self {
         self.vsync = vsync;
         self
@@ -616,7 +616,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Context> {
+    pub fn build(self) -> Result<Duku> {
         let Self {
             vsync,
             msaa,
@@ -665,7 +665,7 @@ impl ContextBuilder {
         #[cfg(feature = "glsl")]
         let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
 
-        Ok(Context {
+        Ok(Duku {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             frame_time: Instant::now(),
@@ -695,7 +695,7 @@ impl ContextBuilder {
     #[cfg(feature = "window")]
     pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {
         WindowBuilder {
-            context: self,
+            duku: self,
             title: "".to_string(),
             resizable: false,
             width,
@@ -716,12 +716,12 @@ impl WindowBuilder {
         self
     }
 
-    pub fn build(self) -> Result<(Context, Window)> {
+    pub fn build(self) -> Result<(Duku, Window)> {
         let window = Window::new(&self.title, self.width, self.height, self.resizable);
-        let mut context_builder = self.context;
-        context_builder.window = Some(window.handle());
-        let context = context_builder.build()?;
-        Ok((context, window))
+        let mut duku_builder = self.duku;
+        duku_builder.window = Some(window.handle());
+        let duku = duku_builder.build()?;
+        Ok((duku, window))
     }
 }
 

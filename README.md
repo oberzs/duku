@@ -39,7 +39,7 @@
 - [x] **Vulkan** - uses the Vulkan API
 - [x] **PBR** - uses a PBR material/shader system
 - [x] **Shadows** - uses PCF shadow maps
-- [x] **Text** - uses Fira Mono font (upcoming support for custom fonts) 
+- [x] **Text** - uses Fira Mono font (upcoming support for custom fonts)
 - [x] **No dependencies** - all Rust dependencies are optional
 - [ ] **UI** - retained mode UI (not yet supported)
 
@@ -53,18 +53,18 @@ All these features will be completed for release `0.1.0`
 
 ## Simple Example
 
-A simple example that creates the duku context, sets up a 3D camera
+A simple example that creates the duku duku, sets up a 3D camera
 and draws a cube on the screen.
 
 ```rust
 use duku::Color;
 use duku::Camera;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    // create duku context and OS window with a size of 500x500
-    let (mut context, window) = Context::builder().build_window(500, 500).build()?;
+    // initialize duku and OS window with a size of 500x500
+    let (mut duku, window) = Duku::builder().build_window(500, 500).build()?;
 
     // create a 3D perspective camera with an FOV of 90
     let mut camera = Camera::perspective_autosized(90);
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
     // start up the main event loop
     window.main_loop(move |_| {
       // start drawing on the window using our camera
-      context.draw_on_window(Some(&camera), |target| {
+      duku.draw_on_window(Some(&camera), |target| {
             // set the background color to sky blue
             target.clear = Color::SKY_BLUE;
 

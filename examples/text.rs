@@ -6,12 +6,12 @@
 use duku::window::Key;
 use duku::BorderMode;
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 use duku::ShapeMode;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .no_msaa()
         .build_window(500, 500)
         .title("Duku example: Text")
@@ -30,10 +30,10 @@ fn main() -> Result<()> {
             input.pop();
         }
 
-        let font = context.font(&context.builtins.fira_font);
+        let font = duku.font(&duku.builtins.fira_font);
         let input_length = font.text_width(&input);
 
-        context.draw_on_window(None, |target| {
+        duku.draw_on_window(None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(250.0);
             target.transform.move_up(250.0);

@@ -6,7 +6,7 @@
 use duku::window::Controller;
 use duku::Camera;
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 use duku::Vector3;
 use std::time::Instant;
@@ -14,7 +14,7 @@ use std::time::Instant;
 fn main() -> Result<()> {
     let square_size = 10;
 
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(720, 640)
         .title("Duku example: Dynamic")
         .build()?;
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     camera.transform.move_backward(10.0);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
-    let square = context
+    let square = duku
         .build_mesh()
         .vertices(square_vertices(square_size, 0.0))
         .indices(square_indices(square_size))
@@ -32,15 +32,14 @@ fn main() -> Result<()> {
     let time = Instant::now();
 
     window.main_loop(move |events| {
-        controller.update(&mut camera, events, context.delta_time());
+        controller.update(&mut camera, events, duku.delta_time());
 
         // update square mesh
         let elapsed = time.elapsed().as_secs_f32();
-        context
-            .mesh_mut(&square)
+        duku.mesh_mut(&square)
             .set_vertices(square_vertices(square_size, elapsed));
 
-        context.draw_on_window(Some(&camera), |target| {
+        duku.draw_on_window(Some(&camera), |target| {
             target.clear_color = Color::ORANGE;
 
             // draw square

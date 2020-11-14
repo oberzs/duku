@@ -4,11 +4,11 @@
 // "Hello, World!" example to open a transparent rainbow window
 
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(500, 500)
         .title("Duku example: Hello")
         .resizable()
@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     window.main_loop(move |_| {
         hue = (hue + 1) % 360;
 
-        context.draw_on_window(None, |target| {
+        duku.draw_on_window(None, |target| {
             target.clear_color = Color::hsv(hue, 255, 255);
         });
     });

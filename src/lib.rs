@@ -28,8 +28,8 @@ mod macros;
 
 mod buffer;
 mod color;
-mod context;
 mod device;
+mod duku;
 mod error;
 mod font;
 mod image;
@@ -47,8 +47,8 @@ mod watch;
 
 // normal exports
 pub use color::Color;
-pub use context::Context;
 pub use device::Stats;
+pub use duku::Duku;
 pub use error::Result;
 pub use image::ColorSpace;
 pub use image::Cubemap;

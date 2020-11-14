@@ -4,21 +4,21 @@
 // example that draws lines
 
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 use duku::Target;
 use duku::Vector2;
 use std::f32::consts::PI;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(600, 400)
         .title("Duku example: Lines")
         .resizable()
         .build()?;
 
     window.main_loop(move |_| {
-        context.draw_on_window(None, |target| {
+        duku.draw_on_window(None, |target| {
             star(target, [0.0, 0.0], Color::BLUE);
             star(target, [50.0, 10.0], Color::GREEN);
             star(target, [-20.0, -40.0], Color::ORANGE);

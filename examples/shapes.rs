@@ -4,18 +4,18 @@
 // example that draws shapes
 
 use duku::Color;
-use duku::Context;
+use duku::Duku;
 use duku::Result;
 use duku::ShapeMode;
 
 fn main() -> Result<()> {
-    let (mut context, window) = Context::builder()
+    let (mut duku, window) = Duku::builder()
         .build_window(500, 500)
         .title("Duku example: Shapes")
         .build()?;
 
     window.main_loop(move |_| {
-        context.draw_on_window(None, |target| {
+        duku.draw_on_window(None, |target| {
             target.clear_color = Color::gray(50);
             target.border_color = Color::BLACK;
             target.border_width = 5.0;
