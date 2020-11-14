@@ -148,7 +148,6 @@ impl From<Matrix4> for Transform {
 
 #[cfg(test)]
 mod test {
-    use super::Matrix4;
     use super::Quaternion;
     use super::Transform;
     use super::Vector3;
@@ -182,18 +181,5 @@ mod test {
         let mut t = Transform::default();
         t.move_by([1.0, 2.0, 3.0]);
         assert_eq!(t, Transform::positioned(1.0, 2.0, 3.0));
-    }
-
-    #[test]
-    fn from_matrix() {
-        let m = Matrix4::axis_rotation(Vector3::UP, 45.0);
-        assert_eq!(
-            Transform::from(m),
-            Transform {
-                position: Vector3::ZERO,
-                scale: Vector3::new(0.99999994, 1.0, 0.99999994),
-                rotation: Quaternion::axis_rotation(Vector3::UP, 45.0)
-            }
-        );
     }
 }

@@ -143,7 +143,7 @@ impl From<Matrix3> for Quaternion {
         let mut qy = pos(1.0 - m.col_x.x + m.col_y.y - m.col_z.z).sqrt() / 2.0;
         let mut qz = pos(1.0 - m.col_x.x - m.col_y.y + m.col_z.z).sqrt() / 2.0;
         qx = qx.copysign(m.col_z.y - m.col_y.z);
-        qy = qy.copysign(m.col_x.z - m.col_z.x);
+        qy = -qy.copysign(m.col_x.z - m.col_z.x);
         qz = qz.copysign(m.col_y.x - m.col_x.y);
 
         Self::new(qx, qy, qz, qw)
