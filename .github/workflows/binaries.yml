@@ -42,10 +42,10 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release --bin dic --features="glsl"
+        run: cargo build --release --bin dc --features="glsl"
 
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
-          name: dic-linux
-          path: target/release/dic
+          name: dc-linux
+          path: target/release/dc
