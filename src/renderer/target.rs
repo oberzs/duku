@@ -240,6 +240,10 @@ impl<'b> Target<'b> {
         self.shader = None;
     }
 
+    pub fn set_skybox(&mut self, cubemap: &Handle<Cubemap>) {
+        self.skybox = Some(cubemap.clone());
+    }
+
     pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader

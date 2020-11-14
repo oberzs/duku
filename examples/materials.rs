@@ -4,11 +4,11 @@
 // Material drawing example
 
 use duku::window::Controller;
-use duku::window::Key;
 use duku::Camera;
 use duku::Color;
 use duku::ColorSpace;
 use duku::Context;
+use duku::CubemapSides;
 use duku::Light;
 use duku::Mips;
 use duku::Result;
@@ -32,6 +32,15 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
+    let skybox = context.create_cubemap_png(CubemapSides {
+        top: "examples/textures/skybox/top.png",
+        bottom: "examples/textures/skybox/bottom.png",
+        front: "examples/textures/skybox/front.png",
+        back: "examples/textures/skybox/back.png",
+        left: "examples/textures/skybox/left.png",
+        right: "examples/textures/skybox/right.png",
+    })?;
+
     let light_tex = context.create_texture_png(
         "examples/textures/prototype/light.png",
         ColorSpace::Srgb,
@@ -54,49 +63,14 @@ fn main() -> Result<()> {
         .albedo_texture(&purple_tex)
         .build();
 
-    let mut max_white_point = 1.0;
-    let mut light_brightness = 5.0;
-
     window.main_loop(move |events| {
         controller.update(&mut camera, events, context.delta_time());
 
-        if events.is_key_typed(Key::Up) {
-            light_brightness += 0.1;
-        }
-        if events.is_key_typed(Key::Down) {
-            light_brightness -= 0.1;
-        }
-        if events.is_key_typed(Key::Right) {
-            max_white_point += 0.1;
-        }
-        if events.is_key_typed(Key::Left) {
-            max_white_point -= 0.1;
-        }
-
-        // render UI
-        context.draw(&ui, None, |target| {
-            // move (0, 0) to top left
-            target.transform.move_left(250.0);
-            target.transform.move_up(250.0);
-
-            target.clear_color = Color::rgba_norm(0.0, 0.0, 0.0, 0.0);
-
-            // left and top margin
-            target.transform.move_right(10.0);
-            target.transform.move_down(10.0);
-
-            target.text_color = Color::ORANGE;
-            target.draw_text(format!("Max White Point: {}", max_white_point));
-            target.new_line();
-            target.draw_text(format!("Light Brightness: {}", light_brightness));
-        });
-
-        // render 3D scene
         context.draw_on_window(Some(&camera), |target| {
-            target.draw_grid();
+            target.set_skybox(&skybox);
+            target.lights[0] = Light::main([-1.0, -1.0, 1.0], Color::WHITE, 5.0);
 
-            target.lights[0] = Light::main([-1.0, -1.0, 1.0], Color::WHITE, light_brightness);
-            target.max_white_point = max_white_point;
+            target.draw_grid();
 
             // render meshes
             target.transform.move_by([-2.0, 1.0, 0.0]);
