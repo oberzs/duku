@@ -546,7 +546,7 @@ impl<'b> Target<'b> {
 
     pub fn draw_ellipse(&mut self, size: impl Into<Vector2>) {
         let s = size.into() / 2.0;
-        let resolution = 50;
+        let side_count = (s.length() * 3.0) as u32;
 
         self.push();
 
@@ -554,9 +554,9 @@ impl<'b> Target<'b> {
             self.transform.position += s.extend(0.0);
         }
 
-        let points: Vec<_> = (0..resolution)
+        let points: Vec<_> = (0..side_count)
             .map(|i| {
-                let q = 2.0 * PI * (i as f32 / resolution as f32);
+                let q = 2.0 * PI * (i as f32 / side_count as f32);
                 let x = s.x * q.cos();
                 let y = s.y * q.sin();
                 Vector2::new(x, y)

@@ -314,7 +314,7 @@ impl Duku {
             Size::new(width, height),
         )?;
         self.forward_renderer
-            .add_target(&self.device, &mut self.uniforms);
+            .add_target(&self.device, &mut self.uniforms)?;
         Ok(self.storage.add_framebuffer(framebuffer))
     }
 
@@ -332,7 +332,7 @@ impl Duku {
             Size::new(width, height),
         )?;
         self.forward_renderer
-            .add_target(&self.device, &mut self.uniforms);
+            .add_target(&self.device, &mut self.uniforms)?;
         Ok(self.storage.add_framebuffer(framebuffer))
     }
 
