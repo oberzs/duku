@@ -574,10 +574,8 @@ impl<'b> Target<'b> {
     pub fn draw_texture(
         &mut self,
         texture: &Handle<Texture>,
-        position: impl Into<Vector2>,
         size: impl Into<Vector2>,
     ) {
-        let pos = position.into().extend(0.0);
         let s = size.into().extend(0.0);
 
         self.push();
@@ -589,9 +587,9 @@ impl<'b> Target<'b> {
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                pos,
-                Vector3::new(pos.x, pos.y + s.y, 0.0),
-                Vector3::new(pos.x + s.x, pos.y, 0.0),
+                Vector3::ZERO,
+                Vector3::new(0.0, s.y, 0.0),
+                Vector3::new(s.x, 0.0, 0.0),
             ],
             transform: self.transform,
             texture: texture.clone(),
@@ -605,9 +603,9 @@ impl<'b> Target<'b> {
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                Vector3::new(pos.x, pos.y + s.y, 0.0),
-                pos + s,
-                Vector3::new(pos.x + s.x, pos.y, 0.0),
+                Vector3::new(0.0, s.y, 0.0),
+                s,
+                Vector3::new(s.x, 0.0, 0.0),
             ],
             transform: self.transform,
             texture: texture.clone(),
