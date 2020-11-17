@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// size struct
-
 use crate::vk;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

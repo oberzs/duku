@@ -10,7 +10,7 @@
 /// # Examples
 ///
 /// ```ignore
-/// // duku is initialized and rendering has happened before
+/// // rendering has happened before
 /// let stats = duku.stats();
 /// println!("{:#?}", stats);
 /// ```

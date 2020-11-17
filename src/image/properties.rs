@@ -1,12 +1,112 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// enums for possible image properties
-
 use crate::vk;
 
+/// Color value representation mode.
+///
+/// Defines how textures should be sampled in the shader.
+///
+/// # Example
+///
+/// ```ignore
+/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
+/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Format {
+pub enum ColorSpace {
+    /// a linear representation of color values
+    Linear,
+    /// a representation closer to how humans perceive light
+    Srgb,
+}
+
+/// Texture mipmapping mode.
+///
+/// Generates extra smaller textures that are used
+/// when objects are rendered further away.
+///
+/// Rendering with mips is faster to sample, but they
+/// require more memory.
+///
+/// # Example
+///
+/// ```ignore
+/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
+/// ```
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Mips {
+    /// generates as many mips as possible
+    Log2,
+    /// generates no mips
+    Zero,
+}
+
+/// Multi Sample Anti-Aliasing mode.
+///
+/// Makes mesh outlines smoother (adds anti-aliasing)
+/// by sampling each pixel multiple times.
+///
+/// Higher settings greatly impact performance, also
+/// require more memory for bigger framebuffers.
+///
+/// # Example
+///
+/// ```ignore
+/// let duku = Duku::builder().msaa(Msaa::X4).build()?;
+/// ```
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Msaa {
+    /// samples each pixel 4 times
+    X4,
+    /// samples each pixel 8 times
+    X8,
+    /// samples each pixel 16 times
+    X16,
+    /// no MSAA is applied
+    Disabled,
+}
+
+/// Filtering mode for texture sampling.
+///
+/// # Example
+///
+/// ```ignore
+/// duku.draw_on_window(None, |target| {
+///     target.texture_filter = Filter::Nearest;
+/// });
+/// ```
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Filter {
+    /// interpolates linearly between texture pixels
+    Linear,
+    /// does no interpolation (good for pixel art)
+    Nearest,
+}
+
+/// Wrapping mode for texture sampling.
+///
+/// Defines what should be returned when sampling outside
+/// of the texture's UV range
+///
+/// # Example
+///
+/// ```ignore
+/// duku.draw_on_window(None, |target| {
+///     target.texture_filter = Wrap::Repeat;
+/// });
+/// ```
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Wrap {
+    /// samples black outside of texture
+    ClampBorder,
+    /// samples edge pixels outside of texture
+    ClampEdge,
+    /// repeats the texture
+    Repeat,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum Format {
     Rgb,
     Rgba,
     Srgb,
@@ -16,18 +116,6 @@ pub enum Format {
     DepthStencil,
     Float2,
     Gray,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ColorSpace {
-    Linear,
-    Srgb,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Mips {
-    Log2,
-    Zero,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -50,27 +138,6 @@ pub(crate) enum ImageLayout {
     Present,
     TransferSrc,
     TransferDst,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Msaa {
-    X4,
-    X8,
-    X16,
-    Disabled,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Filter {
-    Linear,
-    Nearest,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Wrap {
-    ClampBorder,
-    ClampEdge,
-    Repeat,
 }
 
 impl ImageUsage {

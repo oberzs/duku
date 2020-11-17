@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Framebuffer - images that can be used as a render targets
-
 use std::ptr;
 
 use super::Format;
@@ -18,6 +16,28 @@ use crate::pipeline::Uniforms;
 use crate::surface::Swapchain;
 use crate::vk;
 
+/// Texture that can be rendered to.
+///
+/// This collection of images can be used as the
+/// target of a shader.
+/// Similar to rendering to the window, but not showing
+/// it on-screen.
+///
+/// # Example
+///
+/// ```ignore
+/// let framebuffer = duku.create_framebuffer(400, 400)?;
+///
+/// // use framebuffer in material to use later
+/// let material = duku.build_material_pbr()?
+///     .albedo_framebuffer(&framebuffer)
+///     .build();
+///
+/// // render to framebuffer
+/// duku.draw(&framebuffer, None, |target| {
+///     // draw commands ...
+/// });
+/// ```
 pub struct Framebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
@@ -160,6 +180,14 @@ impl Framebuffer {
         })
     }
 
+    /// Change the framebuffer to a new size
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let mut framebuffer = duku.create_framebuffer(400, 400)?;
+    /// duku.framebuffer_mut(&framebuffer).resize(500, 500);
+    /// ```
     pub fn resize(&mut self, width: u32, height: u32) {
         self.size = Size::new(width, height);
         self.should_update = true;

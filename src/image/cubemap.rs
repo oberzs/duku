@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Cubemap - image with 6 layers to render a skybox
-
 use super::with_alpha;
 use super::Format;
 use super::Image;
@@ -13,17 +11,54 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::Uniforms;
 
+/// Texture representation of an environment.
+///
+/// Contains 6 square side textures of a cube that
+/// can be sampled by a direction in the shader.
+///
+/// # Example
+///
+/// ```ignore
+/// let skybox = duku.create_cubemap_png(CubemapSides {
+///     top: "path/to/top.png",
+///     bottom: "path/to/bottom.png",
+///     front: "path/to/front.png",
+///     back: "path/to/back.png",
+///     left: "path/to/left.png",
+///     right: "path/to/right.png",
+/// });
+/// ```
 pub struct Cubemap {
     image: Image,
     shader_index: u32,
 }
 
+/// 6 square sides of the cubemap.
+///
+/// # Example
+///
+/// ```ignore
+/// let skybox = duku.create_cubemap_png(CubemapSides {
+///     top: "path/to/top.png",
+///     bottom: "path/to/bottom.png",
+///     front: "path/to/front.png",
+///     back: "path/to/back.png",
+///     left: "path/to/left.png",
+///     right: "path/to/right.png",
+/// });
+/// ```
 pub struct CubemapSides<T> {
+    /// top face of the cube
     pub top: T,
+    /// bottom face of the cube
     pub bottom: T,
+    /// front face of the cube
     pub front: T,
+    /// back face of the cube
     pub back: T,
+    /// left face of the cube
     pub left: T,
+    /// right face of the cube
     pub right: T,
 }
 

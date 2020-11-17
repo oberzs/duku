@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Texture - simple image that can be used for rendering
-
 #[cfg(feature = "png")]
 use std::path::Path;
 
@@ -21,6 +19,21 @@ use crate::pipeline::Uniforms;
 #[cfg(any(feature = "png", feature = "jpeg"))]
 use super::ColorSpace;
 
+/// Image that can be sampled in a shader.
+///
+/// These can be created from bytes of color data, PNGs
+/// JPEGs, etc.
+///
+/// # Example
+///
+/// ```ignore
+/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
+///
+/// // use the texture in a material
+/// let material = duku.build_material_pbr()?
+///     .albedo_texture(&texture)
+///     .build();
+/// ```
 pub struct Texture {
     image: Image,
     data: Vec<u8>,
@@ -133,6 +146,27 @@ impl Texture {
         Self::new(device, uniforms, data, size, format, mips)
     }
 
+    /// Gets the width of the texture.
+    pub const fn width(&self) -> u32 {
+        self.image.size().width
+    }
+
+    /// Gets the height of the texture.
+    pub const fn height(&self) -> u32 {
+        self.image.size().height
+    }
+
+    /// Sets a pixel in the image to a specific color.
+    ///
+    /// Note: works only if the texture has no mips.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let tex = duku.texture_mut(&texture);
+    /// tex.set_pixel(0, 0, Color::SKY_BLUE);
+    /// tex.set_pixel(1, 1, Color::RED);
+    /// ```
     pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
@@ -147,6 +181,7 @@ impl Texture {
         }
     }
 
+    /// Gets a pixel's color in the image
     pub fn pixel(&self, x: u32, y: u32) -> Color {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
@@ -188,6 +223,15 @@ impl Texture {
         }
     }
 
+    /// Saves the texture as a PNG file.
+    ///
+    /// Note: requires the `png` feature.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// duku.texture(&texture).save("path/to/output.png")?;
+    /// ```
     #[cfg(feature = "png")]
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         use png::BitDepth;
