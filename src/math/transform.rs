@@ -79,7 +79,7 @@ impl Transform {
         self.move_by(self.forward() * amount);
     }
 
-    pub fn move_backward(&mut self, amount: f32) {
+    pub fn move_back(&mut self, amount: f32) {
         self.move_by(-self.forward() * amount);
     }
 

@@ -28,8 +28,11 @@ fn main() -> Result<()> {
 
     window.main_loop(move |_| {
         duku.draw_on_window(None, |target| {
-            target.draw_texture(&texture_1, [-400.0, -200.0], [400.0, 400.0]);
-            target.draw_texture(&texture_2, [0.0, -200.0], [400.0, 400.0]);
+            target.transform.move_down(200.0);
+            target.transform.move_left(400.0);
+            target.draw_texture(&texture_1, [400.0, 400.0]);
+            target.transform.move_right(400.0);
+            target.draw_texture(&texture_2, [400.0, 400.0]);
         });
     });
 

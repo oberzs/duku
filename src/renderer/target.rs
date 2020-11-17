@@ -499,7 +499,7 @@ impl<'b> Target<'b> {
         // draw borders
         if self.border_mode != BorderMode::Disabled {
             self.push();
-            self.transform.move_backward(0.00001);
+            self.transform.move_back(0.00001);
             self.draw_path(
                 points,
                 true,
@@ -571,11 +571,7 @@ impl<'b> Target<'b> {
         self.draw_ellipse(Vector2::new(size, size));
     }
 
-    pub fn draw_texture(
-        &mut self,
-        texture: &Handle<Texture>,
-        size: impl Into<Vector2>,
-    ) {
+    pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
         let s = size.into().extend(0.0);
 
         self.push();
@@ -602,11 +598,7 @@ impl<'b> Target<'b> {
         });
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
-            points: [
-                Vector3::new(0.0, s.y, 0.0),
-                s,
-                Vector3::new(s.x, 0.0, 0.0),
-            ],
+            points: [Vector3::new(0.0, s.y, 0.0), s, Vector3::new(s.x, 0.0, 0.0)],
             transform: self.transform,
             texture: texture.clone(),
             uvs: [

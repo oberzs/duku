@@ -255,11 +255,11 @@ impl Duku {
     pub fn duplicate_mesh(&mut self, mesh: &Handle<Mesh>) -> Handle<Mesh> {
         let m = self.storage.meshes.get(mesh);
         let mut result = Mesh::new(&self.device);
-        result.set_vertices(m.vertices().to_vec());
-        result.set_normals(m.normals().to_vec());
-        result.set_colors(m.colors().to_vec());
-        result.set_uvs(m.uvs().to_vec());
-        result.set_indices(m.indices().to_vec());
+        result.set_vertices(m.vertices().copied().collect());
+        result.set_normals(m.normals().copied().collect());
+        result.set_colors(m.colors().copied().collect());
+        result.set_uvs(m.uvs().copied().collect());
+        result.set_indices(m.indices().copied().collect());
         self.storage.add_mesh(result)
     }
 

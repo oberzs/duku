@@ -207,24 +207,49 @@ impl Mesh {
         self.should_update = true;
     }
 
-    pub fn vertices(&self) -> &[Vector3] {
-        &self.vertices
+    pub fn vertices(&self) -> impl Iterator<Item = &Vector3> {
+        self.vertices.iter()
     }
 
-    pub fn normals(&self) -> &[Vector3] {
-        &self.normals
+    pub fn normals(&self) -> impl Iterator<Item = &Vector3> {
+        self.normals.iter()
     }
 
-    pub fn colors(&self) -> &[Color] {
-        &self.colors
+    pub fn colors(&self) -> impl Iterator<Item = &Color> {
+        self.colors.iter()
     }
 
-    pub fn uvs(&self) -> &[Vector2] {
-        &self.uvs
+    pub fn uvs(&self) -> impl Iterator<Item = &Vector2> {
+        self.uvs.iter()
     }
 
-    pub fn indices(&self) -> &[u32] {
-        &self.indices
+    pub fn indices(&self) -> impl Iterator<Item = &u32> {
+        self.indices.iter()
+    }
+
+    pub fn vertices_mut(&mut self) -> impl Iterator<Item = &mut Vector3> {
+        self.should_update = true;
+        self.vertices.iter_mut()
+    }
+
+    pub fn normals_mut(&mut self) -> impl Iterator<Item = &mut Vector3> {
+        self.should_update = true;
+        self.normals.iter_mut()
+    }
+
+    pub fn colors_mut(&mut self) -> impl Iterator<Item = &mut Color> {
+        self.should_update = true;
+        self.colors.iter_mut()
+    }
+
+    pub fn uvs_mut(&mut self) -> impl Iterator<Item = &mut Vector2> {
+        self.should_update = true;
+        self.uvs.iter_mut()
+    }
+
+    pub fn indices_mut(&mut self) -> impl Iterator<Item = &mut u32> {
+        self.should_update = true;
+        self.indices.iter_mut()
     }
 
     pub(crate) fn set_textures(&mut self, textures: Vec<u32>) {

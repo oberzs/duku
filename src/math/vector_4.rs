@@ -39,6 +39,19 @@ impl Vector4 {
         Vector3::new(self.x, self.y, self.z)
     }
 
+    pub fn floor(self) -> Vector4 {
+        Vector4::new(
+            self.x.floor(),
+            self.y.floor(),
+            self.z.floor(),
+            self.w.floor(),
+        )
+    }
+
+    pub fn ceil(self) -> Vector4 {
+        Vector4::new(self.x.ceil(), self.y.ceil(), self.z.ceil(), self.w.ceil())
+    }
+
     pub fn round(self) -> Vector4 {
         Vector4::new(
             self.x.round(),

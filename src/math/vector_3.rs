@@ -48,8 +48,12 @@ impl Vector3 {
         Self::new(x, y, z)
     }
 
+    pub fn sqr_length(&self) -> f32 {
+        self.dot(*self)
+    }
+
     pub fn length(&self) -> f32 {
-        self.dot(*self).sqrt()
+        self.sqr_length().sqrt()
     }
 
     pub fn unit(&self) -> Self {
@@ -81,7 +85,15 @@ impl Vector3 {
         Vector3::new(self.x.floor(), self.y.floor(), self.z.floor())
     }
 
-    pub const BACKWARD: Self = Self::new(0.0, 0.0, -1.0);
+    pub fn ceil(&self) -> Self {
+        Vector3::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
+    }
+
+    pub fn round(&self) -> Self {
+        Vector3::new(self.x.round(), self.y.round(), self.z.round())
+    }
+
+    pub const BACK: Self = Self::new(0.0, 0.0, -1.0);
     pub const FORWARD: Self = Self::new(0.0, 0.0, 1.0);
     pub const UP: Self = Self::new(0.0, 1.0, 0.0);
     pub const DOWN: Self = Self::new(0.0, -1.0, 0.0);
@@ -246,7 +258,7 @@ mod test {
     #[test]
     fn direction() {
         assert_eq!(Vector3::FORWARD, Vector3::new(0.0, 0.0, 1.0));
-        assert_eq!(Vector3::BACKWARD, Vector3::new(0.0, 0.0, -1.0));
+        assert_eq!(Vector3::BACK, Vector3::new(0.0, 0.0, -1.0));
         assert_eq!(Vector3::DOWN, Vector3::new(0.0, -1.0, 0.0));
         assert_eq!(Vector3::UP, Vector3::new(0.0, 1.0, 0.0));
         assert_eq!(Vector3::RIGHT, Vector3::new(1.0, 0.0, 0.0));

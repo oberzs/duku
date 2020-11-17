@@ -40,10 +40,6 @@ path = "src/dc.rs"
 required-features = ["glsl"]
 
 [[example]]
-name = "dynamic"
-required-features = ["window"]
-
-[[example]]
 name = "framebuffer"
 required-features = ["window"]
 

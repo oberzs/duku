@@ -55,7 +55,7 @@ impl Controller {
                     transform.move_forward(final_speed);
                 }
                 if events.is_key_pressed(Key::S) {
-                    transform.move_backward(final_speed);
+                    transform.move_back(final_speed);
                 }
                 if events.is_key_pressed(Key::A) {
                     transform.move_left(final_speed);

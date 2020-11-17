@@ -126,7 +126,7 @@ fn show_help(no_color: bool) {
     {}
 
 {}
-    $ dic [FILE]
+    $ dc [FILE]
 
 {}
     -o, --out   {}

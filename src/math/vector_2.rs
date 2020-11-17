@@ -32,8 +32,12 @@ impl Vector2 {
         self.x * o.x + self.y * o.y
     }
 
+    pub fn sqr_length(&self) -> f32 {
+        self.dot(*self)
+    }
+
     pub fn length(&self) -> f32 {
-        self.dot(*self).sqrt()
+        self.sqr_length().sqrt()
     }
 
     pub fn unit(&self) -> Self {
@@ -51,10 +55,26 @@ impl Vector2 {
         cos.acos().to_degrees()
     }
 
+    pub fn floor(&self) -> Self {
+        Self::new(self.x.floor(), self.y.floor())
+    }
+
+    pub fn ceil(&self) -> Self {
+        Self::new(self.x.ceil(), self.y.ceil())
+    }
+
+    pub fn round(&self) -> Self {
+        Self::new(self.x.round(), self.y.round())
+    }
+
     pub const fn extend(&self, z: f32) -> Vector3 {
         Vector3::new(self.x, self.y, z)
     }
 
+    pub const UP: Self = Self::new(0.0, 1.0);
+    pub const DOWN: Self = Self::new(0.0, -1.0);
+    pub const LEFT: Self = Self::new(-1.0, 0.0);
+    pub const RIGHT: Self = Self::new(1.0, 0.0);
     pub const ZERO: Self = Self::new(0.0, 0.0);
 }
 
