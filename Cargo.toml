@@ -45,7 +45,7 @@ required-features = ["window"]
 
 [[example]]
 name = "gltf"
-required-features = ["window", "png", "gltf"]
+required-features = ["window", "png", "jpeg", "gltf"]
 
 [[example]]
 name = "hello"

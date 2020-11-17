@@ -17,7 +17,7 @@
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
-    <img src="https://img.shields.io/badge/rust-1.46.0-orange?style=flat-square" alt="Rust Version" />
+    <img src="https://img.shields.io/badge/rust-1.47.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
   <a href="https://github.com/oberzs/duku/blob/develop/LICENSE">
@@ -26,29 +26,10 @@
 </div>
 
 <div align="center">
-  <a href="#features">Features</a> •
-  <a href="#support">Support</a> •
   <a href="#simple-example">Simple Example</a> •
   <a href="#usage">Usage</a> •
-  <a href="#optional-features">Optional Features</a> •
-  <a href="#credits">Credits</a>
+  <a href="#features">Features</a>
 </div>
-
-## Features
-
-- [x] **Vulkan** - uses the Vulkan API
-- [x] **PBR** - uses a PBR material/shader system
-- [x] **Shadows** - uses PCF shadow maps
-- [x] **Text** - uses Fira Mono font (upcoming support for custom fonts)
-- [x] **No dependencies** - all Rust dependencies are optional
-
-All these features will be completed for release `0.1.0`
-
-## Support
-
-- [x] **Windows**
-- [x] **Linux X11**
-- [ ] **MacOS** - not tested, help wanted
 
 ## Simple Example
 
@@ -91,7 +72,9 @@ fn main() -> Result<()> {
 
 This example uses the optional feature `window` for OS window creation.
 
-Want more? Check out these other [examples](https://github.com/oberzs/duku/tree/develop/examples).
+Want more? Check out these other [examples].
+
+---
 
 ## Usage
 
@@ -102,10 +85,22 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 duku = { git = "https://github.com/oberzs/duku" }
 ```
 
-This crate will be added to the [crates.io](https://crates.io) upon
-release `0.1.0`.
+This crate will be added to the [crates.io] upon release `0.1.0`.
 
-## Optional Features
+---
+
+## Features
+
+- **Supports** - Windows and Linux X11
+- **Vulkan** - uses the [Vulkan SDK]
+- **3D** - mesh rendering with materials and shaders
+- **2D** - shape, texture and text rendering with batching
+- **PBR** - uses a PBR material/shader system
+- **Shadows** - uses PCF shadow maps
+- **Text** - uses [Fira Mono] font
+- **No dependencies** - all Rust dependencies are optional
+
+#### Optional Features
 
 This crate supports additional optional features that you can add
 to your dependency in your `Cargo.toml` file.
@@ -117,22 +112,21 @@ duku = { ... , features = ["feature-name"] }
 
 The optional features include:
 
-- `window` - adds OS window creation support
-- `png` - adds png file loading support
-- `gltf` - adds gltf file loading support
-- `glsl` - adds custom glsl file loading support
+| Name     | Uses           | Description                           |
+| -------- | -------------- | ------------------------------------- |
+| `window` | [winit]        | adds OS window creation support       |
+| `png`    | [png]          | adds png file loading support         |
+| `jpeg`   | [jpeg-decoder] | adds jpeg file loading support        |
+| `gltf`   | [gltf]         | adds gltf file loading support        |
+| `glsl`   | [shaderc]      | adds custom glsl file loading support |
+| `log`    | n/a            | adds informational logs               |
 
-## Credits
-
-Open source projects:
-
-- [Vulkan SDK](https://vulkan.lunarg.com/) - Vulkan API support
-- [Png](https://github.com/image-rs/image-png) - Png image loading **(optional)**
-- [Gltf](https://github.com/gltf-rs/gltf) - Gltf model loading **(optional)**
-- [Shaderc](https://github.com/google/shaderc-rs) - Glsl shader loading **(optional)**
-- [Winit](https://github.com/rust-windowing/winit) - OS windowing **(optional)**
-
-Assets:
-
-- [Fira Mono](https://fonts.google.com/specimen/Fira+Mono?query=fira) - Builtin font
-- [Kenney](https://www.kenney.nl/assets) - Assets for examples
+[examples]: https://github.com/oberzs/duku/tree/develop/examples
+[crates.io]: https://crates.io
+[vulkan sdk]: https://vulkan.lunarg.com/
+[fira mono]: https://fonts.google.com/specimen/Fira+Mono?query=fira
+[png]: https://github.com/image-rs/image-png
+[jpeg-decoder]: https://github.com/image-rs/jpeg-decoder
+[gltf]: https://github.com/gltf-rs/gltf
+[shaderc]: https://github.com/google/shaderc-rs
+[winit]: https://github.com/rust-windowing/winit
