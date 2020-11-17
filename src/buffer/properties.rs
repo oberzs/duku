@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// enums for possible buffer properties
-
 use crate::vk;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

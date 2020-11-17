@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// GPUProperties - properties for the specific GPU
-
 use crate::image::Msaa;
 use crate::surface::VSync;
 use crate::vk;

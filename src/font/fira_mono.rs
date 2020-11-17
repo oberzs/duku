@@ -1,3 +1,6 @@
+// Oliver Berzs
+// https://github.com/oberzs/duku
+
 use std::collections::HashMap;
 
 pub(crate) const LINE_HEIGHT: u32 = 24;

@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Font - struct for a renderable font
-
 mod fira_mono;
 
 use std::collections::HashMap;

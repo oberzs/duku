@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Instance - struct for Vulkan entrypoint
-
 mod properties;
 mod version;
 

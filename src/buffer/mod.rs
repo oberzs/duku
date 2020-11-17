@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Buffer - struct that manages allocated buffer memory
-
 mod properties;
 
 use std::ffi::c_void;

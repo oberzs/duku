@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// CLI utility to compile a glsl shader to spirv
-
 #![warn(
     rust_2018_idioms,
     future_incompatible,

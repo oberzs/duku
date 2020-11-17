@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// duku macros
-
 #![macro_use]
 
 // prints debug info in debug mode

@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// picks the most suitable GPU
-
 use std::ffi::CStr;
 
 use crate::error::Error;

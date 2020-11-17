@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Vulkan Rust bindings generated from vk.xml
-
 #![macro_use]
 #![allow(non_camel_case_types, unused, improper_ctypes)]
 

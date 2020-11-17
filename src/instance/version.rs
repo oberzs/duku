@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Vulkan version struct
-
 use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
