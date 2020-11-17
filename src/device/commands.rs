@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Commands - struct to record commands to a buffer
-
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::cmp;
@@ -12,6 +10,7 @@ use std::ops::Range;
 use std::ptr;
 use std::slice;
 
+use super::Stats;
 use crate::image::Framebuffer;
 use crate::image::Image;
 use crate::image::ImageLayout;
@@ -31,16 +30,6 @@ pub(crate) struct Commands {
     stats: Cell<Stats>,
     used_materials: RefCell<HashSet<vk::DescriptorSet>>,
     used_shaders: RefCell<HashSet<vk::Pipeline>>,
-}
-
-#[derive(Copy, Clone, Default)]
-pub struct Stats {
-    pub drawn_indices: u32,
-    pub shaders_used: u32,
-    pub shader_rebinds: u32,
-    pub materials_used: u32,
-    pub material_rebinds: u32,
-    pub draw_calls: u32,
 }
 
 impl Commands {

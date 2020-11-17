@@ -1,10 +1,9 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Device - struct to access GPU API layer
-
 mod commands;
 mod pick;
+mod stats;
 
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -18,8 +17,8 @@ use std::ptr;
 use std::slice;
 
 pub(crate) use commands::Commands;
-pub use commands::Stats;
 pub(crate) use pick::pick_gpu;
+pub use stats::Stats;
 
 use crate::buffer::MemoryAccess;
 use crate::error::Error;

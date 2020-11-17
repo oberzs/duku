@@ -1,12 +1,6 @@
 <h1 align="center">Duku Renderer 🎨</h1>
 
 <div align="center">
-  <strong>Easy to use rendering library for Rust</strong>
-</div>
-
-<br />
-
-<div align="center">
   <!-- Version -->
   <span>
     <img src="https://img.shields.io/badge/version-Work%20In%20Progress-yellow?style=flat-square" alt="Version" />
@@ -31,9 +25,13 @@
   <a href="#features">Features</a>
 </div>
 
+<br>
+
+This Rust crate makes it easy to render 2D and 3D graphics.
+
 ## Simple Example
 
-A simple example that creates the duku duku, sets up a 3D camera
+A simple example that initiates duku, sets up a 3D camera
 and draws a cube on the screen.
 
 ```rust
@@ -98,6 +96,7 @@ This crate will be added to the [crates.io] upon release `0.1.0`.
 - **PBR** - uses a PBR material/shader system
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] font
+- **Shaders** - adding custom shaders is documented [here](https://github.com/oberzs/duku/tree/develop/DC_DOCS.md)
 - **No dependencies** - all Rust dependencies are optional
 
 #### Optional Features

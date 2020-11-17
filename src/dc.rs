@@ -6,7 +6,6 @@
 #![warn(
     rust_2018_idioms,
     future_incompatible,
-    // missing_docs,
     single_use_lifetimes,
     unused_qualifications,
     clippy::missing_const_for_fn,
@@ -19,7 +18,7 @@
     clippy::if_not_else,
     clippy::imprecise_flops,
     clippy::inefficient_to_string,
-    clippy::unused_self,
+    clippy::unused_self
 )]
 #![allow(dead_code)]
 
