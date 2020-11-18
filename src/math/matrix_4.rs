@@ -21,7 +21,7 @@ pub struct Matrix4 {
 }
 
 impl Matrix4 {
-    pub fn from_columns(
+    pub fn columns(
         col_x: impl Into<Vector4>,
         col_y: impl Into<Vector4>,
         col_z: impl Into<Vector4>,
@@ -35,7 +35,7 @@ impl Matrix4 {
         }
     }
 
-    pub fn from_rows(
+    pub fn rows(
         row_x: impl Into<Vector4>,
         row_y: impl Into<Vector4>,
         row_z: impl Into<Vector4>,
@@ -46,7 +46,7 @@ impl Matrix4 {
         let rz = row_z.into();
         let rw = row_w.into();
 
-        Self::from_columns(
+        Self::columns(
             [rx.x, ry.x, rz.x, rw.x],
             [rx.y, ry.y, rz.y, rw.y],
             [rx.z, ry.z, rz.z, rw.z],
@@ -55,7 +55,7 @@ impl Matrix4 {
     }
 
     pub fn identity() -> Self {
-        Self::from_rows(
+        Self::rows(
             [1.0, 0.0, 0.0, 0.0],
             [0.0, 1.0, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
@@ -65,7 +65,7 @@ impl Matrix4 {
 
     pub fn translation(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
-        Self::from_rows(
+        Self::rows(
             [1.0, 0.0, 0.0, v.x],
             [0.0, 1.0, 0.0, v.y],
             [0.0, 0.0, 1.0, v.z],
@@ -75,7 +75,7 @@ impl Matrix4 {
 
     pub fn scale(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
-        Self::from_rows(
+        Self::rows(
             [v.x, 0.0, 0.0, 0.0],
             [0.0, v.y, 0.0, 0.0],
             [0.0, 0.0, v.z, 0.0],
@@ -108,7 +108,7 @@ impl Matrix4 {
         ];
         let row_w = [0.0, 0.0, 0.0, 1.0];
 
-        Self::from_rows(row_x, row_y, row_z, row_w)
+        Self::rows(row_x, row_y, row_z, row_w)
     }
 
     pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
@@ -125,7 +125,7 @@ impl Matrix4 {
 
         let copy = 1.0;
 
-        Self::from_rows(
+        Self::rows(
             [x_scale, 0.0, 0.0, 0.0],
             [0.0, y_scale, 0.0, 0.0],
             [0.0, 0.0, z_scale, z_move],
@@ -142,7 +142,7 @@ impl Matrix4 {
         let z_scale = 1.0 / (far - near);
         let z_move = -near / (far - near);
 
-        Self::from_rows(
+        Self::rows(
             [x_scale, 0.0, 0.0, 0.0],
             [0.0, y_scale, 0.0, 0.0],
             [0.0, 0.0, z_scale, z_move],
@@ -159,7 +159,7 @@ impl Matrix4 {
         let z_scale = 1.0 / (far - near);
         let z_move = -near / (far - near);
 
-        Self::from_rows(
+        Self::rows(
             [x_scale, 0.0, 0.0, -1.0],
             [0.0, y_scale, 0.0, -1.0],
             [0.0, 0.0, z_scale, z_move],
@@ -172,7 +172,7 @@ impl Matrix4 {
         let x_axis = global_up.into().cross(z_axis).unit();
         let y_axis = z_axis.cross(x_axis);
 
-        Self::from_rows(
+        Self::rows(
             [x_axis.x, x_axis.y, x_axis.z, 0.0],
             [y_axis.x, y_axis.y, y_axis.z, 0.0],
             [z_axis.x, z_axis.y, z_axis.z, 0.0],
@@ -329,7 +329,7 @@ impl Mul<Self> for Matrix4 {
         let col_y = self * rhs.col_y;
         let col_z = self * rhs.col_z;
         let col_w = self * rhs.col_w;
-        Self::from_columns(col_x, col_y, col_z, col_w)
+        Self::columns(col_x, col_y, col_z, col_w)
     }
 }
 
@@ -360,7 +360,7 @@ impl From<Quaternion> for Matrix4 {
 
 impl From<[f32; 16]> for Matrix4 {
     fn from(m: [f32; 16]) -> Self {
-        Self::from_columns(
+        Self::columns(
             [m[0], m[1], m[2], m[3]],
             [m[4], m[5], m[6], m[7]],
             [m[8], m[9], m[10], m[11]],
@@ -401,7 +401,7 @@ mod test {
 
     #[test]
     fn from_columns() {
-        let m = Matrix4::from_columns(
+        let m = Matrix4::columns(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -415,7 +415,7 @@ mod test {
 
     #[test]
     fn from_rows() {
-        let m = Matrix4::from_rows(
+        let m = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -429,7 +429,7 @@ mod test {
 
     #[test]
     fn rows() {
-        let m = Matrix4::from_rows(
+        let m = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -500,7 +500,7 @@ mod test {
 
     #[test]
     fn mul_with_vector() {
-        let m = Matrix4::from_rows(
+        let m = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -512,13 +512,13 @@ mod test {
 
     #[test]
     fn mul_with_matrix() {
-        let mut ma = Matrix4::from_rows(
+        let mut ma = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        let mb = Matrix4::from_rows(
+        let mb = Matrix4::rows(
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
             [1.0, 2.0, 3.0, 4.0],

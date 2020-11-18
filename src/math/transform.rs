@@ -125,7 +125,7 @@ impl From<Matrix4> for Transform {
     fn from(m: Matrix4) -> Self {
         let position = Vector3::new(m.col_w.x, m.col_w.y, m.col_w.z);
 
-        let mut i = Matrix3::from_columns(m.col_x.shrink(), m.col_y.shrink(), m.col_z.shrink());
+        let mut i = Matrix3::columns(m.col_x.shrink(), m.col_y.shrink(), m.col_z.shrink());
 
         let sx = i.col_x.length();
         let sy = i.col_y.length();

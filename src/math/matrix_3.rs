@@ -13,7 +13,7 @@ pub struct Matrix3 {
 }
 
 impl Matrix3 {
-    pub fn from_columns(
+    pub fn columns(
         col_x: impl Into<Vector3>,
         col_y: impl Into<Vector3>,
         col_z: impl Into<Vector3>,
@@ -25,7 +25,7 @@ impl Matrix3 {
         }
     }
 
-    pub fn from_rows(
+    pub fn rows(
         row_x: impl Into<Vector3>,
         row_y: impl Into<Vector3>,
         row_z: impl Into<Vector3>,
@@ -34,11 +34,11 @@ impl Matrix3 {
         let ry = row_y.into();
         let rz = row_z.into();
 
-        Self::from_columns([rx.x, ry.x, rz.x], [rx.y, ry.y, rz.y], [rx.z, ry.z, rz.z])
+        Self::columns([rx.x, ry.x, rz.x], [rx.y, ry.y, rz.y], [rx.z, ry.z, rz.z])
     }
 
     pub fn identity() -> Self {
-        Self::from_rows([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
+        Self::rows([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
     }
 
     pub fn determinant(&self) -> f32 {
@@ -68,7 +68,7 @@ mod test {
 
     #[test]
     fn from_columns() {
-        let m = Matrix3::from_columns([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
+        let m = Matrix3::columns([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
         assert_eq!(m.col_x, Vector3::new(1.0, 2.0, 3.0));
         assert_eq!(m.col_y, Vector3::new(5.0, 6.0, 7.0));
         assert_eq!(m.col_z, Vector3::new(8.0, 7.0, 6.0));
@@ -76,7 +76,7 @@ mod test {
 
     #[test]
     fn from_rows() {
-        let m = Matrix3::from_rows([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
+        let m = Matrix3::rows([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
         assert_eq!(m.col_x, Vector3::new(1.0, 5.0, 8.0));
         assert_eq!(m.col_y, Vector3::new(2.0, 6.0, 7.0));
         assert_eq!(m.col_z, Vector3::new(3.0, 7.0, 6.0));
@@ -84,7 +84,7 @@ mod test {
 
     #[test]
     fn rows() {
-        let m = Matrix3::from_rows([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
+        let m = Matrix3::rows([1.0, 2.0, 3.0], [5.0, 6.0, 7.0], [8.0, 7.0, 6.0]);
         assert_eq!(m.row_x(), Vector3::new(1.0, 2.0, 3.0));
         assert_eq!(m.row_y(), Vector3::new(5.0, 6.0, 7.0));
         assert_eq!(m.row_z(), Vector3::new(8.0, 7.0, 6.0));
@@ -100,7 +100,7 @@ mod test {
 
     #[test]
     fn determinant() {
-        let m = Matrix3::from_rows([2.0, 3.0, 1.0], [7.0, 2.0, 3.0], [1.0, 8.0, 4.0]);
+        let m = Matrix3::rows([2.0, 3.0, 1.0], [7.0, 2.0, 3.0], [1.0, 8.0, 4.0]);
         assert_eq!(m.determinant(), -53.0);
     }
 }

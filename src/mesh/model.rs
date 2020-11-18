@@ -297,7 +297,7 @@ impl ModelNode {
         // get transform matrix
         let matrix = {
             let m = node.transform().matrix();
-            Matrix4::from_columns(m[0], m[1], m[2], m[3])
+            Matrix4::columns(m[0], m[1], m[2], m[3])
         };
 
         // get mesh and material
