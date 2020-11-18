@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Target - struct that collects draw calls to be used in a renderer
-
 use std::f32::consts::PI;
 
 use super::Pcf;
@@ -484,11 +482,15 @@ impl<'b> Target<'b> {
         }
 
         // triangulate points
-        let first = points[0].extend(0.0);
+        let first = Vector3::from((points[0], 0.0));
         for i in 2..points.len() {
             self.shape_orders.push(ShapeOrder {
                 color: self.shape_color,
-                points: [first, points[i - 1].extend(0.0), points[i].extend(0.0)],
+                points: [
+                    first,
+                    Vector3::from((points[i - 1], 0.0)),
+                    Vector3::from((points[i], 0.0)),
+                ],
                 transform: self.transform,
                 texture: self.builtins.white_texture.clone(),
                 uvs: [Vector2::ZERO; 3],
@@ -527,7 +529,7 @@ impl<'b> Target<'b> {
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
-            self.transform.position -= (s / 2.0).extend(0.0);
+            self.transform.position -= Vector3::from((s / 2.0, 0.0));
         }
 
         self.draw_shape(&[
@@ -551,7 +553,7 @@ impl<'b> Target<'b> {
         self.push();
 
         if self.shape_mode == ShapeMode::Corner {
-            self.transform.position += s.extend(0.0);
+            self.transform.position += Vector3::from((s, 0.0));
         }
 
         let points: Vec<_> = (0..side_count)
@@ -572,7 +574,7 @@ impl<'b> Target<'b> {
     }
 
     pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
-        let s = size.into().extend(0.0);
+        let s = Vector3::from((size.into(), 0.0));
 
         self.push();
 

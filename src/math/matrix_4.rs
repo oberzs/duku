@@ -1,8 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// 4x4 matrix struct
-
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::MulAssign;
 
@@ -14,37 +14,37 @@ use super::Vector4;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Matrix4 {
-    pub col_x: Vector4,
-    pub col_y: Vector4,
-    pub col_z: Vector4,
-    pub col_w: Vector4,
+    pub x: Vector4,
+    pub y: Vector4,
+    pub z: Vector4,
+    pub w: Vector4,
 }
 
 impl Matrix4 {
     pub fn columns(
-        col_x: impl Into<Vector4>,
-        col_y: impl Into<Vector4>,
-        col_z: impl Into<Vector4>,
-        col_w: impl Into<Vector4>,
+        x: impl Into<Vector4>,
+        y: impl Into<Vector4>,
+        z: impl Into<Vector4>,
+        w: impl Into<Vector4>,
     ) -> Self {
         Self {
-            col_x: col_x.into(),
-            col_y: col_y.into(),
-            col_z: col_z.into(),
-            col_w: col_w.into(),
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
+            w: w.into(),
         }
     }
 
     pub fn rows(
-        row_x: impl Into<Vector4>,
-        row_y: impl Into<Vector4>,
-        row_z: impl Into<Vector4>,
-        row_w: impl Into<Vector4>,
+        x: impl Into<Vector4>,
+        y: impl Into<Vector4>,
+        z: impl Into<Vector4>,
+        w: impl Into<Vector4>,
     ) -> Self {
-        let rx = row_x.into();
-        let ry = row_y.into();
-        let rz = row_z.into();
-        let rw = row_w.into();
+        let rx = x.into();
+        let ry = y.into();
+        let rz = z.into();
+        let rw = w.into();
 
         Self::columns(
             [rx.x, ry.x, rz.x, rw.x],
@@ -275,24 +275,50 @@ impl Matrix4 {
         Some(Self::from(inv) * det)
     }
 
-    pub const fn row_x(&self) -> Vector4 {
-        Vector4::new(self.col_x.x, self.col_y.x, self.col_z.x, self.col_w.x)
+    pub const fn rx(&self) -> Vector4 {
+        Vector4::new(self.x.x, self.y.x, self.z.x, self.w.x)
     }
 
-    pub const fn row_y(&self) -> Vector4 {
-        Vector4::new(self.col_x.y, self.col_y.y, self.col_z.y, self.col_w.y)
+    pub const fn ry(&self) -> Vector4 {
+        Vector4::new(self.x.y, self.y.y, self.z.y, self.w.y)
     }
 
-    pub const fn row_z(&self) -> Vector4 {
-        Vector4::new(self.col_x.z, self.col_y.z, self.col_z.z, self.col_w.z)
+    pub const fn rz(&self) -> Vector4 {
+        Vector4::new(self.x.z, self.y.z, self.z.z, self.w.z)
     }
 
-    pub const fn row_w(&self) -> Vector4 {
-        Vector4::new(self.col_x.w, self.col_y.w, self.col_z.w, self.col_w.w)
+    pub const fn rw(&self) -> Vector4 {
+        Vector4::new(self.x.w, self.y.w, self.z.w, self.w.w)
     }
 
     pub fn transform_vector(&self, vector: Vector3) -> Vector3 {
-        (*self * vector.extend(1.0)).shrink()
+        (*self * Vector4::from((vector, 1.0))).xyz()
+    }
+}
+
+impl Index<usize> for Matrix4 {
+    type Output = Vector4;
+
+    fn index(&self, index: usize) -> &Vector4 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("index out of range {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Matrix4 {
+    fn index_mut(&mut self, index: usize) -> &mut Vector4 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("index out of range {}", index),
+        }
     }
 }
 
@@ -301,10 +327,10 @@ impl Mul<f32> for Matrix4 {
 
     fn mul(self, rhs: f32) -> Self::Output {
         let mut m = self;
-        m.col_x *= rhs;
-        m.col_y *= rhs;
-        m.col_z *= rhs;
-        m.col_w *= rhs;
+        m.x *= rhs;
+        m.y *= rhs;
+        m.z *= rhs;
+        m.w *= rhs;
         m
     }
 }
@@ -313,10 +339,10 @@ impl Mul<Vector4> for Matrix4 {
     type Output = Vector4;
 
     fn mul(self, rhs: Vector4) -> Self::Output {
-        let x = self.row_x().dot(rhs);
-        let y = self.row_y().dot(rhs);
-        let z = self.row_z().dot(rhs);
-        let w = self.row_w().dot(rhs);
+        let x = self.rx().dot(rhs);
+        let y = self.ry().dot(rhs);
+        let z = self.rz().dot(rhs);
+        let w = self.rw().dot(rhs);
         Vector4::new(x, y, z, w)
     }
 }
@@ -325,11 +351,11 @@ impl Mul<Self> for Matrix4 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        let col_x = self * rhs.col_x;
-        let col_y = self * rhs.col_y;
-        let col_z = self * rhs.col_z;
-        let col_w = self * rhs.col_w;
-        Self::columns(col_x, col_y, col_z, col_w)
+        let x = self * rhs.x;
+        let y = self * rhs.y;
+        let z = self * rhs.z;
+        let w = self * rhs.w;
+        Self::columns(x, y, z, w)
     }
 }
 
@@ -372,22 +398,8 @@ impl From<[f32; 16]> for Matrix4 {
 impl Into<[f32; 16]> for Matrix4 {
     fn into(self) -> [f32; 16] {
         [
-            self.col_x.x,
-            self.col_x.y,
-            self.col_x.z,
-            self.col_x.w,
-            self.col_y.x,
-            self.col_y.y,
-            self.col_y.z,
-            self.col_y.w,
-            self.col_z.x,
-            self.col_z.y,
-            self.col_z.z,
-            self.col_z.w,
-            self.col_w.x,
-            self.col_w.y,
-            self.col_w.z,
-            self.col_w.w,
+            self.x.x, self.x.y, self.x.z, self.x.w, self.y.x, self.y.y, self.y.z, self.y.w,
+            self.z.x, self.z.y, self.z.z, self.z.w, self.w.x, self.w.y, self.w.z, self.w.w,
         ]
     }
 }
@@ -400,31 +412,17 @@ mod test {
     use super::Vector4;
 
     #[test]
-    fn from_columns() {
+    fn columns() {
         let m = Matrix4::columns(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        assert_eq!(m.col_x, Vector4::new(1.0, 2.0, 3.0, 4.0));
-        assert_eq!(m.col_y, Vector4::new(5.0, 6.0, 7.0, 8.0));
-        assert_eq!(m.col_z, Vector4::new(8.0, 7.0, 6.0, 5.0));
-        assert_eq!(m.col_w, Vector4::new(4.0, 3.0, 2.0, 1.0));
-    }
-
-    #[test]
-    fn from_rows() {
-        let m = Matrix4::rows(
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [8.0, 7.0, 6.0, 5.0],
-            [4.0, 3.0, 2.0, 1.0],
-        );
-        assert_eq!(m.col_x, Vector4::new(1.0, 5.0, 8.0, 4.0));
-        assert_eq!(m.col_y, Vector4::new(2.0, 6.0, 7.0, 3.0));
-        assert_eq!(m.col_z, Vector4::new(3.0, 7.0, 6.0, 2.0));
-        assert_eq!(m.col_w, Vector4::new(4.0, 8.0, 5.0, 1.0));
+        assert_eq!(m.x, Vector4::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(m.y, Vector4::new(5.0, 6.0, 7.0, 8.0));
+        assert_eq!(m.z, Vector4::new(8.0, 7.0, 6.0, 5.0));
+        assert_eq!(m.w, Vector4::new(4.0, 3.0, 2.0, 1.0));
     }
 
     #[test]
@@ -435,19 +433,24 @@ mod test {
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        assert_eq!(m.row_x(), Vector4::new(1.0, 2.0, 3.0, 4.0));
-        assert_eq!(m.row_y(), Vector4::new(5.0, 6.0, 7.0, 8.0));
-        assert_eq!(m.row_z(), Vector4::new(8.0, 7.0, 6.0, 5.0));
-        assert_eq!(m.row_w(), Vector4::new(4.0, 3.0, 2.0, 1.0));
+        assert_eq!(m.x, Vector4::new(1.0, 5.0, 8.0, 4.0));
+        assert_eq!(m.y, Vector4::new(2.0, 6.0, 7.0, 3.0));
+        assert_eq!(m.z, Vector4::new(3.0, 7.0, 6.0, 2.0));
+        assert_eq!(m.w, Vector4::new(4.0, 8.0, 5.0, 1.0));
+
+        assert_eq!(m.rx(), Vector4::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(m.ry(), Vector4::new(5.0, 6.0, 7.0, 8.0));
+        assert_eq!(m.rz(), Vector4::new(8.0, 7.0, 6.0, 5.0));
+        assert_eq!(m.rw(), Vector4::new(4.0, 3.0, 2.0, 1.0));
     }
 
     #[test]
     fn identity() {
         let m = Matrix4::identity();
-        assert_eq!(m.row_x(), Vector4::new(1.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, 1.0, 0.0, 0.0));
-        assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, 0.0));
-        assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(m.rx(), Vector4::new(1.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, 0.0));
+        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
@@ -474,28 +477,28 @@ mod test {
     #[test]
     fn perspective() {
         let m = Matrix4::perspective(90.0, 1.0, 0.0, 100.0);
-        assert_eq!(m.row_x(), Vector4::new(1.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, 1.0, 0.0, 0.0));
-        assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, -0.0));
-        assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 1.0, 0.0));
+        assert_eq!(m.rx(), Vector4::new(1.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, -0.0));
+        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 1.0, 0.0));
     }
 
     #[test]
     fn orthographic_center() {
         let m = Matrix4::orthographic_center(1.0, 1.0, 0.0, 1.0);
-        assert_eq!(m.row_x(), Vector4::new(2.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, 2.0, 0.0, 0.0));
-        assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, 1.0, -0.0));
-        assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(m.rx(), Vector4::new(2.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vector4::new(0.0, 2.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, -0.0));
+        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
     fn look_rotation() {
         let m = Matrix4::look_rotation([0.0, 0.0, -1.0], [0.0, 1.0, 0.0]);
-        assert_eq!(m.row_x(), Vector4::new(-1.0, 0.0, 0.0, -0.0));
-        assert_eq!(m.row_y(), Vector4::new(0.0, 1.0, 0.0, -0.0));
-        assert_eq!(m.row_z(), Vector4::new(0.0, 0.0, -1.0, -0.0));
-        assert_eq!(m.row_w(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(m.rx(), Vector4::new(-1.0, 0.0, 0.0, -0.0));
+        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, -0.0));
+        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, -1.0, -0.0));
+        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
@@ -526,14 +529,14 @@ mod test {
         );
         let r = ma * mb;
         ma *= mb;
-        assert_eq!(r.row_x(), Vector4::new(39.0, 43.0, 47.0, 51.0));
-        assert_eq!(r.row_y(), Vector4::new(111.0, 115.0, 119.0, 123.0));
-        assert_eq!(r.row_z(), Vector4::new(123.0, 119.0, 115.0, 111.0));
-        assert_eq!(r.row_w(), Vector4::new(51.0, 47.0, 43.0, 39.0));
-        assert_eq!(ma.row_x(), Vector4::new(39.0, 43.0, 47.0, 51.0));
-        assert_eq!(ma.row_y(), Vector4::new(111.0, 115.0, 119.0, 123.0));
-        assert_eq!(ma.row_z(), Vector4::new(123.0, 119.0, 115.0, 111.0));
-        assert_eq!(ma.row_w(), Vector4::new(51.0, 47.0, 43.0, 39.0));
+        assert_eq!(r.rx(), Vector4::new(39.0, 43.0, 47.0, 51.0));
+        assert_eq!(r.ry(), Vector4::new(111.0, 115.0, 119.0, 123.0));
+        assert_eq!(r.rz(), Vector4::new(123.0, 119.0, 115.0, 111.0));
+        assert_eq!(r.rw(), Vector4::new(51.0, 47.0, 43.0, 39.0));
+        assert_eq!(ma.rx(), Vector4::new(39.0, 43.0, 47.0, 51.0));
+        assert_eq!(ma.ry(), Vector4::new(111.0, 115.0, 119.0, 123.0));
+        assert_eq!(ma.rz(), Vector4::new(123.0, 119.0, 115.0, 111.0));
+        assert_eq!(ma.rw(), Vector4::new(51.0, 47.0, 43.0, 39.0));
     }
 
     #[test]

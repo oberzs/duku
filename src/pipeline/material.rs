@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Material - struct to pass additional data to shader
-
 use super::Descriptor;
 use super::ShaderMaterial;
 use super::Uniforms;
@@ -13,7 +11,6 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
-use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::storage::Handle;
 use crate::storage::Storage;
@@ -60,7 +57,8 @@ impl Material {
     }
 
     pub fn set_albedo_color(&mut self, color: impl Into<Color>) {
-        self.arg_1 = Vector3::from(color.into()).extend(self.arg_1.w);
+        let c = color.into();
+        self.arg_1 = Vector4::from((c.into(), self.arg_1.w));
         self.should_update = true;
     }
 
@@ -85,7 +83,8 @@ impl Material {
     }
 
     pub fn set_emissive(&mut self, color: impl Into<Color>) {
-        self.arg_4 = Vector3::from(color.into()).extend(self.arg_4.w);
+        let c = color.into();
+        self.arg_4 = Vector4::from((c.into(), self.arg_4.w));
         self.should_update = true;
     }
 
@@ -112,7 +111,7 @@ impl Material {
     pub fn fix_albedo_color_space(&mut self) {
         let old = Color::rgb_norm(self.arg_1.x, self.arg_1.y, self.arg_1.z);
         let new = old.to_linear();
-        self.arg_1 = Vector3::from(new).extend(self.arg_1.w);
+        self.arg_1 = Vector4::from((new.into(), self.arg_1.w));
         self.should_update = true;
     }
 

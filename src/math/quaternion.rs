@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// quaternion rotation struct
-
 use super::Matrix3;
 use super::Matrix4;
 use super::Vector3;
@@ -52,36 +50,33 @@ impl Quaternion {
     }
 
     pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
-        let matrix = Matrix4::look_rotation(dir, global_up);
-        let col_x = matrix.col_x;
-        let col_y = matrix.col_y;
-        let col_z = matrix.col_z;
+        let m = Matrix4::look_rotation(dir, global_up);
 
         let mut result = Self::default();
-        let trace = col_x.x + col_y.y + col_z.z;
+        let trace = m.x.x + m.y.y + m.z.z;
         if trace > 0.0 {
             let s = 0.5 / (trace + 1.0).sqrt();
             result.w = 0.25 / s;
-            result.x = (col_z.y - col_y.z) * s;
-            result.y = (col_x.z - col_z.x) * s;
-            result.z = (col_y.x - col_x.y) * s;
-        } else if col_x.x > col_y.y && col_x.x > col_z.z {
-            let s = 2.0 * (1.0 + col_x.x - col_y.y - col_z.z).sqrt();
-            result.w = (col_z.y - col_y.z) / s;
+            result.x = (m.z.y - m.y.z) * s;
+            result.y = (m.x.z - m.z.x) * s;
+            result.z = (m.y.x - m.x.y) * s;
+        } else if m.x.x > m.y.y && m.x.x > m.z.z {
+            let s = 2.0 * (1.0 + m.x.x - m.y.y - m.z.z).sqrt();
+            result.w = (m.z.y - m.y.z) / s;
             result.x = 0.25 * s;
-            result.y = (col_x.y + col_y.x) / s;
-            result.z = (col_x.z + col_z.x) / s;
-        } else if col_y.y > col_z.z {
-            let s = 2.0 * (1.0 + col_y.y - col_x.x - col_z.z).sqrt();
-            result.w = (col_x.z - col_z.x) / s;
-            result.x = (col_x.y + col_y.x) / s;
+            result.y = (m.x.y + m.y.x) / s;
+            result.z = (m.x.z + m.z.x) / s;
+        } else if m.y.y > m.z.z {
+            let s = 2.0 * (1.0 + m.y.y - m.x.x - m.z.z).sqrt();
+            result.w = (m.x.z - m.z.x) / s;
+            result.x = (m.x.y + m.y.x) / s;
             result.y = 0.25 * s;
-            result.z = (col_y.z + col_z.y) / s;
+            result.z = (m.y.z + m.z.y) / s;
         } else {
-            let s = 2.0 * (1.0 + col_z.z - col_x.x - col_y.y).sqrt();
-            result.w = (col_y.x - col_x.y) / s;
-            result.x = (col_x.z + col_z.x) / s;
-            result.y = (col_y.z + col_z.y) / s;
+            let s = 2.0 * (1.0 + m.z.z - m.x.x - m.y.y).sqrt();
+            result.w = (m.y.x - m.x.y) / s;
+            result.x = (m.x.z + m.z.x) / s;
+            result.y = (m.y.z + m.z.y) / s;
             result.z = 0.25 * s;
         }
         result
@@ -138,13 +133,13 @@ impl From<Matrix3> for Quaternion {
             }
         }
 
-        let qw = pos(1.0 + m.col_x.x + m.col_y.y + m.col_z.z).sqrt() / 2.0;
-        let mut qx = pos(1.0 + m.col_x.x - m.col_y.y - m.col_z.z).sqrt() / 2.0;
-        let mut qy = pos(1.0 - m.col_x.x + m.col_y.y - m.col_z.z).sqrt() / 2.0;
-        let mut qz = pos(1.0 - m.col_x.x - m.col_y.y + m.col_z.z).sqrt() / 2.0;
-        qx = qx.copysign(m.col_z.y - m.col_y.z);
-        qy = -qy.copysign(m.col_x.z - m.col_z.x);
-        qz = qz.copysign(m.col_y.x - m.col_x.y);
+        let qw = pos(1.0 + m.x.x + m.y.y + m.z.z).sqrt() / 2.0;
+        let mut qx = pos(1.0 + m.x.x - m.y.y - m.z.z).sqrt() / 2.0;
+        let mut qy = pos(1.0 - m.x.x + m.y.y - m.z.z).sqrt() / 2.0;
+        let mut qz = pos(1.0 - m.x.x - m.y.y + m.z.z).sqrt() / 2.0;
+        qx = qx.copysign(m.z.y - m.y.z);
+        qy = -qy.copysign(m.x.z - m.z.x);
+        qz = qz.copysign(m.y.x - m.x.y);
 
         Self::new(qx, qy, qz, qw)
     }

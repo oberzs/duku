@@ -123,18 +123,18 @@ impl Default for Transform {
 
 impl From<Matrix4> for Transform {
     fn from(m: Matrix4) -> Self {
-        let position = Vector3::new(m.col_w.x, m.col_w.y, m.col_w.z);
+        let position = Vector3::new(m.w.x, m.w.y, m.w.z);
 
-        let mut i = Matrix3::columns(m.col_x.shrink(), m.col_y.shrink(), m.col_z.shrink());
+        let mut i = Matrix3::columns(m.x.xyz(), m.y.xyz(), m.z.xyz());
 
-        let sx = i.col_x.length();
-        let sy = i.col_y.length();
-        let sz = i.col_z.length() * i.determinant().signum();
+        let sx = i.x.length();
+        let sy = i.y.length();
+        let sz = i.z.length() * i.determinant().signum();
         let scale = Vector3::new(sx, sy, sz);
 
-        i.col_x *= 1.0 / sx;
-        i.col_y *= 1.0 / sy;
-        i.col_z *= 1.0 / sz;
+        i.x *= 1.0 / sx;
+        i.y *= 1.0 / sy;
+        i.z *= 1.0 / sz;
 
         let rotation = Quaternion::from(i);
 

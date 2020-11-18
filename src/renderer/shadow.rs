@@ -155,8 +155,8 @@ impl ShadowRenderer {
             let rounded_origin = shadow_origin.round();
             let mut round_offset = rounded_origin - shadow_origin;
             round_offset *= 2.0 / self.map_size as f32;
-            light_ortho_matrix.col_w.x += round_offset.x;
-            light_ortho_matrix.col_w.y += round_offset.y;
+            light_ortho_matrix.w.x += round_offset.x;
+            light_ortho_matrix.w.y += round_offset.y;
             let light_matrix = light_ortho_matrix * light_view_matrix;
 
             params.world_to_shadow[i] = light_matrix;
@@ -312,8 +312,8 @@ fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
 
     // get projection frustum corners from NDC
     for corner in &mut frustum_corners {
-        let point = inverse_projection * corner.extend(1.0);
-        *corner = point.shrink() / point.w;
+        let point = inverse_projection * Vector4::from((*corner, 0.0));
+        *corner = point.xyz() / point.w;
     }
 
     // cut out a section (near -> far) from the frustum

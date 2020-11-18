@@ -256,8 +256,8 @@ impl ForwardRenderer {
         let mut indices = vec![];
         for order in line_orders {
             let matrix = Matrix4::from(order.transform);
-            let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
-            let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
+            let point_1 = matrix.transform_vector(order.points[0]);
+            let point_2 = matrix.transform_vector(order.points[1]);
             let o = vertices.len() as u32;
             vertices.extend(&[point_1, point_2]);
             colors.extend(&[order.color, order.color]);
@@ -301,9 +301,9 @@ impl ForwardRenderer {
         let mut indices = vec![];
         for order in shape_orders {
             let matrix = Matrix4::from(order.transform);
-            let point_1 = (matrix * order.points[0].extend(1.0)).shrink();
-            let point_2 = (matrix * order.points[1].extend(1.0)).shrink();
-            let point_3 = (matrix * order.points[2].extend(1.0)).shrink();
+            let point_1 = matrix.transform_vector(order.points[0]);
+            let point_2 = matrix.transform_vector(order.points[1]);
+            let point_3 = matrix.transform_vector(order.points[2]);
             let texture = target.storage.textures.get(&order.texture).shader_index();
             let sampler = order.sampler_index;
             let o = vertices.len() as u32;

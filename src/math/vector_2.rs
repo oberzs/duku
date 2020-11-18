@@ -7,13 +7,13 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::DivAssign;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::MulAssign;
 use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
-
-use super::Vector3;
 
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -67,10 +67,6 @@ impl Vector2 {
         Self::new(self.x.round(), self.y.round())
     }
 
-    pub const fn extend(&self, z: f32) -> Vector3 {
-        Vector3::new(self.x, self.y, z)
-    }
-
     pub const UP: Self = Self::new(0.0, 1.0);
     pub const DOWN: Self = Self::new(0.0, -1.0);
     pub const LEFT: Self = Self::new(-1.0, 0.0);
@@ -81,6 +77,28 @@ impl Vector2 {
 impl From<[f32; 2]> for Vector2 {
     fn from(a: [f32; 2]) -> Self {
         Self::new(a[0], a[1])
+    }
+}
+
+impl Index<usize> for Vector2 {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            _ => panic!("index out of range {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vector2 {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            _ => panic!("index out of range {}", index),
+        }
     }
 }
 
@@ -152,7 +170,6 @@ impl DivAssign<f32> for Vector2 {
 #[allow(clippy::float_cmp)]
 mod test {
     use super::Vector2;
-    use super::Vector3;
 
     #[test]
     fn default() {
@@ -185,12 +202,6 @@ mod test {
     fn unit() {
         let v = Vector2::new(3.0, 4.0);
         assert_eq!(v.unit(), Vector2::new(0.6, 0.8));
-    }
-
-    #[test]
-    fn extend() {
-        let v = Vector2::new(2.0, 5.5);
-        assert_eq!(v.extend(4.7), Vector3::new(2.0, 5.5, 4.7));
     }
 
     #[test]

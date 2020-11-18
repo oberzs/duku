@@ -45,7 +45,7 @@ fn main() -> Result<()> {
 fn star(target: &mut Target<'_>, position: impl Into<Vector2>, color: impl Into<Color>) {
     target.push();
 
-    target.transform.move_by(position.into().extend(0.0));
+    target.transform.move_by((position.into(), 0.0));
     target.line_color = color.into();
 
     let r = 20.0;

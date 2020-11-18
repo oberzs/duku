@@ -8,6 +8,8 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::DivAssign;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::MulAssign;
 use std::ops::Neg;
@@ -15,7 +17,6 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use super::Vector2;
-use super::Vector4;
 use crate::color::Color;
 
 #[repr(C)]
@@ -73,11 +74,7 @@ impl Vector3 {
         o.unit() * projected_length
     }
 
-    pub const fn extend(&self, w: f32) -> Vector4 {
-        Vector4::new(self.x, self.y, self.z, w)
-    }
-
-    pub const fn shrink(&self) -> Vector2 {
+    pub const fn xy(&self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
@@ -108,9 +105,39 @@ impl From<[f32; 3]> for Vector3 {
     }
 }
 
+impl From<(Vector2, f32)> for Vector3 {
+    fn from(v: (Vector2, f32)) -> Self {
+        Self::new(v.0.x, v.0.y, v.1)
+    }
+}
+
 impl From<Color> for Vector3 {
     fn from(c: Color) -> Self {
         Self::from(c.to_rgb_norm())
+    }
+}
+
+impl Index<usize> for Vector3 {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("index out of range {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vector3 {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("index out of range {}", index),
+        }
     }
 }
 
@@ -192,7 +219,6 @@ impl DivAssign<f32> for Vector3 {
 mod test {
     use super::Vector2;
     use super::Vector3;
-    use super::Vector4;
 
     #[test]
     fn default() {
@@ -244,15 +270,9 @@ mod test {
     }
 
     #[test]
-    fn extend() {
-        let v = Vector3::new(2.0, 5.5, 1.0);
-        assert_eq!(v.extend(4.7), Vector4::new(2.0, 5.5, 1.0, 4.7));
-    }
-
-    #[test]
-    fn shrink() {
+    fn xy() {
         let v = Vector3::new(1.0, 3.0, 2.0);
-        assert_eq!(v.shrink(), Vector2::new(1.0, 3.0));
+        assert_eq!(v.xy(), Vector2::new(1.0, 3.0));
     }
 
     #[test]

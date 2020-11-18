@@ -7,12 +7,15 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::DivAssign;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::MulAssign;
 use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
+use super::Vector2;
 use super::Vector3;
 use crate::color::Color;
 
@@ -35,7 +38,11 @@ impl Vector4 {
         self.x * o.x + self.y * o.y + self.z * o.z + self.w * o.w
     }
 
-    pub const fn shrink(self) -> Vector3 {
+    pub const fn xy(self) -> Vector2 {
+        Vector2::new(self.x, self.y)
+    }
+
+    pub const fn xyz(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 
@@ -73,6 +80,38 @@ impl From<[f32; 4]> for Vector4 {
 impl From<Color> for Vector4 {
     fn from(c: Color) -> Self {
         Self::from(c.to_rgba_norm())
+    }
+}
+
+impl From<(Vector3, f32)> for Vector4 {
+    fn from(v: (Vector3, f32)) -> Self {
+        Self::new(v.0.x, v.0.y, v.0.z, v.1)
+    }
+}
+
+impl Index<usize> for Vector4 {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("index out of range {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vector4 {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("index out of range {}", index),
+        }
     }
 }
 
@@ -153,7 +192,6 @@ impl DivAssign<f32> for Vector4 {
 #[cfg(test)]
 #[allow(clippy::float_cmp)]
 mod test {
-    use super::Vector3;
     use super::Vector4;
 
     #[test]
@@ -179,12 +217,6 @@ mod test {
         let a = Vector4::new(1.0, 2.0, 3.0, 1.0);
         let b = Vector4::new(5.0, 6.0, 7.0, 1.0);
         assert_eq!(a.dot(b), 39.0);
-    }
-
-    #[test]
-    fn shrink() {
-        let v = Vector4::new(1.0, 3.0, 2.0, 4.0);
-        assert_eq!(v.shrink(), Vector3::new(1.0, 3.0, 2.0));
     }
 
     #[test]
