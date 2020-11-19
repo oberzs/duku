@@ -248,10 +248,10 @@ impl Model {
                 .unwrap_or(Ok(0.0))?;
 
             let mut mat = Material::new(device, uniforms)?;
-            mat.set_arg_1([albedo[0], albedo[1], albedo[2], albedo_tex]);
-            mat.set_arg_2([metalness, roughness, met_rough_tex, occlusion_tex]);
-            mat.set_arg_3([normal_tex, emissive_tex, 0.0, 0.0]);
-            mat.set_arg_4([emissive[0], emissive[1], emissive[2], 0.0]);
+            mat.set_a([albedo[0], albedo[1], albedo[2], albedo_tex]);
+            mat.set_b([metalness, roughness, met_rough_tex, occlusion_tex]);
+            mat.set_c([normal_tex, emissive_tex]);
+            mat.set_d(emissive);
             mat.update_if_needed();
 
             materials.insert(material.index().unwrap_or(0), storage.add_material(mat));

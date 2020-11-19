@@ -11,7 +11,7 @@
   </span>
   <!-- Rust Version -->
   <a href="https://www.rust-lang.org/">
-    <img src="https://img.shields.io/badge/rust-1.47.0-orange?style=flat-square" alt="Rust Version" />
+    <img src="https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
   <a href="https://github.com/oberzs/duku/blob/develop/LICENSE">

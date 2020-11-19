@@ -56,10 +56,10 @@ impl Mesh {
         let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
 
         Self {
-            vertices: vec![Vector3::ZERO; 1],
-            uvs: vec![Vector2::ZERO; 1],
-            normals: vec![Vector3::ZERO; 1],
-            tangents: vec![Vector3::ZERO; 1],
+            vertices: vec![Vector3::default(); 1],
+            uvs: vec![Vector2::default(); 1],
+            normals: vec![Vector3::default(); 1],
+            tangents: vec![Vector3::default(); 1],
             colors: vec![Color::WHITE; 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
@@ -105,7 +105,7 @@ impl Mesh {
     }
 
     pub fn calculate_normals(&mut self) {
-        self.normals = vec![Vector3::ZERO; self.vertices.len()];
+        self.normals = vec![Vector3::default(); self.vertices.len()];
 
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
@@ -136,7 +136,7 @@ impl Mesh {
     }
 
     pub fn calculate_tangents(&mut self) {
-        self.tangents = vec![Vector3::ZERO; self.vertices.len()];
+        self.tangents = vec![Vector3::default(); self.vertices.len()];
 
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
@@ -150,9 +150,9 @@ impl Mesh {
                 let vtx_c = self.vertices[c];
 
                 // get uvs
-                let uv_a = self.uvs.get(a).copied().unwrap_or(Vector2::ZERO);
-                let uv_b = self.uvs.get(b).copied().unwrap_or(Vector2::ZERO);
-                let uv_c = self.uvs.get(c).copied().unwrap_or(Vector2::ZERO);
+                let uv_a = self.uvs.get(a).copied().unwrap_or(Vector2::default());
+                let uv_b = self.uvs.get(b).copied().unwrap_or(Vector2::default());
+                let uv_c = self.uvs.get(c).copied().unwrap_or(Vector2::default());
 
                 // calculate tangent
                 let edge_1 = vtx_b - vtx_a;
@@ -262,9 +262,13 @@ impl Mesh {
             let vertices: Vec<_> = self
                 .vertices
                 .iter()
-                .zip(self.uvs.iter().chain(iter::repeat(&Vector2::ZERO)))
-                .zip(self.normals.iter().chain(iter::repeat(&Vector3::ZERO)))
-                .zip(self.tangents.iter().chain(iter::repeat(&Vector3::ZERO)))
+                .zip(self.uvs.iter().chain(iter::repeat(&Vector2::default())))
+                .zip(self.normals.iter().chain(iter::repeat(&Vector3::default())))
+                .zip(
+                    self.tangents
+                        .iter()
+                        .chain(iter::repeat(&Vector3::default())),
+                )
                 .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
                 .zip(self.textures.iter().chain(iter::repeat(&0)))
                 .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {

@@ -46,14 +46,14 @@ pub(crate) struct ShaderWorld {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct ShaderMaterial {
-    pub(crate) arg_1: Vector4,
-    pub(crate) arg_2: Vector4,
-    pub(crate) arg_3: Vector4,
-    pub(crate) arg_4: Vector4,
-    pub(crate) arg_5: Vector4,
-    pub(crate) arg_6: Vector4,
-    pub(crate) arg_7: Vector4,
-    pub(crate) arg_8: Vector4,
+    pub(crate) a: Vector4,
+    pub(crate) b: Vector4,
+    pub(crate) c: Vector4,
+    pub(crate) d: Vector4,
+    pub(crate) e: Vector4,
+    pub(crate) f: Vector4,
+    pub(crate) g: Vector4,
+    pub(crate) h: Vector4,
 }
 
 #[derive(Default, Copy, Clone)]

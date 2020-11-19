@@ -66,16 +66,16 @@ float self_shadowing(float n_dot_v, float n_dot_l, float roughness) {
 }
 
 void fragment() {
-    vec4 albedo_tex = tex(int(material.arg_1.a), in_uv);
-    vec4 met_rough_tex = tex(int(material.arg_2.b), in_uv);
-    float ambient_occlusion = tex(int(material.arg_2.a), in_uv).r;
-    vec3 emissive = tex(int(material.arg_3.g), in_uv).rgb * material.arg_4.rgb;
-    vec3 albedo = material.arg_1.rgb * albedo_tex.rgb;
-    float metalness = material.arg_2.r * met_rough_tex.b;
-    float roughness = material.arg_2.g * met_rough_tex.g;
+    vec4 albedo_tex = tex(int(material.a.a), in_uv);
+    vec4 met_rough_tex = tex(int(material.b.b), in_uv);
+    float ambient_occlusion = tex(int(material.b.a), in_uv).r;
+    vec3 emissive = tex(int(material.c.g), in_uv).rgb * material.d.rgb;
+    vec3 albedo = material.a.rgb * albedo_tex.rgb;
+    float metalness = material.b.r * met_rough_tex.b;
+    float roughness = material.b.g * met_rough_tex.g;
 
     // calculate normal and view direction
-    vec3 normal = tex(int(material.arg_3.r), in_uv).xyz * (255.0 / 128.0) - 1.0;
+    vec3 normal = tex(int(material.c.r), in_uv).xyz * (255.0 / 128.0) - 1.0;
     normal = normalize(in_tbn * normal);
     vec3 view_dir = normalize(world.camera_position - in_world_position);
 

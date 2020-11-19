@@ -68,11 +68,4 @@ impl Light {
             light_type,
         }
     }
-
-    pub(crate) const NONE: Self = Self {
-        light_type: LightType::Point,
-        coords: Vector3::ZERO,
-        color: Color::BLACK,
-        brightness: 0.0,
-    };
 }

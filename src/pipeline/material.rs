@@ -1,6 +1,9 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+use std::ops::Index;
+use std::ops::IndexMut;
+
 use super::Descriptor;
 use super::ShaderMaterial;
 use super::Uniforms;
@@ -11,25 +14,29 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
-use crate::math::Vector4;
+use crate::math::Vector2;
+use crate::math::Vector3;
 use crate::storage::Handle;
 use crate::storage::Storage;
 
 pub struct Material {
-    arg_1: Vector4,
-    arg_2: Vector4,
-    arg_3: Vector4,
-    arg_4: Vector4,
-    arg_5: Vector4,
-    arg_6: Vector4,
-    arg_7: Vector4,
-    arg_8: Vector4,
+    a: MaterialParam,
+    b: MaterialParam,
+    c: MaterialParam,
+    d: MaterialParam,
+    e: MaterialParam,
+    f: MaterialParam,
+    g: MaterialParam,
+    h: MaterialParam,
 
     should_update: bool,
 
     descriptor: Descriptor,
     buffer: Buffer<ShaderMaterial>,
 }
+
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
+pub struct MaterialParam(pub [f32; 4]);
 
 pub struct MaterialBuilder<'s> {
     pub(crate) storage: &'s mut Storage,
@@ -42,14 +49,14 @@ impl Material {
         let descriptor = uniforms.material_set(device, &buffer)?;
 
         Ok(Self {
-            arg_1: Vector4::ZERO,
-            arg_2: Vector4::ZERO,
-            arg_3: Vector4::ZERO,
-            arg_4: Vector4::ZERO,
-            arg_5: Vector4::ZERO,
-            arg_6: Vector4::ZERO,
-            arg_7: Vector4::ZERO,
-            arg_8: Vector4::ZERO,
+            a: MaterialParam::default(),
+            b: MaterialParam::default(),
+            c: MaterialParam::default(),
+            d: MaterialParam::default(),
+            e: MaterialParam::default(),
+            f: MaterialParam::default(),
+            g: MaterialParam::default(),
+            h: MaterialParam::default(),
             should_update: true,
             buffer,
             descriptor,
@@ -57,115 +64,119 @@ impl Material {
     }
 
     pub fn set_albedo_color(&mut self, color: impl Into<Color>) {
-        let c = color.into();
-        self.arg_1 = Vector4::from((c.into(), self.arg_1.w));
+        let temp = self.a[3];
+        self.a = MaterialParam::from(color.into());
+        self.a[3] = temp;
         self.should_update = true;
     }
 
     pub fn set_albedo_texture(&mut self, texture: &Handle<Texture>) {
-        self.arg_1.w = texture.id() as f32;
+        self.a[3] = texture.id() as f32;
         self.should_update = true;
     }
 
     pub fn set_albedo_framebuffer(&mut self, f: &Handle<Framebuffer>) {
-        self.arg_1.w = f.id() as f32;
+        self.a[3] = f.id() as f32;
         self.should_update = true;
     }
 
     pub fn set_metalness(&mut self, value: f32) {
-        self.arg_2.x = value;
+        self.b[0] = value;
         self.should_update = true;
     }
 
     pub fn set_roughness(&mut self, value: f32) {
-        self.arg_2.y = value;
+        self.b[1] = value;
         self.should_update = true;
     }
 
     pub fn set_emissive(&mut self, color: impl Into<Color>) {
-        let c = color.into();
-        self.arg_4 = Vector4::from((c.into(), self.arg_4.w));
+        let temp = self.d[3];
+        self.d = MaterialParam::from(color.into());
+        self.d[3] = temp;
         self.should_update = true;
     }
 
     pub fn set_metalness_roughness_texture(&mut self, texture: &Handle<Texture>) {
-        self.arg_2.z = texture.id() as f32;
+        self.b[2] = texture.id() as f32;
         self.should_update = true;
     }
 
     pub fn set_ambient_occlusion_texture(&mut self, texture: &Handle<Texture>) {
-        self.arg_2.w = texture.id() as f32;
+        self.b[3] = texture.id() as f32;
         self.should_update = true;
     }
 
     pub fn set_normal_texture(&mut self, texture: &Handle<Texture>) {
-        self.arg_3.x = texture.id() as f32;
+        self.c[0] = texture.id() as f32;
         self.should_update = true;
     }
 
     pub fn set_emissive_texture(&mut self, texture: &Handle<Texture>) {
-        self.arg_3.y = texture.id() as f32;
+        self.c[1] = texture.id() as f32;
         self.should_update = true;
     }
 
     pub fn fix_albedo_color_space(&mut self) {
-        let old = Color::rgb_norm(self.arg_1.x, self.arg_1.y, self.arg_1.z);
+        let old = Color::from([self.a[0], self.a[1], self.a[2]]);
         let new = old.to_linear();
-        self.arg_1 = Vector4::from((new.into(), self.arg_1.w));
+        let temp = self.a[3];
+        self.a = MaterialParam::from(new);
+        self.a[3] = temp;
         self.should_update = true;
     }
 
-    pub fn set_arg_1<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_1 = arg.into();
+    pub fn set_a(&mut self, param: impl Into<MaterialParam>) {
+        self.a = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_2<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_2 = arg.into();
+    pub fn set_b(&mut self, param: impl Into<MaterialParam>) {
+        self.b = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_3<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_3 = arg.into();
+    pub fn set_c(&mut self, param: impl Into<MaterialParam>) {
+        self.c = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_4<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_4 = arg.into();
+    pub fn set_d(&mut self, param: impl Into<MaterialParam>) {
+        self.d = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_5<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_5 = arg.into();
+    pub fn set_e(&mut self, param: impl Into<MaterialParam>) {
+        self.e = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_6<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_6 = arg.into();
+    pub fn set_f(&mut self, param: impl Into<MaterialParam>) {
+        self.f = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_7<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_7 = arg.into();
+    pub fn set_g(&mut self, param: impl Into<MaterialParam>) {
+        self.g = param.into();
         self.should_update = true;
     }
 
-    pub fn set_arg_8<V: Into<Vector4>>(&mut self, arg: V) {
-        self.arg_8 = arg.into();
+    pub fn set_h(&mut self, param: impl Into<MaterialParam>) {
+        self.h = param.into();
         self.should_update = true;
     }
 
     pub(crate) fn update_if_needed(&mut self) {
         if self.should_update {
             self.buffer.copy_from_data(&[ShaderMaterial {
-                arg_1: self.arg_1,
-                arg_2: self.arg_2,
-                arg_3: self.arg_3,
-                arg_4: self.arg_4,
-                arg_5: self.arg_5,
-                arg_6: self.arg_6,
-                arg_7: self.arg_7,
-                arg_8: self.arg_8,
+                a: self.a.0.into(),
+                b: self.b.0.into(),
+                c: self.c.0.into(),
+                d: self.d.0.into(),
+                e: self.e.0.into(),
+                f: self.f.0.into(),
+                g: self.g.0.into(),
+                h: self.h.0.into(),
             }]);
             self.should_update = false;
         }
@@ -239,5 +250,73 @@ impl MaterialBuilder<'_> {
 impl PartialEq for Material {
     fn eq(&self, other: &Self) -> bool {
         self.buffer == other.buffer
+    }
+}
+
+impl Index<usize> for MaterialParam {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &f32 {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for MaterialParam {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        &mut self.0[index]
+    }
+}
+
+impl From<&Handle<Texture>> for MaterialParam {
+    fn from(h: &Handle<Texture>) -> Self {
+        Self([h.id() as f32, 0.0, 0.0, 0.0])
+    }
+}
+
+impl From<&Handle<Framebuffer>> for MaterialParam {
+    fn from(h: &Handle<Framebuffer>) -> Self {
+        Self([h.id() as f32, 0.0, 0.0, 0.0])
+    }
+}
+
+impl From<[f32; 4]> for MaterialParam {
+    fn from(v: [f32; 4]) -> Self {
+        Self(v)
+    }
+}
+
+impl From<[f32; 3]> for MaterialParam {
+    fn from(v: [f32; 3]) -> Self {
+        Self([v[0], v[1], v[2], 0.0])
+    }
+}
+
+impl From<[f32; 2]> for MaterialParam {
+    fn from(v: [f32; 2]) -> Self {
+        Self([v[0], v[1], 0.0, 0.0])
+    }
+}
+
+impl From<f32> for MaterialParam {
+    fn from(v: f32) -> Self {
+        Self([v, 0.0, 0.0, 0.0])
+    }
+}
+
+impl From<Vector3> for MaterialParam {
+    fn from(v: Vector3) -> Self {
+        Self([v.x, v.y, v.z, 0.0])
+    }
+}
+
+impl From<Vector2> for MaterialParam {
+    fn from(v: Vector2) -> Self {
+        Self([v.x, v.y, 0.0, 0.0])
+    }
+}
+
+impl From<Color> for MaterialParam {
+    fn from(c: Color) -> Self {
+        Self(c.to_rgba_norm())
     }
 }

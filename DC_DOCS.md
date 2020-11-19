@@ -28,7 +28,7 @@ layout(location = 0) out vec4 out_color;
 // main fragment shader function
 void fragment() {
   // get color from bound material
-  vec3 color = material.arg_1.rgb;
+  vec3 color = material.a.rgb;
 
   // output color to framebuffer
   out_color = vec4(color, 1.0);
@@ -137,16 +137,16 @@ been passed from the Rust code.
 
 `material` defines values that are set for each material.
 
-| Name    | Type   | Description        |
-| ------- | ------ | ------------------ |
-| `arg_1` | `vec4` | user defined value |
-| `arg_2` | `vec4` | user defined value |
-| `arg_3` | `vec4` | user defined value |
-| `arg_4` | `vec4` | user defined value |
-| `arg_5` | `vec4` | user defined value |
-| `arg_6` | `vec4` | user defined value |
-| `arg_7` | `vec4` | user defined value |
-| `arg_8` | `vec4` | user defined value |
+| Name | Type   | Description        |
+| ---- | ------ | ------------------ |
+| `a`  | `vec4` | user defined value |
+| `b`  | `vec4` | user defined value |
+| `c`  | `vec4` | user defined value |
+| `d`  | `vec4` | user defined value |
+| `e`  | `vec4` | user defined value |
+| `f`  | `vec4` | user defined value |
+| `g`  | `vec4` | user defined value |
+| `h`  | `vec4` | user defined value |
 
 `object` defines values that are set for each draw call.
 

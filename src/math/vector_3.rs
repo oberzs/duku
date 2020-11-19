@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// 3 component vector
-
 use std::iter::Sum;
 use std::ops::Add;
 use std::ops::AddAssign;
@@ -19,28 +17,48 @@ use std::ops::SubAssign;
 use super::Vector2;
 use crate::color::Color;
 
+/// 3-component Vector.
+///
+/// Used for 3D sizing and positioning.
+///
+/// # Example
+///
+/// ```ignore
+/// let point_1 = Vector3::new(-10.0, -10.0, -10.0);
+/// let point_2 = Vector3::new(10.0, 10.0, 10.0);
+///
+/// target.draw_line_debug(point_1, point_2);
+/// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector3 {
+    /// the X component
     pub x: f32,
+    /// the Y component
     pub y: f32,
+    /// the Z component
     pub z: f32,
 }
 
 impl Vector3 {
+    /// Create a new vector
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
+    /// Create a new vector with all components
+    /// with the same value
     pub const fn uniform(v: f32) -> Self {
         Self::new(v, v, v)
     }
 
+    /// Calculate the dot-product of the vector
     pub fn dot(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         self.x * o.x + self.y * o.y + self.z * o.z
     }
 
+    /// Calculate the cross-product of the vector
     pub fn cross(&self, other: impl Into<Self>) -> Self {
         let o = other.into();
         let x = self.y * o.z - self.z * o.y;
@@ -49,54 +67,87 @@ impl Vector3 {
         Self::new(x, y, z)
     }
 
+    /// Calculate the squared length of a vector
+    ///
+    /// Can sometimes use this instead of
+    /// [length](crate::math::Vector3::length),
+    /// because this is faster.
     pub fn sqr_length(&self) -> f32 {
         self.dot(*self)
     }
 
+    /// Calculate the length of a vector
     pub fn length(&self) -> f32 {
         self.sqr_length().sqrt()
     }
 
+    /// Calculate the unit vector
+    ///
+    /// The unit vector is of length 1 and can also be
+    /// thought of as the direction of the vector.
     pub fn unit(&self) -> Self {
         let scale = 1.0 / self.length();
         *self * if scale.is_infinite() { 0.0 } else { scale }
     }
 
+    /// Calculate the angle between 2 vectors
+    ///
+    /// Note: resulting angle is in degrees
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let up = Vector3::UP;
+    /// let right = Vector3::RIGHT;
+    /// let angle = up.angle_between(right);
+    /// assert_eq!(angle, 90.0);
+    /// ```
     pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
         cos.acos().to_degrees()
     }
 
+    /// Calculate the projected vector onto some other vector
     pub fn project_onto(&self, other: impl Into<Self>) -> Self {
         let o = other.into();
         let projected_length = self.dot(o) / o.length();
         o.unit() * projected_length
     }
 
+    /// Get the [Vector2](crate::math::Vector2)
+    /// made from this vectors x and y
     pub const fn xy(&self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
+    /// Floor every component of the vector
     pub fn floor(&self) -> Self {
         Vector3::new(self.x.floor(), self.y.floor(), self.z.floor())
     }
 
+    /// Ceil every component of the vector
     pub fn ceil(&self) -> Self {
         Vector3::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
     }
 
+    /// Round every component of the vector
     pub fn round(&self) -> Self {
         Vector3::new(self.x.round(), self.y.round(), self.z.round())
     }
 
+    /// Shorthand for `Vector3::new(0.0, 0.0, -1.0)`
     pub const BACK: Self = Self::new(0.0, 0.0, -1.0);
+    /// Shorthand for `Vector3::new(0.0, 0.0, 1.0)`
     pub const FORWARD: Self = Self::new(0.0, 0.0, 1.0);
+    /// Shorthand for `Vector3::new(0.0, 1.0, 0.0)`
     pub const UP: Self = Self::new(0.0, 1.0, 0.0);
+    /// Shorthand for `Vector3::new(0.0, -1.0, 0.0)`
     pub const DOWN: Self = Self::new(0.0, -1.0, 0.0);
+    /// Shorthand for `Vector3::new(-1.0, 0.0, 0.0)`
     pub const LEFT: Self = Self::new(-1.0, 0.0, 0.0);
+    /// Shorthand for `Vector3::new(1.0, 0.0, 0.0)`
     pub const RIGHT: Self = Self::new(1.0, 0.0, 0.0);
-    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
 }
 
 impl From<[f32; 3]> for Vector3 {

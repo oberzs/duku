@@ -1,7 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-use super::Matrix3;
 use super::Matrix4;
 use super::Vector3;
 
@@ -82,25 +81,27 @@ impl Quaternion {
         result
     }
 
-    pub fn inverse_rotation(self) -> Quaternion {
+    pub fn inverse(self) -> Quaternion {
         let mut result = self;
         result.w = -result.w;
         result
     }
-
-    pub fn rotate_vector(self, v: Vector3) -> Vector3 {
-        let u = Vector3::new(self.x, self.y, self.z);
-        let s = self.w;
-
-        u * 2.0 * u.dot(v) + v * (s * s - u.dot(u)) + u.cross(v) * 2.0 * s
-    }
-
-    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 1.0);
 }
 
 impl Default for Quaternion {
     fn default() -> Self {
-        Self::ZERO
+        Self::new(0.0, 0.0, 0.0, 1.0)
+    }
+}
+
+impl Mul<Vector3> for Quaternion {
+    type Output = Vector3;
+
+    fn mul(self, rhs: Vector3) -> Vector3 {
+        let u = Vector3::new(self.x, self.y, self.z);
+        let s = self.w;
+
+        u * 2.0 * u.dot(rhs) + rhs * (s * s - u.dot(u)) + u.cross(rhs) * 2.0 * s
     }
 }
 
@@ -123,8 +124,8 @@ impl MulAssign<Self> for Quaternion {
     }
 }
 
-impl From<Matrix3> for Quaternion {
-    fn from(m: Matrix3) -> Self {
+impl From<Matrix4> for Quaternion {
+    fn from(m: Matrix4) -> Self {
         fn pos(value: f32) -> f32 {
             if value < 0.0 {
                 0.0
@@ -175,42 +176,24 @@ mod test {
     }
 
     #[test]
-    fn rotate_vector() {
+    fn mul_vector() {
         let q = Quaternion::axis_rotation([0.0, 1.0, 0.0], 90.0);
         let v = Vector3::new(1.0, 2.0, 3.0);
-        assert_eq!(
-            q.rotate_vector(v),
-            Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
-        );
+        assert_eq!(q * v, Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94));
 
         let q1 = Quaternion::look_rotation([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
         assert_eq!(
-            q1.rotate_vector(v),
+            q1 * v,
             Vector3::new(2.999_999_8, 1.999_999_9, -0.999_999_94)
         );
     }
 
     #[test]
-    fn operator() {
+    fn mul_self() {
         let mut q1 = Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0);
         let r = q1 * q1;
         q1 *= q1;
         assert_eq!(r, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));
         assert_eq!(q1, Quaternion::new(0.999_999_94, 0.0, 0.0, 0.0));
     }
-
-    // #[test]
-    // fn from_matrix3() {
-    //     use std::f32::consts::FRAC_1_SQRT_2;
-
-    //     let m = Matrix3::from_rows(
-    //         [FRAC_1_SQRT_2, 0.0, FRAC_1_SQRT_2],
-    //         [0.5, FRAC_1_SQRT_2, -0.5],
-    //         [-0.5, FRAC_1_SQRT_2, 0.5],
-    //     );
-    //     assert_eq!(
-    //         Quaternion::from(m),
-    //         Quaternion::new(0.3535534, 0.3535534, 0.1464466, 0.8535534)
-    //     );
-    // }
 }

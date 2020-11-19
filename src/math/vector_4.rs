@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// 4 component vector
-
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
@@ -19,33 +17,47 @@ use super::Vector2;
 use super::Vector3;
 use crate::color::Color;
 
+/// 4-component Vector.
+///
+/// Used mostly as columns of [Matrix4](crate::math::Matrix4)
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector4 {
+    /// the X component
     pub x: f32,
+    /// the Y component
     pub y: f32,
+    /// the Z component
     pub z: f32,
+    /// the W component
     pub w: f32,
 }
 
 impl Vector4 {
+    /// Create a new vector
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
+    /// Calculate the dot-product of the vector
     pub fn dot(self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         self.x * o.x + self.y * o.y + self.z * o.z + self.w * o.w
     }
 
+    /// Get the [Vector2](crate::math::Vector2)
+    /// made from this vectors x and y
     pub const fn xy(self) -> Vector2 {
         Vector2::new(self.x, self.y)
     }
 
+    /// Get the [Vector3](crate::math::Vector3)
+    /// made from this vectors x, y and z
     pub const fn xyz(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
 
+    /// Floor every component of the vector
     pub fn floor(self) -> Vector4 {
         Vector4::new(
             self.x.floor(),
@@ -55,10 +67,12 @@ impl Vector4 {
         )
     }
 
+    /// Ceil every component of the vector
     pub fn ceil(self) -> Vector4 {
         Vector4::new(self.x.ceil(), self.y.ceil(), self.z.ceil(), self.w.ceil())
     }
 
+    /// Round every component of the vector
     pub fn round(self) -> Vector4 {
         Vector4::new(
             self.x.round(),
@@ -67,8 +81,6 @@ impl Vector4 {
             self.w.round(),
         )
     }
-
-    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0, 0.0);
 }
 
 impl From<[f32; 4]> for Vector4 {

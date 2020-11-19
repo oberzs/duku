@@ -144,8 +144,7 @@ impl ShadowRenderer {
             let light_position = bounds.center - light_dir * bounds.radius;
             let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
                 * Matrix4::translation(-light_position);
-            let mut light_ortho_matrix =
-                Matrix4::orthographic_center(diameter, diameter, 0.0, diameter);
+            let mut light_ortho_matrix = Matrix4::orthographic(diameter, diameter, 0.0, diameter);
 
             // stabilize shadow map by using texel units
             let shadow_matrix = light_ortho_matrix * light_view_matrix;
@@ -341,10 +340,7 @@ fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
     radius = (radius * 16.0).ceil() / 16.0;
 
     // transform frustum center into view space
-    let center = world_to_view
-        .inverse()
-        .expect("no inverse")
-        .transform_vector(frustum_center);
+    let center = world_to_view.inverse().expect("no inverse") * frustum_center;
 
     Sphere { center, radius }
 }

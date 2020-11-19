@@ -165,33 +165,39 @@ impl ForwardRenderer {
             builtins,
             ..
         } = &target;
+
         // update text batching mesh
         let mut vertices = vec![];
         let mut colors = vec![];
         let mut textures = vec![];
         let mut indices = vec![];
         let mut uvs = vec![];
+
         for order in text_orders {
             let font = target.storage.fonts.get(&order.font);
             let mut transform = order.transform;
             let quat = transform.rotation;
             let start_x = transform.position.x;
             transform.scale *= order.size as f32;
+
             for c in order.text.chars() {
                 // handle whitespace
                 if c == ' ' {
                     transform.position.x += transform.scale.x / 3.0;
                     continue;
                 }
+
                 if c == '\n' {
                     transform.position.x = start_x;
                     transform.position.y -= transform.scale.y;
                     continue;
                 }
+
                 let data = font.char_data(c);
                 let mut local_transform = transform;
                 local_transform.position.x += data.x_offset * transform.scale.x;
                 local_transform.position.y -= data.y_offset * transform.scale.y;
+
                 let pos1 = local_transform.position;
                 let pos2 = pos1
                     + Vector3::new(
@@ -199,12 +205,13 @@ impl ForwardRenderer {
                         -data.height * transform.scale.y,
                         0.0,
                     );
+
                 let o = vertices.len() as u32;
                 vertices.extend(&[
-                    quat.rotate_vector(Vector3::new(pos1.x, pos1.y, pos1.z)),
-                    quat.rotate_vector(Vector3::new(pos2.x, pos1.y, pos1.z)),
-                    quat.rotate_vector(Vector3::new(pos2.x, pos2.y, pos1.z)),
-                    quat.rotate_vector(Vector3::new(pos1.x, pos2.y, pos1.z)),
+                    quat * Vector3::new(pos1.x, pos1.y, pos1.z),
+                    quat * Vector3::new(pos2.x, pos1.y, pos1.z),
+                    quat * Vector3::new(pos2.x, pos2.y, pos1.z),
+                    quat * Vector3::new(pos1.x, pos2.y, pos1.z),
                 ]);
                 uvs.extend(&[
                     Vector2::new(data.uvs.x, data.uvs.y),
@@ -215,23 +222,29 @@ impl ForwardRenderer {
                 colors.extend(&[order.color; 4]);
                 textures.extend(&[font.texture().shader_index(); 4]);
                 indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
+
                 transform.position.x += data.advance * transform.scale.x;
             }
         }
+
         // bind shader
         let shader = target.storage.shaders.get(&builtins.font_shader);
         cmd.bind_shader(shader);
+
         // bind material
         let material = target.storage.materials.get(&builtins.white_material);
         cmd.bind_material(uniforms, material);
+
         // bind and draw mesh
         let text_mesh = &mut self.target_resources[self.target_index].text_mesh;
+
         text_mesh.set_vertices(vertices);
         text_mesh.set_colors(colors);
         text_mesh.set_textures(textures);
         text_mesh.set_uvs(uvs);
         text_mesh.set_indices(indices);
         text_mesh.update_if_needed(device);
+
         cmd.bind_mesh(text_mesh);
         cmd.push_constants(
             uniforms,
@@ -250,31 +263,38 @@ impl ForwardRenderer {
             builtins,
             ..
         } = &target;
+
         // update line batching mesh
         let mut vertices = vec![];
         let mut colors = vec![];
         let mut indices = vec![];
+
         for order in line_orders {
             let matrix = Matrix4::from(order.transform);
-            let point_1 = matrix.transform_vector(order.points[0]);
-            let point_2 = matrix.transform_vector(order.points[1]);
+            let point_1 = matrix * order.points[0];
+            let point_2 = matrix * order.points[1];
+
             let o = vertices.len() as u32;
             vertices.extend(&[point_1, point_2]);
             colors.extend(&[order.color, order.color]);
             indices.extend(&[o, o + 1]);
         }
+
         // bind shader
         let shader = target.storage.shaders.get(&builtins.line_shader);
         cmd.bind_shader(shader);
+
         // bind material
         let material = target.storage.materials.get(&builtins.white_material);
         cmd.bind_material(uniforms, material);
+
         // bind and draw mesh
         let line_mesh = &mut self.target_resources[self.target_index].line_mesh;
         line_mesh.set_vertices(vertices);
         line_mesh.set_colors(colors);
         line_mesh.set_indices(indices);
         line_mesh.update_if_needed(device);
+
         cmd.bind_mesh(line_mesh);
         cmd.push_constants(
             uniforms,
@@ -285,6 +305,7 @@ impl ForwardRenderer {
         );
         cmd.draw(line_mesh.index_count(), 0);
     }
+
     fn record_shapes(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
@@ -292,6 +313,7 @@ impl ForwardRenderer {
             builtins,
             ..
         } = &target;
+
         // update shape batching mesh
         let mut vertices = vec![];
         let mut colors = vec![];
@@ -299,28 +321,35 @@ impl ForwardRenderer {
         let mut uvs = vec![];
         let mut normals = vec![];
         let mut indices = vec![];
+
         for order in shape_orders {
             let matrix = Matrix4::from(order.transform);
-            let point_1 = matrix.transform_vector(order.points[0]);
-            let point_2 = matrix.transform_vector(order.points[1]);
-            let point_3 = matrix.transform_vector(order.points[2]);
+            let point_1 = matrix * order.points[0];
+            let point_2 = matrix * order.points[1];
+            let point_3 = matrix * order.points[2];
+
             let texture = target.storage.textures.get(&order.texture).shader_index();
             let sampler = order.sampler_index;
+
             let o = vertices.len() as u32;
             vertices.extend(&[point_1, point_2, point_3]);
             colors.extend(&[order.color, order.color, order.color]);
             textures.extend(&[texture, texture, texture]);
             uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2]]);
             indices.extend(&[o, o + 1, o + 2]);
+
             // use normal to store sampler
             normals.extend(&[Vector3::new(sampler as f32, 0.0, 0.0); 3]);
         }
+
         // bind shader
         let shader = target.storage.shaders.get(&builtins.shape_shader);
         cmd.bind_shader(shader);
+
         // bind material
         let material = target.storage.materials.get(&builtins.white_material);
         cmd.bind_material(uniforms, material);
+
         // bind and draw mesh
         let shape_mesh = &mut self.target_resources[self.target_index].shape_mesh;
         shape_mesh.set_vertices(vertices);
@@ -330,6 +359,7 @@ impl ForwardRenderer {
         shape_mesh.set_normals(normals);
         shape_mesh.set_indices(indices);
         shape_mesh.update_if_needed(device);
+
         cmd.bind_mesh(shape_mesh);
         cmd.push_constants(
             uniforms,

@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// 2 component vector
-
 use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
@@ -15,63 +13,113 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
+/// 2-component Vector.
+///
+/// Used for 2D sizing and positioning.
+///
+/// # Example
+///
+/// ```ignore
+/// let point_1 = Vector2::new(-10.0, -10.0);
+/// let point_2 = Vector2::new(10.0, 10.0);
+///
+/// target.draw_lines(&[point_1, point_2], false);
+/// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vector2 {
+    /// the X component
     pub x: f32,
+    /// the Y component
     pub y: f32,
 }
 
 impl Vector2 {
+    /// Create a new vector
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
+    /// Calculate the dot-product of the vector
     pub fn dot(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         self.x * o.x + self.y * o.y
     }
 
+    /// Calculate the squared length of a vector
+    ///
+    /// Can sometimes be used instead of
+    /// [length](crate::math::Vector2::length),
+    /// because this is faster.
     pub fn sqr_length(&self) -> f32 {
         self.dot(*self)
     }
 
+    /// Calculate the length of a vector
     pub fn length(&self) -> f32 {
         self.sqr_length().sqrt()
     }
 
+    /// Calculate the unit vector
+    ///
+    /// The unit vector is of length 1 and can also be
+    /// thought of as the direction of the vector.
     pub fn unit(&self) -> Self {
         let scale = 1.0 / self.length();
         *self * if scale.is_infinite() { 0.0 } else { scale }
     }
 
+    /// Calculate the normal vector
+    ///
+    /// The normal vector is a vector perpendicular to
+    /// the original.
+    ///
+    /// Note: may not be unit length
     pub fn normal(&self) -> Self {
         Vector2::new(-self.y, self.x)
     }
 
+    /// Calculate the angle between 2 vectors
+    ///
+    /// Note: resulting angle is in degrees
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let up = Vector2::UP;
+    /// let right = Vector2::RIGHT;
+    /// let angle = up.angle_between(right);
+    /// assert_eq!(angle, 90.0);
+    /// ```
     pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
         let cos = self.dot(o) / (self.length() * o.length());
         cos.acos().to_degrees()
     }
 
+    /// Floor every component of the vector
     pub fn floor(&self) -> Self {
         Self::new(self.x.floor(), self.y.floor())
     }
 
+    /// Ceil every component of the vector
     pub fn ceil(&self) -> Self {
         Self::new(self.x.ceil(), self.y.ceil())
     }
 
+    /// Round every component of the vector
     pub fn round(&self) -> Self {
         Self::new(self.x.round(), self.y.round())
     }
 
+    /// Shorthand for `Vector2::new(0.0, 1.0)`
     pub const UP: Self = Self::new(0.0, 1.0);
+    /// Shorthand for `Vector2::new(0.0, -1.0)`
     pub const DOWN: Self = Self::new(0.0, -1.0);
+    /// Shorthand for `Vector2::new(-1.0, 0.0)`
     pub const LEFT: Self = Self::new(-1.0, 0.0);
+    /// Shorthand for `Vector2::new(1.0, 0.0)`
     pub const RIGHT: Self = Self::new(1.0, 0.0);
-    pub const ZERO: Self = Self::new(0.0, 0.0);
 }
 
 impl From<[f32; 2]> for Vector2 {

@@ -26,14 +26,14 @@ layout(set = 0, binding = 0) uniform World {
 } world;
 
 layout(set = 1, binding = 0) uniform Material {
-    vec4 arg_1;
-    vec4 arg_2;
-    vec4 arg_3;
-    vec4 arg_4;
-    vec4 arg_5;
-    vec4 arg_6;
-    vec4 arg_7;
-    vec4 arg_8;
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 d;
+    vec4 e;
+    vec4 f;
+    vec4 g;
+    vec4 h;
 } material;
 
 layout(push_constant) uniform Constants {

@@ -1,9 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// represents a whole transform. position + scale + rotation
-
-use super::Matrix3;
 use super::Matrix4;
 use super::Quaternion;
 use super::Vector3;
@@ -16,43 +13,16 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub const fn positioned(x: f32, y: f32, z: f32) -> Self {
-        Self {
-            position: Vector3::new(x, y, z),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::ZERO,
-        }
-    }
-
-    pub const fn scaled(x: f32, y: f32, z: f32) -> Self {
-        Self {
-            scale: Vector3::new(x, y, z),
-            position: Vector3::ZERO,
-            rotation: Quaternion::ZERO,
-        }
-    }
-
-    pub const fn scaled_uniformly(s: f32) -> Self {
-        Self::scaled(s, s, s)
-    }
-
-    pub fn rotated(roll: f32, pitch: f32, yaw: f32) -> Self {
-        Self {
-            rotation: Quaternion::euler_rotation(roll, pitch, yaw),
-            ..Default::default()
-        }
-    }
-
     pub fn up(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::UP)
+        self.rotation * Vector3::UP
     }
 
     pub fn forward(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::FORWARD)
+        self.rotation * Vector3::FORWARD
     }
 
     pub fn right(self) -> Vector3 {
-        self.rotation.rotate_vector(Vector3::RIGHT)
+        self.rotation * Vector3::RIGHT
     }
 
     pub fn move_by(&mut self, amount: impl Into<Vector3>) {
@@ -92,7 +62,7 @@ impl Transform {
         let point = point.into();
         let rotation = Quaternion::axis_rotation(axis, angle);
         self.position -= point;
-        self.position = rotation.rotate_vector(self.position);
+        self.position = rotation * self.position;
         self.position += point;
     }
 
@@ -122,21 +92,23 @@ impl Default for Transform {
 }
 
 impl From<Matrix4> for Transform {
-    fn from(m: Matrix4) -> Self {
+    fn from(mut m: Matrix4) -> Self {
         let position = Vector3::new(m.w.x, m.w.y, m.w.z);
 
-        let mut i = Matrix3::columns(m.x.xyz(), m.y.xyz(), m.z.xyz());
+        let determinant = m.x.x * (m.y.y * m.z.z - m.z.y * m.y.z)
+            - m.y.x * (m.x.y * m.z.z - m.z.y * m.x.z)
+            + m.z.x * (m.x.y * m.y.z - m.y.y * m.x.z);
 
-        let sx = i.x.length();
-        let sy = i.y.length();
-        let sz = i.z.length() * i.determinant().signum();
+        let sx = m.x.xyz().length();
+        let sy = m.y.xyz().length();
+        let sz = m.z.xyz().length() * determinant.signum();
         let scale = Vector3::new(sx, sy, sz);
 
-        i.x *= 1.0 / sx;
-        i.y *= 1.0 / sy;
-        i.z *= 1.0 / sz;
+        m.x *= 1.0 / sx;
+        m.y *= 1.0 / sy;
+        m.z *= 1.0 / sz;
 
-        let rotation = Quaternion::from(i);
+        let rotation = Quaternion::from(m);
 
         Self {
             position,
@@ -158,28 +130,5 @@ mod test {
         assert_eq!(t.position, Vector3::new(0.0, 0.0, 0.0));
         assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
         assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
-    }
-
-    #[test]
-    fn from_position() {
-        let t = Transform::positioned(1.0, 2.0, 3.0);
-        assert_eq!(t.position, Vector3::new(1.0, 2.0, 3.0));
-        assert_eq!(t.scale, Vector3::new(1.0, 1.0, 1.0));
-        assert_eq!(t.rotation, Quaternion::new(0.0, 0.0, 0.0, 1.0));
-    }
-
-    #[test]
-    fn direction() {
-        let t = Transform::positioned(1.0, 0.0, 0.0);
-        assert_eq!(t.up(), Vector3::new(0.0, 1.0, 0.0));
-        assert_eq!(t.right(), Vector3::new(1.0, 0.0, 0.0));
-        assert_eq!(t.forward(), Vector3::new(0.0, 0.0, 1.0));
-    }
-
-    #[test]
-    fn move_by() {
-        let mut t = Transform::default();
-        t.move_by([1.0, 2.0, 3.0]);
-        assert_eq!(t, Transform::positioned(1.0, 2.0, 3.0));
     }
 }

@@ -11,16 +11,34 @@ use super::Transform;
 use super::Vector3;
 use super::Vector4;
 
+/// 4x4 Matrix.
+///
+/// Used for transforming vectors
+///
+/// Note: column-major
+///
+/// # Example
+///
+/// ```ignore
+/// let vector = Vector3::new(2.0, 0.0, 0.0);
+/// let matrix = Matrix4::scale([5.0, 1.0, 1.0]);
+/// assert_eq!(matrix * vector, Vector3::new(10.0, 0.0, 0.0));
+/// ```
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Matrix4 {
+    /// the X column
     pub x: Vector4,
+    /// the Y column
     pub y: Vector4,
+    /// the Z column
     pub z: Vector4,
+    /// the W column
     pub w: Vector4,
 }
 
 impl Matrix4 {
+    /// Create matrix from column vectors
     pub fn columns(
         x: impl Into<Vector4>,
         y: impl Into<Vector4>,
@@ -35,6 +53,7 @@ impl Matrix4 {
         }
     }
 
+    /// Create matrix from row vectors
     pub fn rows(
         x: impl Into<Vector4>,
         y: impl Into<Vector4>,
@@ -54,6 +73,7 @@ impl Matrix4 {
         )
     }
 
+    /// Create identity matrix
     pub fn identity() -> Self {
         Self::rows(
             [1.0, 0.0, 0.0, 0.0],
@@ -63,6 +83,17 @@ impl Matrix4 {
         )
     }
 
+    /// Create translation matrix
+    ///
+    /// Translation matrix moves vectors around
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let vector = Vector3::new(2.0, 0.0, 0.0);
+    /// let matrix = Matrix4::translation([5.0, 1.0, 1.0]);
+    /// assert_eq!(matrix * vector, Vector3::new(7.0, 1.0, 1.0));
+    /// ```
     pub fn translation(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
         Self::rows(
@@ -73,6 +104,17 @@ impl Matrix4 {
         )
     }
 
+    /// Create scale matrix
+    ///
+    /// Scale matrix scales vectors
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let vector = Vector3::new(2.0, 0.0, 0.0);
+    /// let matrix = Matrix4::scale([5.0, 1.0, 1.0]);
+    /// assert_eq!(matrix * vector, Vector3::new(10.0, 0.0, 0.0));
+    /// ```
     pub fn scale(vector: impl Into<Vector3>) -> Self {
         let v = vector.into();
         Self::rows(
@@ -83,6 +125,9 @@ impl Matrix4 {
         )
     }
 
+    /// Create rotation matrix around axis
+    ///
+    /// This matrix rotates vectors around axis by the angle
     pub fn axis_rotation(axis: impl Into<Vector3>, angle: f32) -> Self {
         let v = axis.into();
         let sin = angle.to_radians().sin();
@@ -111,10 +156,27 @@ impl Matrix4 {
         Self::rows(row_x, row_y, row_z, row_w)
     }
 
-    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
-        // L-handed and z = [0, 1]
-        // Y up, Z forward, center
+    /// Create rotation matrix to rotate towards direction
+    ///
+    /// Note: `global_up` is used as a guide to try aligning to
+    pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
+        let z_axis = dir.into().unit();
+        let x_axis = global_up.into().cross(z_axis).unit();
+        let y_axis = z_axis.cross(x_axis);
 
+        Self::rows(
+            [x_axis.x, x_axis.y, x_axis.z, 0.0],
+            [y_axis.x, y_axis.y, y_axis.z, 0.0],
+            [z_axis.x, z_axis.y, z_axis.z, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        )
+    }
+
+    /// Create perspective projection matrix
+    ///
+    /// Note: this is a left-handed matrix
+    /// with Z in range of [0; 1]
+    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
         let half_fov = (fov / 2.0).to_radians();
         let zoom_len = 1.0 / half_fov.tan();
 
@@ -133,10 +195,11 @@ impl Matrix4 {
         )
     }
 
-    pub fn orthographic_center(width: f32, height: f32, near: f32, far: f32) -> Self {
-        // L-handed and z = [0, 1]
-        // Y up, Z forward, center
-
+    /// Create orthographic projection matrix
+    ///
+    /// Note: this is a left-handed matrix
+    /// with Z in range of [0; 1]
+    pub fn orthographic(width: f32, height: f32, near: f32, far: f32) -> Self {
         let x_scale = 2.0 / width;
         let y_scale = 2.0 / height;
         let z_scale = 1.0 / (far - near);
@@ -150,36 +213,7 @@ impl Matrix4 {
         )
     }
 
-    pub fn orthographic(width: f32, height: f32, near: f32, far: f32) -> Self {
-        // L-handed and z = [0, 1]
-        // Y up, Z forward, top-left
-
-        let x_scale = 2.0 / width;
-        let y_scale = 2.0 / height;
-        let z_scale = 1.0 / (far - near);
-        let z_move = -near / (far - near);
-
-        Self::rows(
-            [x_scale, 0.0, 0.0, -1.0],
-            [0.0, y_scale, 0.0, -1.0],
-            [0.0, 0.0, z_scale, z_move],
-            [0.0, 0.0, 0.0, 1.0],
-        )
-    }
-
-    pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
-        let z_axis = dir.into().unit();
-        let x_axis = global_up.into().cross(z_axis).unit();
-        let y_axis = z_axis.cross(x_axis);
-
-        Self::rows(
-            [x_axis.x, x_axis.y, x_axis.z, 0.0],
-            [y_axis.x, y_axis.y, y_axis.z, 0.0],
-            [z_axis.x, z_axis.y, z_axis.z, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        )
-    }
-
+    /// Calculate the inverse of the matrix
     pub fn inverse(&self) -> Option<Self> {
         let m: [f32; 16] = (*self).into();
         let mut inv = [0.0; 16];
@@ -275,24 +309,24 @@ impl Matrix4 {
         Some(Self::from(inv) * det)
     }
 
+    /// Access the X row of the matrix
     pub const fn rx(&self) -> Vector4 {
         Vector4::new(self.x.x, self.y.x, self.z.x, self.w.x)
     }
 
+    /// Access the Y row of the matrix
     pub const fn ry(&self) -> Vector4 {
         Vector4::new(self.x.y, self.y.y, self.z.y, self.w.y)
     }
 
+    /// Access the Z row of the matrix
     pub const fn rz(&self) -> Vector4 {
         Vector4::new(self.x.z, self.y.z, self.z.z, self.w.z)
     }
 
+    /// Access the W row of the matrix
     pub const fn rw(&self) -> Vector4 {
         Vector4::new(self.x.w, self.y.w, self.z.w, self.w.w)
-    }
-
-    pub fn transform_vector(&self, vector: Vector3) -> Vector3 {
-        (*self * Vector4::from((vector, 1.0))).xyz()
     }
 }
 
@@ -344,6 +378,14 @@ impl Mul<Vector4> for Matrix4 {
         let z = self.rz().dot(rhs);
         let w = self.rw().dot(rhs);
         Vector4::new(x, y, z, w)
+    }
+}
+
+impl Mul<Vector3> for Matrix4 {
+    type Output = Vector3;
+
+    fn mul(self, rhs: Vector3) -> Self::Output {
+        (self * Vector4::from((rhs, 1.0))).xyz()
     }
 }
 
@@ -484,8 +526,8 @@ mod test {
     }
 
     #[test]
-    fn orthographic_center() {
-        let m = Matrix4::orthographic_center(1.0, 1.0, 0.0, 1.0);
+    fn orthographic() {
+        let m = Matrix4::orthographic(1.0, 1.0, 0.0, 1.0);
         assert_eq!(m.rx(), Vector4::new(2.0, 0.0, 0.0, 0.0));
         assert_eq!(m.ry(), Vector4::new(0.0, 2.0, 0.0, 0.0));
         assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, -0.0));
@@ -558,7 +600,8 @@ mod test {
 
     #[test]
     fn from_transform() {
-        let t = Transform::positioned(1.0, 2.0, 3.0);
+        let mut t = Transform::default();
+        t.move_by([1.0, 2.0, 3.0]);
         assert_eq!(Matrix4::from(t), Matrix4::translation([1.0, 2.0, 3.0]));
     }
 

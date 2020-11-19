@@ -109,10 +109,10 @@ impl Window {
             buttons_pressed: HashSet::new(),
             buttons_released: HashSet::new(),
             buttons_clicked: HashSet::new(),
-            mouse_position: Vector2::ZERO,
-            mouse_delta: Vector2::ZERO,
+            mouse_position: Vector2::default(),
+            mouse_delta: Vector2::default(),
             mouse_grab: false,
-            scroll_delta: Vector2::ZERO,
+            scroll_delta: Vector2::default(),
             typed_char: None,
             window,
         };

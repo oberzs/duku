@@ -100,14 +100,14 @@ impl Camera {
 
     pub(crate) fn world_to_view(&self) -> Matrix4 {
         Matrix4::scale(self.transform.scale)
-            * Matrix4::from(self.transform.rotation.inverse_rotation())
+            * Matrix4::from(self.transform.rotation.inverse())
             * Matrix4::translation(-self.transform.position)
     }
 
     pub(crate) fn view_to_clip(&self) -> Matrix4 {
         match self.projection {
             Projection::Orthographic => {
-                Matrix4::orthographic_center(self.width, self.height, self.near(), self.depth)
+                Matrix4::orthographic(self.width, self.height, self.near(), self.depth)
             }
             Projection::Perspective => Matrix4::perspective(
                 self.fov as f32,

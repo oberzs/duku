@@ -163,9 +163,9 @@ impl<'b> Target<'b> {
             transform: Transform::default(),
             lights: [
                 Light::main([-1.0, -1.0, 1.0], Color::WHITE, 1.0),
-                Light::NONE,
-                Light::NONE,
-                Light::NONE,
+                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
+                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
+                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
             ],
             texture_filter: Filter::Linear,
             texture_wrap: Wrap::Repeat,
@@ -493,7 +493,7 @@ impl<'b> Target<'b> {
                 ],
                 transform: self.transform,
                 texture: self.builtins.white_texture.clone(),
-                uvs: [Vector2::ZERO; 3],
+                uvs: [Vector2::default(); 3],
                 sampler_index: 0,
             });
         }
@@ -536,7 +536,7 @@ impl<'b> Target<'b> {
             Vector2::new(0.0, s.y),
             s,
             Vector2::new(s.x, 0.0),
-            Vector2::ZERO,
+            Vector2::default(),
         ]);
 
         self.pop();
@@ -585,7 +585,7 @@ impl<'b> Target<'b> {
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                Vector3::ZERO,
+                Vector3::default(),
                 Vector3::new(0.0, s.y, 0.0),
                 Vector3::new(s.x, 0.0, 0.0),
             ],

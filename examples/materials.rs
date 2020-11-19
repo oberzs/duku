@@ -12,7 +12,6 @@ use duku::Duku;
 use duku::Light;
 use duku::Mips;
 use duku::Result;
-use duku::Transform;
 use duku::Vector3;
 
 fn main() -> Result<()> {
@@ -86,7 +85,8 @@ fn main() -> Result<()> {
             target.draw_cube();
 
             // render floor
-            target.transform = Transform::scaled(10.0, 0.2, 10.0);
+            target.transform.position = Vector3::ZERO;
+            target.transform.scale = Vector3::new(10.0, 0.2, 10.0);
             target.unset_material();
             target.draw_cube();
 
