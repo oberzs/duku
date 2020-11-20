@@ -13,9 +13,6 @@ use crate::error::Result;
 use crate::pipeline::Uniforms;
 use crate::renderer::Color;
 
-#[cfg(feature = "jpeg")]
-use super::ColorSpace;
-
 /// Image that can be sampled in a shader.
 ///
 /// These can be created from bytes of color data, PNGs
@@ -82,33 +79,6 @@ impl Texture {
             image,
             shader_index,
         })
-    }
-
-    #[cfg(feature = "jpeg")]
-    pub(crate) fn from_jpeg_bytes(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Self> {
-        use jpeg_decoder::Decoder;
-        use jpeg_decoder::PixelFormat;
-
-        use crate::error::Error;
-
-        let mut decoder = Decoder::new(bytes);
-        let data = decoder.decode().map_err(|_| Error::InvalidJpeg)?;
-        let info = decoder.info().ok_or(Error::InvalidJpeg)?;
-        let size = Size::new(u32::from(info.width), u32::from(info.height));
-
-        let format = match info.pixel_format {
-            PixelFormat::RGB24 if color_space == ColorSpace::Linear => Format::Rgb,
-            PixelFormat::RGB24 => Format::Srgb,
-            _ => return Err(Error::UnsupportedFormat),
-        };
-
-        Self::new(device, uniforms, data, size, format, mips)
     }
 
     /// Get the width of the texture

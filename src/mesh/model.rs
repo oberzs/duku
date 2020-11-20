@@ -18,6 +18,7 @@ use super::Mesh;
 use crate::device::Device;
 use crate::error::Error;
 use crate::error::Result;
+use crate::features::jpeg;
 use crate::features::png;
 use crate::image::ColorSpace;
 use crate::image::Mips;
@@ -416,7 +417,15 @@ fn load_texture(
                 )?
             }
             "image/jpeg" => {
-                Texture::from_jpeg_bytes(device, uniforms, &data, color_space, Mips::Log2)?
+                let data = jpeg::load_jpeg(&data, color_space)?;
+                Texture::new(
+                    device,
+                    uniforms,
+                    data.data,
+                    Size::new(data.width, data.height),
+                    data.format,
+                    Mips::Log2,
+                )?
             }
             _ => return Err(Error::UnsupportedMimeType(mime_type.to_string())),
         };

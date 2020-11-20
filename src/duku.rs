@@ -19,7 +19,6 @@ use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
 use crate::font::Font;
-use crate::image::ColorSpace;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Format;
@@ -447,31 +446,6 @@ impl Duku {
         }
 
         Ok(handle)
-    }
-
-    #[cfg(feature = "jpeg")]
-    pub fn create_texture_jpeg_bytes(
-        &mut self,
-        bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        let tex =
-            Texture::from_jpeg_bytes(&self.device, &mut self.uniforms, bytes, color_space, mips)?;
-        Ok(self.storage.add_texture(tex))
-    }
-
-    #[cfg(feature = "jpeg")]
-    pub fn create_texture_jpeg(
-        &mut self,
-        path: impl AsRef<Path>,
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        use std::fs;
-
-        let bytes = fs::read(path.as_ref())?;
-        self.create_texture_jpeg_bytes(&bytes, color_space, mips)
     }
 
     #[cfg(feature = "gltf")]

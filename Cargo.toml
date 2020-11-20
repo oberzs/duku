@@ -7,7 +7,7 @@ edition = "2018"
 [features]
 default = []
 png = ["png_dep"]
-jpeg = ["jpeg-decoder"]
+jpeg = ["jpeg_dep"]
 gltf = ["gltf_dep", "png", "jpeg"]
 glsl = ["shaderc"]
 window = ["winit"]
@@ -22,7 +22,8 @@ package = "png"
 version = "0.16.7"
 optional = true
 
-[dependencies.jpeg-decoder]
+[dependencies.jpeg_dep]
+package = "jpeg-decoder"
 version = "0.1.20"
 optional = true
 default-features = false
