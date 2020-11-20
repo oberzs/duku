@@ -3,10 +3,10 @@
 
 // Light - struct for light data
 
-use crate::color::Color;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::pipeline::ShaderLight;
+use crate::renderer::Color;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Light {

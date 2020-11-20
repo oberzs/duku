@@ -11,10 +11,10 @@ use super::ImageLayout;
 use super::Mips;
 use super::Size;
 use crate::buffer::Buffer;
-use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::Uniforms;
+use crate::renderer::Color;
 
 #[cfg(any(feature = "png", feature = "jpeg"))]
 use super::ColorSpace;

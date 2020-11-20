@@ -9,13 +9,13 @@ use super::ShaderMaterial;
 use super::Uniforms;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
-use crate::color::Color;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
+use crate::renderer::Color;
 use crate::storage::Handle;
 use crate::storage::Storage;
 

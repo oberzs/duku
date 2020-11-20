@@ -15,7 +15,7 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use super::Vector2;
-use crate::color::Color;
+use crate::renderer::Color;
 
 /// 3-component Vector.
 ///

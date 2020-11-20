@@ -12,11 +12,11 @@ use std::iter;
 
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
-use crate::color::Color;
 use crate::device::Device;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
+use crate::renderer::Color;
 use crate::storage::Handle;
 use crate::storage::Storage;
 use crate::vk;
@@ -150,9 +150,9 @@ impl Mesh {
                 let vtx_c = self.vertices[c];
 
                 // get uvs
-                let uv_a = self.uvs.get(a).copied().unwrap_or(Vector2::default());
-                let uv_b = self.uvs.get(b).copied().unwrap_or(Vector2::default());
-                let uv_c = self.uvs.get(c).copied().unwrap_or(Vector2::default());
+                let uv_a = self.uvs.get(a).copied().unwrap_or_default();
+                let uv_b = self.uvs.get(b).copied().unwrap_or_default();
+                let uv_c = self.uvs.get(c).copied().unwrap_or_default();
 
                 // calculate tangent
                 let edge_1 = vtx_b - vtx_a;

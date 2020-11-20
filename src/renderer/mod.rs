@@ -4,6 +4,7 @@
 // renderers define different/specific rendering paths
 
 mod camera;
+mod color;
 mod forward;
 mod light;
 mod shadow;
@@ -14,6 +15,7 @@ pub(crate) use shadow::ShadowRenderer;
 
 pub use camera::Camera;
 pub use camera::Projection;
+pub use color::Color;
 pub use light::Light;
 pub use light::LightType;
 pub use shadow::Pcf;

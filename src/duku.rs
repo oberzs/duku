@@ -14,7 +14,6 @@ use std::sync::mpsc::Receiver;
 #[cfg(feature = "glsl")]
 use std::sync::mpsc::Sender;
 
-use crate::color::Color;
 use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
@@ -35,6 +34,7 @@ use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
+use crate::renderer::Color;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
 use crate::storage;

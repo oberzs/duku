@@ -47,8 +47,8 @@
     rust_2018_idioms,
     unused,
     future_incompatible,
-    missing_docs,
-    missing_doc_code_examples,
+    // missing_docs,
+    // missing_doc_code_examples,
     single_use_lifetimes,
     unused_qualifications,
     clippy::missing_const_for_fn,
@@ -68,7 +68,6 @@
 mod macros;
 
 mod buffer;
-mod color;
 mod device;
 mod duku;
 mod error;
@@ -88,7 +87,6 @@ mod watch;
 
 // normal exports
 pub use self::duku::Duku;
-pub use color::Color;
 pub use device::Stats;
 pub use error::Result;
 pub use image::ColorSpace;
@@ -114,6 +112,7 @@ pub use pipeline::MaterialParam;
 pub use pipeline::Shader;
 pub use renderer::BorderMode;
 pub use renderer::Camera;
+pub use renderer::Color;
 pub use renderer::Light;
 pub use renderer::LightType;
 pub use renderer::Pcf;
@@ -127,3 +126,8 @@ pub use surface::WindowHandle;
 // optional feature exports
 #[cfg(feature = "window")]
 pub mod window;
+
+#[cfg(feature = "gltf")]
+pub mod gltf {
+    pub use super::mesh::Model;
+}

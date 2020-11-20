@@ -14,9 +14,15 @@ fn main() -> Result<()> {
         .build()?;
 
     // read custom shader
-    let shader = duku.create_shader_glsl("examples/shaders/raymarch.glsl", true)?;
+    let path = "examples/shaders/raymarch.glsl";
+    let shader = duku.create_shader_glsl(path, true)?;
+    // let metadata = Metadata::new(path);
 
     window.main_loop(move |_| {
+        // if metadata.has_updated() {
+        //     shader = duku.create_shader_glsl(path, true)?;
+        // }
+
         duku.draw_on_window(None, |target| {
             target.set_shader(&shader);
             target.draw_surface();

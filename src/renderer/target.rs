@@ -3,8 +3,9 @@
 
 use std::f32::consts::PI;
 
+use super::Color;
+use super::Light;
 use super::Pcf;
-use crate::color::Color;
 use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::Filter;
@@ -17,7 +18,6 @@ use crate::math::Vector3;
 use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-use crate::renderer::Light;
 use crate::storage::Builtins;
 use crate::storage::Handle;
 use crate::storage::Storage;
