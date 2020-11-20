@@ -7,80 +7,60 @@ use super::Vector3;
 use std::ops::Mul;
 use std::ops::MulAssign;
 
+/// Compact 3D rotation representation.
+///
+/// Used for rotating vectors
+///
+/// # Example
+///
+/// ```ignore
+/// let vector = Vector3::UP;
+/// let quat = Quaternion::euler_rotation(0.0, 0.0, 90.0);
+/// assert_eq!(quat * vector, Vector3::RIGHT);
+/// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Quaternion {
+    /// the X component
     pub x: f32,
+    /// the Y component
     pub y: f32,
+    /// the Z component
     pub z: f32,
+    /// the W component
     pub w: f32,
 }
 
 impl Quaternion {
+    /// Create quaternion
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
-    pub fn euler_rotation(roll: f32, pitch: f32, yaw: f32) -> Self {
-        let cy = (yaw.to_radians() * 0.5).cos();
-        let sy = (yaw.to_radians() * 0.5).sin();
-        let cp = (pitch.to_radians() * 0.5).cos();
-        let sp = (pitch.to_radians() * 0.5).sin();
-        let cr = (roll.to_radians() * 0.5).cos();
-        let sr = (roll.to_radians() * 0.5).sin();
-
-        let w = cr * cp * cy + sr * sp * sy;
-        let x = sr * cp * cy - cr * sp * sy;
-        let y = sr * cp * sy + cr * sp * cy;
-        let z = cr * cp * sy - sr * sp * cy;
-
-        Self::new(x, y, z, w)
+    /// Create quaternion with euler angles
+    ///
+    /// This rotation's yaw, pitch and roll are z, y and x
+    pub fn euler_rotation(x: f32, y: f32, z: f32) -> Self {
+        let m = Matrix4::euler_rotation(x, y, z);
+        Self::from(m)
     }
 
+    /// Create quaternion around axis
+    ///
+    /// This rotates vectors around axis by the angle
     pub fn axis_rotation(axis: impl Into<Vector3>, angle: f32) -> Self {
-        let an = angle.to_radians();
-        let ax = axis.into();
-
-        let w = (an / 2.0).cos();
-        let x = ax.x * (an / 2.0).sin();
-        let y = ax.y * (an / 2.0).sin();
-        let z = ax.z * (an / 2.0).sin();
-
-        Self::new(x, y, z, w)
+        let m = Matrix4::axis_rotation(axis, angle);
+        Self::from(m)
     }
 
+    /// Create quaternion to rotate towards direction
+    ///
+    /// Note: `global_up` is used as a guide to try aligning to
     pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
         let m = Matrix4::look_rotation(dir, global_up);
-
-        let mut result = Self::default();
-        let trace = m.x.x + m.y.y + m.z.z;
-        if trace > 0.0 {
-            let s = 0.5 / (trace + 1.0).sqrt();
-            result.w = 0.25 / s;
-            result.x = (m.z.y - m.y.z) * s;
-            result.y = (m.x.z - m.z.x) * s;
-            result.z = (m.y.x - m.x.y) * s;
-        } else if m.x.x > m.y.y && m.x.x > m.z.z {
-            let s = 2.0 * (1.0 + m.x.x - m.y.y - m.z.z).sqrt();
-            result.w = (m.z.y - m.y.z) / s;
-            result.x = 0.25 * s;
-            result.y = (m.x.y + m.y.x) / s;
-            result.z = (m.x.z + m.z.x) / s;
-        } else if m.y.y > m.z.z {
-            let s = 2.0 * (1.0 + m.y.y - m.x.x - m.z.z).sqrt();
-            result.w = (m.x.z - m.z.x) / s;
-            result.x = (m.x.y + m.y.x) / s;
-            result.y = 0.25 * s;
-            result.z = (m.y.z + m.z.y) / s;
-        } else {
-            let s = 2.0 * (1.0 + m.z.z - m.x.x - m.y.y).sqrt();
-            result.w = (m.y.x - m.x.y) / s;
-            result.x = (m.x.z + m.z.x) / s;
-            result.y = (m.y.z + m.z.y) / s;
-            result.z = 0.25 * s;
-        }
-        result
+        Self::from(m)
     }
 
+    /// Calculate the inverse rotation
     pub fn inverse(self) -> Quaternion {
         let mut result = self;
         result.w = -result.w;

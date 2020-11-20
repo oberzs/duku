@@ -125,9 +125,40 @@ impl Matrix4 {
         )
     }
 
+    /// Create rotation matrix with euler angles
+    ///
+    /// This rotation's yaw, pitch and roll are z, y and x
+    pub fn euler_rotation(x: f32, y: f32, z: f32) -> Self {
+        let sin_a = z.to_radians().sin();
+        let cos_a = z.to_radians().cos();
+        let sin_b = y.to_radians().sin();
+        let cos_b = y.to_radians().cos();
+        let sin_g = x.to_radians().sin();
+        let cos_g = x.to_radians().cos();
+
+        let xx = cos_a * cos_b;
+        let xy = cos_a * sin_b * sin_g - sin_a * cos_g;
+        let xz = cos_a * sin_b * cos_g + sin_a * sin_g;
+
+        let yx = sin_a * cos_b;
+        let yy = sin_a * sin_b * sin_g + cos_a * cos_g;
+        let yz = sin_a * sin_b * cos_g - cos_a * sin_g;
+
+        let zx = -sin_b;
+        let zy = cos_b * sin_g;
+        let zz = cos_b * cos_g;
+
+        Self::rows(
+            [xx, xy, xz, 0.0],
+            [yx, yy, yz, 0.0],
+            [zx, zy, zz, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        )
+    }
+
     /// Create rotation matrix around axis
     ///
-    /// This matrix rotates vectors around axis by the angle
+    /// This rotates vectors around axis by the angle
     pub fn axis_rotation(axis: impl Into<Vector3>, angle: f32) -> Self {
         let v = axis.into();
         let sin = angle.to_radians().sin();

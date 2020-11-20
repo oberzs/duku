@@ -52,15 +52,12 @@ fn main() -> Result<()> {
     )?;
 
     let light_mat = duku
-        .build_material_pbr()?
+        .build_material()?
         .albedo_texture(&light_tex)
         .metalness(1.0)
         .roughness(0.5)
         .build();
-    let purple_mat = duku
-        .build_material_pbr()?
-        .albedo_texture(&purple_tex)
-        .build();
+    let purple_mat = duku.build_material()?.albedo_texture(&purple_tex).build();
 
     window.main_loop(move |events| {
         controller.update(&mut camera, events, duku.delta_time());
@@ -85,7 +82,7 @@ fn main() -> Result<()> {
             target.draw_cube();
 
             // render floor
-            target.transform.position = Vector3::ZERO;
+            target.transform.position = Vector3::default();
             target.transform.scale = Vector3::new(10.0, 0.2, 10.0);
             target.unset_material();
             target.draw_cube();

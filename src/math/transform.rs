@@ -5,54 +5,99 @@ use super::Matrix4;
 use super::Quaternion;
 use super::Vector3;
 
+/// Represents transformation in separate components.
+///
+/// Used as an easier way to operate with transformations
+/// than matrices
+///
+/// # Example
+///
+/// ```ignore
+/// let transform = Transform {
+///     position: Vector3::new(1.0, 2.0, 3.0),
+///     scale: Vector3::uniform(5.0),
+///     rotation: Quaternion::euler_rotation(90.0, 0.0, 45.0),
+/// };
+/// let matrix = Matrix4::from(transform);
+/// // use matrix as usual
+/// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Transform {
+    /// the position component
     pub position: Vector3,
+    /// the scale component
     pub scale: Vector3,
+    /// the rotation component
     pub rotation: Quaternion,
 }
 
 impl Transform {
+    /// local up direction for transformation
     pub fn up(self) -> Vector3 {
         self.rotation * Vector3::UP
     }
 
+    /// local forward direction for transformation
     pub fn forward(self) -> Vector3 {
         self.rotation * Vector3::FORWARD
     }
 
+    /// local right direction for transformation
     pub fn right(self) -> Vector3 {
         self.rotation * Vector3::RIGHT
     }
 
+    /// move tranformation by specified amount
+    ///
+    /// Note: this moves using global directions
     pub fn move_by(&mut self, amount: impl Into<Vector3>) {
         self.position += amount.into();
     }
 
+    /// move transformation up by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_up(&mut self, amount: f32) {
         self.move_by(self.up() * amount);
     }
 
+    /// move transformation down by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_down(&mut self, amount: f32) {
         self.move_by(-self.up() * amount);
     }
 
+    /// move transformation right by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_right(&mut self, amount: f32) {
         self.move_by(self.right() * amount);
     }
 
+    /// move transformation left by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_left(&mut self, amount: f32) {
         self.move_by(-self.right() * amount);
     }
 
+    /// move transformation forward by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_forward(&mut self, amount: f32) {
         self.move_by(self.forward() * amount);
     }
 
+    /// move transformation back by specified amount
+    ///
+    /// Note: this moves using local directions
     pub fn move_back(&mut self, amount: f32) {
         self.move_by(-self.forward() * amount);
     }
 
+    /// move transformation rotating it around
+    /// some point around an axis
     pub fn move_around_point(
         &mut self,
         point: impl Into<Vector3>,
@@ -66,6 +111,7 @@ impl Transform {
         self.position += point;
     }
 
+    /// rotates the transformation to look at specific direction
     pub fn look_dir(&mut self, dir: impl Into<Vector3>) {
         let dir = dir.into().unit();
         let up = if dir == Vector3::UP {
@@ -76,6 +122,7 @@ impl Transform {
         self.rotation = Quaternion::look_rotation(dir, up);
     }
 
+    /// rotates the transformation to look at specific position
     pub fn look_at(&mut self, pos: impl Into<Vector3>) {
         self.look_dir(pos.into() - self.position);
     }

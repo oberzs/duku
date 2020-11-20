@@ -286,13 +286,6 @@ impl Duku {
         Ok(MaterialBuilder {
             storage: &mut self.storage,
             material: Material::new(&self.device, &mut self.uniforms)?,
-        })
-    }
-
-    pub fn build_material_pbr(&mut self) -> Result<MaterialBuilder<'_>> {
-        Ok(MaterialBuilder {
-            storage: &mut self.storage,
-            material: Material::new(&self.device, &mut self.uniforms)?,
         }
         .albedo_texture(&self.builtins.white_texture)
         .normal_texture(&self.builtins.blue_texture)
