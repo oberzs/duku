@@ -24,7 +24,7 @@ fn main() -> Result<()> {
         duku.create_texture_jpeg("examples/textures/cat.jpg", ColorSpace::Srgb, Mips::Log2)?;
 
     // save imported jpeg as a png
-    duku.texture(&texture_2).save("cat.png")?;
+    duku.save_texture(&texture_2, "cat.png")?;
 
     window.main_loop(move |_| {
         duku.draw_on_window(None, |target| {

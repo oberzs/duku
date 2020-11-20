@@ -17,7 +17,6 @@ use crate::pipeline::Attachment;
 use crate::vk;
 use properties::with_alpha;
 
-pub(crate) use properties::Format;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
 pub(crate) use size::Size;
@@ -27,6 +26,7 @@ pub use cubemap::CubemapSides;
 pub use framebuffer::Framebuffer;
 pub use properties::ColorSpace;
 pub use properties::Filter;
+pub use properties::Format;
 pub use properties::Mips;
 pub use properties::Msaa;
 pub use properties::Wrap;

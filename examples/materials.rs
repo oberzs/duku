@@ -31,14 +31,17 @@ fn main() -> Result<()> {
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
-    let skybox = duku.create_cubemap_png(CubemapSides {
-        top: "examples/textures/skybox/top.png",
-        bottom: "examples/textures/skybox/bottom.png",
-        front: "examples/textures/skybox/front.png",
-        back: "examples/textures/skybox/back.png",
-        left: "examples/textures/skybox/left.png",
-        right: "examples/textures/skybox/right.png",
-    })?;
+    let skybox = duku.create_cubemap_png(
+        ColorSpace::Srgb,
+        CubemapSides {
+            top: "examples/textures/skybox/top.png",
+            bottom: "examples/textures/skybox/bottom.png",
+            front: "examples/textures/skybox/front.png",
+            back: "examples/textures/skybox/back.png",
+            left: "examples/textures/skybox/left.png",
+            right: "examples/textures/skybox/right.png",
+        },
+    )?;
 
     let light_tex = duku.create_texture_png(
         "examples/textures/prototype/light.png",

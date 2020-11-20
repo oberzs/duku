@@ -126,65 +126,6 @@ impl Cubemap {
         })
     }
 
-    #[cfg(feature = "png")]
-    pub(crate) fn from_png_bytes(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        sides: CubemapSides<Vec<u8>>,
-    ) -> Result<Self> {
-        use png::ColorType;
-        use png::Decoder;
-
-        use crate::error::Error;
-
-        let (format, size) = {
-            let decoder = Decoder::new(sides.top.as_slice());
-            let (info, _) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
-
-            let f = match info.color_type {
-                ColorType::RGBA => Format::Srgba,
-                ColorType::RGB => Format::Srgb,
-                ColorType::Grayscale => Format::Gray,
-                _ => return Err(Error::UnsupportedFormat),
-            };
-            (f, info.width)
-        };
-
-        let mut side_data: Vec<_> = [
-            sides.top,
-            sides.bottom,
-            sides.front,
-            sides.back,
-            sides.left,
-            sides.right,
-        ]
-        .iter()
-        .map(|side| {
-            let decoder = Decoder::new(side.as_slice());
-            let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
-
-            let mut data = vec![0; info.buffer_size()];
-            reader.next_frame(&mut data).expect("bad read");
-            Ok(data)
-        })
-        .collect::<Result<_>>()?;
-
-        Self::new(
-            device,
-            uniforms,
-            size,
-            format,
-            CubemapSides {
-                top: side_data.remove(0),
-                bottom: side_data.remove(0),
-                front: side_data.remove(0),
-                back: side_data.remove(0),
-                left: side_data.remove(0),
-                right: side_data.remove(0),
-            },
-        )
-    }
-
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         uniforms.remove_cubemap(self.shader_index);
         self.image.destroy(device);

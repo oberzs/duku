@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-#[cfg(any(feature = "glsl", feature = "png", feature = "gltf"))]
+#[cfg(any(feature = "glsl", feature = "gltf"))]
 use std::path::Path;
 #[cfg(feature = "glsl")]
 use std::path::PathBuf;
@@ -20,6 +20,8 @@ use crate::device::Stats;
 use crate::error::Result;
 use crate::font::Font;
 use crate::image::ColorSpace;
+use crate::image::Cubemap;
+use crate::image::CubemapSides;
 use crate::image::Format;
 use crate::image::Framebuffer;
 use crate::image::Mips;
@@ -45,11 +47,6 @@ use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
-
-#[cfg(feature = "png")]
-use crate::image::Cubemap;
-#[cfg(feature = "png")]
-use crate::image::CubemapSides;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
@@ -177,30 +174,36 @@ impl Duku {
 
     pub fn create_texture(
         &mut self,
-        pixels: &[Color],
-        color_space: ColorSpace,
+        data: Vec<u8>,
+        format: Format,
+        mips: Mips,
         width: u32,
         height: u32,
-        mips: Mips,
     ) -> Result<Handle<Texture>> {
-        let data = pixels
-            .iter()
-            .map(|p| vec![p.r, p.g, p.b, p.a])
-            .flatten()
-            .collect::<Vec<_>>();
         let tex = Texture::new(
             &self.device,
             &mut self.uniforms,
             data,
             Size::new(width, height),
-            if color_space == ColorSpace::Linear {
-                Format::Rgba
-            } else {
-                Format::Srgba
-            },
+            format,
             mips,
         )?;
         Ok(self.storage.add_texture(tex))
+    }
+
+    pub fn create_texture_color(
+        &mut self,
+        pixels: &[Color],
+        width: u32,
+        height: u32,
+    ) -> Result<Handle<Texture>> {
+        let data: Vec<_> = pixels
+            .iter()
+            .map(|p| vec![p.r, p.g, p.b, p.a])
+            .flatten()
+            .collect();
+
+        self.create_texture(data, Format::Rgba, Mips::Zero, width, height)
     }
 
     pub fn texture(&self, tex: &Handle<Texture>) -> &Texture {
@@ -209,6 +212,16 @@ impl Duku {
 
     pub fn texture_mut(&mut self, tex: &Handle<Texture>) -> &mut Texture {
         self.storage.textures.get_mut(tex)
+    }
+
+    pub fn create_cubemap(
+        &mut self,
+        format: Format,
+        size: u32,
+        sides: CubemapSides<Vec<u8>>,
+    ) -> Result<Handle<Cubemap>> {
+        let cub = Cubemap::new(&self.device, &mut self.uniforms, size, format, sides)?;
+        Ok(self.storage.add_cubemap(cub))
     }
 
     pub fn font(&self, font: &Handle<Font>) -> &Font {
@@ -434,53 +447,6 @@ impl Duku {
         }
 
         Ok(handle)
-    }
-
-    #[cfg(feature = "png")]
-    pub fn create_texture_png_bytes(
-        &mut self,
-        bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        let tex =
-            Texture::from_png_bytes(&self.device, &mut self.uniforms, bytes, color_space, mips)?;
-        Ok(self.storage.add_texture(tex))
-    }
-
-    #[cfg(feature = "png")]
-    pub fn create_texture_png(
-        &mut self,
-        path: impl AsRef<Path>,
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Handle<Texture>> {
-        use std::fs;
-
-        let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes(&bytes, color_space, mips)
-    }
-
-    #[cfg(feature = "png")]
-    pub fn create_cubemap_png(
-        &mut self,
-        sides: CubemapSides<impl AsRef<Path>>,
-    ) -> Result<Handle<Cubemap>> {
-        use std::fs;
-
-        let cubemap = Cubemap::from_png_bytes(
-            &self.device,
-            &mut self.uniforms,
-            CubemapSides {
-                top: fs::read(sides.top)?,
-                bottom: fs::read(sides.bottom)?,
-                front: fs::read(sides.front)?,
-                back: fs::read(sides.back)?,
-                left: fs::read(sides.left)?,
-                right: fs::read(sides.right)?,
-            },
-        )?;
-        Ok(self.storage.add_cubemap(cubemap))
     }
 
     #[cfg(feature = "jpeg")]

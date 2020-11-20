@@ -106,7 +106,7 @@ pub enum Wrap {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum Format {
+pub enum Format {
     Rgb,
     Rgba,
     Srgb,

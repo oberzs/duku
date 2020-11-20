@@ -1,9 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-#[cfg(feature = "png")]
-use std::path::Path;
-
 use super::with_alpha;
 use super::Format;
 use super::Image;
@@ -16,7 +13,7 @@ use crate::error::Result;
 use crate::pipeline::Uniforms;
 use crate::renderer::Color;
 
-#[cfg(any(feature = "png", feature = "jpeg"))]
+#[cfg(feature = "jpeg")]
 use super::ColorSpace;
 
 /// Image that can be sampled in a shader.
@@ -87,38 +84,6 @@ impl Texture {
         })
     }
 
-    #[cfg(feature = "png")]
-    pub(crate) fn from_png_bytes(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
-    ) -> Result<Self> {
-        use png::ColorType;
-        use png::Decoder;
-
-        use crate::error::Error;
-
-        let decoder = Decoder::new(bytes);
-        let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
-        let size = Size::new(info.width, info.height);
-
-        let mut data = vec![0; info.buffer_size()];
-        reader.next_frame(&mut data).expect("bad read");
-
-        let format = match info.color_type {
-            ColorType::RGBA if color_space == ColorSpace::Linear => Format::Rgba,
-            ColorType::RGBA => Format::Srgba,
-            ColorType::RGB if color_space == ColorSpace::Linear => Format::Rgb,
-            ColorType::RGB => Format::Srgb,
-            ColorType::Grayscale => Format::Gray,
-            _ => return Err(Error::UnsupportedFormat),
-        };
-
-        Self::new(device, uniforms, data, size, format, mips)
-    }
-
     #[cfg(feature = "jpeg")]
     pub(crate) fn from_jpeg_bytes(
         device: &Device,
@@ -146,17 +111,22 @@ impl Texture {
         Self::new(device, uniforms, data, size, format, mips)
     }
 
-    /// Gets the width of the texture.
+    /// Get the width of the texture
     pub const fn width(&self) -> u32 {
         self.image.size().width
     }
 
-    /// Gets the height of the texture.
+    /// Get the height of the texture
     pub const fn height(&self) -> u32 {
         self.image.size().height
     }
 
-    /// Sets a pixel in the image to a specific color.
+    /// Get the data of the texture
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    /// Set a pixel in the image to a specific color.
     ///
     /// Note: works only if the texture has no mips.
     ///
@@ -181,7 +151,7 @@ impl Texture {
         }
     }
 
-    /// Gets a pixel's color in the image
+    /// Get a pixel's color in the image
     pub fn pixel(&self, x: u32, y: u32) -> Color {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
@@ -221,39 +191,6 @@ impl Texture {
 
             self.should_update = false;
         }
-    }
-
-    /// Saves the texture as a PNG file.
-    ///
-    /// Note: requires the `png` feature.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// duku.texture(&texture).save("path/to/output.png")?;
-    /// ```
-    #[cfg(feature = "png")]
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
-        use png::BitDepth;
-        use png::ColorType;
-        use png::Encoder;
-        use std::fs::File;
-        use std::io::BufWriter;
-
-        let file = File::create(path.as_ref())?;
-
-        let mut encoder = Encoder::new(
-            BufWriter::new(file),
-            self.image.size().width,
-            self.image.size().height,
-        );
-        encoder.set_color(ColorType::RGBA);
-        encoder.set_depth(BitDepth::Eight);
-        let mut writer = encoder.write_header().expect("bad write");
-
-        writer.write_image_data(&self.data).expect("bad write");
-
-        Ok(())
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {

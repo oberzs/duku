@@ -5,11 +5,11 @@
 
 #![cfg(feature = "gltf")]
 
-use gltf::buffer;
-use gltf::image;
-use gltf::mesh::Mode;
-use gltf::Gltf;
-use gltf::Node;
+use gltf_dep::buffer;
+use gltf_dep::image;
+use gltf_dep::mesh::Mode;
+use gltf_dep::Gltf;
+use gltf_dep::Node;
 use std::collections::HashMap;
 use std::fs;
 use std::slice::Iter;
@@ -18,8 +18,10 @@ use super::Mesh;
 use crate::device::Device;
 use crate::error::Error;
 use crate::error::Result;
+use crate::features::png;
 use crate::image::ColorSpace;
 use crate::image::Mips;
+use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Matrix4;
 use crate::math::Vector2;
@@ -402,11 +404,17 @@ fn load_texture(
         let (mime_type, data) = texture_data.remove(&index).ok_or(Error::InvalidGltf)?;
 
         let tex = match mime_type {
-            #[cfg(feature = "png")]
             "image/png" => {
-                Texture::from_png_bytes(device, uniforms, &data, color_space, Mips::Log2)?
+                let data = png::load_png(&data, color_space)?;
+                Texture::new(
+                    device,
+                    uniforms,
+                    data.data,
+                    Size::new(data.width, data.height),
+                    data.format,
+                    Mips::Log2,
+                )?
             }
-            #[cfg(feature = "jpeg")]
             "image/jpeg" => {
                 Texture::from_jpeg_bytes(device, uniforms, &data, color_space, Mips::Log2)?
             }
