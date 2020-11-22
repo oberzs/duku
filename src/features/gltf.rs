@@ -20,6 +20,7 @@ use crate::image::ColorSpace;
 use crate::image::Mips;
 use crate::image::Texture;
 use crate::math::Matrix4;
+use crate::math::Quaternion;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
@@ -284,8 +285,10 @@ fn load_node(
 ) -> Result<ModelNode> {
     // get transform matrix
     let matrix = {
-        let m = node.transform().matrix();
-        Matrix4::columns(m[0], m[1], m[2], m[3])
+        let (t, r, s) = node.transform().decomposed();
+        Matrix4::translation([t[0], t[1], -t[2]])
+            * Matrix4::from(Quaternion::new(r[0], r[1], -r[2], -r[3]))
+            * Matrix4::scale(s)
     };
 
     // get mesh and material
