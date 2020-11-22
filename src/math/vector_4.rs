@@ -202,33 +202,32 @@ impl DivAssign<f32> for Vector4 {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp)]
 mod test {
     use super::Vector4;
 
     #[test]
     fn default() {
         let v = Vector4::default();
-        assert_eq!(v.x, 0.0);
-        assert_eq!(v.y, 0.0);
-        assert_eq!(v.z, 0.0);
-        assert_eq!(v.w, 0.0);
+        assert_eq_delta!(v.x, 0.0);
+        assert_eq_delta!(v.y, 0.0);
+        assert_eq_delta!(v.z, 0.0);
+        assert_eq_delta!(v.w, 0.0);
     }
 
     #[test]
     fn new() {
         let v = Vector4::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(v.x, 1.0);
-        assert_eq!(v.y, 2.0);
-        assert_eq!(v.z, 3.0);
-        assert_eq!(v.w, 4.0);
+        assert_eq_delta!(v.x, 1.0);
+        assert_eq_delta!(v.y, 2.0);
+        assert_eq_delta!(v.z, 3.0);
+        assert_eq_delta!(v.w, 4.0);
     }
 
     #[test]
     fn dot() {
         let a = Vector4::new(1.0, 2.0, 3.0, 1.0);
         let b = Vector4::new(5.0, 6.0, 7.0, 1.0);
-        assert_eq!(a.dot(b), 39.0);
+        assert_eq_delta!(a.dot(b), 39.0);
     }
 
     #[test]
@@ -240,22 +239,5 @@ mod test {
         assert_eq!(v1 - v2, Vector4::new(0.0, -5.0, 0.0, 0.0));
         assert_eq!(v1 * 4.0, Vector4::new(8.0, 12.0, 16.0, 4.0));
         assert_eq!(v2 / 2.0, Vector4::new(1.0, 4.0, 2.0, 0.5));
-    }
-
-    #[test]
-    fn operators_assign() {
-        let v = Vector4::new(2.0, 2.0, 2.0, 1.0);
-        let mut add = Vector4::new(1.0, 3.0, 2.0, 1.0);
-        let mut sub = Vector4::new(3.0, 5.0, 2.0, 1.0);
-        let mut mul = Vector4::new(1.0, 3.0, 2.0, 1.0);
-        let mut div = Vector4::new(4.0, 6.0, 2.0, 1.0);
-        add += v;
-        sub -= v;
-        mul *= 2.0;
-        div /= 2.0;
-        assert_eq!(add, Vector4::new(3.0, 5.0, 4.0, 2.0));
-        assert_eq!(sub, Vector4::new(1.0, 3.0, 0.0, 0.0));
-        assert_eq!(mul, Vector4::new(2.0, 6.0, 4.0, 2.0));
-        assert_eq!(div, Vector4::new(2.0, 3.0, 1.0, 0.5));
     }
 }

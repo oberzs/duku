@@ -189,16 +189,23 @@ impl Matrix4 {
 
     /// Create rotation matrix to rotate towards direction
     ///
-    /// Note: `global_up` is used as a guide to try aligning to
-    pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
-        let z_axis = dir.into().unit();
-        let x_axis = global_up.into().cross(z_axis).unit();
-        let y_axis = z_axis.cross(x_axis);
+    /// Note: `up` is used as a guide to try aligning to
+    pub fn look_rotation(forward: impl Into<Vector3>, up: impl Into<Vector3>) -> Self {
+        let f = forward.into().unit();
+        let r = up.into().unit().cross(f).unit();
+        let u = f.cross(r).unit();
+
+        // Self::rows(
+        //     [r.x, u.x, f.x, 0.0],
+        //     [r.y, u.y, f.y, 0.0],
+        //     [r.z, u.z, f.z, 0.0],
+        //     [0.0, 0.0, 0.0, 1.0],
+        // )
 
         Self::rows(
-            [x_axis.x, x_axis.y, x_axis.z, 0.0],
-            [y_axis.x, y_axis.y, y_axis.z, 0.0],
-            [z_axis.x, z_axis.y, z_axis.z, 0.0],
+            [r.x, r.y, r.z, 0.0],
+            [u.x, u.y, u.z, 0.0],
+            [f.x, f.y, f.z, 0.0],
             [0.0, 0.0, 0.0, 1.0],
         )
     }
@@ -482,6 +489,7 @@ mod test {
     use super::Matrix4;
     use super::Quaternion;
     use super::Transform;
+    use super::Vector3;
     use super::Vector4;
 
     #[test]
@@ -529,22 +537,82 @@ mod test {
     #[test]
     fn translation() {
         let m = Matrix4::translation([3.0, 4.0, 5.0]);
-        let v = Vector4::new(6.0, 7.0, 8.0, 1.0);
-        assert_eq!(m * v, Vector4::new(9.0, 11.0, 13.0, 1.0));
+        let v = Vector3::new(6.0, 7.0, 8.0);
+        assert_eq!(m * v, Vector3::new(9.0, 11.0, 13.0));
     }
 
     #[test]
     fn scale() {
         let m = Matrix4::scale([1.0, 2.0, 3.0]);
-        let v = Vector4::new(3.0, 4.0, 5.0, 1.0);
-        assert_eq!(m * v, Vector4::new(3.0, 8.0, 15.0, 1.0));
+        let v = Vector3::new(3.0, 4.0, 5.0);
+        assert_eq!(m * v, Vector3::new(3.0, 8.0, 15.0));
     }
 
     #[test]
     fn axis_rotation() {
         let m = Matrix4::axis_rotation([1.0, 0.0, 0.0], 180.0);
-        let v = Vector4::new(1.0, 1.0, 1.0, 1.0);
-        assert_eq!(m * v, Vector4::new(1.0, -0.999_999_94, -1.000_000_1, 1.0));
+        let v = Vector3::new(1.0, 1.0, 1.0);
+        let r = m * v;
+        assert_eq_delta!(r.x, 1.0);
+        assert_eq_delta!(r.y, -1.0);
+        assert_eq_delta!(r.z, -1.0);
+    }
+
+    #[test]
+    fn look_rotation_x() {
+        let m = Matrix4::look_rotation(Vector3::new(1.0, 0.0, 0.0), Vector3::UP);
+        let r = m * Vector3::FORWARD;
+        assert_eq_delta!(r.x, -1.0);
+        assert_eq_delta!(r.y, 0.0);
+        assert_eq_delta!(r.z, 0.0);
+    }
+
+    #[test]
+    fn look_rotation_y() {
+        let m = Matrix4::look_rotation([0.0, 1.0, 0.0], Vector3::FORWARD);
+        let r = m * Vector3::FORWARD;
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, 1.0);
+        assert_eq_delta!(r.z, 0.0);
+    }
+
+    #[test]
+    fn look_rotation_z() {
+        let m = Matrix4::look_rotation([0.0, 0.0, -1.0], Vector3::UP);
+        let r = m * Vector3::FORWARD;
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, 0.0);
+        assert_eq_delta!(r.z, -1.0);
+    }
+
+    #[test]
+    fn euler_rotation_x() {
+        let m = Matrix4::euler_rotation(90.0, 0.0, 0.0);
+        let v = Vector3::new(0.0, 0.0, 1.0);
+        let r = m * v;
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, -1.0);
+        assert_eq_delta!(r.z, 0.0);
+    }
+
+    #[test]
+    fn euler_rotation_y() {
+        let m = Matrix4::euler_rotation(0.0, 90.0, 0.0);
+        let v = Vector3::new(0.0, 0.0, 1.0);
+        let r = m * v;
+        assert_eq_delta!(r.x, 1.0);
+        assert_eq_delta!(r.y, 0.0);
+        assert_eq_delta!(r.z, 0.0);
+    }
+
+    #[test]
+    fn euler_rotation_z() {
+        let m = Matrix4::euler_rotation(0.0, 0.0, 90.0);
+        let v = Vector3::new(1.0, 0.0, 0.0);
+        let r = m * v;
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, 1.0);
+        assert_eq_delta!(r.z, 0.0);
     }
 
     #[test]
@@ -566,15 +634,6 @@ mod test {
     }
 
     #[test]
-    fn look_rotation() {
-        let m = Matrix4::look_rotation([0.0, 0.0, -1.0], [0.0, 1.0, 0.0]);
-        assert_eq!(m.rx(), Vector4::new(-1.0, 0.0, 0.0, -0.0));
-        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, -0.0));
-        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, -1.0, -0.0));
-        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
-    }
-
-    #[test]
     fn mul_with_vector() {
         let m = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
@@ -587,8 +646,8 @@ mod test {
     }
 
     #[test]
-    fn mul_with_matrix() {
-        let mut ma = Matrix4::rows(
+    fn mul_with_self() {
+        let ma = Matrix4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
@@ -601,32 +660,31 @@ mod test {
             [5.0, 6.0, 7.0, 8.0],
         );
         let r = ma * mb;
-        ma *= mb;
         assert_eq!(r.rx(), Vector4::new(39.0, 43.0, 47.0, 51.0));
         assert_eq!(r.ry(), Vector4::new(111.0, 115.0, 119.0, 123.0));
         assert_eq!(r.rz(), Vector4::new(123.0, 119.0, 115.0, 111.0));
         assert_eq!(r.rw(), Vector4::new(51.0, 47.0, 43.0, 39.0));
-        assert_eq!(ma.rx(), Vector4::new(39.0, 43.0, 47.0, 51.0));
-        assert_eq!(ma.ry(), Vector4::new(111.0, 115.0, 119.0, 123.0));
-        assert_eq!(ma.rz(), Vector4::new(123.0, 119.0, 115.0, 111.0));
-        assert_eq!(ma.rw(), Vector4::new(51.0, 47.0, 43.0, 39.0));
     }
 
     #[test]
     fn inverse() {
         let m = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0);
-        let precision = 0.99999994;
-        assert_eq!(
-            m * m.inverse().expect("no inverse"),
-            Matrix4::identity() * precision
-        );
+        let r = m * m.inverse().expect("no inverse");
+        assert_eq_delta!(r.x.x, 1.0);
+        assert_eq_delta!(r.y.y, 1.0);
+        assert_eq_delta!(r.z.z, 1.0);
+        assert_eq_delta!(r.w.w, 1.0);
     }
 
     #[test]
     fn projection() {
         let matrix = Matrix4::perspective(90.0, 16.0 / 9.0, 0.1, 10.0);
         let point = Vector4::new(0.0, 0.0, 10.0, 1.0);
-        assert_eq!(matrix * point, Vector4::new(0.0, 0.0, 10.000001, 10.0));
+        let r = matrix * point;
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, 0.0);
+        assert_eq_delta!(r.z, 10.0);
+        assert_eq_delta!(r.w, 10.0);
     }
 
     #[test]
@@ -638,8 +696,19 @@ mod test {
 
     #[test]
     fn from_quaternion() {
-        let m3 = Matrix4::from(Quaternion::axis_rotation([1.0, 0.0, 0.0], 90.0));
-        let m4 = Matrix4::axis_rotation([1.0, 0.0, 0.0], 90.0);
-        assert_eq!(m3, m4);
+        let v = Vector3::new(0.0, 0.0, 1.0);
+        let mq = Matrix4::from(Quaternion::euler_rotation(90.0, 0.0, 0.0));
+        let m = Matrix4::euler_rotation(90.0, 0.0, 0.0);
+
+        let rq = mq * v;
+        let r = m * v;
+
+        assert_eq_delta!(rq.x, 0.0);
+        assert_eq_delta!(rq.y, -1.0);
+        assert_eq_delta!(rq.z, 0.0);
+
+        assert_eq_delta!(r.x, 0.0);
+        assert_eq_delta!(r.y, -1.0);
+        assert_eq_delta!(r.z, 0.0);
     }
 }

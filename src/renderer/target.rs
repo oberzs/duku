@@ -16,16 +16,13 @@ use crate::math::Transform;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
+use crate::mesh::Model;
+use crate::mesh::ModelNode;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::storage::Builtins;
 use crate::storage::Handle;
 use crate::storage::Storage;
-
-#[cfg(feature = "gltf")]
-use crate::mesh::Model;
-#[cfg(feature = "gltf")]
-use crate::mesh::ModelNode;
 
 pub struct Target<'b> {
     // global
@@ -614,20 +611,18 @@ impl<'b> Target<'b> {
         self.pop();
     }
 
-    #[cfg(feature = "gltf")]
     pub fn draw_model(&mut self, model: &Handle<Model>) {
         let m = self.storage.models.get(model);
 
         self.push();
-        for node in m.nodes() {
+        for node in &m.nodes {
             self.draw_model_node(node, Matrix4::from(self.transform));
         }
         self.pop();
     }
 
-    #[cfg(feature = "gltf")]
     fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Matrix4) {
-        let matrix = parent_matrix * node.matrix();
+        let matrix = parent_matrix * node.matrix;
         self.transform = Transform::from(matrix);
 
         for (mesh, material) in node.orders() {
@@ -635,7 +630,7 @@ impl<'b> Target<'b> {
             self.draw_mesh(mesh);
         }
 
-        for child in node.children() {
+        for child in &node.children {
             self.draw_model_node(child, matrix);
         }
     }

@@ -1,3 +1,6 @@
+// Oliver Berzs
+// https://github.com/oberzs/duku
+
 #![cfg(feature = "jpeg")]
 
 use jpeg_dep::Decoder;

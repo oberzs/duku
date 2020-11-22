@@ -1,3 +1,6 @@
+// Oliver Berzs
+// https://github.com/oberzs/duku
+
 #![cfg(feature = "png")]
 
 use png_dep::BitDepth;

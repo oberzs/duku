@@ -142,8 +142,8 @@ impl ShadowRenderer {
                 Vector3::FORWARD
             };
             let light_position = bounds.center - light_dir * bounds.radius;
-            let light_view_matrix = Matrix4::look_rotation(bounds.center - light_position, up)
-                * Matrix4::translation(-light_position);
+            let light_view_matrix =
+                Matrix4::look_rotation(light_dir, up) * Matrix4::translation(-light_position);
             let mut light_ortho_matrix = Matrix4::orthographic(diameter, diameter, 0.0, diameter);
 
             // stabilize shadow map by using texel units
@@ -156,20 +156,21 @@ impl ShadowRenderer {
             round_offset *= 2.0 / self.map_size as f32;
             light_ortho_matrix.w.x += round_offset.x;
             light_ortho_matrix.w.y += round_offset.y;
-            let light_matrix = light_ortho_matrix * light_view_matrix;
 
-            params.world_to_shadow[i] = light_matrix;
+            params.world_to_shadow[i] = light_ortho_matrix * light_view_matrix;
             params.texels[i] = diameter / self.map_size as f32;
             params.diameters[i] = diameter;
 
             // update world uniform
             target_resources.world_buffers[i].copy_from_data(&[ShaderWorld {
+                world_to_view: light_view_matrix,
+                view_to_clip: light_ortho_matrix,
+
+                // these fields are not important
                 world_to_shadow: [Matrix4::identity(); 4],
                 camera_position: Vector3::default(),
                 ambient_color: Vector3::default(),
                 lights: [Default::default(); 4],
-                world_to_view: light_view_matrix,
-                view_to_clip: light_ortho_matrix,
                 shadow_splits: [0.0; 4],
                 shadow_texels: [0.0; 4],
                 shadow_diameters: [0.0; 4],
@@ -311,7 +312,7 @@ fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
 
     // get projection frustum corners from NDC
     for corner in &mut frustum_corners {
-        let point = inverse_projection * Vector4::from((*corner, 0.0));
+        let point = inverse_projection * Vector4::from((*corner, 1.0));
         *corner = point.xyz() / point.w;
     }
 

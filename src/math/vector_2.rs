@@ -85,11 +85,11 @@ impl Vector2 {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// let up = Vector2::UP;
     /// let right = Vector2::RIGHT;
     /// let angle = up.angle_between(right);
-    /// assert_eq!(angle, 90.0);
+    /// // angle is ~90 degrees
     /// ```
     pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
@@ -215,48 +215,63 @@ impl DivAssign<f32> for Vector2 {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp)]
 mod test {
     use super::Vector2;
 
     #[test]
     fn default() {
         let v = Vector2::default();
-        assert_eq!(v.x, 0.0);
-        assert_eq!(v.y, 0.0);
+        assert_eq_delta!(v.x, 0.0);
+        assert_eq_delta!(v.y, 0.0);
     }
 
     #[test]
     fn new() {
         let v = Vector2::new(1.0, 2.0);
-        assert_eq!(v.x, 1.0);
-        assert_eq!(v.y, 2.0);
+        assert_eq_delta!(v.x, 1.0);
+        assert_eq_delta!(v.y, 2.0);
     }
 
     #[test]
     fn dot() {
         let a = Vector2::new(1.0, 2.0);
         let b = Vector2::new(5.0, 6.0);
-        assert_eq!(a.dot(b), 17.0);
+        assert_eq_delta!(a.dot(b), 17.0);
+    }
+
+    #[test]
+    fn sqr_length() {
+        let v = Vector2::new(3.0, 4.0);
+        assert_eq_delta!(v.sqr_length(), 25.0);
     }
 
     #[test]
     fn length() {
-        let v = Vector2::new(2.0, 4.0);
-        assert_eq!(v.length(), 4.472_136);
+        let v = Vector2::new(3.0, 4.0);
+        assert_eq_delta!(v.length(), 5.0);
     }
 
     #[test]
     fn unit() {
         let v = Vector2::new(3.0, 4.0);
-        assert_eq!(v.unit(), Vector2::new(0.6, 0.8));
+        let u = v.unit();
+        assert_eq_delta!(u.x, 0.6);
+        assert_eq_delta!(u.y, 0.8);
+    }
+
+    #[test]
+    fn normal() {
+        let v = Vector2::new(6.0, 7.0);
+        let n = v.normal();
+        assert_eq_delta!(n.x, -7.0);
+        assert_eq_delta!(n.y, 6.0);
     }
 
     #[test]
     fn angle_between() {
         let v1 = Vector2::new(1.0, 3.0);
         let v2 = Vector2::new(-3.0, 1.0);
-        assert_eq!(v1.angle_between(v2), 90.0);
+        assert_eq_delta!(v1.angle_between(v2), 90.0);
     }
 
     #[test]
@@ -268,22 +283,5 @@ mod test {
         assert_eq!(v1 - v2, Vector2::new(0.0, -5.0));
         assert_eq!(v1 * 4.0, Vector2::new(8.0, 12.0));
         assert_eq!(v2 / 2.0, Vector2::new(1.0, 4.0));
-    }
-
-    #[test]
-    fn operators_assign() {
-        let v = Vector2::new(2.0, 2.0);
-        let mut add = Vector2::new(1.0, 3.0);
-        let mut sub = Vector2::new(3.0, 5.0);
-        let mut mul = Vector2::new(1.0, 3.0);
-        let mut div = Vector2::new(4.0, 6.0);
-        add += v;
-        sub -= v;
-        mul *= 2.0;
-        div /= 2.0;
-        assert_eq!(add, Vector2::new(3.0, 5.0));
-        assert_eq!(sub, Vector2::new(1.0, 3.0));
-        assert_eq!(mul, Vector2::new(2.0, 6.0));
-        assert_eq!(div, Vector2::new(2.0, 3.0));
     }
 }

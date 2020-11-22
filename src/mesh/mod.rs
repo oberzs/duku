@@ -3,10 +3,8 @@
 
 // Mesh - struct representing a renderable object
 
-mod vertex;
-
-#[cfg(feature = "gltf")]
 mod model;
+mod vertex;
 
 use std::iter;
 
@@ -23,11 +21,8 @@ use crate::vk;
 
 pub(crate) use vertex::Vertex;
 
-#[cfg(feature = "gltf")]
-pub(crate) use model::ModelNode;
-
-#[cfg(feature = "gltf")]
 pub use model::Model;
+pub use model::ModelNode;
 
 pub struct Mesh {
     vertices: Vec<Vector3>,

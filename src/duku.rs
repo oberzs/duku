@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-#[cfg(any(feature = "glsl", feature = "gltf"))]
+#[cfg(any(feature = "glsl"))]
 use std::path::Path;
 #[cfg(feature = "glsl")]
 use std::path::PathBuf;
@@ -30,6 +30,8 @@ use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
 use crate::mesh::MeshBuilder;
+use crate::mesh::Model;
+use crate::mesh::ModelNode;
 use crate::pipeline::Material;
 use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
@@ -49,9 +51,6 @@ use crate::surface::WindowHandle;
 
 #[cfg(feature = "window")]
 use crate::window::Window;
-
-#[cfg(feature = "gltf")]
-use crate::mesh::Model;
 
 const FPS_SAMPLE_COUNT: usize = 64;
 
@@ -281,6 +280,27 @@ impl Duku {
         self.storage.add_mesh(mesh)
     }
 
+    pub fn create_model(&mut self, nodes: Vec<ModelNode>) -> Handle<Model> {
+        let model = Model { nodes };
+        self.storage.add_model(model)
+    }
+
+    pub fn model(&self, model: &Handle<Model>) -> &Model {
+        self.storage.models.get(model)
+    }
+
+    pub fn model_mut(&mut self, model: &Handle<Model>) -> &mut Model {
+        self.storage.models.get_mut(model)
+    }
+
+    pub fn fix_model_color_space(&mut self, model: &Handle<Model>) {
+        let mdl = self.storage.models.get(model);
+        for material in mdl.materials() {
+            let mat = self.storage.materials.get_mut(material);
+            mat.fix_albedo_color_space();
+        }
+    }
+
     pub fn create_material(&mut self) -> Result<Handle<Material>> {
         let mat = Material::new(&self.device, &mut self.uniforms)?;
         Ok(self.storage.add_material(mat))
@@ -299,11 +319,11 @@ impl Duku {
             storage: &mut self.storage,
             material: Material::new(&self.device, &mut self.uniforms)?,
         }
-        .albedo_texture(&self.builtins.white_texture)
-        .normal_texture(&self.builtins.blue_texture)
-        .metalness_roughness_texture(&self.builtins.white_texture)
-        .ambient_occlusion_texture(&self.builtins.white_texture)
-        .emissive_texture(&self.builtins.black_texture)
+        .albedo_texture(self.builtins.white_texture.clone())
+        .normal_texture(self.builtins.blue_texture.clone())
+        .metalness_roughness_texture(self.builtins.white_texture.clone())
+        .ambient_occlusion_texture(self.builtins.white_texture.clone())
+        .emissive_texture(self.builtins.black_texture.clone())
         .albedo_color([255, 255, 255])
         .emissive([0, 0, 0])
         .metalness(0.0)
@@ -446,52 +466,6 @@ impl Duku {
         }
 
         Ok(handle)
-    }
-
-    #[cfg(feature = "gltf")]
-    pub fn create_model_gltf_bytes(&mut self, bytes: &[u8], root: &str) -> Result<Handle<Model>> {
-        let model = Model::from_gltf_bytes(
-            &self.device,
-            &mut self.uniforms,
-            &mut self.storage,
-            root,
-            bytes,
-        )?;
-        Ok(self.storage.add_model(model))
-    }
-
-    #[cfg(feature = "gltf")]
-    pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
-        use std::fs;
-
-        let p = path.as_ref();
-        let bytes = fs::read(p)?;
-        self.create_model_gltf_bytes(
-            &bytes,
-            p.parent()
-                .unwrap_or_else(|| Path::new("./"))
-                .to_str()
-                .expect("bad path"),
-        )
-    }
-
-    #[cfg(feature = "gltf")]
-    pub fn fix_model_color_space(&mut self, model: &Handle<Model>) {
-        let mdl = self.storage.models.get(model);
-        for material in mdl.materials() {
-            let mat = self.storage.materials.get_mut(material);
-            mat.fix_albedo_color_space();
-        }
-    }
-
-    #[cfg(feature = "gltf")]
-    pub fn model(&self, model: &Handle<Model>) -> &Model {
-        self.storage.models.get(model)
-    }
-
-    #[cfg(feature = "gltf")]
-    pub fn model_mut(&mut self, model: &Handle<Model>) -> &mut Model {
-        self.storage.models.get_mut(model)
     }
 }
 

@@ -33,3 +33,21 @@ macro_rules! warn {
         }
     }};
 }
+
+// asserts floats with delta
+#[cfg(test)]
+macro_rules! assert_eq_delta {
+    ($a:expr, $b:expr) => {{
+        let eps = 1.0e-6;
+        let (a, b) = (&$a, &$b);
+        assert!(
+            (*a - *b).abs() < eps,
+            "assertion failed: `(left !== right)` \
+        (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+            *a,
+            *b,
+            eps,
+            (*a - *b).abs()
+        );
+    }};
+}

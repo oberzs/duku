@@ -100,7 +100,7 @@ impl Camera {
 
     pub(crate) fn world_to_view(&self) -> Matrix4 {
         Matrix4::scale(self.transform.scale)
-            * Matrix4::from(self.transform.rotation.inverse())
+            * Matrix4::from(self.transform.rotation)
             * Matrix4::translation(-self.transform.position)
     }
 

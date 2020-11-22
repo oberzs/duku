@@ -7,7 +7,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use duku::Color;
 //! use duku::Camera;
 //! use duku::Duku;
@@ -108,6 +108,8 @@ pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::Mesh;
 pub use mesh::MeshBuilder;
+pub use mesh::Model;
+pub use mesh::ModelNode;
 pub use pipeline::Material;
 pub use pipeline::MaterialBuilder;
 pub use pipeline::MaterialParam;
@@ -128,8 +130,3 @@ pub use surface::WindowHandle;
 // optional feature exports
 #[cfg(feature = "window")]
 pub mod window;
-
-#[cfg(feature = "gltf")]
-pub mod gltf {
-    pub use super::mesh::Model;
-}

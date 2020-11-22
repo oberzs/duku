@@ -33,6 +33,7 @@ pub struct Material {
 
     descriptor: Descriptor,
     buffer: Buffer<ShaderMaterial>,
+    pub(crate) textures: Vec<Handle<Texture>>,
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
@@ -57,6 +58,7 @@ impl Material {
             f: MaterialParam::default(),
             g: MaterialParam::default(),
             h: MaterialParam::default(),
+            textures: vec![],
             should_update: true,
             buffer,
             descriptor,
@@ -70,8 +72,9 @@ impl Material {
         self.should_update = true;
     }
 
-    pub fn set_albedo_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_albedo_texture(&mut self, texture: Handle<Texture>) {
         self.a[3] = texture.id() as f32;
+        self.textures.push(texture);
         self.should_update = true;
     }
 
@@ -97,23 +100,27 @@ impl Material {
         self.should_update = true;
     }
 
-    pub fn set_metalness_roughness_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_metalness_roughness_texture(&mut self, texture: Handle<Texture>) {
         self.b[2] = texture.id() as f32;
+        self.textures.push(texture);
         self.should_update = true;
     }
 
-    pub fn set_ambient_occlusion_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_ambient_occlusion_texture(&mut self, texture: Handle<Texture>) {
         self.b[3] = texture.id() as f32;
+        self.textures.push(texture);
         self.should_update = true;
     }
 
-    pub fn set_normal_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_normal_texture(&mut self, texture: Handle<Texture>) {
         self.c[0] = texture.id() as f32;
+        self.textures.push(texture);
         self.should_update = true;
     }
 
-    pub fn set_emissive_texture(&mut self, texture: &Handle<Texture>) {
+    pub fn set_emissive_texture(&mut self, texture: Handle<Texture>) {
         self.c[1] = texture.id() as f32;
+        self.textures.push(texture);
         self.should_update = true;
     }
 
@@ -197,7 +204,7 @@ impl MaterialBuilder<'_> {
         self
     }
 
-    pub fn albedo_texture(mut self, texture: &Handle<Texture>) -> Self {
+    pub fn albedo_texture(mut self, texture: Handle<Texture>) -> Self {
         self.material.set_albedo_texture(texture);
         self
     }
@@ -222,22 +229,22 @@ impl MaterialBuilder<'_> {
         self
     }
 
-    pub fn metalness_roughness_texture(mut self, texture: &Handle<Texture>) -> Self {
+    pub fn metalness_roughness_texture(mut self, texture: Handle<Texture>) -> Self {
         self.material.set_metalness_roughness_texture(texture);
         self
     }
 
-    pub fn ambient_occlusion_texture(mut self, texture: &Handle<Texture>) -> Self {
+    pub fn ambient_occlusion_texture(mut self, texture: Handle<Texture>) -> Self {
         self.material.set_ambient_occlusion_texture(texture);
         self
     }
 
-    pub fn normal_texture(mut self, texture: &Handle<Texture>) -> Self {
+    pub fn normal_texture(mut self, texture: Handle<Texture>) -> Self {
         self.material.set_normal_texture(texture);
         self
     }
 
-    pub fn emissive_texture(mut self, texture: &Handle<Texture>) -> Self {
+    pub fn emissive_texture(mut self, texture: Handle<Texture>) -> Self {
         self.material.set_emissive_texture(texture);
         self
     }

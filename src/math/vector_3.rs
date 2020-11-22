@@ -96,11 +96,11 @@ impl Vector3 {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// let up = Vector3::UP;
     /// let right = Vector3::RIGHT;
     /// let angle = up.angle_between(right);
-    /// assert_eq!(angle, 90.0);
+    /// // angle is ~90 degrees
     /// ```
     pub fn angle_between(&self, other: impl Into<Self>) -> f32 {
         let o = other.into();
@@ -266,7 +266,6 @@ impl DivAssign<f32> for Vector3 {
 }
 
 #[cfg(test)]
-#[allow(clippy::float_cmp)]
 mod test {
     use super::Vector2;
     use super::Vector3;
@@ -274,50 +273,56 @@ mod test {
     #[test]
     fn default() {
         let v = Vector3::default();
-        assert_eq!(v.x, 0.0);
-        assert_eq!(v.y, 0.0);
-        assert_eq!(v.z, 0.0);
+        assert_eq_delta!(v.x, 0.0);
+        assert_eq_delta!(v.y, 0.0);
+        assert_eq_delta!(v.z, 0.0);
     }
 
     #[test]
     fn new() {
         let v = Vector3::new(1.0, 2.0, 3.0);
-        assert_eq!(v.x, 1.0);
-        assert_eq!(v.y, 2.0);
-        assert_eq!(v.z, 3.0);
+        assert_eq_delta!(v.x, 1.0);
+        assert_eq_delta!(v.y, 2.0);
+        assert_eq_delta!(v.z, 3.0);
     }
 
     #[test]
     fn dot() {
         let a = Vector3::new(1.0, 2.0, 3.0);
         let b = Vector3::new(5.0, 6.0, 7.0);
-        assert_eq!(a.dot(b), 38.0);
+        assert_eq_delta!(a.dot(b), 38.0);
     }
 
     #[test]
     fn cross() {
         let a = Vector3::new(2.0, 3.0, 4.0);
         let b = Vector3::new(5.0, 6.0, 7.0);
-        assert_eq!(a.cross(b), Vector3::new(-3.0, 6.0, -3.0));
+        let r = a.cross(b);
+        assert_eq_delta!(r.x, -3.0);
+        assert_eq_delta!(r.y, 6.0);
+        assert_eq_delta!(r.z, -3.0);
     }
 
     #[test]
     fn length() {
-        let v = Vector3::new(2.0, 4.0, -2.0);
-        assert_eq!(v.length(), 4.898_979_7);
+        let v = Vector3::new(3.0, 4.0, 0.0);
+        assert_eq_delta!(v.length(), 5.0);
     }
 
     #[test]
     fn unit() {
         let v = Vector3::new(3.0, 4.0, 0.0);
-        assert_eq!(v.unit(), Vector3::new(0.6, 0.8, 0.0));
+        let u = v.unit();
+        assert_eq_delta!(u.x, 0.6);
+        assert_eq_delta!(u.y, 0.8);
+        assert_eq_delta!(u.z, 0.0);
     }
 
     #[test]
     fn angle_between() {
         let a = Vector3::new(4.0, 0.0, 0.0);
         let b = Vector3::new(0.0, 13.0, 0.0);
-        assert_eq!(a.angle_between(b), 90.0);
+        assert_eq_delta!(a.angle_between(b), 90.0);
     }
 
     #[test]
@@ -345,22 +350,5 @@ mod test {
         assert_eq!(v1 - v2, Vector3::new(0.0, -5.0, 0.0));
         assert_eq!(v1 * 4.0, Vector3::new(8.0, 12.0, 16.0));
         assert_eq!(v2 / 2.0, Vector3::new(1.0, 4.0, 2.0));
-    }
-
-    #[test]
-    fn operators_assign() {
-        let v = Vector3::new(2.0, 2.0, 2.0);
-        let mut add = Vector3::new(1.0, 3.0, 2.0);
-        let mut sub = Vector3::new(3.0, 5.0, 2.0);
-        let mut mul = Vector3::new(1.0, 3.0, 2.0);
-        let mut div = Vector3::new(4.0, 6.0, 2.0);
-        add += v;
-        sub -= v;
-        mul *= 2.0;
-        div /= 2.0;
-        assert_eq!(add, Vector3::new(3.0, 5.0, 4.0));
-        assert_eq!(sub, Vector3::new(1.0, 3.0, 0.0));
-        assert_eq!(mul, Vector3::new(2.0, 6.0, 4.0));
-        assert_eq!(div, Vector3::new(2.0, 3.0, 1.0));
     }
 }

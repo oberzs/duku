@@ -24,7 +24,6 @@ fn main() -> Result<()> {
 
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);
-    camera.transform.look_dir(Vector3::FORWARD);
 
     let ui = duku.create_framebuffer(500, 500)?;
     let ui_mat = duku.build_material()?.albedo_framebuffer(&ui).build();
@@ -56,11 +55,11 @@ fn main() -> Result<()> {
 
     let light_mat = duku
         .build_material()?
-        .albedo_texture(&light_tex)
+        .albedo_texture(light_tex)
         .metalness(1.0)
         .roughness(0.5)
         .build();
-    let purple_mat = duku.build_material()?.albedo_texture(&purple_tex).build();
+    let purple_mat = duku.build_material()?.albedo_texture(purple_tex).build();
 
     window.main_loop(move |events| {
         controller.update(&mut camera, events, duku.delta_time());

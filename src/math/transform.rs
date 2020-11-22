@@ -34,17 +34,17 @@ pub struct Transform {
 impl Transform {
     /// local up direction for transformation
     pub fn up(self) -> Vector3 {
-        self.rotation * Vector3::UP
+        self.rotation.inverse() * Vector3::UP
     }
 
     /// local forward direction for transformation
     pub fn forward(self) -> Vector3 {
-        self.rotation * Vector3::FORWARD
+        self.rotation.inverse() * Vector3::FORWARD
     }
 
     /// local right direction for transformation
     pub fn right(self) -> Vector3 {
-        self.rotation * Vector3::RIGHT
+        self.rotation.inverse() * Vector3::RIGHT
     }
 
     /// move tranformation by specified amount
