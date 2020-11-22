@@ -22,8 +22,8 @@
 
 mod error;
 
-#[path = "pipeline/glsl.rs"]
-mod glsl;
+#[path = "features/glsl_compiler.rs"]
+mod glsl_compiler;
 
 use std::env;
 use std::fs;
@@ -33,7 +33,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 
-use glsl::compile_glsl;
+use glsl_compiler::compile;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -96,7 +96,7 @@ fn main() {
 
     // compile shader
     let shader_src = fs::read_to_string(&in_path).expect("bad read");
-    let (vert, frag, bytes) = match compile_glsl(&shader_src) {
+    let (vert, frag, bytes) = match compile(&shader_src) {
         Ok(bin) => bin,
         Err(err) => error(format!("{}", err), no_color),
     };

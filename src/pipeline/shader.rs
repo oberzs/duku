@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Shader - GPU program for execution in the renderer
-
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::io::Cursor;
@@ -76,28 +74,7 @@ impl Shader {
         Self::new(device, uniforms, &vert_source, &frag_source, config)
     }
 
-    #[cfg(feature = "glsl")]
-    pub(crate) fn from_glsl_string(
-        device: &Device,
-        uniforms: &Uniforms,
-        msaa: Msaa,
-        source: String,
-    ) -> Result<Self> {
-        use super::glsl::compile_glsl;
-
-        let (vert, frag, bytes) = compile_glsl(&source)?;
-        let config = ShaderConfig {
-            depth: bytes[0].try_into()?,
-            shape: bytes[1].try_into()?,
-            cull: bytes[2].try_into()?,
-            outputs: bytes[3],
-            msaa,
-        };
-
-        Self::new(device, uniforms, &vert, &frag, config)
-    }
-
-    fn new(
+    pub(crate) fn new(
         device: &Device,
         uniforms: &Uniforms,
         vert_source: &[u8],

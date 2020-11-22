@@ -9,11 +9,12 @@ default = []
 png = ["png_dep"]
 jpeg = ["jpeg_dep"]
 gltf = ["gltf_dep", "png", "jpeg"]
-glsl = ["shaderc"]
-window = ["winit"]
+glsl = ["glsl_dep"]
+window = ["window_dep"]
 log = []
 
-[dependencies.winit]
+[dependencies.window_dep]
+package = "winit"
 version = "0.23.0"
 optional = true
 
@@ -28,7 +29,8 @@ version = "0.1.20"
 optional = true
 default-features = false
 
-[dependencies.shaderc]
+[dependencies.glsl_dep]
+package = "shaderc"
 version = "0.7.0"
 optional = true
 
@@ -50,7 +52,7 @@ required-features = ["window"]
 
 [[example]]
 name = "gltf"
-required-features = ["window", "png", "jpeg", "gltf"]
+required-features = ["window", "gltf"]
 
 [[example]]
 name = "hello"

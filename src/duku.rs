@@ -1,18 +1,9 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Duku - duku application entrypoint
-
-use std::time::Instant;
-
-#[cfg(any(feature = "glsl"))]
+use std::fs;
 use std::path::Path;
-#[cfg(feature = "glsl")]
-use std::path::PathBuf;
-#[cfg(feature = "glsl")]
-use std::sync::mpsc::Receiver;
-#[cfg(feature = "glsl")]
-use std::sync::mpsc::Sender;
+use std::time::Instant;
 
 use crate::device::pick_gpu;
 use crate::device::Device;
@@ -49,9 +40,6 @@ use crate::surface::Swapchain;
 use crate::surface::VSync;
 use crate::surface::WindowHandle;
 
-#[cfg(feature = "window")]
-use crate::window::Window;
-
 const FPS_SAMPLE_COUNT: usize = 64;
 
 pub struct Duku {
@@ -80,12 +68,6 @@ pub struct Duku {
     delta_time: f32,
     msaa: Msaa,
     vsync: VSync,
-
-    // Hot Reload
-    #[cfg(feature = "glsl")]
-    hot_reload_sender: Sender<(Handle<Shader>, PathBuf)>,
-    #[cfg(feature = "glsl")]
-    hot_reload_receiver: Receiver<(Handle<Shader>, PathBuf)>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,16 +77,6 @@ pub struct DukuBuilder {
     msaa: Msaa,
     vsync: VSync,
     window: Option<WindowHandle>,
-}
-
-#[cfg(feature = "window")]
-#[derive(Debug, Clone)]
-pub struct WindowBuilder {
-    duku: DukuBuilder,
-    title: String,
-    resizable: bool,
-    width: u32,
-    height: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -365,8 +337,13 @@ impl Duku {
         self.storage.framebuffers.get_mut(framebuffer)
     }
 
-    pub fn create_shader_spirv(&mut self, source: &[u8]) -> Result<Handle<Shader>> {
-        let shader = Shader::from_spirv_bytes(&self.device, &self.uniforms, self.msaa, source)?;
+    pub fn create_shader_spirv(&mut self, path: impl AsRef<Path>) -> Result<Handle<Shader>> {
+        let bytes = fs::read(path.as_ref())?;
+        self.create_shader_spirv_bytes(&bytes)
+    }
+
+    pub fn create_shader_spirv_bytes(&mut self, bytes: &[u8]) -> Result<Handle<Shader>> {
+        let shader = Shader::from_spirv_bytes(&self.device, &self.uniforms, self.msaa, bytes)?;
         Ok(self.storage.add_shader(shader))
     }
 
@@ -382,27 +359,28 @@ impl Duku {
         self.fps
     }
 
+    pub(crate) const fn msaa(&self) -> Msaa {
+        self.msaa
+    }
+
+    pub(crate) const fn device(&self) -> &Device {
+        &self.device
+    }
+
+    pub(crate) const fn uniforms(&self) -> &Uniforms {
+        &self.uniforms
+    }
+
+    pub(crate) fn storage_mut(&mut self) -> &mut Storage {
+        &mut self.storage
+    }
+
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain);
         self.storage.clear_unused(&self.device, &mut self.uniforms);
         self.storage
             .update_if_needed(&self.device, &mut self.uniforms);
-
-        // hot-reload shaders
-        #[cfg(feature = "glsl")]
-        for (handle, path) in self.hot_reload_receiver.try_iter() {
-            let source = std::fs::read_to_string(&path).expect("bad read");
-
-            match Shader::from_glsl_string(&self.device, &self.uniforms, self.msaa, source) {
-                Ok(new_shader) => {
-                    *self.storage.shaders.get_mut(&handle) = new_shader;
-                    info!("shader {:?} was reloaded", path);
-                }
-                Err(err) => warn!("{}", err),
-            }
-        }
-
         self.uniforms.update_if_needed(&self.device);
         self.device
             .commands()
@@ -443,29 +421,6 @@ impl Duku {
             self.window_framebuffers =
                 Framebuffer::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
-    }
-
-    #[cfg(feature = "glsl")]
-    pub fn create_shader_glsl(
-        &mut self,
-        path: impl AsRef<Path>,
-        watch: bool,
-    ) -> Result<Handle<Shader>> {
-        use crate::watch::watch_file;
-
-        let source = std::fs::read_to_string(&path)?;
-        let handle = self.storage.add_shader(Shader::from_glsl_string(
-            &self.device,
-            &self.uniforms,
-            self.msaa,
-            source,
-        )?);
-
-        if watch {
-            watch_file(path, handle.clone(), self.hot_reload_sender.clone());
-        }
-
-        Ok(handle)
     }
 }
 
@@ -569,9 +524,6 @@ impl DukuBuilder {
             gpu_properties.image_count,
         )?;
 
-        #[cfg(feature = "glsl")]
-        let (hot_reload_sender, hot_reload_receiver) = std::sync::mpsc::channel();
-
         Ok(Duku {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
@@ -591,44 +543,7 @@ impl DukuBuilder {
             device,
             msaa,
             vsync,
-
-            #[cfg(feature = "glsl")]
-            hot_reload_sender,
-            #[cfg(feature = "glsl")]
-            hot_reload_receiver,
         })
-    }
-
-    #[cfg(feature = "window")]
-    pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {
-        WindowBuilder {
-            duku: self,
-            title: "".to_string(),
-            resizable: false,
-            width,
-            height,
-        }
-    }
-}
-
-#[cfg(feature = "window")]
-impl WindowBuilder {
-    pub const fn resizable(mut self) -> Self {
-        self.resizable = true;
-        self
-    }
-
-    pub fn title<S: AsRef<str>>(mut self, title: S) -> Self {
-        self.title = title.as_ref().to_string();
-        self
-    }
-
-    pub fn build(self) -> Result<(Duku, Window)> {
-        let window = Window::new(&self.title, self.width, self.height, self.resizable);
-        let mut duku_builder = self.duku;
-        duku_builder.window = Some(window.handle());
-        let duku = duku_builder.build()?;
-        Ok((duku, window))
     }
 }
 

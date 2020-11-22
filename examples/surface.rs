@@ -3,6 +3,7 @@
 
 // example that draws a framebuffer with a custom ray-marching shader
 
+use duku::glsl::Metadata;
 use duku::Duku;
 use duku::Result;
 
@@ -15,13 +16,20 @@ fn main() -> Result<()> {
 
     // read custom shader
     let path = "examples/shaders/raymarch.glsl";
-    let shader = duku.create_shader_glsl(path, true)?;
-    // let metadata = Metadata::new(path);
+    let mut shader = duku.create_shader_glsl(path)?;
+    let mut metadata = Metadata::new(path)?;
 
     window.main_loop(move |_| {
-        // if metadata.has_updated() {
-        //     shader = duku.create_shader_glsl(path, true)?;
-        // }
+        // hot-reload shader
+        if metadata.is_modified() {
+            match duku.create_shader_glsl(path) {
+                Ok(s) => {
+                    println!("* recompiled shader");
+                    shader = s;
+                }
+                Err(err) => println!("{}", err),
+            }
+        }
 
         duku.draw_on_window(None, |target| {
             target.set_shader(&shader);

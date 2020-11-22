@@ -1,13 +1,11 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// functions to compile glsl to spirv
-
 #![cfg(feature = "glsl")]
 
-use shaderc::CompilationArtifact;
-use shaderc::Compiler;
-use shaderc::ShaderKind;
+use glsl_dep::CompilationArtifact;
+use glsl_dep::Compiler;
+use glsl_dep::ShaderKind;
 use std::collections::HashMap;
 
 use crate::error::Error;
@@ -18,7 +16,7 @@ struct Defines {
     values: HashMap<String, String>,
 }
 
-pub(crate) fn compile_glsl(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 4])> {
+pub(crate) fn compile(src: &str) -> Result<(Vec<u8>, Vec<u8>, [u8; 4])> {
     let defines = Defines::new(src);
 
     let bytes = [
@@ -159,11 +157,11 @@ fn compile_frag(src: &str, defines: &Defines) -> Result<Vec<u8>> {
 }
 
 fn check_artifact(
-    artifact: shaderc::Result<CompilationArtifact>,
+    artifact: glsl_dep::Result<CompilationArtifact>,
     pre_line_count: usize,
 ) -> Result<Vec<u8>> {
     match artifact {
-        Err(shaderc::Error::CompilationError(_, msg)) => {
+        Err(glsl_dep::Error::CompilationError(_, msg)) => {
             // format shader error
             let mut result = "invalid shader code\n".to_string();
             for error in msg.lines() {

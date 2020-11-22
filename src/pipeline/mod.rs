@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// pipeline is responsible for the whole rendering pass
-
 mod attachment;
 mod material;
 mod properties;
@@ -10,9 +8,6 @@ mod render_pass;
 mod sampler;
 mod shader;
 mod uniforms;
-
-#[cfg(feature = "glsl")]
-mod glsl;
 
 use properties::Clear;
 use properties::CullMode;

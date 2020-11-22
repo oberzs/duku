@@ -1,35 +1,35 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// wrapper around glfw window
-
 #![cfg(feature = "window")]
-
-mod controller;
 
 use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
-use winit::dpi::PhysicalPosition;
-use winit::dpi::PhysicalSize;
-use winit::event::DeviceEvent;
-use winit::event::ElementState;
-use winit::event::Event as WinitEvent;
-use winit::event::MouseScrollDelta;
-use winit::event::WindowEvent;
-use winit::event_loop::ControlFlow;
-use winit::event_loop::EventLoop;
-use winit::window::Window as WinitWindow;
-use winit::window::WindowBuilder;
+use window_dep::dpi::PhysicalPosition;
+use window_dep::dpi::PhysicalSize;
+use window_dep::event::DeviceEvent;
+use window_dep::event::ElementState;
+use window_dep::event::Event as WinitEvent;
+use window_dep::event::MouseScrollDelta;
+use window_dep::event::WindowEvent;
+use window_dep::event_loop::ControlFlow;
+use window_dep::event_loop::EventLoop;
+use window_dep::window::Window as WinitWindow;
+use window_dep::window::WindowBuilder as WinitWindowBuilder;
 
-pub use winit::event::MouseButton;
-pub use winit::event::VirtualKeyCode as Key;
-pub use winit::window::CursorIcon as Cursor;
+pub use window_dep::event::MouseButton;
+pub use window_dep::event::VirtualKeyCode as Key;
+pub use window_dep::window::CursorIcon as Cursor;
 
+use crate::duku::Duku;
+use crate::duku::DukuBuilder;
+use crate::error::Result;
+use crate::math::Quaternion;
 use crate::math::Vector2;
+use crate::math::Vector3;
+use crate::renderer::Camera;
 use crate::surface::WindowHandle;
-
-pub use controller::Controller;
 
 pub struct Window {
     window: WinitWindow,
@@ -59,10 +59,37 @@ pub enum Event {
     Resize(Vector2),
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Controller {
+    Fly { camera_angle: f32, move_speed: f32 },
+    Orbit { pivot: Vector3, move_speed: f32 },
+}
+
+#[derive(Debug, Clone)]
+pub struct WindowBuilder {
+    duku: DukuBuilder,
+    title: String,
+    resizable: bool,
+    width: u32,
+    height: u32,
+}
+
+impl DukuBuilder {
+    pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {
+        WindowBuilder {
+            duku: self,
+            title: "".to_string(),
+            resizable: false,
+            width,
+            height,
+        }
+    }
+}
+
 impl Window {
     pub(crate) fn new(title: &str, width: u32, height: u32, resizable: bool) -> Self {
         let event_loop = EventLoop::new();
-        let window = WindowBuilder::new()
+        let window = WinitWindowBuilder::new()
             .with_inner_size(PhysicalSize::new(width, height))
             .with_title(title)
             .with_resizable(resizable)
@@ -74,7 +101,7 @@ impl Window {
 
     #[cfg(target_os = "windows")]
     pub(crate) fn handle(&self) -> WindowHandle {
-        use winit::platform::windows::WindowExtWindows;
+        use window_dep::platform::windows::WindowExtWindows;
 
         WindowHandle {
             hwnd: self.window.hwnd(),
@@ -83,7 +110,7 @@ impl Window {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn handle(&self) -> WindowHandle {
-        use winit::platform::unix::WindowExtUnix;
+        use window_dep::platform::unix::WindowExtUnix;
 
         WindowHandle {
             xlib_window: self.window.xlib_window().expect("Wayland not supported"),
@@ -301,5 +328,173 @@ impl Events {
 
     pub const fn typed_char(&self) -> Option<char> {
         self.typed_char
+    }
+}
+
+impl Controller {
+    pub const fn fly() -> Self {
+        Self::Fly {
+            camera_angle: 0.0,
+            move_speed: 1.0,
+        }
+    }
+
+    pub fn orbit(pivot: impl Into<Vector3>) -> Self {
+        Self::Orbit {
+            pivot: pivot.into(),
+            move_speed: 2.5,
+        }
+    }
+
+    pub fn update(&mut self, camera: &mut Camera, events: &mut Events, delta_time: f32) {
+        match self {
+            Self::Fly {
+                camera_angle,
+                move_speed,
+            } => {
+                // update move speed
+                if events.is_key_typed(Key::Plus) {
+                    *move_speed += 0.5;
+                }
+                if events.is_key_typed(Key::Minus) {
+                    *move_speed -= 0.5;
+                }
+
+                // control in flying mode
+                let transform = &mut camera.transform;
+                let final_speed = 5.0f32.powf(*move_speed) * delta_time;
+                let rotation_speed = 50.0 * delta_time;
+
+                // movement
+                if events.is_key_pressed(Key::W) {
+                    transform.move_forward(final_speed);
+                }
+                if events.is_key_pressed(Key::S) {
+                    transform.move_back(final_speed);
+                }
+                if events.is_key_pressed(Key::A) {
+                    transform.move_left(final_speed);
+                }
+                if events.is_key_pressed(Key::D) {
+                    transform.move_right(final_speed);
+                }
+                if events.is_key_pressed(Key::Space) {
+                    transform.move_by(Vector3::UP * final_speed);
+                }
+                if events.is_key_pressed(Key::LShift) {
+                    transform.move_by(Vector3::DOWN * final_speed);
+                }
+
+                // rotation
+                if events.is_button_pressed(MouseButton::Middle) {
+                    // toggle mouse grab if needed
+                    if !events.mouse_grab() {
+                        events.set_mouse_grab(true);
+                    }
+
+                    // rotate view
+                    let delta = events.mouse_delta();
+
+                    let mouse_x = delta.x * rotation_speed;
+                    let mouse_y =
+                        clamp_change(*camera_angle, delta.y * rotation_speed, -90.0, 90.0);
+                    *camera_angle += mouse_y;
+
+                    let pitch = Quaternion::euler_rotation(0.0, mouse_x, 0.0);
+                    let roll = Quaternion::euler_rotation(mouse_y, 0.0, 0.0);
+
+                    transform.rotation = pitch * transform.rotation * roll;
+                } else {
+                    // toggle mouse grab if needed
+                    if events.mouse_grab() {
+                        events.set_mouse_grab(false);
+                    }
+                }
+            }
+            Self::Orbit { pivot, move_speed } => {
+                // update move speed
+                if events.is_key_typed(Key::Plus) {
+                    *move_speed += 0.5;
+                }
+                if events.is_key_typed(Key::Minus) {
+                    *move_speed -= 0.5;
+                }
+
+                // control orbiting around pivot
+                let transform = &mut camera.transform;
+                let angle = 5.0f32.powf(*move_speed) * delta_time;
+
+                // mouse rotation
+                if events.is_button_pressed(MouseButton::Middle) {
+                    // toggle mouse grab if needed
+                    if !events.mouse_grab() {
+                        events.set_mouse_grab(true);
+                        events.hide_cursor(true);
+                    }
+
+                    let delta = events.mouse_delta();
+                    let speed = 50.0 * delta_time;
+
+                    transform.move_around_point(*pivot, speed * delta.x, Vector3::UP);
+                    transform.move_around_point(*pivot, speed * delta.y, transform.right());
+                } else {
+                    // toggle mouse grab if needed
+                    if events.mouse_grab() {
+                        events.set_mouse_grab(false);
+                        events.hide_cursor(false);
+                    }
+                }
+
+                // horizontal rotation
+                if events.is_key_pressed(Key::D) {
+                    transform.move_around_point(*pivot, -angle, Vector3::UP);
+                }
+                if events.is_key_pressed(Key::A) {
+                    transform.move_around_point(*pivot, angle, Vector3::UP);
+                }
+
+                // vertical rotation
+                if events.is_key_pressed(Key::W) {
+                    transform.move_around_point(*pivot, angle, transform.right());
+                }
+                if events.is_key_pressed(Key::S) {
+                    transform.move_around_point(*pivot, -angle, transform.right());
+                }
+
+                // zoom
+                let scroll = events.scroll_delta();
+                transform.move_forward(scroll.y * (*pivot - transform.position).length() * 0.05);
+
+                // look at pivot point
+                transform.look_at(*pivot);
+            }
+        }
+    }
+}
+
+impl WindowBuilder {
+    pub const fn resizable(mut self) -> Self {
+        self.resizable = true;
+        self
+    }
+
+    pub fn title<S: AsRef<str>>(mut self, title: S) -> Self {
+        self.title = title.as_ref().to_string();
+        self
+    }
+
+    pub fn build(self) -> Result<(Duku, Window)> {
+        let window = Window::new(&self.title, self.width, self.height, self.resizable);
+        let duku = self.duku.attach_window(window.handle()).build()?;
+
+        Ok((duku, window))
+    }
+}
+
+fn clamp_change(current: f32, change: f32, min: f32, max: f32) -> f32 {
+    if current + change > min && current + change < max {
+        change
+    } else {
+        0.0
     }
 }

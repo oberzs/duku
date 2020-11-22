@@ -83,9 +83,6 @@ mod storage;
 mod surface;
 mod vk;
 
-#[cfg(feature = "glsl")]
-mod watch;
-
 // normal exports
 pub use self::duku::Duku;
 pub use device::Stats;
@@ -128,5 +125,5 @@ pub use surface::VSync;
 pub use surface::WindowHandle;
 
 // optional feature exports
-#[cfg(feature = "window")]
-pub mod window;
+pub use features::glsl;
+pub use features::window;
