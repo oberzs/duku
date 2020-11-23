@@ -6,7 +6,6 @@ use super::Format;
 use super::Image;
 use super::ImageLayout;
 use super::Mips;
-use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::error::Result;
@@ -40,7 +39,8 @@ impl Texture {
         device: &Device,
         uniforms: &mut Uniforms,
         data: Vec<u8>,
-        size: Size,
+        width: u32,
+        height: u32,
         format: Format,
         mips: Mips,
     ) -> Result<Self> {
@@ -56,7 +56,7 @@ impl Texture {
         };
 
         let staging_buffer = Buffer::staging(device, &image_data);
-        let mut image = Image::texture(device, format, mips, size);
+        let mut image = Image::texture(device, format, mips, width, height);
 
         // copy image from staging buffer
         image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);
@@ -83,12 +83,12 @@ impl Texture {
 
     /// Get the width of the texture
     pub const fn width(&self) -> u32 {
-        self.image.size().width
+        self.image.width()
     }
 
     /// Get the height of the texture
     pub const fn height(&self) -> u32 {
-        self.image.size().height
+        self.image.height()
     }
 
     /// Get the data of the texture
@@ -110,9 +110,10 @@ impl Texture {
     pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
-        let size = self.image.size();
-        if x < size.width && y < size.height {
-            let i = (x + y * size.width) as usize * 4;
+        let width = self.image.width();
+        let height = self.image.height();
+        if x < width && y < height {
+            let i = (x + y * width) as usize * 4;
             self.data[i] = color.r;
             self.data[i + 1] = color.g;
             self.data[i + 2] = color.b;
@@ -125,9 +126,10 @@ impl Texture {
     pub fn pixel(&self, x: u32, y: u32) -> Color {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
-        let size = self.image.size();
-        if x < size.width && y < size.height {
-            let i = (x + y * size.width) as usize * 4;
+        let width = self.image.width();
+        let height = self.image.height();
+        if x < width && y < height {
+            let i = (x + y * width) as usize * 4;
             Color::rgba(
                 self.data[i],
                 self.data[i + 1],

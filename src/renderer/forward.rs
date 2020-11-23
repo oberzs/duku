@@ -123,7 +123,7 @@ impl ForwardRenderer {
 
         // do render pass
         cmd.begin_render_pass(framebuffer, target.clear_color.to_rgba_norm());
-        cmd.set_view(framebuffer.size());
+        cmd.set_view(framebuffer.width(), framebuffer.height());
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 
         // skybox rendering

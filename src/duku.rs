@@ -16,7 +16,6 @@ use crate::image::Format;
 use crate::image::Framebuffer;
 use crate::image::Mips;
 use crate::image::Msaa;
-use crate::image::Size;
 use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
@@ -109,7 +108,7 @@ impl Duku {
             let mut target = Target::new(&self.builtins, &self.storage);
             draw_callback(&mut target);
             let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-            let cam = get_camera(camera, framebuffer.size());
+            let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
             // render
             self.forward_renderer
                 .render(&self.device, framebuffer, &cam, &self.uniforms, target);
@@ -135,7 +134,7 @@ impl Duku {
         draw_callback(&mut target);
 
         let frame = self.storage.framebuffers.get(framebuffer);
-        let cam = get_camera(camera, frame.size());
+        let cam = get_camera(camera, frame.width(), frame.height());
 
         // render
         self.forward_renderer
@@ -154,7 +153,8 @@ impl Duku {
             &self.device,
             &mut self.uniforms,
             data,
-            Size::new(width, height),
+            width,
+            height,
             format,
             mips,
         )?;
@@ -308,7 +308,8 @@ impl Duku {
             &self.device,
             &mut self.uniforms,
             shader_config,
-            Size::new(width, height),
+            width,
+            height,
         )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
@@ -326,7 +327,8 @@ impl Duku {
             &self.device,
             &mut self.uniforms,
             shader_config,
-            Size::new(width, height),
+            width,
+            height,
         )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
@@ -547,17 +549,12 @@ impl DukuBuilder {
     }
 }
 
-fn get_camera(camera: Option<&Camera>, size: Size) -> Camera {
+fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
     match camera {
         Some(c) => {
             if c.autosize {
-                let mut cam = Camera::new(
-                    c.projection,
-                    size.width as f32,
-                    size.height as f32,
-                    c.depth,
-                    c.fov,
-                );
+                let mut cam =
+                    Camera::new(c.projection, width as f32, height as f32, c.depth, c.fov);
                 cam.transform = c.transform;
                 cam
             } else {
@@ -565,6 +562,6 @@ fn get_camera(camera: Option<&Camera>, size: Size) -> Camera {
             }
         }
         // create default camera if not supplied
-        None => Camera::orthographic(size.width as f32, size.height as f32),
+        None => Camera::orthographic(width as f32, height as f32),
     }
 }

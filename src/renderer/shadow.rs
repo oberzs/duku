@@ -183,7 +183,7 @@ impl ShadowRenderer {
             // do render pass
             let framebuffer = &target_resources.shadow_maps[i];
             cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
-            cmd.set_view(framebuffer.size());
+            cmd.set_view(framebuffer.width(), framebuffer.height());
             cmd.bind_descriptor(uniforms, target_resources.world_descriptors[i]);
             cmd.bind_shader(&self.shader);
 
@@ -228,10 +228,10 @@ impl TargetResources {
         map_size: u32,
     ) -> Result<Self> {
         let shadow_maps = [
-            Framebuffer::new(device, uniforms, config, map_size.into())?,
-            Framebuffer::new(device, uniforms, config, map_size.into())?,
-            Framebuffer::new(device, uniforms, config, map_size.into())?,
-            Framebuffer::new(device, uniforms, config, map_size.into())?,
+            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
+            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
+            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
+            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
         ];
         let shadow_descriptor = uniforms.shadow_map_set(
             device,

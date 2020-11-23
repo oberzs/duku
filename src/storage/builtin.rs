@@ -16,7 +16,6 @@ use crate::image::CubemapSides;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Msaa;
-use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector2;
 use crate::math::Vector3;
@@ -72,7 +71,8 @@ impl Builtins {
                 device,
                 uniforms,
                 vec![255, 255, 255, 255],
-                Size::new(1, 1),
+                1,
+                1,
                 Format::Rgba,
                 Mips::Zero,
             )?;
@@ -83,7 +83,8 @@ impl Builtins {
                 device,
                 uniforms,
                 vec![128, 128, 255, 255],
-                Size::new(1, 1),
+                1,
+                1,
                 Format::Rgba,
                 Mips::Zero,
             )?;
@@ -94,7 +95,8 @@ impl Builtins {
                 device,
                 uniforms,
                 vec![0, 0, 0, 255],
-                Size::new(1, 1),
+                1,
+                1,
                 Format::Rgba,
                 Mips::Zero,
             )?;

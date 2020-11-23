@@ -9,7 +9,6 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
-use crate::image::Size;
 use crate::image::Texture;
 use crate::math::Vector4;
 use crate::pipeline::Uniforms;
@@ -40,7 +39,8 @@ impl Font {
             device,
             uniforms,
             fira_mono::DATA.to_vec(),
-            Size::new(atlas_width, atlas_height),
+            atlas_width,
+            atlas_height,
             Format::Gray,
             Mips::Zero,
         )?;

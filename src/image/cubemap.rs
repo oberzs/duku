@@ -5,7 +5,6 @@ use super::with_alpha;
 use super::Format;
 use super::Image;
 use super::ImageLayout;
-use super::Size;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::error::Result;
@@ -98,7 +97,7 @@ impl Cubemap {
         let right_staging_buffer = Buffer::staging(device, &sides.right);
 
         // create image
-        let mut image = Image::cubemap(device, format, Size::new(size, size));
+        let mut image = Image::cubemap(device, format, size);
 
         // copy images from staging buffer
         image.change_layout(device, ImageLayout::Undefined, ImageLayout::TransferDst);

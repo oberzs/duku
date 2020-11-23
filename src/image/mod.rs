@@ -4,7 +4,6 @@
 mod cubemap;
 mod framebuffer;
 mod properties;
-mod size;
 mod texture;
 
 use std::cmp;
@@ -19,7 +18,6 @@ use properties::with_alpha;
 
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
-pub(crate) use size::Size;
 
 pub use cubemap::Cubemap;
 pub use cubemap::CubemapSides;
@@ -36,17 +34,24 @@ pub(crate) struct Image {
     handle: vk::Image,
     memory: Option<vk::DeviceMemory>,
     views: Vec<vk::ImageView>,
-    size: Size,
+    width: u32,
+    height: u32,
     mip_count: u32,
     layer_count: u32,
     format: Format,
 }
 
 impl Image {
-    pub(crate) fn texture(device: &Device, format: Format, mips: Mips, size: Size) -> Self {
+    pub(crate) fn texture(
+        device: &Device,
+        format: Format,
+        mips: Mips,
+        width: u32,
+        height: u32,
+    ) -> Self {
         // calculate mip count
         let mip_count = match mips {
-            Mips::Log2 => (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1,
+            Mips::Log2 => (cmp::max(width, height) as f32).log2().floor() as u32 + 1,
             Mips::Zero => 1,
         };
 
@@ -56,7 +61,11 @@ impl Image {
             p_next: ptr::null(),
             image_type: vk::IMAGE_TYPE_2D,
             format: format.flag(),
-            extent: size.into(),
+            extent: vk::Extent3D {
+                depth: 1,
+                width,
+                height,
+            },
             mip_levels: mip_count,
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -82,13 +91,14 @@ impl Image {
             handle,
             mip_count,
             format,
-            size,
+            width,
+            height,
         }
     }
 
-    pub(crate) fn cubemap(device: &Device, format: Format, size: Size) -> Self {
+    pub(crate) fn cubemap(device: &Device, format: Format, size: u32) -> Self {
         // calculate mip count
-        let mip_count = (cmp::max(size.width, size.height) as f32).log2().floor() as u32 + 1;
+        let mip_count = (cmp::max(size, size) as f32).log2().floor() as u32 + 1;
 
         // create image
         let image_info = vk::ImageCreateInfo {
@@ -96,7 +106,11 @@ impl Image {
             p_next: ptr::null(),
             image_type: vk::IMAGE_TYPE_2D,
             format: format.flag(),
-            extent: size.into(),
+            extent: vk::Extent3D {
+                depth: 1,
+                width: size,
+                height: size,
+            },
             mip_levels: mip_count,
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -119,14 +133,15 @@ impl Image {
             memory: Some(memory),
             views: vec![],
             layer_count: 6,
+            width: size,
+            height: size,
             handle,
             mip_count,
             format,
-            size,
         }
     }
 
-    pub(crate) fn shader(device: &Device, size: Size) -> Self {
+    pub(crate) fn shader(device: &Device, width: u32, height: u32) -> Self {
         let format = Format::Bgra;
 
         // create image
@@ -135,7 +150,11 @@ impl Image {
             p_next: ptr::null(),
             image_type: vk::IMAGE_TYPE_2D,
             format: format.flag(),
-            extent: size.into(),
+            extent: vk::Extent3D {
+                depth: 1,
+                width,
+                height,
+            },
             mip_levels: 1,
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -161,14 +180,16 @@ impl Image {
             mip_count: 1,
             format,
             handle,
-            size,
+            width,
+            height,
         }
     }
 
     pub(crate) fn attachment(
         device: &Device,
         attachment: &Attachment,
-        size: Size,
+        width: u32,
+        height: u32,
         external: Option<vk::Image>,
     ) -> Self {
         // configure usage
@@ -207,7 +228,11 @@ impl Image {
                     p_next: ptr::null(),
                     image_type: vk::IMAGE_TYPE_2D,
                     format: format.flag(),
-                    extent: size.into(),
+                    extent: vk::Extent3D {
+                        depth: 1,
+                        width,
+                        height,
+                    },
                     mip_levels: 1,
                     samples: attachment.msaa().flag(),
                     tiling: vk::IMAGE_TILING_OPTIMAL,
@@ -232,7 +257,8 @@ impl Image {
             memory,
             format,
             handle,
-            size,
+            width,
+            height,
         }
     }
 
@@ -287,7 +313,11 @@ impl Image {
                 buffer_image_height: 0,
                 image_subresource: subresource,
                 image_offset: vk::Offset3D { x: 0, y: 0, z: 0 },
-                image_extent: self.size.into(),
+                image_extent: vk::Extent3D {
+                    depth: 1,
+                    width: self.width,
+                    height: self.height,
+                },
             };
 
             cmd.copy_buffer_to_image(buffer.handle(), self.handle, region);
@@ -364,8 +394,12 @@ impl Image {
         self.layer_count
     }
 
-    pub(crate) const fn size(&self) -> Size {
-        self.size
+    pub(crate) const fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) const fn height(&self) -> u32 {
+        self.height
     }
 
     pub(crate) const fn mip_count(&self) -> u32 {

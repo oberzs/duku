@@ -6,7 +6,6 @@ use std::ptr;
 use super::Format;
 use super::Image;
 use super::ImageLayout;
-use super::Size;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
@@ -42,7 +41,8 @@ pub struct Framebuffer {
     handle: vk::Framebuffer,
     render_pass: RenderPass,
     attachments: Vec<Format>,
-    size: Size,
+    width: u32,
+    height: u32,
 
     transient_images: Vec<Image>,
     stored_images: Vec<Image>,
@@ -57,7 +57,8 @@ impl Framebuffer {
         config: ShaderConfig,
         swapchain: &Swapchain,
     ) -> Vec<Self> {
-        let size = swapchain.size();
+        let width = swapchain.width();
+        let height = swapchain.height();
 
         // create a framebuffer for each image in the swapchain
         device
@@ -75,11 +76,12 @@ impl Framebuffer {
                     attachments.push(attachment.format());
 
                     if attachment.is_stored() {
-                        let mut image = Image::attachment(device, &attachment, size, Some(img));
+                        let mut image =
+                            Image::attachment(device, &attachment, width, height, Some(img));
                         views.push(image.add_view(device));
                         stored_images.push(image);
                     } else {
-                        let mut image = Image::attachment(device, &attachment, size, None);
+                        let mut image = Image::attachment(device, &attachment, width, height, None);
                         views.push(image.add_view(device));
                         transient_images.push(image);
                     };
@@ -93,8 +95,8 @@ impl Framebuffer {
                     attachment_count: views.len() as u32,
                     p_attachments: views.as_ptr(),
                     layers: 1,
-                    width: size.width,
-                    height: size.height,
+                    width,
+                    height,
                 };
 
                 let handle = device.create_framebuffer(&info);
@@ -107,7 +109,8 @@ impl Framebuffer {
                     stored_images,
                     render_pass,
                     handle,
-                    size,
+                    width,
+                    height,
                 }
             })
             .collect()
@@ -117,7 +120,8 @@ impl Framebuffer {
         device: &Device,
         uniforms: &mut Uniforms,
         config: ShaderConfig,
-        size: Size,
+        width: u32,
+        height: u32,
     ) -> Result<Self> {
         let render_pass = RenderPass::new(device, config, true);
 
@@ -127,7 +131,7 @@ impl Framebuffer {
         let mut views = vec![];
 
         for attachment in render_pass.attachments() {
-            let mut image = Image::attachment(device, &attachment, size, None);
+            let mut image = Image::attachment(device, &attachment, width, height, None);
             views.push(image.add_view(device));
             attachments.push(attachment.format());
 
@@ -146,13 +150,13 @@ impl Framebuffer {
             attachment_count: views.len() as u32,
             p_attachments: views.as_ptr(),
             layers: 1,
-            width: size.width,
-            height: size.height,
+            width,
+            height,
         };
 
         let handle = device.create_framebuffer(&info);
 
-        let mut shader_image = Image::shader(device, size);
+        let mut shader_image = Image::shader(device, width, height);
         let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
 
         // ready image layouts
@@ -176,7 +180,8 @@ impl Framebuffer {
             stored_images,
             render_pass,
             handle,
-            size,
+            width,
+            height,
         })
     }
 
@@ -189,7 +194,8 @@ impl Framebuffer {
     /// duku.framebuffer_mut(&framebuffer).resize(500, 500);
     /// ```
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.size = Size::new(width, height);
+        self.width = width;
+        self.height = height;
         self.should_update = true;
     }
 
@@ -217,7 +223,8 @@ impl Framebuffer {
             let mut views = vec![];
 
             for attachment in self.render_pass.attachments() {
-                let mut image = Image::attachment(device, &attachment, self.size, None);
+                let mut image =
+                    Image::attachment(device, &attachment, self.width, self.height, None);
                 views.push(image.add_view(device));
 
                 if attachment.is_stored() {
@@ -235,11 +242,11 @@ impl Framebuffer {
                 attachment_count: views.len() as u32,
                 p_attachments: views.as_ptr(),
                 layers: 1,
-                width: self.size.width,
-                height: self.size.height,
+                width: self.width,
+                height: self.height,
             };
 
-            let mut shader_image = Image::shader(device, self.size);
+            let mut shader_image = Image::shader(device, self.width, self.height);
             let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
             uniforms.replace_texture(shader_index, shader_image.add_view(device));
 
@@ -308,8 +315,12 @@ impl Framebuffer {
         self.render_pass.handle()
     }
 
-    pub(crate) const fn size(&self) -> Size {
-        self.size
+    pub(crate) const fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) const fn height(&self) -> u32 {
+        self.height
     }
 
     pub(crate) fn stored_view(&self) -> vk::ImageView {
