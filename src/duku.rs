@@ -290,18 +290,22 @@ impl Duku {
         self.builtins.as_ref().expect("bad builtins")
     }
 
+    #[cfg(feature = "glsl")]
     pub(crate) const fn msaa(&self) -> Msaa {
         self.msaa
     }
 
+    #[cfg(feature = "glsl")]
     pub(crate) const fn device(&self) -> &Device {
         &self.device
     }
 
+    #[cfg(feature = "glsl")]
     pub(crate) const fn uniforms(&self) -> &Uniforms {
         &self.uniforms
     }
 
+    #[cfg(feature = "glsl")]
     pub(crate) fn resources_mut(&mut self) -> &mut Resources {
         &mut self.resources
     }
