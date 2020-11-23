@@ -74,19 +74,14 @@ impl ForwardRenderer {
         framebuffer: &Framebuffer,
         camera: &Camera,
         uniforms: &Uniforms,
-        target: Target<'_>,
+        target: Target,
     ) {
         // shadow mapping pass
         let mut view = camera.clone();
         view.depth = target.shadow_depth;
-        let shadow_params = self.shadow_renderer.render(
-            device,
-            uniforms,
-            &target.storage.meshes,
-            &target,
-            view,
-            self.target_index,
-        );
+        let shadow_params =
+            self.shadow_renderer
+                .render(device, uniforms, &target, view, self.target_index);
 
         let target_resources = &mut self.target_resources[self.target_index];
         let cmd = device.commands();
@@ -104,6 +99,12 @@ impl ForwardRenderer {
             target.lights[3].shader(),
         ];
 
+        let skybox_index = target
+            .skybox
+            .as_ref()
+            .map(|s| s.shader_index())
+            .unwrap_or(0);
+
         // update world uniform
         target_resources.world_buffer.copy_from_data(&[ShaderWorld {
             shadow_splits: shadow_params.splits,
@@ -114,9 +115,9 @@ impl ForwardRenderer {
             camera_position: camera.transform.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
-            skybox_index: target.skybox.as_ref().map(|s| s.id()).unwrap_or(0),
             ambient_color: Vector3::from(target.ambient_color),
             max_white_point: target.max_white_point,
+            skybox_index,
             lights,
             shadow_pcf,
         }]);
@@ -158,7 +159,7 @@ impl ForwardRenderer {
         self.target_index = (self.target_index + 1) % self.target_resources.len();
     }
 
-    fn record_text(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
+    fn record_text(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             text_orders,
@@ -174,7 +175,6 @@ impl ForwardRenderer {
         let mut uvs = vec![];
 
         for order in text_orders {
-            let font = target.storage.fonts.get(&order.font);
             let mut transform = order.transform;
             let quat = transform.rotation;
             let start_x = transform.position.x;
@@ -193,7 +193,7 @@ impl ForwardRenderer {
                     continue;
                 }
 
-                let data = font.char_data(c);
+                let data = order.font.char_data(c);
                 let mut local_transform = transform;
                 local_transform.position.x += data.x_offset * transform.scale.x;
                 local_transform.position.y -= data.y_offset * transform.scale.y;
@@ -220,7 +220,7 @@ impl ForwardRenderer {
                     Vector2::new(data.uvs.x, data.uvs.w),
                 ]);
                 colors.extend(&[order.color; 4]);
-                textures.extend(&[font.texture().shader_index(); 4]);
+                textures.extend(&[order.font.texture().shader_index(); 4]);
                 indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
 
                 transform.position.x += data.advance * transform.scale.x;
@@ -228,22 +228,20 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        let shader = target.storage.shaders.get(&builtins.font_shader);
-        cmd.bind_shader(shader);
+        cmd.bind_shader(&builtins.font_shader);
 
         // bind material
-        let material = target.storage.materials.get(&builtins.white_material);
-        cmd.bind_material(uniforms, material);
+        cmd.bind_material(uniforms, &builtins.white_material);
 
         // bind and draw mesh
         let text_mesh = &mut self.target_resources[self.target_index].text_mesh;
 
-        text_mesh.set_vertices(vertices);
-        text_mesh.set_colors(colors);
-        text_mesh.set_textures(textures);
-        text_mesh.set_uvs(uvs);
-        text_mesh.set_indices(indices);
-        text_mesh.update_if_needed(device);
+        text_mesh.vertices = vertices;
+        text_mesh.colors = colors;
+        text_mesh.textures = textures;
+        text_mesh.uvs = uvs;
+        text_mesh.indices = indices;
+        text_mesh.update(device);
 
         cmd.bind_mesh(text_mesh);
         cmd.push_constants(
@@ -256,7 +254,7 @@ impl ForwardRenderer {
         cmd.draw(text_mesh.index_count(), 0);
     }
 
-    fn record_lines(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
+    fn record_lines(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             line_orders,
@@ -281,19 +279,17 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        let shader = target.storage.shaders.get(&builtins.line_shader);
-        cmd.bind_shader(shader);
+        cmd.bind_shader(&builtins.line_shader);
 
         // bind material
-        let material = target.storage.materials.get(&builtins.white_material);
-        cmd.bind_material(uniforms, material);
+        cmd.bind_material(uniforms, &builtins.white_material);
 
         // bind and draw mesh
         let line_mesh = &mut self.target_resources[self.target_index].line_mesh;
-        line_mesh.set_vertices(vertices);
-        line_mesh.set_colors(colors);
-        line_mesh.set_indices(indices);
-        line_mesh.update_if_needed(device);
+        line_mesh.vertices = vertices;
+        line_mesh.colors = colors;
+        line_mesh.indices = indices;
+        line_mesh.update(device);
 
         cmd.bind_mesh(line_mesh);
         cmd.push_constants(
@@ -306,7 +302,7 @@ impl ForwardRenderer {
         cmd.draw(line_mesh.index_count(), 0);
     }
 
-    fn record_shapes(&mut self, device: &Device, target: &Target<'_>, uniforms: &Uniforms) {
+    fn record_shapes(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
         let cmd = device.commands();
         let Target {
             shape_orders,
@@ -328,7 +324,7 @@ impl ForwardRenderer {
             let point_2 = matrix * order.points[1];
             let point_3 = matrix * order.points[2];
 
-            let texture = target.storage.textures.get(&order.texture).shader_index();
+            let texture = order.texture.shader_index();
             let sampler = order.sampler_index;
 
             let o = vertices.len() as u32;
@@ -343,22 +339,20 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        let shader = target.storage.shaders.get(&builtins.shape_shader);
-        cmd.bind_shader(shader);
+        cmd.bind_shader(&builtins.shape_shader);
 
         // bind material
-        let material = target.storage.materials.get(&builtins.white_material);
-        cmd.bind_material(uniforms, material);
+        cmd.bind_material(uniforms, &builtins.white_material);
 
         // bind and draw mesh
         let shape_mesh = &mut self.target_resources[self.target_index].shape_mesh;
-        shape_mesh.set_vertices(vertices);
-        shape_mesh.set_colors(colors);
-        shape_mesh.set_textures(textures);
-        shape_mesh.set_uvs(uvs);
-        shape_mesh.set_normals(normals);
-        shape_mesh.set_indices(indices);
-        shape_mesh.update_if_needed(device);
+        shape_mesh.vertices = vertices;
+        shape_mesh.colors = colors;
+        shape_mesh.textures = textures;
+        shape_mesh.uvs = uvs;
+        shape_mesh.normals = normals;
+        shape_mesh.indices = indices;
+        shape_mesh.update(device);
 
         cmd.bind_mesh(shape_mesh);
         cmd.push_constants(
@@ -404,20 +398,16 @@ impl TargetResources {
     }
 }
 
-fn record_meshes(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms) {
+fn record_meshes(cmd: &Commands, target: &Target, uniforms: &Uniforms) {
     for s_order in &target.mesh_orders {
         // bind shader
-        let shader = target.storage.shaders.get(&s_order.shader);
-        cmd.bind_shader(shader);
+        cmd.bind_shader(&s_order.shader);
 
         for m_order in &s_order.orders {
             // bind material
-            let material = target.storage.materials.get(&m_order.material);
-            cmd.bind_material(uniforms, material);
+            cmd.bind_material(uniforms, &m_order.material);
 
             for order in &m_order.orders {
-                let mesh = target.storage.meshes.get(&order.mesh);
-
                 cmd.push_constants(
                     uniforms,
                     ShaderConstants {
@@ -425,19 +415,16 @@ fn record_meshes(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms) {
                         sampler_index: order.sampler_index,
                     },
                 );
-                cmd.bind_mesh(mesh);
-                cmd.draw(mesh.index_count(), 0);
+                cmd.bind_mesh(&order.mesh);
+                cmd.draw(order.mesh.index_count(), 0);
             }
         }
     }
 }
 
-fn record_skybox(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms, camera: &Camera) {
-    let shader = target.storage.shaders.get(&target.builtins.skybox_shader);
-    cmd.bind_shader(shader);
-
-    let mesh = target.storage.meshes.get(&target.builtins.cube_mesh);
-    cmd.bind_mesh(mesh);
+fn record_skybox(cmd: &Commands, target: &Target, uniforms: &Uniforms, camera: &Camera) {
+    cmd.bind_shader(&target.builtins.skybox_shader);
+    cmd.bind_mesh(&target.builtins.cube_mesh);
 
     let local_to_world = Matrix4::from(Transform {
         position: camera.transform.position,
@@ -451,5 +438,5 @@ fn record_skybox(cmd: &Commands, target: &Target<'_>, uniforms: &Uniforms, camer
             local_to_world,
         },
     );
-    cmd.draw(mesh.index_count(), 0);
+    cmd.draw(target.builtins.cube_mesh.index_count(), 0);
 }

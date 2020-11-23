@@ -14,7 +14,7 @@ use crate::duku::Duku;
 use crate::error::Result;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConfig;
-use crate::storage::Handle;
+use crate::resources::Handle;
 
 pub struct Metadata {
     file: File,
@@ -38,7 +38,7 @@ impl Duku {
         };
         let shader = Shader::new(self.device(), self.uniforms(), &vert, &frag, config)?;
 
-        Ok(self.storage_mut().add_shader(shader))
+        Ok(self.resources_mut().add_shader(shader))
     }
 }
 

@@ -28,10 +28,10 @@ use crate::renderer::Color;
 ///     .build();
 /// ```
 pub struct Texture {
+    pub data: Vec<u8>,
+
     image: Image,
-    data: Vec<u8>,
     shader_index: u32,
-    should_update: bool,
 }
 
 impl Texture {
@@ -75,7 +75,6 @@ impl Texture {
 
         Ok(Self {
             data: image_data,
-            should_update: false,
             image,
             shader_index,
         })
@@ -89,11 +88,6 @@ impl Texture {
     /// Get the height of the texture
     pub const fn height(&self) -> u32 {
         self.image.height()
-    }
-
-    /// Get the data of the texture
-    pub fn data(&self) -> &[u8] {
-        &self.data
     }
 
     /// Set a pixel in the image to a specific color.
@@ -118,7 +112,6 @@ impl Texture {
             self.data[i + 1] = color.g;
             self.data[i + 2] = color.b;
             self.data[i + 3] = color.a;
-            self.should_update = true;
         }
     }
 
@@ -141,28 +134,21 @@ impl Texture {
         }
     }
 
-    pub(crate) fn update_if_needed(&mut self, device: &Device) {
-        if self.should_update {
-            let staging_buffer = Buffer::staging(device, &self.data);
+    pub(crate) fn update(&mut self, device: &Device) {
+        let staging_buffer = Buffer::staging(device, &self.data);
 
+        self.image
+            .change_layout(device, ImageLayout::ShaderColor, ImageLayout::TransferDst);
+        self.image.copy_from_buffer(device, &staging_buffer, 0);
+
+        if self.image.mip_count() > 1 {
+            self.image.generate_mipmaps(device);
+        } else {
             self.image
-                .change_layout(device, ImageLayout::ShaderColor, ImageLayout::TransferDst);
-            self.image.copy_from_buffer(device, &staging_buffer, 0);
-
-            if self.image.mip_count() > 1 {
-                self.image.generate_mipmaps(device);
-            } else {
-                self.image.change_layout(
-                    device,
-                    ImageLayout::TransferDst,
-                    ImageLayout::ShaderColor,
-                );
-            }
-
-            staging_buffer.destroy(device);
-
-            self.should_update = false;
+                .change_layout(device, ImageLayout::TransferDst, ImageLayout::ShaderColor);
         }
+
+        staging_buffer.destroy(device);
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
@@ -170,7 +156,7 @@ impl Texture {
         self.image.destroy(device);
     }
 
-    pub(crate) const fn shader_index(&self) -> u32 {
+    pub const fn shader_index(&self) -> u32 {
         self.shader_index
     }
 }

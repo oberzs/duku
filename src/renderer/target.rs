@@ -20,17 +20,15 @@ use crate::mesh::Model;
 use crate::mesh::ModelNode;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
-use crate::storage::Builtins;
-use crate::storage::Handle;
-use crate::storage::Storage;
+use crate::resources::Builtins;
+use crate::resources::Handle;
 
-pub struct Target<'b> {
+pub struct Target {
     // global
     pub clear_color: Color,
     pub transform: Transform,
     pub(crate) skybox: Option<Handle<Cubemap>>,
-    pub(crate) builtins: &'b Builtins,
-    pub(crate) storage: &'b Storage,
+    pub(crate) builtins: Builtins,
 
     // meshes
     pub(crate) shader: Option<Handle<Shader>>,
@@ -142,8 +140,8 @@ struct Cache {
     material: Option<Handle<Material>>,
 }
 
-impl<'b> Target<'b> {
-    pub(crate) fn new(builtins: &'b Builtins, storage: &'b Storage) -> Self {
+impl Target {
+    pub(crate) fn new(builtins: &Builtins) -> Self {
         Self {
             mesh_orders: vec![],
             text_orders: vec![],
@@ -180,8 +178,7 @@ impl<'b> Target<'b> {
             shadow_split_coef: 0.5,
             shadows: true,
             shadow_pcf: Pcf::X16,
-            builtins,
-            storage,
+            builtins: builtins.clone(),
         }
     }
 
@@ -456,11 +453,11 @@ impl<'b> Target<'b> {
     }
 
     pub fn new_line(&mut self) {
-        let font = self
-            .storage
-            .fonts
-            .get(self.font.as_ref().unwrap_or(&self.builtins.fira_font));
-        let line_height = font.line_height();
+        let line_height = self
+            .font
+            .as_ref()
+            .unwrap_or(&self.builtins.fira_font)
+            .line_height();
         self.transform.move_down(line_height as f32);
     }
 
@@ -612,10 +609,8 @@ impl<'b> Target<'b> {
     }
 
     pub fn draw_model(&mut self, model: &Handle<Model>) {
-        let m = self.storage.models.get(model);
-
         self.push();
-        for node in &m.nodes {
+        for node in &model.nodes {
             self.draw_model_node(node, Matrix4::from(self.transform));
         }
         self.pop();

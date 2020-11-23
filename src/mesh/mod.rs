@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Mesh - struct representing a renderable object
-
 mod model;
 mod vertex;
 
@@ -15,8 +13,6 @@ use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::math::Vector4;
 use crate::renderer::Color;
-use crate::storage::Handle;
-use crate::storage::Storage;
 use crate::vk;
 
 pub(crate) use vertex::Vertex;
@@ -25,24 +21,17 @@ pub use model::Model;
 pub use model::ModelNode;
 
 pub struct Mesh {
-    vertices: Vec<Vector3>,
-    uvs: Vec<Vector2>,
-    normals: Vec<Vector3>,
-    tangents: Vec<Vector3>,
-    colors: Vec<Color>,
-    textures: Vec<u32>,
-    indices: Vec<u32>,
-
-    should_update: bool,
+    pub vertices: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
+    pub normals: Vec<Vector3>,
+    pub tangents: Vec<Vector3>,
+    pub colors: Vec<Color>,
+    pub textures: Vec<u32>,
+    pub indices: Vec<u32>,
 
     vertex_buffer: Buffer<Vertex>,
     index_buffer: Buffer<u32>,
     index_count: usize,
-}
-
-pub struct MeshBuilder<'s> {
-    pub(crate) storage: &'s mut Storage,
-    pub(crate) mesh: Mesh,
 }
 
 impl Mesh {
@@ -58,7 +47,6 @@ impl Mesh {
             colors: vec![Color::WHITE; 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
-            should_update: true,
             index_count: 3,
             vertex_buffer,
             index_buffer,
@@ -94,8 +82,7 @@ impl Mesh {
         result.uvs = uvs;
         result.textures = textures;
         result.indices = indices;
-        result.should_update = true;
-        result.update_if_needed(device);
+        result.update(device);
         result
     }
 
@@ -122,8 +109,6 @@ impl Mesh {
             for norm in &mut self.normals {
                 *norm = norm.unit();
             }
-
-            self.should_update = true;
         }
 
         // calculate tangents for the new normals
@@ -167,131 +152,45 @@ impl Mesh {
             for tan in &mut self.tangents {
                 *tan = tan.unit();
             }
-
-            self.should_update = true;
         }
     }
 
-    pub fn set_vertices(&mut self, vertices: Vec<Vector3>) {
-        self.vertices = vertices;
-        self.should_update = true;
-    }
+    pub(crate) fn update(&mut self, device: &Device) {
+        let vertices: Vec<_> = self
+            .vertices
+            .iter()
+            .zip(self.uvs.iter().chain(iter::repeat(&Vector2::default())))
+            .zip(self.normals.iter().chain(iter::repeat(&Vector3::default())))
+            .zip(
+                self.tangents
+                    .iter()
+                    .chain(iter::repeat(&Vector3::default())),
+            )
+            .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
+            .zip(self.textures.iter().chain(iter::repeat(&0)))
+            .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {
+                in_local_position: *pos,
+                in_normal: *normal,
+                in_tangent: *tangent,
+                in_uv: *uv,
+                in_color: Vector4::from(*col),
+                in_texture: *tex,
+            })
+            .collect();
 
-    pub fn set_normals(&mut self, normals: Vec<Vector3>) {
-        self.normals = normals;
-        self.should_update = true;
-    }
-
-    pub fn set_tangents(&mut self, tangents: Vec<Vector3>) {
-        self.tangents = tangents;
-        self.should_update = true;
-    }
-
-    pub fn set_colors(&mut self, colors: Vec<Color>) {
-        self.colors = colors;
-        self.should_update = true;
-    }
-
-    pub fn set_uvs(&mut self, uvs: Vec<Vector2>) {
-        self.uvs = uvs;
-        self.should_update = true;
-    }
-
-    pub fn set_indices(&mut self, indices: Vec<u32>) {
-        self.indices = indices;
-        self.should_update = true;
-    }
-
-    pub fn vertices(&self) -> impl Iterator<Item = &Vector3> {
-        self.vertices.iter()
-    }
-
-    pub fn normals(&self) -> impl Iterator<Item = &Vector3> {
-        self.normals.iter()
-    }
-
-    pub fn colors(&self) -> impl Iterator<Item = &Color> {
-        self.colors.iter()
-    }
-
-    pub fn uvs(&self) -> impl Iterator<Item = &Vector2> {
-        self.uvs.iter()
-    }
-
-    pub fn indices(&self) -> impl Iterator<Item = &u32> {
-        self.indices.iter()
-    }
-
-    pub fn vertices_mut(&mut self) -> impl Iterator<Item = &mut Vector3> {
-        self.should_update = true;
-        self.vertices.iter_mut()
-    }
-
-    pub fn normals_mut(&mut self) -> impl Iterator<Item = &mut Vector3> {
-        self.should_update = true;
-        self.normals.iter_mut()
-    }
-
-    pub fn colors_mut(&mut self) -> impl Iterator<Item = &mut Color> {
-        self.should_update = true;
-        self.colors.iter_mut()
-    }
-
-    pub fn uvs_mut(&mut self) -> impl Iterator<Item = &mut Vector2> {
-        self.should_update = true;
-        self.uvs.iter_mut()
-    }
-
-    pub fn indices_mut(&mut self) -> impl Iterator<Item = &mut u32> {
-        self.should_update = true;
-        self.indices.iter_mut()
-    }
-
-    pub(crate) fn set_textures(&mut self, textures: Vec<u32>) {
-        self.textures = textures;
-        self.should_update = true;
-    }
-
-    pub(crate) fn update_if_needed(&mut self, device: &Device) {
-        if self.should_update {
-            let vertices: Vec<_> = self
-                .vertices
-                .iter()
-                .zip(self.uvs.iter().chain(iter::repeat(&Vector2::default())))
-                .zip(self.normals.iter().chain(iter::repeat(&Vector3::default())))
-                .zip(
-                    self.tangents
-                        .iter()
-                        .chain(iter::repeat(&Vector3::default())),
-                )
-                .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
-                .zip(self.textures.iter().chain(iter::repeat(&0)))
-                .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {
-                    in_local_position: *pos,
-                    in_normal: *normal,
-                    in_tangent: *tangent,
-                    in_uv: *uv,
-                    in_color: Vector4::from(*col),
-                    in_texture: *tex,
-                })
-                .collect();
-
-            // resize buffers if needed
-            if vertices.len() > self.vertex_buffer.len() {
-                self.vertex_buffer.resize(device, vertices.len());
-            }
-            if self.indices.len() > self.index_buffer.len() {
-                self.index_buffer.resize(device, self.indices.len());
-            }
-
-            if !vertices.is_empty() && !self.indices.is_empty() {
-                self.vertex_buffer.copy_from_data(&vertices);
-                self.index_buffer.copy_from_data(&self.indices);
-            }
-            self.index_count = self.indices.len();
-
-            self.should_update = false;
+        // resize buffers if needed
+        if vertices.len() > self.vertex_buffer.len() {
+            self.vertex_buffer.resize(device, vertices.len());
         }
+        if self.indices.len() > self.index_buffer.len() {
+            self.index_buffer.resize(device, self.indices.len());
+        }
+
+        if !vertices.is_empty() && !self.indices.is_empty() {
+            self.vertex_buffer.copy_from_data(&vertices);
+            self.index_buffer.copy_from_data(&self.indices);
+        }
+        self.index_count = self.indices.len();
     }
 
     pub(crate) fn vertex_buffer(&self) -> vk::Buffer {
@@ -309,51 +208,5 @@ impl Mesh {
     pub(crate) fn destroy(&self, device: &Device) {
         self.vertex_buffer.destroy(device);
         self.index_buffer.destroy(device);
-    }
-}
-
-impl MeshBuilder<'_> {
-    pub fn vertices(mut self, vertices: Vec<Vector3>) -> Self {
-        self.mesh.set_vertices(vertices);
-        self
-    }
-
-    pub fn normals(mut self, normals: Vec<Vector3>) -> Self {
-        self.mesh.set_normals(normals);
-        self
-    }
-
-    pub fn tangents(mut self, tangents: Vec<Vector3>) -> Self {
-        self.mesh.set_tangents(tangents);
-        self
-    }
-
-    pub fn colors(mut self, colors: Vec<Color>) -> Self {
-        self.mesh.set_colors(colors);
-        self
-    }
-
-    pub fn uvs(mut self, uvs: Vec<Vector2>) -> Self {
-        self.mesh.set_uvs(uvs);
-        self
-    }
-
-    pub fn indices(mut self, indices: Vec<u32>) -> Self {
-        self.mesh.set_indices(indices);
-        self
-    }
-
-    pub fn calculated_normals(mut self) -> Self {
-        self.mesh.calculate_normals();
-        self
-    }
-
-    pub fn calculated_tangents(mut self) -> Self {
-        self.mesh.calculate_tangents();
-        self
-    }
-
-    pub fn build(self) -> Handle<Mesh> {
-        self.storage.add_mesh(self.mesh)
     }
 }

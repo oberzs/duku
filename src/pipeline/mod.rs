@@ -27,6 +27,4 @@ pub(crate) use uniforms::ShaderWorld;
 pub(crate) use uniforms::Uniforms;
 
 pub use material::Material;
-pub use material::MaterialBuilder;
-pub use material::MaterialParam;
 pub use shader::Shader;

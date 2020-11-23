@@ -27,7 +27,7 @@ use crate::mesh::Mesh;
 use crate::mesh::Model;
 use crate::mesh::ModelNode;
 use crate::pipeline::Material;
-use crate::storage::Handle;
+use crate::resources::Handle;
 
 impl Duku {
     pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
@@ -97,20 +97,19 @@ impl Duku {
                     }
                 }
 
-                let mut builder = self
-                    .build_mesh()
-                    .vertices(vertices)
-                    .uvs(uvs)
-                    .indices(indices);
+                let mut m = self.create_mesh();
+                m.vertices = vertices;
+                m.uvs = uvs;
+                m.indices = indices;
 
                 if normals.is_empty() {
-                    builder = builder.calculated_normals();
+                    m.calculate_normals();
                 } else {
-                    builder = builder.normals(normals);
-                    builder = builder.calculated_tangents();
+                    m.normals = normals;
+                    m.calculate_tangents();
                 }
 
-                meshes.insert((mesh.index(), primitive.index()), builder.build());
+                meshes.insert((mesh.index(), primitive.index()), m);
             }
         }
 
@@ -162,7 +161,10 @@ impl Duku {
             }
         }
 
-        Ok(self.create_model(nodes))
+        let mut model = self.create_model();
+        model.nodes = nodes;
+
+        Ok(model)
     }
 
     fn load_material(
@@ -232,28 +234,27 @@ impl Duku {
         };
 
         // build material
-        let mut builder = self
-            .build_material()?
-            .albedo_color(albedo)
-            .metalness(metalness)
-            .roughness(roughness)
-            .emissive(emissive);
+        let mut mat = self.create_material()?;
+        mat.albedo_color(albedo);
+        mat.metalness(metalness);
+        mat.roughness(roughness);
+        mat.emissive(emissive);
         if let Some(tex) = albedo_tex {
-            builder = builder.albedo_texture(tex);
+            mat.albedo_texture(tex);
         }
         if let Some(tex) = emissive_tex {
-            builder = builder.emissive_texture(tex);
+            mat.emissive_texture(tex);
         }
         if let Some(tex) = met_rough_tex {
-            builder = builder.metalness_roughness_texture(tex);
+            mat.metalness_roughness_texture(tex);
         }
         if let Some(tex) = normal_tex {
-            builder = builder.normal_texture(tex);
+            mat.normal_texture(tex);
         }
         if let Some(tex) = occ_tex {
-            builder = builder.ambient_occlusion_texture(tex);
+            mat.ambient_occlusion_texture(tex);
         }
-        Ok(builder.build())
+        Ok(mat)
     }
 
     fn load_texture(

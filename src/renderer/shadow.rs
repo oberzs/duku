@@ -16,14 +16,12 @@ use crate::image::Msaa;
 use crate::math::Matrix4;
 use crate::math::Vector3;
 use crate::math::Vector4;
-use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderWorld;
 use crate::pipeline::Uniforms;
-use crate::storage::Store;
 
 const SHADOW_SPLIT_COUNT: usize = 4;
 
@@ -100,8 +98,7 @@ impl ShadowRenderer {
         &mut self,
         device: &Device,
         uniforms: &Uniforms,
-        meshes: &Store<Mesh>,
-        target: &Target<'_>,
+        target: &Target,
         view: Camera,
         target_index: usize,
     ) -> ShadowSplitParams {
@@ -191,8 +188,6 @@ impl ShadowRenderer {
                 for m_order in &s_order.orders {
                     for order in &m_order.orders {
                         if order.shadows {
-                            let mesh = meshes.get(&order.mesh);
-
                             cmd.push_constants(
                                 uniforms,
                                 ShaderConstants {
@@ -200,8 +195,8 @@ impl ShadowRenderer {
                                     sampler_index: order.sampler_index,
                                 },
                             );
-                            cmd.bind_mesh(mesh);
-                            cmd.draw(mesh.index_count(), 0);
+                            cmd.bind_mesh(&order.mesh);
+                            cmd.draw(order.mesh.index_count(), 0);
                         }
                     }
                 }

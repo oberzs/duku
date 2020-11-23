@@ -38,17 +38,16 @@ use crate::vk;
 /// });
 /// ```
 pub struct Framebuffer {
+    pub width: u32,
+    pub height: u32,
+
     handle: vk::Framebuffer,
     render_pass: RenderPass,
     attachments: Vec<Format>,
-    width: u32,
-    height: u32,
 
     transient_images: Vec<Image>,
     stored_images: Vec<Image>,
     shader_image: Option<(u32, Image)>,
-
-    should_update: bool,
 }
 
 impl Framebuffer {
@@ -103,7 +102,6 @@ impl Framebuffer {
 
                 Self {
                     shader_image: None,
-                    should_update: false,
                     attachments,
                     transient_images,
                     stored_images,
@@ -174,7 +172,6 @@ impl Framebuffer {
 
         Ok(Self {
             shader_image: Some((shader_index, shader_image)),
-            should_update: false,
             attachments,
             transient_images,
             stored_images,
@@ -185,93 +182,74 @@ impl Framebuffer {
         })
     }
 
-    /// Change the framebuffer to a new size
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let mut framebuffer = duku.create_framebuffer(400, 400)?;
-    /// duku.framebuffer_mut(&framebuffer).resize(500, 500);
-    /// ```
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
-        self.should_update = true;
-    }
-
-    pub(crate) fn update_if_needed(&mut self, device: &Device, uniforms: &mut Uniforms) {
+    pub(crate) fn update(&mut self, device: &Device, uniforms: &mut Uniforms) {
         debug_assert!(
             self.shader_image.is_some(),
             "trying to resize swapchain framebuffer"
         );
 
-        if self.should_update {
-            // cleanup images
-            for image in &self.transient_images {
-                image.destroy(device);
-            }
-            for image in &self.stored_images {
-                image.destroy(device);
-            }
-            if let Some((_, image)) = &self.shader_image {
-                image.destroy(device);
-            }
-
-            // recreate framebuffer images
-            let mut transient_images = vec![];
-            let mut stored_images = vec![];
-            let mut views = vec![];
-
-            for attachment in self.render_pass.attachments() {
-                let mut image =
-                    Image::attachment(device, &attachment, self.width, self.height, None);
-                views.push(image.add_view(device));
-
-                if attachment.is_stored() {
-                    stored_images.push(image);
-                } else {
-                    transient_images.push(image);
-                };
-            }
-
-            let info = vk::FramebufferCreateInfo {
-                s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                p_next: ptr::null(),
-                flags: 0,
-                render_pass: self.render_pass.handle(),
-                attachment_count: views.len() as u32,
-                p_attachments: views.as_ptr(),
-                layers: 1,
-                width: self.width,
-                height: self.height,
-            };
-
-            let mut shader_image = Image::shader(device, self.width, self.height);
-            let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
-            uniforms.replace_texture(shader_index, shader_image.add_view(device));
-
-            // ready image layouts
-            shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
-            for image in &stored_images {
-                image.change_layout(
-                    device,
-                    ImageLayout::Undefined,
-                    match image.format() {
-                        Format::Depth => ImageLayout::ShaderDepth,
-                        _ => ImageLayout::ShaderColor,
-                    },
-                );
-            }
-
-            // reassign new values
-            device.destroy_framebuffer(self.handle);
-            self.handle = device.create_framebuffer(&info);
-            self.transient_images = transient_images;
-            self.stored_images = stored_images;
-            self.shader_image = Some((shader_index, shader_image));
-
-            self.should_update = false;
+        // cleanup images
+        for image in &self.transient_images {
+            image.destroy(device);
         }
+        for image in &self.stored_images {
+            image.destroy(device);
+        }
+        if let Some((_, image)) = &self.shader_image {
+            image.destroy(device);
+        }
+
+        // recreate framebuffer images
+        let mut transient_images = vec![];
+        let mut stored_images = vec![];
+        let mut views = vec![];
+
+        for attachment in self.render_pass.attachments() {
+            let mut image = Image::attachment(device, &attachment, self.width, self.height, None);
+            views.push(image.add_view(device));
+
+            if attachment.is_stored() {
+                stored_images.push(image);
+            } else {
+                transient_images.push(image);
+            };
+        }
+
+        let info = vk::FramebufferCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            render_pass: self.render_pass.handle(),
+            attachment_count: views.len() as u32,
+            p_attachments: views.as_ptr(),
+            layers: 1,
+            width: self.width,
+            height: self.height,
+        };
+
+        let mut shader_image = Image::shader(device, self.width, self.height);
+        let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
+        uniforms.replace_texture(shader_index, shader_image.add_view(device));
+
+        // ready image layouts
+        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
+        for image in &stored_images {
+            image.change_layout(
+                device,
+                ImageLayout::Undefined,
+                match image.format() {
+                    Format::Depth => ImageLayout::ShaderDepth,
+                    _ => ImageLayout::ShaderColor,
+                },
+            );
+        }
+
+        // reassign new values
+        device.destroy_framebuffer(self.handle);
+        self.handle = device.create_framebuffer(&info);
+        self.transient_images = transient_images;
+        self.stored_images = stored_images;
+        self.shader_image = Some((shader_index, shader_image));
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {

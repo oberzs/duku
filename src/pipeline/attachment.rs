@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Attachment - represents input/output image in render pass
-
 use super::Clear;
 use super::Store;
 use crate::image::Format;

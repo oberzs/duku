@@ -1,13 +1,11 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// builtin resource creation
-
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
 use super::Handle;
-use super::Storage;
+use super::Resources;
 use crate::device::Device;
 use crate::error::Result;
 use crate::font::Font;
@@ -24,7 +22,7 @@ use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Builtins {
     // textures
     pub white_texture: Handle<Texture>,
@@ -61,7 +59,7 @@ pub struct Builtins {
 impl Builtins {
     pub(crate) fn new(
         device: &Device,
-        storage: &mut Storage,
+        resources: &mut Resources,
         uniforms: &mut Uniforms,
         msaa: Msaa,
     ) -> Result<Self> {
@@ -76,7 +74,7 @@ impl Builtins {
                 Format::Rgba,
                 Mips::Zero,
             )?;
-            storage.add_texture(tex)
+            resources.add_texture(tex)
         };
         let blue_texture = {
             let tex = Texture::new(
@@ -88,7 +86,7 @@ impl Builtins {
                 Format::Rgba,
                 Mips::Zero,
             )?;
-            storage.add_texture(tex)
+            resources.add_texture(tex)
         };
         let black_texture = {
             let tex = Texture::new(
@@ -100,7 +98,7 @@ impl Builtins {
                 Format::Rgba,
                 Mips::Zero,
             )?;
-            storage.add_texture(tex)
+            resources.add_texture(tex)
         };
 
         // cubemaps
@@ -119,25 +117,25 @@ impl Builtins {
                     right: vec![255, 255, 255, 255],
                 },
             )?;
-            storage.add_cubemap(cub)
+            resources.add_cubemap(cub)
         };
 
         // materials
         let white_material = {
             let mut mat = Material::new(device, uniforms)?;
-            mat.set_albedo_color([255, 255, 255]);
-            mat.set_albedo_texture(white_texture.clone());
-            mat.set_normal_texture(blue_texture.clone());
-            mat.update_if_needed();
-            storage.add_material(mat)
+            mat.albedo_color([255, 255, 255]);
+            mat.albedo_texture(white_texture.clone());
+            mat.normal_texture(blue_texture.clone());
+            mat.update();
+            resources.add_material(mat)
         };
 
         // meshes
-        let surface_mesh = storage.add_mesh(create_surface(device));
-        let quad_mesh = storage.add_mesh(create_quad(device));
-        let cube_mesh = storage.add_mesh(create_cube(device));
-        let ico_sphere_mesh = storage.add_mesh(create_ico_sphere(device, 3));
-        let uv_sphere_mesh = storage.add_mesh(create_uv_sphere(device, 30, 30));
+        let surface_mesh = resources.add_mesh(create_surface(device));
+        let quad_mesh = resources.add_mesh(create_quad(device));
+        let cube_mesh = resources.add_mesh(create_cube(device));
+        let ico_sphere_mesh = resources.add_mesh(create_ico_sphere(device, 3));
+        let uv_sphere_mesh = resources.add_mesh(create_uv_sphere(device, 30, 30));
 
         // shaders
         let pbr_shader = {
@@ -148,7 +146,7 @@ impl Builtins {
                 include_bytes!("../../shaders/pbr.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let font_shader = {
@@ -159,7 +157,7 @@ impl Builtins {
                 include_bytes!("../../shaders/font.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let wireframe_shader = {
@@ -170,7 +168,7 @@ impl Builtins {
                 include_bytes!("../../shaders/wireframe.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let line_shader = {
@@ -181,7 +179,7 @@ impl Builtins {
                 include_bytes!("../../shaders/lines.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let shape_shader = {
@@ -192,7 +190,7 @@ impl Builtins {
                 include_bytes!("../../shaders/shape.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let unshaded_shader = {
@@ -203,7 +201,7 @@ impl Builtins {
                 include_bytes!("../../shaders/unshaded.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let skybox_shader = {
@@ -214,7 +212,7 @@ impl Builtins {
                 include_bytes!("../../shaders/skybox.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         let fullscreen_shader = {
@@ -225,13 +223,13 @@ impl Builtins {
                 include_bytes!("../../shaders/fullscreen.spirv"),
             )
             .expect("bad shader");
-            storage.add_shader(shader)
+            resources.add_shader(shader)
         };
 
         // fonts
         let fira_font = {
             let font = Font::fira_mono(device, uniforms)?;
-            storage.add_font(font)
+            resources.add_font(font)
         };
 
         Ok(Self {
@@ -261,42 +259,44 @@ impl Builtins {
 fn create_surface(device: &Device) -> Mesh {
     let mut mesh = Mesh::new(device);
 
-    mesh.set_vertices(vec![
+    mesh.vertices = vec![
         Vector3::new(-1.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, -1.0, 0.0),
         Vector3::new(-1.0, -1.0, 0.0),
-    ]);
-    mesh.set_uvs(vec![
+    ];
+    mesh.uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
+
     mesh.calculate_normals();
-    mesh.update_if_needed(device);
+    mesh.update(device);
     mesh
 }
 
 fn create_quad(device: &Device) -> Mesh {
     let mut mesh = Mesh::new(device);
 
-    mesh.set_vertices(vec![
+    mesh.vertices = vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
-    ]);
-    mesh.set_uvs(vec![
+    ];
+    mesh.uvs = vec![
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(0.0, 0.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
+
     mesh.calculate_normals();
-    mesh.update_if_needed(device);
+    mesh.update(device);
     mesh
 }
 
@@ -362,15 +362,16 @@ pub(crate) fn create_cube(device: &Device) -> Mesh {
 fn create_rectangle<V: Into<Vector3>>(device: &Device, p1: V, p2: V, p3: V, p4: V) -> Mesh {
     let mut mesh = Mesh::new(device);
 
-    mesh.set_vertices(vec![p1.into(), p2.into(), p3.into(), p4.into()]);
-    mesh.set_uvs(vec![
+    mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
+    mesh.uvs = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
-    ]);
-    mesh.set_indices(vec![0, 1, 2, 0, 2, 3]);
+    ];
+    mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
+    mesh.update(device);
 
     mesh
 }
@@ -448,11 +449,11 @@ pub(crate) fn create_ico_sphere(device: &Device, detail_level: u32) -> Mesh {
     }
 
     let mut mesh = Mesh::new(device);
-    mesh.set_vertices(vertices);
-    mesh.set_indices(indices);
-    mesh.set_uvs(uvs);
+    mesh.vertices = vertices;
+    mesh.indices = indices;
+    mesh.uvs = uvs;
     mesh.calculate_normals();
-    mesh.update_if_needed(device);
+    mesh.update(device);
     mesh
 }
 
@@ -511,11 +512,11 @@ pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) 
     }
 
     let mut mesh = Mesh::new(device);
-    mesh.set_vertices(vertices);
-    mesh.set_uvs(uvs);
-    mesh.set_indices(indices);
+    mesh.vertices = vertices;
+    mesh.uvs = uvs;
+    mesh.indices = indices;
     mesh.calculate_normals();
-    mesh.update_if_needed(device);
+    mesh.update(device);
     mesh
 }
 

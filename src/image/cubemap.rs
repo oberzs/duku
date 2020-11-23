@@ -130,7 +130,7 @@ impl Cubemap {
         self.image.destroy(device);
     }
 
-    pub(crate) const fn shader_index(&self) -> u32 {
+    pub const fn shader_index(&self) -> u32 {
         self.shader_index
     }
 }

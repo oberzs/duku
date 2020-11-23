@@ -15,7 +15,7 @@ use crate::image::ColorSpace;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
-use crate::storage::Handle;
+use crate::resources::Handle;
 
 pub(crate) struct JpegData {
     pub(crate) data: Vec<u8>,

@@ -25,9 +25,6 @@ fn main() -> Result<()> {
     let mut camera = Camera::perspective_autosized(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);
 
-    let ui = duku.create_framebuffer(500, 500)?;
-    let ui_mat = duku.build_material()?.albedo_framebuffer(&ui).build();
-
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     let skybox = duku.create_cubemap_png(
@@ -53,13 +50,12 @@ fn main() -> Result<()> {
         Mips::Log2,
     )?;
 
-    let light_mat = duku
-        .build_material()?
-        .albedo_texture(light_tex)
-        .metalness(1.0)
-        .roughness(0.5)
-        .build();
-    let purple_mat = duku.build_material()?.albedo_texture(purple_tex).build();
+    let mut light_mat = duku.create_material_pbr()?;
+    light_mat.albedo_texture(light_tex);
+    light_mat.metalness(1.0);
+    light_mat.roughness(0.5);
+    let mut purple_mat = duku.create_material_pbr()?;
+    purple_mat.albedo_texture(purple_tex);
 
     window.main_loop(move |events| {
         controller.update(&mut camera, events, duku.delta_time());
@@ -88,10 +84,6 @@ fn main() -> Result<()> {
             target.transform.scale = Vector3::new(10.0, 0.2, 10.0);
             target.unset_material();
             target.draw_cube();
-
-            // render ui
-            target.set_material(&ui_mat);
-            target.draw_fullscreen();
         });
     });
 

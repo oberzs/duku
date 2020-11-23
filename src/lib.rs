@@ -79,7 +79,7 @@ mod math;
 mod mesh;
 mod pipeline;
 mod renderer;
-mod storage;
+mod resources;
 mod surface;
 mod vk;
 
@@ -104,12 +104,9 @@ pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
 pub use mesh::Mesh;
-pub use mesh::MeshBuilder;
 pub use mesh::Model;
 pub use mesh::ModelNode;
 pub use pipeline::Material;
-pub use pipeline::MaterialBuilder;
-pub use pipeline::MaterialParam;
 pub use pipeline::Shader;
 pub use renderer::BorderMode;
 pub use renderer::Camera;
@@ -120,10 +117,12 @@ pub use renderer::Pcf;
 pub use renderer::Projection;
 pub use renderer::ShapeMode;
 pub use renderer::Target;
-pub use storage::Handle;
+pub use resources::Handle;
 pub use surface::VSync;
 pub use surface::WindowHandle;
 
 // optional feature exports
+#[cfg(feature = "glsl")]
 pub use features::glsl;
+#[cfg(feature = "window")]
 pub use features::window;

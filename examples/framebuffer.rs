@@ -19,10 +19,8 @@ fn main() -> Result<()> {
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
     let framebuffer = duku.create_framebuffer(500, 500)?;
-    let material = duku
-        .build_material()?
-        .albedo_framebuffer(&framebuffer)
-        .build();
+    let mut material = duku.create_material_pbr()?;
+    material.albedo_framebuffer(&framebuffer);
 
     window.main_loop(move |_| {
         let fps = duku.fps();

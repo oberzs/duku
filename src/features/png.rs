@@ -21,7 +21,7 @@ use crate::image::CubemapSides;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
-use crate::storage::Handle;
+use crate::resources::Handle;
 
 pub(crate) struct PngData {
     pub(crate) data: Vec<u8>,
@@ -57,17 +57,16 @@ impl Duku {
         )
     }
 
+    #[allow(clippy::unused_self)]
     pub fn save_texture(&self, texture: &Handle<Texture>, path: impl AsRef<Path>) -> Result<()> {
-        let tex = self.texture(texture);
-
         let file = File::create(path.as_ref())?;
 
-        let mut encoder = Encoder::new(BufWriter::new(file), tex.width(), tex.height());
+        let mut encoder = Encoder::new(BufWriter::new(file), texture.width(), texture.height());
         encoder.set_color(ColorType::RGBA);
         encoder.set_depth(BitDepth::Eight);
         let mut writer = encoder.write_header().expect("bad write");
 
-        writer.write_image_data(tex.data()).expect("bad write");
+        writer.write_image_data(&texture.data).expect("bad write");
 
         Ok(())
     }

@@ -2,6 +2,7 @@
 // https://github.com/oberzs/duku
 
 use std::fs;
+use std::ops::Deref;
 use std::path::Path;
 use std::time::Instant;
 
@@ -9,7 +10,6 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
-use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Format;
@@ -19,21 +19,18 @@ use crate::image::Msaa;
 use crate::image::Texture;
 use crate::instance::Instance;
 use crate::mesh::Mesh;
-use crate::mesh::MeshBuilder;
 use crate::mesh::Model;
-use crate::mesh::ModelNode;
 use crate::pipeline::Material;
-use crate::pipeline::MaterialBuilder;
 use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
 use crate::renderer::Color;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Target;
-use crate::storage;
-use crate::storage::Builtins;
-use crate::storage::Handle;
-use crate::storage::Storage;
+use crate::resources;
+use crate::resources::Builtins;
+use crate::resources::Handle;
+use crate::resources::Resources;
 use crate::surface::Surface;
 use crate::surface::Swapchain;
 use crate::surface::VSync;
@@ -52,8 +49,8 @@ pub struct Duku {
     window_framebuffers: Vec<Framebuffer>,
 
     // Resources
-    storage: Storage,
-    pub builtins: Builtins,
+    resources: Resources,
+    builtins: Option<Builtins>,
 
     // Renderers
     forward_renderer: ForwardRenderer,
@@ -95,50 +92,42 @@ impl Duku {
         }
     }
 
-    pub fn draw_on_window<F>(&mut self, camera: Option<&Camera>, draw_callback: F)
-    where
-        F: Fn(&mut Target<'_>),
-    {
+    pub fn draw_on_window(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
         // let user record draw calls
-        {
-            let mut target = Target::new(&self.builtins, &self.storage);
-            draw_callback(&mut target);
-            let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-            let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
-            // render
-            self.forward_renderer
-                .render(&self.device, framebuffer, &cam, &self.uniforms, target);
-        }
+        let mut target = Target::new(self.builtins());
+        draw_fn(&mut target);
+        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
+        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
+        // render
+        self.forward_renderer
+            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
 
         self.end_draw();
     }
 
-    pub fn draw<F>(
+    pub fn draw(
         &mut self,
         framebuffer: &Handle<Framebuffer>,
         camera: Option<&Camera>,
-        draw_callback: F,
-    ) where
-        F: Fn(&mut Target<'_>),
-    {
+        draw_fn: impl Fn(&mut Target),
+    ) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
 
         // let user record draw calls
-        let mut target = Target::new(&self.builtins, &self.storage);
-        draw_callback(&mut target);
+        let mut target = Target::new(self.builtins());
+        draw_fn(&mut target);
 
-        let frame = self.storage.framebuffers.get(framebuffer);
-        let cam = get_camera(camera, frame.width(), frame.height());
+        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
 
         // render
         self.forward_renderer
-            .render(&self.device, frame, &cam, &self.uniforms, target);
+            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
     }
 
     pub fn create_texture(
@@ -158,7 +147,7 @@ impl Duku {
             format,
             mips,
         )?;
-        Ok(self.storage.add_texture(tex))
+        Ok(self.resources.add_texture(tex))
     }
 
     pub fn create_texture_color(
@@ -176,14 +165,6 @@ impl Duku {
         self.create_texture(data, Format::Rgba, Mips::Zero, width, height)
     }
 
-    pub fn texture(&self, tex: &Handle<Texture>) -> &Texture {
-        self.storage.textures.get(tex)
-    }
-
-    pub fn texture_mut(&mut self, tex: &Handle<Texture>) -> &mut Texture {
-        self.storage.textures.get_mut(tex)
-    }
-
     pub fn create_cubemap(
         &mut self,
         format: Format,
@@ -191,119 +172,67 @@ impl Duku {
         sides: CubemapSides<Vec<u8>>,
     ) -> Result<Handle<Cubemap>> {
         let cub = Cubemap::new(&self.device, &mut self.uniforms, size, format, sides)?;
-        Ok(self.storage.add_cubemap(cub))
-    }
-
-    pub fn font(&self, font: &Handle<Font>) -> &Font {
-        self.storage.fonts.get(font)
+        Ok(self.resources.add_cubemap(cub))
     }
 
     pub fn create_mesh(&mut self) -> Handle<Mesh> {
         let mesh = Mesh::new(&self.device);
-        self.storage.add_mesh(mesh)
+        self.resources.add_mesh(mesh)
     }
 
     pub fn create_mesh_cube(&mut self) -> Handle<Mesh> {
-        self.storage.add_mesh(storage::create_cube(&self.device))
+        self.resources
+            .add_mesh(resources::create_cube(&self.device))
     }
 
     pub fn create_mesh_sphere_ico(&mut self, detail: u32) -> Handle<Mesh> {
-        self.storage
-            .add_mesh(storage::create_ico_sphere(&self.device, detail))
+        self.resources
+            .add_mesh(resources::create_ico_sphere(&self.device, detail))
     }
 
     pub fn create_mesh_sphere_uv(&mut self, meridians: u32, parallels: u32) -> Handle<Mesh> {
-        self.storage.add_mesh(storage::create_uv_sphere(
+        self.resources.add_mesh(resources::create_uv_sphere(
             &self.device,
             meridians,
             parallels,
         ))
     }
 
-    pub fn mesh(&self, mesh: &Handle<Mesh>) -> &Mesh {
-        self.storage.meshes.get(mesh)
-    }
-
-    pub fn mesh_mut(&mut self, mesh: &Handle<Mesh>) -> &mut Mesh {
-        self.storage.meshes.get_mut(mesh)
-    }
-
-    pub fn build_mesh(&mut self) -> MeshBuilder<'_> {
-        MeshBuilder {
-            storage: &mut self.storage,
-            mesh: Mesh::new(&self.device),
-        }
-    }
-
-    pub fn duplicate_mesh(&mut self, mesh: &Handle<Mesh>) -> Handle<Mesh> {
-        let m = self.storage.meshes.get(mesh);
-        let mut result = Mesh::new(&self.device);
-        result.set_vertices(m.vertices().copied().collect());
-        result.set_normals(m.normals().copied().collect());
-        result.set_colors(m.colors().copied().collect());
-        result.set_uvs(m.uvs().copied().collect());
-        result.set_indices(m.indices().copied().collect());
-        self.storage.add_mesh(result)
-    }
-
     pub fn combine_meshes(&mut self, meshes: &[Handle<Mesh>]) -> Handle<Mesh> {
-        let ms: Vec<_> = meshes.iter().map(|m| self.storage.meshes.get(m)).collect();
+        let ms: Vec<&Mesh> = meshes.iter().map(|m| m.deref()).collect();
         let mesh = Mesh::combine(&self.device, &ms);
-        self.storage.add_mesh(mesh)
+        self.resources.add_mesh(mesh)
     }
 
-    pub fn create_model(&mut self, nodes: Vec<ModelNode>) -> Handle<Model> {
-        let model = Model { nodes };
-        self.storage.add_model(model)
-    }
-
-    pub fn model(&self, model: &Handle<Model>) -> &Model {
-        self.storage.models.get(model)
-    }
-
-    pub fn model_mut(&mut self, model: &Handle<Model>) -> &mut Model {
-        self.storage.models.get_mut(model)
-    }
-
-    pub fn fix_model_color_space(&mut self, model: &Handle<Model>) {
-        let mdl = self.storage.models.get(model);
-        for material in mdl.materials() {
-            let mat = self.storage.materials.get_mut(material);
-            mat.fix_albedo_color_space();
-        }
+    pub fn create_model(&mut self) -> Handle<Model> {
+        let model = Model { nodes: vec![] };
+        self.resources.add_model(model)
     }
 
     pub fn create_material(&mut self) -> Result<Handle<Material>> {
         let mat = Material::new(&self.device, &mut self.uniforms)?;
-        Ok(self.storage.add_material(mat))
+        Ok(self.resources.add_material(mat))
     }
 
-    pub fn material(&self, material: &Handle<Material>) -> &Material {
-        self.storage.materials.get(material)
-    }
+    pub fn create_material_pbr(&mut self) -> Result<Handle<Material>> {
+        let mut mat = Material::new(&self.device, &mut self.uniforms)?;
 
-    pub fn material_mut(&mut self, material: &Handle<Material>) -> &mut Material {
-        self.storage.materials.get_mut(material)
-    }
+        mat.albedo_texture(self.builtins().white_texture.clone());
+        mat.normal_texture(self.builtins().blue_texture.clone());
+        mat.metalness_roughness_texture(self.builtins().white_texture.clone());
+        mat.ambient_occlusion_texture(self.builtins().white_texture.clone());
+        mat.emissive_texture(self.builtins().black_texture.clone());
+        mat.albedo_color([255, 255, 255]);
+        mat.emissive([0, 0, 0]);
+        mat.metalness(0.0);
+        mat.roughness(0.0);
+        mat.update();
 
-    pub fn build_material(&mut self) -> Result<MaterialBuilder<'_>> {
-        Ok(MaterialBuilder {
-            storage: &mut self.storage,
-            material: Material::new(&self.device, &mut self.uniforms)?,
-        }
-        .albedo_texture(self.builtins.white_texture.clone())
-        .normal_texture(self.builtins.blue_texture.clone())
-        .metalness_roughness_texture(self.builtins.white_texture.clone())
-        .ambient_occlusion_texture(self.builtins.white_texture.clone())
-        .emissive_texture(self.builtins.black_texture.clone())
-        .albedo_color([255, 255, 255])
-        .emissive([0, 0, 0])
-        .metalness(0.0)
-        .roughness(0.0))
+        Ok(self.resources.add_material(mat))
     }
 
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Handle<Framebuffer>> {
-        let shader_config = self.storage.shaders.get(&self.builtins.pbr_shader).config();
+        let shader_config = self.builtins().pbr_shader.config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
@@ -313,7 +242,7 @@ impl Duku {
         )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.storage.add_framebuffer(framebuffer))
+        Ok(self.resources.add_framebuffer(framebuffer))
     }
 
     pub fn create_framebuffer_for_shader(
@@ -322,7 +251,7 @@ impl Duku {
         width: u32,
         height: u32,
     ) -> Result<Handle<Framebuffer>> {
-        let shader_config = self.storage.shaders.get(shader).config();
+        let shader_config = shader.config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
@@ -332,11 +261,7 @@ impl Duku {
         )?;
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.storage.add_framebuffer(framebuffer))
-    }
-
-    pub fn framebuffer_mut(&mut self, framebuffer: &Handle<Framebuffer>) -> &mut Framebuffer {
-        self.storage.framebuffers.get_mut(framebuffer)
+        Ok(self.resources.add_framebuffer(framebuffer))
     }
 
     pub fn create_shader_spirv(&mut self, path: impl AsRef<Path>) -> Result<Handle<Shader>> {
@@ -346,7 +271,7 @@ impl Duku {
 
     pub fn create_shader_spirv_bytes(&mut self, bytes: &[u8]) -> Result<Handle<Shader>> {
         let shader = Shader::from_spirv_bytes(&self.device, &self.uniforms, self.msaa, bytes)?;
-        Ok(self.storage.add_shader(shader))
+        Ok(self.resources.add_shader(shader))
     }
 
     pub fn stats(&self) -> Stats {
@@ -361,6 +286,10 @@ impl Duku {
         self.fps
     }
 
+    pub fn builtins(&self) -> &Builtins {
+        self.builtins.as_ref().expect("bad builtins")
+    }
+
     pub(crate) const fn msaa(&self) -> Msaa {
         self.msaa
     }
@@ -373,15 +302,16 @@ impl Duku {
         &self.uniforms
     }
 
-    pub(crate) fn storage_mut(&mut self) -> &mut Storage {
-        &mut self.storage
+    pub(crate) fn resources_mut(&mut self) -> &mut Resources {
+        &mut self.resources
     }
 
     fn begin_draw(&mut self) {
         self.render_stage = RenderStage::During;
         self.device.next_frame(&mut self.swapchain);
-        self.storage.clear_unused(&self.device, &mut self.uniforms);
-        self.storage
+        self.resources
+            .clear_unused(&self.device, &mut self.uniforms);
+        self.resources
             .update_if_needed(&self.device, &mut self.uniforms);
         self.uniforms.update_if_needed(&self.device);
         self.device
@@ -419,7 +349,7 @@ impl Duku {
                 framebuffer.destroy(&self.device, &mut self.uniforms);
             }
 
-            let shader_config = self.storage.shaders.get(&self.builtins.pbr_shader).config();
+            let shader_config = self.builtins().pbr_shader.config();
             self.window_framebuffers =
                 Framebuffer::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
@@ -429,7 +359,8 @@ impl Duku {
 impl Drop for Duku {
     fn drop(&mut self) {
         self.device.wait_idle();
-        self.storage.clear(&self.device, &mut self.uniforms);
+        self.builtins = None;
+        self.resources.clear(&self.device, &mut self.uniforms);
         self.forward_renderer
             .destroy(&self.device, &mut self.uniforms);
         for framebuffer in &self.window_framebuffers {
@@ -510,12 +441,12 @@ impl DukuBuilder {
         // setup uniforms
         let mut uniforms = Uniforms::new(&device, anisotropy);
 
-        // setup storage
-        let mut storage = Storage::new();
-        let builtins = Builtins::new(&device, &mut storage, &mut uniforms, msaa)?;
+        // setup resources
+        let mut resources = Resources::default();
+        let builtins = Builtins::new(&device, &mut resources, &mut uniforms, msaa)?;
 
         // setup framebuffers
-        let shader_config = storage.shaders.get(&builtins.pbr_shader).config();
+        let shader_config = builtins.pbr_shader.config();
         let window_framebuffers = Framebuffer::for_swapchain(&device, shader_config, &swapchain);
 
         // setup renderer
@@ -530,16 +461,16 @@ impl DukuBuilder {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             frame_time: Instant::now(),
+            builtins: Some(builtins),
             fps: 0,
             delta_time: 0.0,
             frame_count: 0,
             window_framebuffers,
             forward_renderer,
             uniforms,
-            storage,
+            resources,
             swapchain,
             gpu_index,
-            builtins,
             instance,
             surface,
             device,

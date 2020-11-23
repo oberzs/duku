@@ -6,7 +6,7 @@ use std::slice::Iter;
 use super::Mesh;
 use crate::math::Matrix4;
 use crate::pipeline::Material;
-use crate::storage::Handle;
+use crate::resources::Handle;
 
 pub struct Model {
     pub nodes: Vec<ModelNode>,
