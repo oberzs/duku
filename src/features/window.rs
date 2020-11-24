@@ -1,6 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+//! Optional feature `window` module for simple window creation.
+
 #![cfg(feature = "window")]
 
 use std::collections::HashSet;
@@ -31,11 +33,13 @@ use crate::math::Vector3;
 use crate::renderer::Camera;
 use crate::surface::WindowHandle;
 
+/// OS window wrapper around `winit`.
 pub struct Window {
     window: WinitWindow,
     event_loop: EventLoop<()>,
 }
 
+/// OS window event handler.
 pub struct Events {
     window: WinitWindow,
     events: Vec<Event>,
@@ -54,17 +58,33 @@ pub struct Events {
     scroll_delta: Vector2,
 }
 
+/// OS window event.
 #[derive(Debug, Copy, Clone)]
 pub enum Event {
+    /// window resize event
     Resize(Vector2),
 }
 
+/// Simple first person controller.
 #[derive(Debug, Copy, Clone)]
 pub enum Controller {
-    Fly { camera_angle: f32, move_speed: f32 },
-    Orbit { pivot: Vector3, move_speed: f32 },
+    /// WASD fly-around mode
+    Fly {
+        /// vertical angle of the camera
+        camera_angle: f32,
+        /// camera move speed
+        move_speed: f32,
+    },
+    /// orbit-arount-point mode
+    Orbit {
+        /// center point to rotate around
+        pivot: Vector3,
+        /// camera move speed
+        move_speed: f32,
+    },
 }
 
+/// OS window builder.
 #[derive(Debug, Clone)]
 pub struct WindowBuilder {
     duku: DukuBuilder,
@@ -75,6 +95,7 @@ pub struct WindowBuilder {
 }
 
 impl DukuBuilder {
+    /// Create OS window builder
     pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {
         WindowBuilder {
             duku: self,
@@ -123,6 +144,7 @@ impl Window {
         unimplemented!()
     }
 
+    /// Start window's main loop for polling events
     pub fn main_loop<F>(self, mut main_fn: F)
     where
         F: FnMut(&mut Events) + 'static,
@@ -252,52 +274,64 @@ impl Window {
 }
 
 impl Events {
+    /// Check if keyboard key is pressed
     pub fn is_key_pressed(&self, key: Key) -> bool {
         self.keys_pressed.contains(&key)
     }
 
+    /// Check if keyboard key is released
     pub fn is_key_released(&self, key: Key) -> bool {
         self.keys_released.contains(&key)
     }
 
+    /// Check if keyboard key has been typed
     pub fn is_key_typed(&self, key: Key) -> bool {
         self.keys_typed.contains(&key)
     }
 
+    /// Check if mouse button is pressed
     pub fn is_button_pressed(&self, button: MouseButton) -> bool {
         self.buttons_pressed.contains(&button)
     }
 
+    /// Check if mouse button is released
     pub fn is_button_released(&self, button: MouseButton) -> bool {
         self.buttons_released.contains(&button)
     }
 
+    /// Check if mouse button has been clicked
     pub fn is_button_clicked(&self, button: MouseButton) -> bool {
         self.buttons_clicked.contains(&button)
     }
 
+    /// Get mouse position
     pub const fn mouse_position(&self) -> Vector2 {
         self.mouse_position
     }
 
+    /// Set mouse position
     pub fn set_mouse_position(&mut self, position: Vector2) {
         self.window
             .set_cursor_position(PhysicalPosition::new(position.x as i32, position.y as i32))
             .expect("cannot set cursor position");
     }
 
+    /// Get mouse position's change since last frame
     pub const fn mouse_delta(&self) -> Vector2 {
         self.mouse_delta
     }
 
+    /// Get scroll wheel's change since last frame
     pub const fn scroll_delta(&self) -> Vector2 {
         self.scroll_delta
     }
 
+    /// Get if mouse is contained in window
     pub const fn mouse_grab(&self) -> bool {
         self.mouse_grab
     }
 
+    /// Set if mouse is contained in window
     pub fn set_mouse_grab(&mut self, grab: bool) {
         self.window
             .set_cursor_grab(grab)
@@ -305,33 +339,40 @@ impl Events {
         self.mouse_grab = grab;
     }
 
+    /// Set if cursor is hidden
     pub fn hide_cursor(&mut self, hide: bool) {
         self.window.set_cursor_visible(!hide);
     }
 
+    /// Set cursor icon
     pub fn set_cursor(&mut self, cursor: Cursor) {
         self.window.set_cursor_icon(cursor);
     }
 
+    /// Get window size
     pub fn size(&self) -> Vector2 {
         let size = self.window.inner_size();
         Vector2::new(size.width as f32, size.height as f32)
     }
 
+    /// Iterate over window events
     pub fn events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
     }
 
+    /// Set window title
     pub fn set_title(&mut self, title: impl AsRef<str>) {
         self.window.set_title(title.as_ref());
     }
 
+    /// Get typed character if there is one
     pub const fn typed_char(&self) -> Option<char> {
         self.typed_char
     }
 }
 
 impl Controller {
+    /// Create a fly-mode controller
     pub const fn fly() -> Self {
         Self::Fly {
             camera_angle: 0.0,
@@ -339,6 +380,7 @@ impl Controller {
         }
     }
 
+    /// Create a orbit-mode controller
     pub fn orbit(pivot: impl Into<Vector3>) -> Self {
         Self::Orbit {
             pivot: pivot.into(),
@@ -346,6 +388,7 @@ impl Controller {
         }
     }
 
+    /// Update camera and window based on controller
     pub fn update(&mut self, camera: &mut Camera, events: &mut Events, delta_time: f32) {
         match self {
             Self::Fly {
@@ -473,16 +516,19 @@ impl Controller {
 }
 
 impl WindowBuilder {
+    /// Make window resizable
     pub const fn resizable(mut self) -> Self {
         self.resizable = true;
         self
     }
 
-    pub fn title<S: AsRef<str>>(mut self, title: S) -> Self {
+    /// Use window title
+    pub fn title(mut self, title: impl AsRef<str>) -> Self {
         self.title = title.as_ref().to_string();
         self
     }
 
+    /// Build duku context and window
     pub fn build(self) -> Result<(Duku, Window)> {
         let window = Window::new(&self.title, self.width, self.height, self.resizable);
         let duku = self.duku.attach_window(window.handle()).build()?;

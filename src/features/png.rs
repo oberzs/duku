@@ -31,6 +31,7 @@ pub(crate) struct PngData {
 }
 
 impl Texture {
+    /// Save texture to a PNG file
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let file = File::create(path.as_ref())?;
 
@@ -46,6 +47,7 @@ impl Texture {
 }
 
 impl Duku {
+    /// Create a texture from a PNG file
     pub fn create_texture_png(
         &mut self,
         path: impl AsRef<Path>,
@@ -56,6 +58,7 @@ impl Duku {
         self.create_texture_png_bytes(&bytes, color_space, mips)
     }
 
+    /// Create a texture from PNG bytes
     pub fn create_texture_png_bytes(
         &mut self,
         bytes: &[u8],
@@ -72,6 +75,7 @@ impl Duku {
         )
     }
 
+    /// Create a cubemap from PNG files
     pub fn create_cubemap_png(
         &mut self,
         color_space: ColorSpace,
@@ -90,6 +94,7 @@ impl Duku {
         )
     }
 
+    /// Create a cubemap from PNG bytes
     pub fn create_cubemap_png_bytes(
         &mut self,
         color_space: ColorSpace,

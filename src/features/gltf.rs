@@ -30,6 +30,7 @@ use crate::pipeline::Material;
 use crate::resources::Handle;
 
 impl Duku {
+    /// Create a model from a GLTF file
     pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
         let p = path.as_ref();
         let bytes = fs::read(p)?;
@@ -42,6 +43,9 @@ impl Duku {
         )
     }
 
+    /// Create a model from GLTF bytes
+    ///
+    /// Note: `root` is used for relative file path loading
     pub fn create_model_gltf_bytes(&mut self, bytes: &[u8], root: &str) -> Result<Handle<Model>> {
         let gltf = Gltf::from_slice(bytes).map_err(|_| Error::InvalidGltf)?;
 

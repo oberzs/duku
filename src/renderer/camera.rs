@@ -1,30 +1,51 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Camera - struct to hold matrix transforms for a camera
-
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector3;
 
-#[derive(Clone)]
+/// The view into a scene.
+///
+/// # Example
+///
+/// ```ignore
+/// let camera = Camera::projection_autosized(90);
+///
+/// duku.draw_on_window(Some(&camera), |target| {
+///     // draw commands
+/// });
+/// ```
+#[derive(Debug, Clone)]
 pub struct Camera {
+    /// the transform of the camera
     pub transform: Transform,
+    /// autosized cameras change their size based
+    /// on the framebuffer rendered to
     pub autosize: bool,
+    /// field of view for perspective cameras
     pub fov: u32,
+    /// the width of the camera
     pub width: f32,
+    /// the height of the camera
     pub height: f32,
+    /// the depth of the camera
     pub depth: f32,
+    /// the projection type of the camera
     pub projection: Projection,
 }
 
-#[derive(Debug, Copy, Clone)]
+/// The projection type of a camera
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Projection {
+    /// orthographic projection type (parallel lines stay paralel)
     Orthographic,
+    /// perspective projection type (parallel lines converge to a point)
     Perspective,
 }
 
 impl Camera {
+    /// Create a perspective camera
     pub fn perspective(width: f32, height: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
@@ -37,6 +58,7 @@ impl Camera {
         }
     }
 
+    /// Create a orthographic camera
     pub fn orthographic(width: f32, height: f32) -> Self {
         Self {
             transform: Transform::default(),
@@ -49,6 +71,7 @@ impl Camera {
         }
     }
 
+    /// Create a perspective camera that is autosized
     pub fn perspective_autosized(fov: u32) -> Self {
         Self {
             transform: Transform::default(),
@@ -61,6 +84,7 @@ impl Camera {
         }
     }
 
+    /// Create a orthographic camera that is autosized
     pub fn orthographic_autosized() -> Self {
         Self {
             transform: Transform::default(),
@@ -73,6 +97,7 @@ impl Camera {
         }
     }
 
+    /// Create a new camera
     pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
@@ -85,6 +110,7 @@ impl Camera {
         }
     }
 
+    /// Convert perspective camera to a zoomed-in orthographic one
     pub fn fake_orthographic(&mut self, enable: bool) {
         if let Projection::Orthographic = self.projection {
             return;

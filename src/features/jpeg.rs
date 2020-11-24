@@ -25,6 +25,7 @@ pub(crate) struct JpegData {
 }
 
 impl Duku {
+    /// Create a texture from a JPEG file
     pub fn create_texture_jpeg(
         &mut self,
         path: impl AsRef<Path>,
@@ -35,6 +36,7 @@ impl Duku {
         self.create_texture_jpeg_bytes(&bytes, color_space, mips)
     }
 
+    /// Create a texture from JPEG bytes
     pub fn create_texture_jpeg_bytes(
         &mut self,
         bytes: &[u8],

@@ -1,6 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+//! Optional feature `glsl` module for GLSL file support.
+
 #![cfg(feature = "glsl")]
 
 use std::fs;
@@ -14,17 +16,20 @@ use crate::error::Result;
 use crate::pipeline::Shader;
 use crate::resources::Handle;
 
+/// Metadata for shader hot-reloading.
 pub struct Metadata {
     file: File,
     last_modified: Option<SystemTime>,
 }
 
 impl Duku {
+    /// Create a shader from a GLSL file
     pub fn create_shader_glsl(&mut self, path: impl AsRef<Path>) -> Result<Handle<Shader>> {
         let source = fs::read_to_string(&path)?;
         self.create_shader_glsl_str(&source)
     }
 
+    /// Create a shader from GLSL source
     pub fn create_shader_glsl_str(&mut self, source: &str) -> Result<Handle<Shader>> {
         let (vert, frag, bytes) = compile(source)?;
         self.create_shader_bytes(&vert, &frag, bytes)
@@ -32,6 +37,7 @@ impl Duku {
 }
 
 impl Metadata {
+    /// Initialize metadata for a file
     pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let file = File::open(path.as_ref())?;
 
@@ -41,6 +47,7 @@ impl Metadata {
         })
     }
 
+    /// Check if file has been modified
     pub fn is_modified(&mut self) -> bool {
         let metadata = self.file.metadata().expect("bad metadata");
         let modified = metadata.modified().expect("bad modified");

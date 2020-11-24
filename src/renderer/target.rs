@@ -5,7 +5,6 @@ use std::f32::consts::PI;
 
 use super::Color;
 use super::Light;
-use super::Pcf;
 use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::Filter;
@@ -23,9 +22,18 @@ use crate::pipeline::Shader;
 use crate::resources::Builtins;
 use crate::resources::Handle;
 
+/// Active render target.
+///
+/// Records rendering commands and settings.
+/// Received from the [draw](crate::duku::Duku::draw) or
+/// [draw_on_window](crate::duku::Duku::draw_on_window)
+/// functions.
 pub struct Target {
     // global
+    /// the clear color of the framebuffer (background)
     pub clear_color: Color,
+    /// the current transform used when
+    /// doing a render command
     pub transform: Transform,
     pub(crate) skybox: Option<Handle<Cubemap>>,
     pub(crate) builtins: Builtins,
@@ -36,52 +44,93 @@ pub struct Target {
     pub(crate) mesh_orders: Vec<OrdersByShader>,
 
     // shadows & lights
+    /// coefficient used to calculate shadow map splits (0 - 1).
+    /// use smaller number to achieve better shadow detail up close.
     pub shadow_split_coef: f32,
+    /// maximum shadow distance in the scene.
+    /// the smaller the value, the better the shadow quality.
     pub shadow_depth: f32,
+    /// setting for shadow softening
     pub shadow_pcf: Pcf,
+    /// controlls whether to use the PBR shader
     pub shadows: bool,
+    /// the lights used in the scene
     pub lights: [Light; 4],
+    /// maximum white value for HDR tone mapping
     pub max_white_point: f32,
+    /// the ambient color of the scene
     pub ambient_color: Color,
 
     // lines
+    /// color used for lines
     pub line_color: Color,
+    /// width used for non-debug lines
     pub line_width: f32,
     pub(crate) line_orders: Vec<LineOrder>,
 
     // shapes
+    /// color used for shapes
     pub shape_color: Color,
+    /// shape positioning mode
     pub shape_mode: ShapeMode,
+    /// color used for shape borders
     pub border_color: Color,
+    /// border positioning mode
     pub border_mode: BorderMode,
+    /// width used for shape borders
     pub border_width: f32,
     pub(crate) shape_orders: Vec<ShapeOrder>,
 
     // text
+    /// font size used for text
     pub font_size: u32,
+    /// color used for text
     pub text_color: Color,
     pub(crate) font: Option<Handle<Font>>,
     pub(crate) text_orders: Vec<TextOrder>,
 
     // textures
+    /// filter used for texture sampling
     pub texture_filter: Filter,
+    /// wrap mode used for texture sampling
     pub texture_wrap: Wrap,
+    /// whether to use mipmaps in texture sampling
     pub texture_mipmaps: bool,
 
     cache: Vec<Cache>,
 }
 
+/// Shape positioning mode.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ShapeMode {
+    /// position from bottom-left corner
     Corner,
+    /// position from center
     Center,
 }
 
+/// Border positioning mode.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BorderMode {
+    /// put border on the outside of shape
     Outside,
+    /// put border on the inside of shape
     Inside,
+    /// pub border evenly on the inside
+    /// and outside of shape
     Center,
+    /// disable borders for shapes
+    Disabled,
+}
+
+/// Shadow softening used when sampling.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Pcf {
+    /// sample shadow map 16 times
+    X16,
+    /// sample shadow map 4 times
+    X4,
+    /// sample shadow map 1 time
     Disabled,
 }
 
@@ -182,6 +231,7 @@ impl Target {
         }
     }
 
+    /// Save target settings to stack
     pub fn push(&mut self) {
         self.cache.push(Cache {
             transform: self.transform,
@@ -199,6 +249,7 @@ impl Target {
         });
     }
 
+    /// Restore target settings from stack
     pub fn pop(&mut self) {
         if let Some(cache) = self.cache.pop() {
             self.transform = cache.transform;
@@ -216,26 +267,32 @@ impl Target {
         }
     }
 
+    /// Set currently used material for mesh rendering
     pub fn set_material(&mut self, material: &Handle<Material>) {
         self.material = Some(material.clone());
     }
 
+    /// Set material to default for mesh rendering
     pub fn unset_material(&mut self) {
         self.material = None;
     }
 
+    /// Set currently used shader for mesh rendering
     pub fn set_shader(&mut self, shader: &Handle<Shader>) {
         self.shader = Some(shader.clone());
     }
 
+    /// Set shader to default for mesh rendering
     pub fn unset_shader(&mut self) {
         self.shader = None;
     }
 
+    /// Set cubemap to be used as a skybox
     pub fn set_skybox(&mut self, cubemap: &Handle<Cubemap>) {
         self.skybox = Some(cubemap.clone());
     }
 
+    /// Draw custom mesh
     pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
@@ -261,6 +318,7 @@ impl Target {
         );
     }
 
+    /// Draw wireframes for custom mesh
     pub fn draw_mesh_wireframe(&mut self, mesh: &Handle<Mesh>) {
         let shader = self.builtins.wireframe_shader.clone();
         let material = self.builtins.white_material.clone();
@@ -277,6 +335,7 @@ impl Target {
         );
     }
 
+    /// Draw a cube
     pub fn draw_cube(&mut self) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
@@ -302,6 +361,7 @@ impl Target {
         );
     }
 
+    /// Draw an ico-sphere
     pub fn draw_sphere_ico(&mut self) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
@@ -327,6 +387,7 @@ impl Target {
         );
     }
 
+    /// Draw a uv-sphere
     pub fn draw_sphere_uv(&mut self) {
         let default_shader = if self.shadows {
             &self.builtins.pbr_shader
@@ -352,6 +413,7 @@ impl Target {
         );
     }
 
+    /// Draw a flat surface
     pub fn draw_surface(&mut self) {
         let shader = self
             .shader
@@ -376,6 +438,7 @@ impl Target {
         );
     }
 
+    /// Draw a fullscreen quad
     pub fn draw_fullscreen(&mut self) {
         let shader = self.builtins.fullscreen_shader.clone();
         let material = self
@@ -396,6 +459,7 @@ impl Target {
         );
     }
 
+    /// Draw a XY line grid
     pub fn draw_grid(&mut self) {
         let size = 100;
         let half = size / 2;
@@ -436,6 +500,7 @@ impl Target {
         self.pop();
     }
 
+    /// Draw a string of text
     pub fn draw_text(&mut self, text: impl AsRef<str>) {
         let font = self
             .font
@@ -452,6 +517,7 @@ impl Target {
         });
     }
 
+    /// Move transform down one line's heigth for the current font
     pub fn new_line(&mut self) {
         let line_height = self
             .font
@@ -461,6 +527,7 @@ impl Target {
         self.transform.move_down(line_height as f32);
     }
 
+    /// Draw a debug 1-pixel wide line
     pub fn draw_line_debug(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
         self.line_orders.push(LineOrder {
             color: self.line_color,
@@ -469,6 +536,7 @@ impl Target {
         });
     }
 
+    /// Draw a custom shape from points
     pub fn draw_shape(&mut self, points: &[Vector2]) {
         // don't draw polygon with less than 2 points
         if points.len() < 3 {
@@ -507,6 +575,7 @@ impl Target {
         }
     }
 
+    /// Draw mitered line from points
     pub fn draw_lines(&mut self, points: &[Vector2], closed: bool) {
         self.draw_path(
             points,
@@ -517,6 +586,7 @@ impl Target {
         );
     }
 
+    /// Draw a rectangle
     pub fn draw_rectangle(&mut self, size: impl Into<Vector2>) {
         let s = size.into();
 
@@ -536,10 +606,12 @@ impl Target {
         self.pop();
     }
 
+    /// Draw a square
     pub fn draw_square(&mut self, size: f32) {
         self.draw_rectangle(Vector2::new(size, size));
     }
 
+    /// Draw an ellipse
     pub fn draw_ellipse(&mut self, size: impl Into<Vector2>) {
         let s = size.into() / 2.0;
         let side_count = (s.length() * 3.0) as u32;
@@ -563,10 +635,12 @@ impl Target {
         self.pop();
     }
 
+    /// Draw a circle
     pub fn draw_circle(&mut self, size: f32) {
         self.draw_ellipse(Vector2::new(size, size));
     }
 
+    /// Draw a textured quad
     pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
         let s = Vector3::from((size.into(), 0.0));
 
@@ -608,6 +682,7 @@ impl Target {
         self.pop();
     }
 
+    /// Draw all of the meshes of a model
     pub fn draw_model(&mut self, model: &Handle<Model>) {
         self.push();
         for node in &model.nodes {

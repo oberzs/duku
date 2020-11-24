@@ -18,7 +18,7 @@ pub use camera::Projection;
 pub use color::Color;
 pub use light::Light;
 pub use light::LightType;
-pub use shadow::Pcf;
 pub use target::BorderMode;
+pub use target::Pcf;
 pub use target::ShapeMode;
 pub use target::Target;

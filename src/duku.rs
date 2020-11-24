@@ -40,6 +40,17 @@ use crate::surface::WindowHandle;
 
 const FPS_SAMPLE_COUNT: usize = 64;
 
+/// The renderer context.
+///
+/// Entrypoint into the duku API
+///
+/// # Example
+///
+/// ```ignore
+/// let (mut duku, window) = Duku::builder()
+///     .build_window(500, 500)
+///     .build()?;
+/// ```
 pub struct Duku {
     // Vulkan
     instance: Instance,
@@ -52,6 +63,7 @@ pub struct Duku {
 
     // Resources
     resources: Resources,
+    /// Built-in resources
     pub builtins: Builtins,
 
     // Renderers
@@ -68,6 +80,7 @@ pub struct Duku {
     vsync: VSync,
 }
 
+/// The render context builder.
 #[derive(Debug, Clone)]
 pub struct DukuBuilder {
     shadow_map_size: u32,
@@ -84,6 +97,7 @@ enum RenderStage {
 }
 
 impl Duku {
+    /// Create builder for duku context
     pub const fn builder() -> DukuBuilder {
         DukuBuilder {
             shadow_map_size: 2048,
@@ -94,6 +108,18 @@ impl Duku {
         }
     }
 
+    /// Start rendering on the window framebuffer
+    ///
+    /// Note: if `camera` is `None` a default camera that fits the
+    /// framebuffer will be used.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// duku.draw_on_window(None, |target| {
+    ///     // record drawing commands
+    /// });
+    /// ```
     pub fn draw_on_window(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
@@ -112,6 +138,20 @@ impl Duku {
         self.end_draw();
     }
 
+    /// Start rendering on a specified framebuffer
+    ///
+    /// Note: if `camera` is `None` a default camera that fits the
+    /// framebuffer will be used.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let frame = duku.create_framebuffer(640, 360)?;
+    ///
+    /// duku.draw(&frame, None, |target| {
+    ///     // record drawing commands
+    /// });
+    /// ```
     pub fn draw(
         &mut self,
         framebuffer: &Handle<Framebuffer>,
@@ -133,6 +173,7 @@ impl Duku {
             .render(&self.device, framebuffer, &cam, &self.uniforms, target);
     }
 
+    /// Create a texture from byte data
     pub fn create_texture(
         &mut self,
         data: Vec<u8>,
@@ -153,6 +194,7 @@ impl Duku {
         Ok(self.resources.add_texture(tex))
     }
 
+    /// Create a texture from colors
     pub fn create_texture_color(
         &mut self,
         pixels: &[Color],
@@ -168,6 +210,7 @@ impl Duku {
         self.create_texture(data, Format::Rgba, Mips::Zero, width, height)
     }
 
+    /// Create a cubemap from byte data
     pub fn create_cubemap(
         &mut self,
         format: Format,
@@ -178,21 +221,25 @@ impl Duku {
         Ok(self.resources.add_cubemap(cub))
     }
 
+    /// Create a mesh
     pub fn create_mesh(&mut self) -> Handle<Mesh> {
         let mesh = Mesh::new(&self.device);
         self.resources.add_mesh(mesh)
     }
 
+    /// Create a cube mesh
     pub fn create_mesh_cube(&mut self) -> Handle<Mesh> {
         self.resources
             .add_mesh(resources::create_cube(&self.device))
     }
 
+    /// Create an ico-sphere mesh
     pub fn create_mesh_sphere_ico(&mut self, detail: u32) -> Handle<Mesh> {
         self.resources
             .add_mesh(resources::create_ico_sphere(&self.device, detail))
     }
 
+    /// Create a uv-sphere mesh
     pub fn create_mesh_sphere_uv(&mut self, meridians: u32, parallels: u32) -> Handle<Mesh> {
         self.resources.add_mesh(resources::create_uv_sphere(
             &self.device,
@@ -201,22 +248,26 @@ impl Duku {
         ))
     }
 
+    /// Combine multiple meshes into a new one
     pub fn combine_meshes(&mut self, meshes: &[Handle<Mesh>]) -> Handle<Mesh> {
         let ms: Vec<&Mesh> = meshes.iter().map(|m| m.deref()).collect();
         let mesh = Mesh::combine(&self.device, &ms);
         self.resources.add_mesh(mesh)
     }
 
+    /// Create a model
     pub fn create_model(&mut self) -> Handle<Model> {
         let model = Model { nodes: vec![] };
         self.resources.add_model(model)
     }
 
+    /// Create a material
     pub fn create_material(&mut self) -> Result<Handle<Material>> {
         let mat = Material::new(&self.device, &mut self.uniforms)?;
         Ok(self.resources.add_material(mat))
     }
 
+    /// Create a material with PBR defaults
     pub fn create_material_pbr(&mut self) -> Result<Handle<Material>> {
         let mut mat = Material::new(&self.device, &mut self.uniforms)?;
 
@@ -234,6 +285,7 @@ impl Duku {
         Ok(self.resources.add_material(mat))
     }
 
+    /// Create a framebuffer
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Handle<Framebuffer>> {
         let shader_config = self.builtins.pbr_shader.config();
         let framebuffer = Framebuffer::new(
@@ -248,6 +300,7 @@ impl Duku {
         Ok(self.resources.add_framebuffer(framebuffer))
     }
 
+    /// Create a framebuffer with configuration based on a shader
     pub fn create_framebuffer_for_shader(
         &mut self,
         shader: &Handle<Shader>,
@@ -267,16 +320,22 @@ impl Duku {
         Ok(self.resources.add_framebuffer(framebuffer))
     }
 
+    /// Create a shader from a SPIR-V file
     pub fn create_shader_spirv(&mut self, path: impl AsRef<Path>) -> Result<Handle<Shader>> {
         let bytes = fs::read(path.as_ref())?;
         self.create_shader_spirv_bytes(&bytes)
     }
 
+    /// Create a shader from SPIR-V bytes
     pub fn create_shader_spirv_bytes(&mut self, bytes: &[u8]) -> Result<Handle<Shader>> {
         let shader = Shader::from_spirv_bytes(&self.device, &self.uniforms, self.msaa, bytes)?;
         Ok(self.resources.add_shader(shader))
     }
 
+    /// Create a shader
+    ///
+    /// Note: this should be used only if building a
+    /// 3rd party shader compiler
     pub fn create_shader_bytes(
         &mut self,
         vert: &[u8],
@@ -295,14 +354,17 @@ impl Duku {
         Ok(self.resources.add_shader(shader))
     }
 
+    /// Get last render's statistics
     pub fn stats(&self) -> Stats {
         self.device.stats()
     }
 
+    /// Get time between frames
     pub const fn delta_time(&self) -> f32 {
         self.delta_time
     }
 
+    /// Get current FPS
     pub const fn fps(&self) -> u32 {
         self.fps
     }
@@ -376,41 +438,49 @@ impl Drop for Duku {
 }
 
 impl DukuBuilder {
+    /// Use VSync setting
     pub const fn vsync(mut self, vsync: VSync) -> Self {
         self.vsync = vsync;
         self
     }
 
+    /// Disable VSync
     pub const fn no_vsync(mut self) -> Self {
         self.vsync = VSync::Off;
         self
     }
 
+    /// Use shadow map size
     pub const fn shadow_map_size(mut self, size: u32) -> Self {
         self.shadow_map_size = size;
         self
     }
 
+    /// Use MSAA setting
     pub const fn msaa(mut self, msaa: Msaa) -> Self {
         self.msaa = msaa;
         self
     }
 
+    /// Disable MSAA
     pub const fn no_msaa(mut self) -> Self {
         self.msaa = Msaa::Disabled;
         self
     }
 
+    /// Use sampler anisotropy setting
     pub const fn anisotropy(mut self, value: f32) -> Self {
         self.anisotropy = value;
         self
     }
 
+    /// Attach OS window handle to renderer context
     pub const fn attach_window(mut self, window: WindowHandle) -> Self {
         self.window = Some(window);
         self
     }
 
+    /// Build context
     pub fn build(self) -> Result<Duku> {
         let Self {
             vsync,

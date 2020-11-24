@@ -1,27 +1,42 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Color struct
-
 use std::cmp;
 
+/// Color bytes in RGBA.
+///
+/// Makes it easier to handle/convert colors.
+///
+/// # Example
+///
+/// ```ignore
+/// let red = Color::RED;
+/// let (h, s, v) = rgb.to_hsv();
+/// ```
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Color {
+    /// the red component
     pub r: u8,
+    /// the green component
     pub g: u8,
+    /// the blue component
     pub b: u8,
+    /// the alpha component
     pub a: u8,
 }
 
 impl Color {
+    /// Create color from RGB bytes
     pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self::rgba(r, g, b, 255)
     }
 
+    /// Create color from RGBA bytes
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
+    /// Create color from HSV components
     pub fn hsv(h: u16, s: u8, v: u8) -> Self {
         let mut h_norm = f32::from(h);
         let s_norm = to_norm(s);
@@ -48,26 +63,32 @@ impl Color {
         }
     }
 
+    /// Create color from RGB normalized floats
     pub fn rgb_norm(r: f32, g: f32, b: f32) -> Self {
         Self::rgb(to_byte(r), to_byte(g), to_byte(b))
     }
 
+    /// Create color from RGBA normalized floats
     pub fn rgba_norm(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self::rgba(to_byte(r), to_byte(g), to_byte(b), to_byte(a))
     }
 
+    /// Create color from gray value byte
     pub const fn gray(v: u8) -> Self {
         Self::rgb(v, v, v)
     }
 
+    /// Create color from gray value normalized float
     pub fn gray_norm(v: f32) -> Self {
         Self::rgb_norm(v, v, v)
     }
 
+    /// Get RGB components as normalized floats
     pub fn to_rgb_norm(&self) -> [f32; 3] {
         [to_norm(self.r), to_norm(self.g), to_norm(self.b)]
     }
 
+    /// Get RGBA components as normalized floats
     pub fn to_rgba_norm(&self) -> [f32; 4] {
         [
             to_norm(self.r),
@@ -77,6 +98,7 @@ impl Color {
         ]
     }
 
+    /// Get HSV components
     pub fn to_hsv(&self) -> (u16, u8, u8) {
         let [r, g, b] = self.to_rgb_norm();
 
@@ -111,6 +133,7 @@ impl Color {
         (hue as u16, saturation, value)
     }
 
+    /// Convert color to sRGB color space
     pub fn to_srgb(&self) -> Self {
         fn map(value: f32) -> f32 {
             let l = match value {
@@ -132,6 +155,7 @@ impl Color {
         Self::rgba_norm(map(r), map(g), map(b), a)
     }
 
+    /// Convert color to linear color space
     pub fn to_linear(&self) -> Self {
         fn map(value: f32) -> f32 {
             let s = match value {
@@ -153,23 +177,39 @@ impl Color {
         Self::rgba_norm(map(r), map(g), map(b), a)
     }
 
+    /// Shorthand for Color::rgb(255, 255, 255)
     pub const WHITE: Self = Self::rgb(255, 255, 255);
+    /// Shorthand for Color::rgb(192, 192, 192)
     pub const SILVER: Self = Self::rgb(192, 192, 192);
+    /// Shorthand for Color::rgb(128, 128, 128)
     pub const GRAY: Self = Self::rgb(128, 128, 128);
+    /// Shorthand for Color::rgb(0, 0, 0)
     pub const BLACK: Self = Self::rgb(0, 0, 0);
+    /// Shorthand for Color::rgb(255, 0, 0)
     pub const RED: Self = Self::rgb(255, 0, 0);
+    /// Shorthand for Color::rgb(128, 0, 0)
     pub const MAROON: Self = Self::rgb(128, 0, 0);
+    /// Shorthand for Color::rgb(255, 255, 0)
     pub const YELLOW: Self = Self::rgb(255, 255, 0);
+    /// Shorthand for Color::rgb(128, 128, 0)
     pub const OLIVE: Self = Self::rgb(128, 128, 0);
+    /// Shorthand for Color::rgb(0, 255, 255)
     pub const AQUA: Self = Self::rgb(0, 255, 255);
+    /// Shorthand for Color::rgb(0, 128, 128)
     pub const TEAL: Self = Self::rgb(0, 128, 128);
+    /// Shorthand for Color::rgb(0, 0, 255)
     pub const BLUE: Self = Self::rgb(0, 0, 255);
+    /// Shorthand for Color::rgb(0, 0, 128)
     pub const NAVY: Self = Self::rgb(0, 0, 128);
+    /// Shorthand for Color::rgb(128, 0, 128)
     pub const FUCHSIA: Self = Self::rgb(128, 0, 128);
+    /// Shorthand for Color::rgb(128, 0, 128)
     pub const PURPLE: Self = Self::rgb(128, 0, 128);
-
+    /// Shorthand for Color::rgb(0, 255, 0)
     pub const GREEN: Self = Self::rgb(0, 255, 0);
+    /// Shorthand for Color::rgb(135, 206, 235)
     pub const SKY_BLUE: Self = Self::rgb(135, 206, 235);
+    /// Shorthand for Color::rgb(255, 127, 0)
     pub const ORANGE: Self = Self::rgb(255, 127, 0);
 }
 

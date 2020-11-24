@@ -25,13 +25,6 @@ use crate::pipeline::Uniforms;
 
 const SHADOW_SPLIT_COUNT: usize = 4;
 
-#[derive(Debug, Copy, Clone)]
-pub enum Pcf {
-    X16,
-    X4,
-    Disabled,
-}
-
 pub(crate) struct ShadowRenderer {
     target_resources: Vec<TargetResources>,
     shader: Shader,
