@@ -13,55 +13,65 @@ These examples use these CC0-licensed assets:
 
 ---
 
-[framebuffer.rs](https://github.com/oberzs/duku/tree/release/examples/framebuffer.rs)
+To run these examples use:
+
+```bash
+cargo run --example [example-name] --features="[features]"
+```
+
+Required features are listed on this page by each example name.
+
+---
+
+[framebuffer](https://github.com/oberzs/duku/tree/release/examples/framebuffer.rs) - `window`
 <br>
 ![framebuffer.png](screenshots/framebuffer.png)
 
 ---
 
-[gltf.rs](https://github.com/oberzs/duku/tree/release/examples/gltf.rs)
+[gltf](https://github.com/oberzs/duku/tree/release/examples/gltf.rs) - `window` `gltf`
 <br>
 ![gltf.png](screenshots/gltf.png)
 
 ---
 
-[hello.rs](https://github.com/oberzs/duku/tree/release/examples/hello.rs)
+[hello](https://github.com/oberzs/duku/tree/release/examples/hello.rs) - `window`
 <br>
 ![hello.png](screenshots/hello.png)
 
 ---
 
-[lines.rs](https://github.com/oberzs/duku/tree/release/examples/lines.rs)
+[lines](https://github.com/oberzs/duku/tree/release/examples/lines.rs) - `window`
 <br>
 ![lines.png](screenshots/lines.png)
 
 ---
 
-[materials.rs](https://github.com/oberzs/duku/tree/release/examples/materials.rs)
+[materials](https://github.com/oberzs/duku/tree/release/examples/materials.rs) - `window` `png`
 <br>
 ![materials.png](screenshots/materials.png)
 
 ---
 
-[shapes.rs](https://github.com/oberzs/duku/tree/release/examples/shapes.rs)
+[shapes](https://github.com/oberzs/duku/tree/release/examples/shapes.rs) - `window`
 <br>
 ![shapes.png](screenshots/shapes.png)
 
 ---
 
-[surface.rs](https://github.com/oberzs/duku/tree/release/examples/surface.rs)
+[surface](https://github.com/oberzs/duku/tree/release/examples/surface.rs) - `window` `glsl`
 <br>
 ![surface.png](screenshots/surface.png)
 
 ---
 
-[text.rs](https://github.com/oberzs/duku/tree/release/examples/text.rs)
+[text](https://github.com/oberzs/duku/tree/release/examples/text.rs) - `window`
 <br>
 ![text.png](screenshots/text.png)
 
 ---
 
-[textures.rs](https://github.com/oberzs/duku/tree/release/examples/textures.rs)
+[textures](https://github.com/oberzs/duku/tree/release/examples/textures.rs) - `window` `png` `jpeg`
 <br>
 ![textures.png](screenshots/textures.png)
 

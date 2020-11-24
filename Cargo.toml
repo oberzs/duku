@@ -57,39 +57,3 @@ features = ["utils"]
 name = "dc"
 path = "src/dc.rs"
 required-features = ["glsl"]
-
-[[example]]
-name = "framebuffer"
-required-features = ["window"]
-
-[[example]]
-name = "gltf"
-required-features = ["window", "gltf"]
-
-[[example]]
-name = "hello"
-required-features = ["window"]
-
-[[example]]
-name = "lines"
-required-features = ["window"]
-
-[[example]]
-name = "materials"
-required-features = ["window", "png"]
-
-[[example]]
-name = "shapes"
-required-features = ["window"]
-
-[[example]]
-name = "surface"
-required-features = ["window", "glsl"]
-
-[[example]]
-name = "text"
-required-features = ["window"]
-
-[[example]]
-name = "textures"
-required-features = ["window", "png", "jpeg"]
