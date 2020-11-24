@@ -17,7 +17,7 @@ fn main() -> Result<()> {
         .build()?;
 
     let mut camera = Camera::perspective_autosized(90);
-    camera.transform.move_by([0.0, 0.0, -0.5]);
+    camera.transform.move_by([0.0, 0.5, -2.0]);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
