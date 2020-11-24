@@ -6,39 +6,50 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::io;
 
-/// Crate's `Result` type
+/// Crate's `Result` type.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Crate's `Error` type.
 #[derive(Debug)]
 pub enum Error {
+    /// Rust's io error
     Io(String),
+    /// Invalid SPIR-V data
     InvalidSpirv,
-    InvalidFile,
+    /// Cannot find suitable GPU
     NoSuitableGpu,
+    /// Texture limit has been reached (max 100)
     TextureLimit,
+    /// Cubemap limit has been reached (max 100)
     CubemapLimit,
+    /// Material limit has been reached (max 100)
     MaterialLimit,
+    /// Framebuffer limit has been reached (max 100)
     FramebufferLimit,
 
+    /// Unsupported PNG or JPEG color format
     #[cfg(any(feature = "png", feature = "jpeg"))]
     UnsupportedFormat,
 
+    /// Invalid PNG data
     #[cfg(feature = "png")]
     InvalidPng,
 
+    /// Invalid JPEG data
     #[cfg(feature = "jpeg")]
     InvalidJpeg,
 
+    /// Invalid GLSL source
     #[cfg(feature = "glsl")]
     InvalidGlsl(String),
 
-    #[cfg(feature = "window")]
-    InternalGlfw,
-
+    /// Invalid GLTF data
     #[cfg(feature = "gltf")]
     InvalidGltf,
+    /// Unsupported GLTF mime-type
     #[cfg(feature = "gltf")]
     UnsupportedMimeType(String),
+    /// Unsupported GLTF primitive mode
     #[cfg(feature = "gltf")]
     UnsupportedPrimitive,
 }

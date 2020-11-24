@@ -87,6 +87,7 @@ mod vk;
 pub use self::duku::Duku;
 pub use device::Stats;
 pub use duku::DukuBuilder;
+pub use error::Error;
 pub use error::Result;
 pub use image::ColorSpace;
 pub use image::Cubemap;
