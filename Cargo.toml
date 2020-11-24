@@ -1,8 +1,15 @@
 [package]
 name = "duku"
 version = "0.1.0"
-authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 edition = "2018"
+
+authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
+license = "Apache 2.0"
+description = "Easy to use rendering library for Rust"
+homepage = "https://github.com/oberzs/duku"
+repository = "https://github.com/oberzs/duku"
+documentation = "https://docs.rs/duku"
+readme = "README.md"
 
 [features]
 default = []

@@ -3,8 +3,12 @@
 <div align="center">
   <!-- Version -->
   <span>
-    <img src="https://img.shields.io/badge/version-Work%20In%20Progress-yellow?style=flat-square" alt="Version" />
+    <img src="https://img.shields.io/badge/version-0.1.0-green?style=flat-square" alt="Version" />
   </span>
+  <!-- Docs -->
+  <a href="https://docs.rs/duku">
+    <img src="https://img.shields.io/badge/docs-0.1.0-blue?style=flat-square" alt="Docs" />
+  </a>
   <!-- Build status -->
   <span>
     <img src="https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square" alt="Build Status" />
@@ -80,10 +84,8 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 
 ```toml
 [dependencies]
-duku = { git = "https://github.com/oberzs/duku" }
+duku = "0.1.0"
 ```
-
-This crate will be added to the [crates.io] upon release `0.1.0`.
 
 ---
 
