@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
-license = "Apache 2.0"
+license = "Apache-2.0"
 description = "Easy to use rendering library for Rust"
 homepage = "https://github.com/oberzs/duku"
 repository = "https://github.com/oberzs/duku"
