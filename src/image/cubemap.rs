@@ -130,6 +130,7 @@ impl Cubemap {
         self.image.destroy(device);
     }
 
+    /// Get index to be used in shader for sampling
     pub const fn shader_index(&self) -> u32 {
         self.shader_index
     }

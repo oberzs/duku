@@ -105,16 +105,26 @@ pub enum Wrap {
     Repeat,
 }
 
+/// Image's pixel format.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Format {
+    /// RGB, 8bits for each component
     Rgb,
+    /// RGBA, 8bits for each component
     Rgba,
+    /// sRGB, 8bits for each component
     Srgb,
+    /// sRGBA, 8bits for each component
     Srgba,
+    /// BGRA, 8bits for each component
     Bgra,
+    /// Used for depth testing images
     Depth,
+    /// Used for depth testing images with stencil
     DepthStencil,
+    /// 2 component 32bits per component
     Float2,
+    /// 1 component 8 bits per component
     Gray,
 }
 

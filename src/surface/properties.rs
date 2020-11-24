@@ -1,13 +1,17 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// properties for surface
-
 use crate::vk;
 
+/// VSync setting for rendering.
+///
+/// If this is on, rendering fps is locked
+/// to the screen's refresh-rate
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VSync {
+    /// turn vsync on
     On,
+    /// turn vsync off
     Off,
 }
 

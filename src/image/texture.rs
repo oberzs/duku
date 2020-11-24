@@ -23,11 +23,11 @@ use crate::renderer::Color;
 /// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
 ///
 /// // use the texture in a material
-/// let material = duku.build_material_pbr()?
-///     .albedo_texture(&texture)
-///     .build();
+/// let mut material = duku.create_material_pbr()?;
+/// material.albedo_texture(&texture);
 /// ```
 pub struct Texture {
+    /// pixel data as bytes
     pub data: Vec<u8>,
 
     image: Image,
@@ -156,6 +156,7 @@ impl Texture {
         self.image.destroy(device);
     }
 
+    /// Get index to be used in shader for sampling
     pub const fn shader_index(&self) -> u32 {
         self.shader_index
     }

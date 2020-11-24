@@ -20,13 +20,37 @@ pub(crate) use vertex::Vertex;
 pub use model::Model;
 pub use model::ModelNode;
 
+/// Shape collection for rendering
+///
+/// # Example
+///
+/// ```ignore
+/// // setup a triangle
+/// let mut mesh = duku.create_mesh();
+/// mesh.vertices = vec![
+///     Vector3::new(-1.0, -1.0),
+///     Vector3::new(0.0, 1.0),
+///     Vector3::new(1.0, -1.0),
+/// ];
+/// mesh.indices = vec![0, 1, 2];
+///
+/// // render a triangle
+/// target.draw_mesh(&mesh);
+/// ```
 pub struct Mesh {
+    /// vertex positions
     pub vertices: Vec<Vector3>,
+    /// vertex UV coordinates
     pub uvs: Vec<Vector2>,
+    /// vertex normal directions
     pub normals: Vec<Vector3>,
+    /// vertex tangent directions
     pub tangents: Vec<Vector3>,
+    /// vertex colors
     pub colors: Vec<Color>,
+    /// vertex texture indices
     pub textures: Vec<u32>,
+    /// vertex indices
     pub indices: Vec<u32>,
 
     vertex_buffer: Buffer<Vertex>,
@@ -86,6 +110,12 @@ impl Mesh {
         result
     }
 
+    /// Calculate vertex normals automatically
+    /// smoothing the values to achieve smooth
+    /// shading.
+    ///
+    /// Note: calls [calculate_tangents](crate::mesh::Mesh::calculate_tangents)
+    /// automatically
     pub fn calculate_normals(&mut self) {
         self.normals = vec![Vector3::default(); self.vertices.len()];
 
@@ -115,6 +145,9 @@ impl Mesh {
         self.calculate_tangents();
     }
 
+    /// Calculate vertex tangents automatically
+    /// smoothing the values to achieve smooth
+    /// shading.
     pub fn calculate_tangents(&mut self) {
         self.tangents = vec![Vector3::default(); self.vertices.len()];
 

@@ -8,14 +8,34 @@ use crate::math::Matrix4;
 use crate::pipeline::Material;
 use crate::resources::Handle;
 
+/// Collection of meshes and materials.
+///
+/// Makes it easier to render complex scenes
+///
+/// # Example
+///
+/// ```ignore
+/// let model = duku.create_model_gltf("house.gltf")?;
+///
+/// target.draw_model(&model);
+/// ```
 pub struct Model {
+    /// render-nodes of the model
     pub nodes: Vec<ModelNode>,
 }
 
+/// One node of the model.
+///
+/// Represents an object in a scene or a
+/// child object.
 pub struct ModelNode {
+    /// meshes for this node
     pub meshes: Vec<Handle<Mesh>>,
+    /// materials for this node
     pub materials: Vec<Handle<Material>>,
+    /// transform in matrix form for this node
     pub matrix: Matrix4,
+    /// child nodes
     pub children: Vec<Self>,
 }
 
@@ -24,10 +44,12 @@ struct ChildIter<'a> {
 }
 
 impl Model {
+    /// iterates through all meshes in the model
     pub fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {
         self.nodes.iter().map(|node| node.meshes()).flatten()
     }
 
+    /// iterates through all materials in the model
     pub fn materials(&self) -> impl Iterator<Item = &Handle<Material>> {
         self.nodes.iter().map(|node| node.materials()).flatten()
     }

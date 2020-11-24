@@ -19,6 +19,17 @@ use crate::image::Msaa;
 use crate::mesh::Vertex;
 use crate::vk;
 
+/// Program that runs on the GPU.
+///
+/// Used for rendering objects in custom ways
+///
+/// # Example
+///
+/// ```ignore
+/// let shader = create_shader_glsl("shader.glsl")?;
+///
+/// target.set_shader(&shader);
+/// ```
 pub struct Shader {
     handle: vk::Pipeline,
     config: ShaderConfig,

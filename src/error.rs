@@ -1,13 +1,12 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// duku error types
-
 use std::error;
 use std::fmt;
 use std::fmt::Formatter;
 use std::io;
 
+/// Crate's `Result` type
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]

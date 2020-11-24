@@ -12,6 +12,12 @@ pub(crate) struct Resource<T> {
     pub(crate) mutated: bool,
 }
 
+/// A handle to a rendering resource.
+///
+/// Gives access to the underlying resource
+/// through the [Deref](std::ops::Deref) trait.
+///
+/// Note: cloning this does not create a new resource
 pub struct Handle<T> {
     _marker: PhantomData<*const T>,
     value: *mut T,

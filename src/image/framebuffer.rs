@@ -28,9 +28,8 @@ use crate::vk;
 /// let framebuffer = duku.create_framebuffer(400, 400)?;
 ///
 /// // use framebuffer in material to use later
-/// let material = duku.build_material_pbr()?
-///     .albedo_framebuffer(&framebuffer)
-///     .build();
+/// let mut material = duku.create_material_pbr()?;
+/// material.albedo_framebuffer(&framebuffer);
 ///
 /// // render to framebuffer
 /// duku.draw(&framebuffer, None, |target| {
@@ -38,7 +37,9 @@ use crate::vk;
 /// });
 /// ```
 pub struct Framebuffer {
+    /// framebuffer's image width
     pub width: u32,
+    /// framebuffer's image height
     pub height: u32,
 
     handle: vk::Framebuffer,
@@ -309,7 +310,8 @@ impl Framebuffer {
         self.attachments.iter()
     }
 
-    pub(crate) fn shader_index(&self) -> u32 {
+    /// Get index to be used in shader for sampling
+    pub fn shader_index(&self) -> u32 {
         self.shader_image.as_ref().expect("bad shader image").0
     }
 }
