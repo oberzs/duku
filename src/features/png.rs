@@ -30,6 +30,21 @@ pub(crate) struct PngData {
     pub(crate) height: u32,
 }
 
+impl Texture {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        let file = File::create(path.as_ref())?;
+
+        let mut encoder = Encoder::new(BufWriter::new(file), self.width(), self.height());
+        encoder.set_color(ColorType::RGBA);
+        encoder.set_depth(BitDepth::Eight);
+        let mut writer = encoder.write_header().expect("bad write");
+
+        writer.write_image_data(&self.data).expect("bad write");
+
+        Ok(())
+    }
+}
+
 impl Duku {
     pub fn create_texture_png(
         &mut self,
@@ -55,20 +70,6 @@ impl Duku {
             png_data.width,
             png_data.height,
         )
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn save_texture(&self, texture: &Handle<Texture>, path: impl AsRef<Path>) -> Result<()> {
-        let file = File::create(path.as_ref())?;
-
-        let mut encoder = Encoder::new(BufWriter::new(file), texture.width(), texture.height());
-        encoder.set_color(ColorType::RGBA);
-        encoder.set_depth(BitDepth::Eight);
-        let mut writer = encoder.write_header().expect("bad write");
-
-        writer.write_image_data(&texture.data).expect("bad write");
-
-        Ok(())
     }
 
     pub fn create_cubemap_png(

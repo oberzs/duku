@@ -3,7 +3,6 @@
 
 #![cfg(feature = "glsl")]
 
-use std::convert::TryInto;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -13,7 +12,6 @@ use super::glsl_compiler::compile;
 use crate::duku::Duku;
 use crate::error::Result;
 use crate::pipeline::Shader;
-use crate::pipeline::ShaderConfig;
 use crate::resources::Handle;
 
 pub struct Metadata {
@@ -29,16 +27,7 @@ impl Duku {
 
     pub fn create_shader_glsl_str(&mut self, source: &str) -> Result<Handle<Shader>> {
         let (vert, frag, bytes) = compile(source)?;
-        let config = ShaderConfig {
-            depth: bytes[0].try_into()?,
-            shape: bytes[1].try_into()?,
-            cull: bytes[2].try_into()?,
-            outputs: bytes[3],
-            msaa: self.msaa(),
-        };
-        let shader = Shader::new(self.device(), self.uniforms(), &vert, &frag, config)?;
-
-        Ok(self.resources_mut().add_shader(shader))
+        self.create_shader_bytes(&vert, &frag, bytes)
     }
 }
 

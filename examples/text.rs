@@ -30,7 +30,7 @@ fn main() -> Result<()> {
             input.pop();
         }
 
-        let input_length = duku.builtins().fira_font.text_width(&input);
+        let input_length = duku.builtins.fira_font.text_width(&input);
 
         duku.draw_on_window(None, |target| {
             // move (0, 0) to top left

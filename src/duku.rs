@@ -1,6 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+use std::convert::TryInto;
 use std::fs;
 use std::ops::Deref;
 use std::path::Path;
@@ -22,6 +23,7 @@ use crate::mesh::Mesh;
 use crate::mesh::Model;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
+use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
 use crate::renderer::Color;
@@ -50,7 +52,7 @@ pub struct Duku {
 
     // Resources
     resources: Resources,
-    builtins: Option<Builtins>,
+    pub builtins: Builtins,
 
     // Renderers
     forward_renderer: ForwardRenderer,
@@ -98,10 +100,11 @@ impl Duku {
         }
 
         // let user record draw calls
-        let mut target = Target::new(self.builtins());
+        let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
         let framebuffer = &self.window_framebuffers[self.swapchain.current()];
         let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
+
         // render
         self.forward_renderer
             .render(&self.device, framebuffer, &cam, &self.uniforms, target);
@@ -120,7 +123,7 @@ impl Duku {
         }
 
         // let user record draw calls
-        let mut target = Target::new(self.builtins());
+        let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
 
         let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
@@ -217,11 +220,11 @@ impl Duku {
     pub fn create_material_pbr(&mut self) -> Result<Handle<Material>> {
         let mut mat = Material::new(&self.device, &mut self.uniforms)?;
 
-        mat.albedo_texture(self.builtins().white_texture.clone());
-        mat.normal_texture(self.builtins().blue_texture.clone());
-        mat.metalness_roughness_texture(self.builtins().white_texture.clone());
-        mat.ambient_occlusion_texture(self.builtins().white_texture.clone());
-        mat.emissive_texture(self.builtins().black_texture.clone());
+        mat.albedo_texture(self.builtins.white_texture.clone());
+        mat.normal_texture(self.builtins.blue_texture.clone());
+        mat.metalness_roughness_texture(self.builtins.white_texture.clone());
+        mat.ambient_occlusion_texture(self.builtins.white_texture.clone());
+        mat.emissive_texture(self.builtins.black_texture.clone());
         mat.albedo_color([255, 255, 255]);
         mat.emissive([0, 0, 0]);
         mat.metalness(0.0);
@@ -232,7 +235,7 @@ impl Duku {
     }
 
     pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Handle<Framebuffer>> {
-        let shader_config = self.builtins().pbr_shader.config();
+        let shader_config = self.builtins.pbr_shader.config();
         let framebuffer = Framebuffer::new(
             &self.device,
             &mut self.uniforms,
@@ -274,6 +277,24 @@ impl Duku {
         Ok(self.resources.add_shader(shader))
     }
 
+    pub fn create_shader_bytes(
+        &mut self,
+        vert: &[u8],
+        frag: &[u8],
+        bytes: [u8; 4],
+    ) -> Result<Handle<Shader>> {
+        let config = ShaderConfig {
+            depth: bytes[0].try_into()?,
+            shape: bytes[1].try_into()?,
+            cull: bytes[2].try_into()?,
+            outputs: bytes[3],
+            msaa: self.msaa,
+        };
+        let shader = Shader::new(&self.device, &self.uniforms, &vert, &frag, config)?;
+
+        Ok(self.resources.add_shader(shader))
+    }
+
     pub fn stats(&self) -> Stats {
         self.device.stats()
     }
@@ -284,30 +305,6 @@ impl Duku {
 
     pub const fn fps(&self) -> u32 {
         self.fps
-    }
-
-    pub fn builtins(&self) -> &Builtins {
-        self.builtins.as_ref().expect("bad builtins")
-    }
-
-    #[cfg(feature = "glsl")]
-    pub(crate) const fn msaa(&self) -> Msaa {
-        self.msaa
-    }
-
-    #[cfg(feature = "glsl")]
-    pub(crate) const fn device(&self) -> &Device {
-        &self.device
-    }
-
-    #[cfg(feature = "glsl")]
-    pub(crate) const fn uniforms(&self) -> &Uniforms {
-        &self.uniforms
-    }
-
-    #[cfg(feature = "glsl")]
-    pub(crate) fn resources_mut(&mut self) -> &mut Resources {
-        &mut self.resources
     }
 
     fn begin_draw(&mut self) {
@@ -353,7 +350,7 @@ impl Duku {
                 framebuffer.destroy(&self.device, &mut self.uniforms);
             }
 
-            let shader_config = self.builtins().pbr_shader.config();
+            let shader_config = self.builtins.pbr_shader.config();
             self.window_framebuffers =
                 Framebuffer::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
@@ -363,7 +360,6 @@ impl Duku {
 impl Drop for Duku {
     fn drop(&mut self) {
         self.device.wait_idle();
-        self.builtins = None;
         self.resources.clear(&self.device, &mut self.uniforms);
         self.forward_renderer
             .destroy(&self.device, &mut self.uniforms);
@@ -465,12 +461,12 @@ impl DukuBuilder {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             frame_time: Instant::now(),
-            builtins: Some(builtins),
             fps: 0,
             delta_time: 0.0,
             frame_count: 0,
             window_framebuffers,
             forward_renderer,
+            builtins,
             uniforms,
             resources,
             swapchain,
