@@ -10,6 +10,11 @@ homepage = "https://github.com/oberzs/duku"
 repository = "https://github.com/oberzs/duku"
 documentation = "https://docs.rs/duku"
 readme = "README.md"
+exclude = [
+  "examples/*",
+  ".github/*",
+  "shaders/glsl/*"
+]
 
 [features]
 default = []
