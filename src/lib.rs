@@ -85,8 +85,8 @@ mod vk;
 
 // normal exports
 pub use self::duku::Duku;
+pub use self::duku::DukuBuilder;
 pub use device::Stats;
-pub use duku::DukuBuilder;
 pub use error::Error;
 pub use error::Result;
 pub use image::ColorSpace;
