@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square" alt="Rust Version" />
   </a>
   <!-- License -->
-  <a href="https://github.com/oberzs/duku/blob/develop/LICENSE">
+  <a href="https://github.com/oberzs/duku/blob/release/LICENSE">
     <img src="https://img.shields.io/github/license/oberzs/duku?style=flat-square" alt="License" />
   </a>
 </div>
@@ -98,7 +98,7 @@ duku = "0.1.0"
 - **PBR** - uses a PBR material/shader system
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] font
-- **Shaders** - adding custom shaders is documented [here](https://github.com/oberzs/duku/tree/develop/DC_DOCS.md)
+- **Shaders** - adding custom shaders is documented [here](https://github.com/oberzs/duku/tree/release/DC_DOCS.md)
 - **No dependencies** - all Rust dependencies are optional
 
 #### Optional Features
@@ -122,7 +122,7 @@ The optional features include:
 | `glsl`   | [shaderc]      | adds custom glsl file loading support |
 | `log`    | n/a            | adds informational logs               |
 
-[examples]: https://github.com/oberzs/duku/tree/develop/examples
+[examples]: https://github.com/oberzs/duku/tree/release/examples
 [crates.io]: https://crates.io
 [vulkan sdk]: https://vulkan.lunarg.com/
 [fira mono]: https://fonts.google.com/specimen/Fira+Mono?query=fira

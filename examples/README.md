@@ -13,55 +13,55 @@ These examples use these CC0-licensed assets:
 
 ---
 
-[framebuffer.rs](https://github.com/oberzs/duku/tree/develop/examples/framebuffer.rs)
+[framebuffer.rs](https://github.com/oberzs/duku/tree/release/examples/framebuffer.rs)
 <br>
 ![framebuffer.png](screenshots/framebuffer.png)
 
 ---
 
-[gltf.rs](https://github.com/oberzs/duku/tree/develop/examples/gltf.rs)
+[gltf.rs](https://github.com/oberzs/duku/tree/release/examples/gltf.rs)
 <br>
 ![gltf.png](screenshots/gltf.png)
 
 ---
 
-[hello.rs](https://github.com/oberzs/duku/tree/develop/examples/hello.rs)
+[hello.rs](https://github.com/oberzs/duku/tree/release/examples/hello.rs)
 <br>
 ![hello.png](screenshots/hello.png)
 
 ---
 
-[lines.rs](https://github.com/oberzs/duku/tree/develop/examples/lines.rs)
+[lines.rs](https://github.com/oberzs/duku/tree/release/examples/lines.rs)
 <br>
 ![lines.png](screenshots/lines.png)
 
 ---
 
-[materials.rs](https://github.com/oberzs/duku/tree/develop/examples/materials.rs)
+[materials.rs](https://github.com/oberzs/duku/tree/release/examples/materials.rs)
 <br>
 ![materials.png](screenshots/materials.png)
 
 ---
 
-[shapes.rs](https://github.com/oberzs/duku/tree/develop/examples/shapes.rs)
+[shapes.rs](https://github.com/oberzs/duku/tree/release/examples/shapes.rs)
 <br>
 ![shapes.png](screenshots/shapes.png)
 
 ---
 
-[surface.rs](https://github.com/oberzs/duku/tree/develop/examples/surface.rs)
+[surface.rs](https://github.com/oberzs/duku/tree/release/examples/surface.rs)
 <br>
 ![surface.png](screenshots/surface.png)
 
 ---
 
-[text.rs](https://github.com/oberzs/duku/tree/develop/examples/text.rs)
+[text.rs](https://github.com/oberzs/duku/tree/release/examples/text.rs)
 <br>
 ![text.png](screenshots/text.png)
 
 ---
 
-[textures.rs](https://github.com/oberzs/duku/tree/develop/examples/textures.rs)
+[textures.rs](https://github.com/oberzs/duku/tree/release/examples/textures.rs)
 <br>
 ![textures.png](screenshots/textures.png)
 

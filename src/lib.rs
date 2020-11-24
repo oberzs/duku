@@ -41,7 +41,7 @@
 //! }
 //! ```
 //!
-//! More usage examples can be found [here](https://github.com/oberzs/duku/tree/develop/examples).
+//! More usage examples can be found [here](https://github.com/oberzs/duku/tree/release/examples).
 
 #![warn(
     rust_2018_idioms,
