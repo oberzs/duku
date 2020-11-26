@@ -30,7 +30,7 @@ void fragment() {
   // get color from bound material
   vec3 color = material.a.rgb;
 
-  // output color to framebuffer
+  // output color to canvas
   out_color = vec4(color, 1.0);
 }
 ```
@@ -117,7 +117,7 @@ be available only in the fragment shader.
 Global objects provide data that has
 been passed from the Rust code.
 
-`world` defines values that are set for each framebuffer target.
+`world` defines values that are set for each canvas target.
 
 | Name               | Type       | Description                                                   |
 | ------------------ | ---------- | ------------------------------------------------------------- |

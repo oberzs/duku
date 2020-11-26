@@ -11,7 +11,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::Canvas;
 use crate::image::Msaa;
 use crate::math::Matrix4;
 use crate::math::Vector3;
@@ -42,7 +42,7 @@ struct TargetResources {
     world_descriptors: [Descriptor; SHADOW_SPLIT_COUNT],
     world_buffers: [Buffer<ShaderWorld>; SHADOW_SPLIT_COUNT],
     shadow_descriptor: Descriptor,
-    shadow_maps: [Framebuffer; SHADOW_SPLIT_COUNT],
+    shadow_maps: [Canvas; SHADOW_SPLIT_COUNT],
 }
 
 struct Sphere {
@@ -171,9 +171,9 @@ impl ShadowRenderer {
             }]);
 
             // do render pass
-            let framebuffer = &target_resources.shadow_maps[i];
-            cmd.begin_render_pass(framebuffer, [1.0, 1.0, 1.0, 1.0]);
-            cmd.set_view(framebuffer.width(), framebuffer.height());
+            let texture = &target_resources.shadow_maps[i];
+            cmd.begin_render_pass(texture, [1.0, 1.0, 1.0, 1.0]);
+            cmd.set_view(texture.width, texture.height);
             cmd.bind_descriptor(uniforms, target_resources.world_descriptors[i]);
             cmd.bind_shader(&self.shader);
 
@@ -216,10 +216,10 @@ impl TargetResources {
         map_size: u32,
     ) -> Result<Self> {
         let shadow_maps = [
-            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
-            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
-            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
-            Framebuffer::new(device, uniforms, config, map_size, map_size)?,
+            Canvas::new(device, uniforms, config, map_size, map_size)?,
+            Canvas::new(device, uniforms, config, map_size, map_size)?,
+            Canvas::new(device, uniforms, config, map_size, map_size)?,
+            Canvas::new(device, uniforms, config, map_size, map_size)?,
         ];
         let shadow_descriptor = uniforms.shadow_map_set(
             device,

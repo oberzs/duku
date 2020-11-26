@@ -11,10 +11,10 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
+use crate::image::Canvas;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
 use crate::image::Format;
-use crate::image::Framebuffer;
 use crate::image::Mips;
 use crate::image::Msaa;
 use crate::image::Texture;
@@ -60,7 +60,7 @@ pub struct Duku {
     surface: Surface,
     swapchain: Swapchain,
     uniforms: Uniforms,
-    window_framebuffers: Vec<Framebuffer>,
+    window_canvases: Vec<Canvas>,
 
     // Resources
     resources: Resources,
@@ -109,10 +109,10 @@ impl Duku {
         }
     }
 
-    /// Start rendering on the window framebuffer
+    /// Start rendering on the window canvas
     ///
     /// Note: if `camera` is `None` a default camera that fits the
-    /// framebuffer will be used.
+    /// canvas will be used.
     ///
     /// # Example
     ///
@@ -129,33 +129,33 @@ impl Duku {
         // let user record draw calls
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
-        let framebuffer = &self.window_framebuffers[self.swapchain.current()];
-        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
+        let canvas = &self.window_canvases[self.swapchain.current()];
+        let cam = get_camera(camera, canvas.width, canvas.height);
 
         // render
         self.forward_renderer
-            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
+            .render(&self.device, canvas, &cam, &self.uniforms, target);
 
         self.end_draw();
     }
 
-    /// Start rendering on a specified framebuffer
+    /// Start rendering on a specified canvas
     ///
     /// Note: if `camera` is `None` a default camera that fits the
-    /// framebuffer will be used.
+    /// canvas will be used.
     ///
     /// # Example
     ///
     /// ```ignore
-    /// let frame = duku.create_framebuffer(640, 360)?;
+    /// let canvas = duku.create_canvas(640, 360)?;
     ///
-    /// duku.draw(&frame, None, |target| {
+    /// duku.draw(&canvas, None, |target| {
     ///     // record drawing commands
     /// });
     /// ```
     pub fn draw(
         &mut self,
-        framebuffer: &Handle<Framebuffer>,
+        canvas: &Handle<Canvas>,
         camera: Option<&Camera>,
         draw_fn: impl Fn(&mut Target),
     ) {
@@ -167,11 +167,11 @@ impl Duku {
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
 
-        let cam = get_camera(camera, framebuffer.width(), framebuffer.height());
+        let cam = get_camera(camera, canvas.width, canvas.height);
 
         // render
         self.forward_renderer
-            .render(&self.device, framebuffer, &cam, &self.uniforms, target);
+            .render(&self.device, canvas, &cam, &self.uniforms, target);
     }
 
     /// Create a texture from byte data
@@ -286,39 +286,41 @@ impl Duku {
         Ok(self.resources.add_material(mat))
     }
 
-    /// Create a framebuffer
-    pub fn create_framebuffer(&mut self, width: u32, height: u32) -> Result<Handle<Framebuffer>> {
+    /// Create a canvas
+    pub fn create_canvas(&mut self, width: u32, height: u32) -> Result<Handle<Canvas>> {
         let shader_config = self.builtins.pbr_shader.config();
-        let framebuffer = Framebuffer::new(
+        let mut canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             width,
             height,
         )?;
+        canvas.set_material(self.create_material()?);
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.resources.add_framebuffer(framebuffer))
+        Ok(self.resources.add_canvas(canvas))
     }
 
-    /// Create a framebuffer with configuration based on a shader
-    pub fn create_framebuffer_for_shader(
+    /// Create a canvas with configuration based on a shader
+    pub fn create_canvas_for_shader(
         &mut self,
         shader: &Handle<Shader>,
         width: u32,
         height: u32,
-    ) -> Result<Handle<Framebuffer>> {
+    ) -> Result<Handle<Canvas>> {
         let shader_config = shader.config();
-        let framebuffer = Framebuffer::new(
+        let mut canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             width,
             height,
         )?;
+        canvas.set_material(self.create_material()?);
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.resources.add_framebuffer(framebuffer))
+        Ok(self.resources.add_canvas(canvas))
     }
 
     /// Create a shader from a SPIR-V file
@@ -409,13 +411,13 @@ impl Duku {
             self.swapchain
                 .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
 
-            for framebuffer in &self.window_framebuffers {
-                framebuffer.destroy(&self.device, &mut self.uniforms);
+            for canvas in &self.window_canvases {
+                canvas.destroy(&self.device, &mut self.uniforms);
             }
 
             let shader_config = self.builtins.pbr_shader.config();
-            self.window_framebuffers =
-                Framebuffer::for_swapchain(&self.device, shader_config, &self.swapchain);
+            self.window_canvases =
+                Canvas::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
     }
 }
@@ -426,8 +428,8 @@ impl Drop for Duku {
         self.resources.clear(&self.device, &mut self.uniforms);
         self.forward_renderer
             .destroy(&self.device, &mut self.uniforms);
-        for framebuffer in &self.window_framebuffers {
-            framebuffer.destroy(&self.device, &mut self.uniforms);
+        for canvas in &self.window_canvases {
+            canvas.destroy(&self.device, &mut self.uniforms);
         }
         self.uniforms.destroy(&self.device);
         self.device.destroy_swapchain(&self.swapchain);
@@ -516,9 +518,9 @@ impl DukuBuilder {
         let mut resources = Resources::default();
         let builtins = Builtins::new(&device, &mut resources, &mut uniforms, msaa)?;
 
-        // setup framebuffers
+        // setup canvases
         let shader_config = builtins.pbr_shader.config();
-        let window_framebuffers = Framebuffer::for_swapchain(&device, shader_config, &swapchain);
+        let window_canvases = Canvas::for_swapchain(&device, shader_config, &swapchain);
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
@@ -535,7 +537,7 @@ impl DukuBuilder {
             fps: 0,
             delta_time: 0.0,
             frame_count: 0,
-            window_framebuffers,
+            window_canvases,
             forward_renderer,
             builtins,
             uniforms,

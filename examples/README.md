@@ -23,7 +23,7 @@ Required features are listed on this page by each example name.
 
 ---
 
-[framebuffer](https://github.com/oberzs/duku/tree/release/examples/framebuffer.rs) - `window`
+[canvas](https://github.com/oberzs/duku/tree/release/examples/canvas.rs) - `window`
 <br>
 ![framebuffer.png](screenshots/framebuffer.png)
 

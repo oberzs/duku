@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// example that draws a framebuffer with a custom ray-marching shader
+// example that draws with a custom ray-marching shader
 
 use duku::glsl::Metadata;
 use duku::Duku;

@@ -47,7 +47,7 @@ pub enum Mips {
 /// by sampling each pixel multiple times.
 ///
 /// Higher settings greatly impact performance, also
-/// require more memory for bigger framebuffers.
+/// require more memory for bigger canvases.
 ///
 /// # Example
 ///

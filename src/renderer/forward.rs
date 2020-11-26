@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// ForwardRenderer - renderer that renders shadowmap and then normal render pass
-
 use std::time::Instant;
 
 use super::Camera;
@@ -14,7 +12,7 @@ use crate::buffer::BufferUsage;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::Canvas;
 use crate::math::Matrix4;
 use crate::math::Transform;
 use crate::math::Vector2;
@@ -71,7 +69,7 @@ impl ForwardRenderer {
     pub(crate) fn render(
         &mut self,
         device: &Device,
-        framebuffer: &Framebuffer,
+        canvas: &Canvas,
         camera: &Camera,
         uniforms: &Uniforms,
         target: Target,
@@ -123,8 +121,8 @@ impl ForwardRenderer {
         }]);
 
         // do render pass
-        cmd.begin_render_pass(framebuffer, target.clear_color.to_rgba_norm());
-        cmd.set_view(framebuffer.width(), framebuffer.height());
+        cmd.begin_render_pass(canvas, target.clear_color.to_rgba_norm());
+        cmd.set_view(canvas.width, canvas.height);
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 
         // skybox rendering
@@ -154,7 +152,7 @@ impl ForwardRenderer {
 
         // end rendering
         cmd.end_render_pass();
-        framebuffer.blit_to_texture(cmd);
+        canvas.blit_to_texture(cmd);
 
         self.target_index = (self.target_index + 1) % self.target_resources.len();
     }
