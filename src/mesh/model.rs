@@ -28,6 +28,7 @@ pub struct Model {
 ///
 /// Represents an object in a scene or a
 /// child object.
+#[derive(Clone)]
 pub struct ModelNode {
     /// meshes for this node
     pub meshes: Vec<Handle<Mesh>>,

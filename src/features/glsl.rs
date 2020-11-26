@@ -17,6 +17,7 @@ use crate::pipeline::Shader;
 use crate::resources::Handle;
 
 /// Metadata for shader hot-reloading.
+#[derive(Debug)]
 pub struct Metadata {
     file: File,
     last_modified: Option<SystemTime>,
