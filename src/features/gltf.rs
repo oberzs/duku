@@ -273,8 +273,12 @@ impl Duku {
         } else {
             let (mime_type, data) = texture_data.remove(&index).ok_or(Error::InvalidGltf)?;
             let tex = match mime_type {
-                "image/png" => self.create_texture_png_bytes(&data, color_space, Mips::Log2)?,
-                "image/jpeg" => self.create_texture_jpeg_bytes(&data, color_space, Mips::Log2)?,
+                "image/png" => {
+                    self.create_texture_png_bytes(&data, Some((color_space, Mips::Log2)))?
+                }
+                "image/jpeg" => {
+                    self.create_texture_jpeg_bytes(&data, Some((color_space, Mips::Log2)))?
+                }
                 _ => return Err(Error::UnsupportedMimeType(mime_type.to_string())),
             };
             textures.insert(index, tex.clone());

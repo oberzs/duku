@@ -6,11 +6,9 @@
 use duku::window::Controller;
 use duku::Camera;
 use duku::Color;
-use duku::ColorSpace;
 use duku::CubemapSides;
 use duku::Duku;
 use duku::Light;
-use duku::Mips;
 use duku::Result;
 use duku::Vector3;
 
@@ -28,7 +26,7 @@ fn main() -> Result<()> {
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);
 
     let skybox = duku.create_cubemap_png(
-        ColorSpace::Srgb,
+        None,
         CubemapSides {
             top: "examples/textures/skybox/top.png",
             bottom: "examples/textures/skybox/bottom.png",
@@ -39,16 +37,8 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let light_tex = duku.create_texture_png(
-        "examples/textures/prototype/light.png",
-        ColorSpace::Srgb,
-        Mips::Log2,
-    )?;
-    let purple_tex = duku.create_texture_png(
-        "examples/textures/prototype/purple.png",
-        ColorSpace::Srgb,
-        Mips::Log2,
-    )?;
+    let light_tex = duku.create_texture_png("examples/textures/prototype/light.png", None)?;
+    let purple_tex = duku.create_texture_png("examples/textures/prototype/purple.png", None)?;
 
     let mut light_mat = duku.create_material_pbr()?;
     light_mat.albedo_texture(light_tex);

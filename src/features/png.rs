@@ -48,23 +48,28 @@ impl Texture {
 
 impl Duku {
     /// Create a texture from a PNG file
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB and no mipmaps are used.
     pub fn create_texture_png(
         &mut self,
         path: impl AsRef<Path>,
-        color_space: ColorSpace,
-        mips: Mips,
+        options: Option<(ColorSpace, Mips)>,
     ) -> Result<Handle<Texture>> {
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_png_bytes(&bytes, color_space, mips)
+        self.create_texture_png_bytes(&bytes, options)
     }
 
     /// Create a texture from PNG bytes
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB is used.
     pub fn create_texture_png_bytes(
         &mut self,
         bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
+        options: Option<(ColorSpace, Mips)>,
     ) -> Result<Handle<Texture>> {
+        let (color_space, mips) = options.unwrap_or((ColorSpace::Srgb, Mips::Zero));
         let png_data = load_png(bytes, color_space)?;
         self.create_texture(
             png_data.data,
@@ -76,13 +81,16 @@ impl Duku {
     }
 
     /// Create a cubemap from PNG files
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB is used.
     pub fn create_cubemap_png(
         &mut self,
-        color_space: ColorSpace,
+        options: Option<ColorSpace>,
         sides: CubemapSides<impl AsRef<Path>>,
     ) -> Result<Handle<Cubemap>> {
         self.create_cubemap_png_bytes(
-            color_space,
+            options,
             CubemapSides {
                 top: &fs::read(sides.top)?,
                 bottom: &fs::read(sides.bottom)?,
@@ -95,11 +103,15 @@ impl Duku {
     }
 
     /// Create a cubemap from PNG bytes
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB is used.
     pub fn create_cubemap_png_bytes(
         &mut self,
-        color_space: ColorSpace,
+        options: Option<ColorSpace>,
         sides: CubemapSides<&[u8]>,
     ) -> Result<Handle<Cubemap>> {
+        let color_space = options.unwrap_or(ColorSpace::Srgb);
         let top = load_png(sides.top, color_space)?;
         let bottom = load_png(sides.bottom, color_space)?;
         let left = load_png(sides.left, color_space)?;
@@ -163,7 +175,7 @@ impl Duku {
     }
 }
 
-pub(crate) fn load_png(bytes: &[u8], color_space: ColorSpace) -> Result<PngData> {
+fn load_png(bytes: &[u8], color_space: ColorSpace) -> Result<PngData> {
     let decoder = Decoder::new(bytes);
     let (info, mut reader) = decoder.read_info().map_err(|_| Error::InvalidPng)?;
 
