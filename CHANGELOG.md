@@ -8,4 +8,6 @@
 
 ### Changed
 
+- Make autosized cameras the default.
+
 ### Removed

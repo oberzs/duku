@@ -22,7 +22,7 @@ fn main() -> Result<()> {
         .resizable()
         .build()?;
 
-    let mut camera = Camera::perspective_autosized(90);
+    let mut camera = Camera::perspective(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);
 
     let mut controller = Controller::orbit([0.0, 0.0, 0.0]);

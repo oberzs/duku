@@ -10,7 +10,7 @@ use crate::math::Vector3;
 /// # Example
 ///
 /// ```ignore
-/// let camera = Camera::projection_autosized(90);
+/// let camera = Camera::projection(90);
 ///
 /// duku.draw_on_window(Some(&camera), |target| {
 ///     // draw commands
@@ -20,15 +20,16 @@ use crate::math::Vector3;
 pub struct Camera {
     /// the transform of the camera
     pub transform: Transform,
-    /// autosized cameras change their size based
-    /// on the framebuffer rendered to
-    pub autosize: bool,
     /// field of view for perspective cameras
     pub fov: u32,
-    /// the width of the camera
-    pub width: f32,
-    /// the height of the camera
-    pub height: f32,
+    /// the width of the camera, if width is `None`
+    /// the camera will be automatically sized based
+    /// on the render texture or window
+    pub width: Option<f32>,
+    /// the height of the camera, if height is `None`
+    /// the camera will be automatically sized based
+    /// on the render texture or window
+    pub height: Option<f32>,
     /// the depth of the camera
     pub depth: f32,
     /// the projection type of the camera
@@ -45,54 +46,50 @@ pub enum Projection {
 }
 
 impl Camera {
-    /// Create a perspective camera
-    pub fn perspective(width: f32, height: f32, fov: u32) -> Self {
-        Self {
-            transform: Transform::default(),
-            projection: Projection::Perspective,
-            autosize: false,
-            depth: 100.0,
-            width,
-            height,
-            fov,
-        }
-    }
-
-    /// Create a orthographic camera
-    pub fn orthographic(width: f32, height: f32) -> Self {
-        Self {
-            transform: Transform::default(),
-            projection: Projection::Orthographic,
-            autosize: false,
-            depth: 100.0,
-            fov: 0,
-            width,
-            height,
-        }
-    }
-
     /// Create a perspective camera that is autosized
-    pub fn perspective_autosized(fov: u32) -> Self {
+    pub fn perspective(fov: u32) -> Self {
         Self {
             transform: Transform::default(),
             projection: Projection::Perspective,
-            autosize: true,
             depth: 100.0,
-            width: -1.0,
-            height: -1.0,
+            width: None,
+            height: None,
             fov,
         }
     }
 
     /// Create a orthographic camera that is autosized
-    pub fn orthographic_autosized() -> Self {
+    pub fn orthographic() -> Self {
         Self {
             transform: Transform::default(),
             projection: Projection::Orthographic,
-            autosize: true,
             depth: 100.0,
-            width: -1.0,
-            height: -1.0,
+            fov: 0,
+            width: None,
+            height: None,
+        }
+    }
+
+    /// Create a perspective camera
+    pub fn perspective_sized(width: f32, height: f32, fov: u32) -> Self {
+        Self {
+            transform: Transform::default(),
+            projection: Projection::Perspective,
+            depth: 100.0,
+            width: Some(width),
+            height: Some(height),
+            fov,
+        }
+    }
+
+    /// Create a orthographic camera
+    pub fn orthographic_sized(width: f32, height: f32) -> Self {
+        Self {
+            transform: Transform::default(),
+            projection: Projection::Orthographic,
+            depth: 100.0,
+            width: Some(width),
+            height: Some(height),
             fov: 0,
         }
     }
@@ -101,23 +98,30 @@ impl Camera {
     pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
             transform: Transform::default(),
-            autosize: false,
+            height: Some(height),
+            width: Some(width),
             fov,
             depth,
             projection,
-            width,
-            height,
         }
     }
 
     /// Convert perspective camera to a zoomed-in orthographic one
+    ///
+    /// Note: camera has to have a set height
     pub fn fake_orthographic(&mut self, enable: bool) {
+        // validate camera
         if let Projection::Orthographic = self.projection {
             return;
         }
+        if self.height.is_none() {
+            return;
+        }
+
+        // set fake
         if enable {
             let height = (self.fov as f32).to_radians().tan() * self.depth;
-            let zoom = height / self.height as f32;
+            let zoom = height / self.height.expect("bad code");
             self.transform.scale = Vector3::new(zoom, zoom, zoom);
         } else {
             self.transform.scale = Vector3::new(1.0, 1.0, 1.0);
@@ -131,16 +135,16 @@ impl Camera {
     }
 
     pub(crate) fn view_to_clip(&self) -> Matrix4 {
+        let width = self.width.expect("bad code");
+        let height = self.height.expect("bad code");
+
         match self.projection {
             Projection::Orthographic => {
-                Matrix4::orthographic(self.width, self.height, self.near(), self.depth)
+                Matrix4::orthographic(width, height, self.near(), self.depth)
             }
-            Projection::Perspective => Matrix4::perspective(
-                self.fov as f32,
-                self.width / self.height,
-                self.near(),
-                self.depth,
-            ),
+            Projection::Perspective => {
+                Matrix4::perspective(self.fov as f32, width / height, self.near(), self.depth)
+            }
         }
     }
 
