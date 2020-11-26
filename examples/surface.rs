@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     let mut shader = duku.create_shader_glsl(path)?;
     let mut metadata = Metadata::new(path)?;
 
-    window.main_loop(move |_| {
+    window.while_open(move |_| {
         // hot-reload shader
         if metadata.is_modified() {
             match duku.create_shader_glsl(path) {
@@ -31,7 +31,7 @@ fn main() -> Result<()> {
             }
         }
 
-        duku.draw_on_window(None, |target| {
+        duku.draw(None, |target| {
             target.set_shader(&shader);
             target.draw_surface();
         });

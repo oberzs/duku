@@ -9,7 +9,7 @@
 ### Changed
 
 - Made autosized cameras the default.
-- Renamed Framebuffer to Canvas to make the API
-  more beginner friendly.
+- Renamed Framebuffer to Canvas.
+- Renamed drawing functions.
 
 ### Removed

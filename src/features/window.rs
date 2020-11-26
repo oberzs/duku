@@ -145,7 +145,7 @@ impl Window {
     }
 
     /// Start window's main loop for polling events
-    pub fn main_loop<F>(self, mut main_fn: F)
+    pub fn while_open<F>(self, mut main_fn: F)
     where
         F: FnMut(&mut Events) + 'static,
     {

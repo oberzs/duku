@@ -117,11 +117,11 @@ impl Duku {
     /// # Example
     ///
     /// ```ignore
-    /// duku.draw_on_window(None, |target| {
+    /// duku.draw(None, |target| {
     ///     // record drawing commands
     /// });
     /// ```
-    pub fn draw_on_window(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
+    pub fn draw(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
         if let RenderStage::Before = self.render_stage {
             self.begin_draw();
         }
@@ -149,11 +149,11 @@ impl Duku {
     /// ```ignore
     /// let canvas = duku.create_canvas(640, 360)?;
     ///
-    /// duku.draw(&canvas, None, |target| {
+    /// duku.draw_on_canvas(&canvas, None, |target| {
     ///     // record drawing commands
     /// });
     /// ```
-    pub fn draw(
+    pub fn draw_on_canvas(
         &mut self,
         canvas: &Handle<Canvas>,
         camera: Option<&Camera>,

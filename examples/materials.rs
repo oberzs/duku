@@ -57,10 +57,10 @@ fn main() -> Result<()> {
     let mut purple_mat = duku.create_material_pbr()?;
     purple_mat.albedo_texture(purple_tex);
 
-    window.main_loop(move |events| {
+    window.while_open(move |events| {
         controller.update(&mut camera, events, duku.delta_time());
 
-        duku.draw_on_window(Some(&camera), |target| {
+        duku.draw(Some(&camera), |target| {
             target.set_skybox(&skybox);
             target.lights[0] = Light::main([-1.0, -1.0, 1.0], Color::WHITE, 5.0);
 

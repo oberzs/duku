@@ -57,9 +57,9 @@ fn main() -> Result<()> {
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
     // start up the main event loop
-    window.main_loop(move |_| {
+    window.while_open(move |_| {
       // start drawing on the window using our camera
-      duku.draw_on_window(Some(&camera), |target| {
+      duku.draw(Some(&camera), |target| {
             // set the background color to sky blue
             target.clear = Color::SKY_BLUE;
 

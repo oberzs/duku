@@ -14,8 +14,8 @@ fn main() -> Result<()> {
         .title("Duku example: Shapes")
         .build()?;
 
-    window.main_loop(move |_| {
-        duku.draw_on_window(None, |target| {
+    window.while_open(move |_| {
+        duku.draw(None, |target| {
             target.clear_color = Color::gray(50);
             target.border_color = Color::BLACK;
             target.border_width = 5.0;

@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     let mut input = String::new();
     let mut time = 0.0f32;
 
-    window.main_loop(move |events| {
+    window.while_open(move |events| {
         // update text
         if let Some(c) = events.typed_char() {
             input.push(c);
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
 
         let input_length = duku.builtins.fira_font.text_width(&input);
 
-        duku.draw_on_window(None, |target| {
+        duku.draw(None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(250.0);
             target.transform.move_up(250.0);

@@ -26,8 +26,8 @@ fn main() -> Result<()> {
     // save imported jpeg as a png
     texture_2.save("cat.png")?;
 
-    window.main_loop(move |_| {
-        duku.draw_on_window(None, |target| {
+    window.while_open(move |_| {
+        duku.draw(None, |target| {
             target.transform.move_down(200.0);
             target.transform.move_left(400.0);
             target.draw_texture(&texture_1, [400.0, 400.0]);
