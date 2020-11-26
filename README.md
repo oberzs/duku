@@ -99,11 +99,10 @@ duku = "0.1.0"
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] font
 - **Shaders** - adding custom shaders is documented [here](https://github.com/oberzs/duku/tree/release/DC_DOCS.md)
-- **No dependencies** - all Rust dependencies are optional
 
-#### Optional Features
+#### Additional Features
 
-This crate supports additional optional features that you can add
+This crate supports additional features that you can add
 to your dependency in your `Cargo.toml` file.
 
 ```toml
@@ -111,16 +110,16 @@ to your dependency in your `Cargo.toml` file.
 duku = { ... , features = ["feature-name"] }
 ```
 
-The optional features include:
+The features include:
 
-| Name     | Uses           | Description                           |
-| -------- | -------------- | ------------------------------------- |
-| `window` | [winit]        | adds OS window creation support       |
-| `png`    | [png]          | adds png file loading support         |
-| `jpeg`   | [jpeg-decoder] | adds jpeg file loading support        |
-| `gltf`   | [gltf]         | adds gltf file loading support        |
-| `glsl`   | [shaderc]      | adds custom glsl file loading support |
-| `log`    | n/a            | adds informational logs               |
+| Name     | Default | Uses           | Description                           |
+| -------- | ------- | -------------- | ------------------------------------- |
+| `window` | yes     | [winit]        | adds OS window creation support       |
+| `png`    | no      | [png]          | adds png file loading support         |
+| `jpeg`   | no      | [jpeg-decoder] | adds jpeg file loading support        |
+| `gltf`   | no      | [gltf]         | adds gltf file loading support        |
+| `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
+| `log`    | no      | n/a            | adds informational logs               |
 
 [examples]: https://github.com/oberzs/duku/tree/release/examples
 [crates.io]: https://crates.io
