@@ -1,8 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+mod canvas;
 mod cubemap;
-mod framebuffer;
 mod properties;
 mod texture;
 
@@ -19,9 +19,9 @@ use properties::with_alpha;
 pub(crate) use properties::ImageLayout;
 pub(crate) use properties::ImageUsage;
 
+pub use canvas::Canvas;
 pub use cubemap::Cubemap;
 pub use cubemap::CubemapSides;
-pub use framebuffer::Framebuffer;
 pub use properties::ColorSpace;
 pub use properties::Filter;
 pub use properties::Format;

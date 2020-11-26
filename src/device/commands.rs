@@ -11,7 +11,7 @@ use std::ptr;
 use std::slice;
 
 use super::Stats;
-use crate::image::Framebuffer;
+use crate::image::Canvas;
 use crate::image::Image;
 use crate::image::ImageLayout;
 use crate::mesh::Mesh;
@@ -137,9 +137,9 @@ impl Commands {
         }
     }
 
-    pub(crate) fn begin_render_pass(&self, framebuffer: &Framebuffer, clear: [f32; 4]) {
-        // create clear values based on framebuffer image formats
-        let clear_values: Vec<_> = framebuffer
+    pub(crate) fn begin_render_pass(&self, canvas: &Canvas, clear: [f32; 4]) {
+        // create clear values based on canvas image formats
+        let clear_values: Vec<_> = canvas
             .attachments()
             .map(|format| {
                 if format.is_depth() {
@@ -160,13 +160,13 @@ impl Commands {
         let info = vk::RenderPassBeginInfo {
             s_type: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             p_next: ptr::null(),
-            render_pass: framebuffer.render_pass(),
-            framebuffer: framebuffer.handle(),
+            render_pass: canvas.render_pass(),
+            framebuffer: canvas.framebuffer(),
             render_area: vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },
                 extent: vk::Extent2D {
-                    width: framebuffer.width(),
-                    height: framebuffer.height(),
+                    width: canvas.width,
+                    height: canvas.height,
                 },
             },
             clear_value_count: clear_values.len() as u32,

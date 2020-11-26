@@ -1,7 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// Framebuffer drawing example
+// Canvas drawing example
 
 use duku::Camera;
 use duku::Color;
@@ -11,21 +11,19 @@ use duku::Result;
 fn main() -> Result<()> {
     let (mut duku, window) = Duku::builder()
         .build_window(500, 500)
-        .title("Duku example: Framebuffer")
+        .title("Duku example: Canvas")
         .build()?;
 
     let mut camera = Camera::perspective(90);
     camera.transform.move_by([-2.0, 2.0, -2.0]);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
-    let framebuffer = duku.create_framebuffer(500, 500)?;
-    let mut material = duku.create_material_pbr()?;
-    material.albedo_framebuffer(&framebuffer);
+    let canvas = duku.create_canvas(500, 500)?;
 
     window.main_loop(move |_| {
         let fps = duku.fps();
 
-        duku.draw(&framebuffer, None, |target| {
+        duku.draw(&canvas, None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(250.0);
             target.transform.move_up(250.0);
@@ -40,8 +38,7 @@ fn main() -> Result<()> {
             target.draw_grid();
             target.draw_cube();
 
-            target.set_material(&material);
-            target.draw_fullscreen();
+            target.draw_fullscreen(&canvas);
         });
     });
 

@@ -8,8 +8,8 @@ mod resource;
 
 use crate::device::Device;
 use crate::font::Font;
+use crate::image::Canvas;
 use crate::image::Cubemap;
-use crate::image::Framebuffer;
 use crate::image::Texture;
 use crate::mesh::Mesh;
 use crate::mesh::Model;
@@ -30,7 +30,7 @@ pub(crate) struct Resources {
     fonts: Vec<Box<Resource<Font>>>,
     textures: Vec<Box<Resource<Texture>>>,
     cubemaps: Vec<Box<Resource<Cubemap>>>,
-    framebuffers: Vec<Box<Resource<Framebuffer>>>,
+    canvases: Vec<Box<Resource<Canvas>>>,
     materials: Vec<Box<Resource<Material>>>,
     meshes: Vec<Box<Resource<Mesh>>>,
     models: Vec<Box<Resource<Model>>>,
@@ -53,8 +53,8 @@ impl Resources {
         add(&mut self.cubemaps, value)
     }
 
-    pub(crate) fn add_framebuffer(&mut self, value: Framebuffer) -> Handle<Framebuffer> {
-        add(&mut self.framebuffers, value)
+    pub(crate) fn add_canvas(&mut self, value: Canvas) -> Handle<Canvas> {
+        add(&mut self.canvases, value)
     }
 
     pub(crate) fn add_material(&mut self, value: Material) -> Handle<Material> {
@@ -75,7 +75,7 @@ impl Resources {
         clear_unused(&mut self.shaders, |v| v.destroy(device));
         clear_unused(&mut self.textures, |v| v.destroy(device, uniforms));
         clear_unused(&mut self.cubemaps, |v| v.destroy(device, uniforms));
-        clear_unused(&mut self.framebuffers, |v| v.destroy(device, uniforms));
+        clear_unused(&mut self.canvases, |v| v.destroy(device, uniforms));
         clear_unused(&mut self.materials, |v| v.destroy(device));
         clear_unused(&mut self.meshes, |v| v.destroy(device));
     }
@@ -86,7 +86,7 @@ impl Resources {
         clear(&mut self.shaders, |v| v.destroy(device));
         clear(&mut self.textures, |v| v.destroy(device, uniforms));
         clear(&mut self.cubemaps, |v| v.destroy(device, uniforms));
-        clear(&mut self.framebuffers, |v| v.destroy(device, uniforms));
+        clear(&mut self.canvases, |v| v.destroy(device, uniforms));
         clear(&mut self.materials, |v| v.destroy(device));
         clear(&mut self.meshes, |v| v.destroy(device));
     }
@@ -108,8 +108,8 @@ impl Resources {
             r.mutated = false;
         }
 
-        // update framebuffers
-        for r in &mut self.framebuffers {
+        // update canvases
+        for r in &mut self.canvases {
             if r.mutated {
                 r.value.update(device, uniforms);
             }

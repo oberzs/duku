@@ -6,6 +6,7 @@ use std::f32::consts::PI;
 use super::Color;
 use super::Light;
 use crate::font::Font;
+use crate::image::Canvas;
 use crate::image::Cubemap;
 use crate::image::Filter;
 use crate::image::Texture;
@@ -30,7 +31,7 @@ use crate::resources::Handle;
 /// functions.
 pub struct Target {
     // global
-    /// the clear color of the framebuffer (background)
+    /// the clear color of the canvas (background)
     pub clear_color: Color,
     /// the current transform used when
     /// doing a render command
@@ -439,13 +440,9 @@ impl Target {
     }
 
     /// Draw a fullscreen quad
-    pub fn draw_fullscreen(&mut self) {
+    pub fn draw_fullscreen(&mut self, canvas: &Handle<Canvas>) {
         let shader = self.builtins.fullscreen_shader.clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
+        let material = canvas.material().clone();
 
         self.add_mesh_order(
             material,

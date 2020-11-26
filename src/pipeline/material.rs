@@ -8,7 +8,7 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Device;
 use crate::error::Result;
-use crate::image::Framebuffer;
+use crate::image::Canvas;
 use crate::image::Texture;
 use crate::math::Vector4;
 use crate::renderer::Color;
@@ -70,22 +70,21 @@ impl Material {
         })
     }
 
-    /// Set albedo color for the PBR (and other various) shaders
+    /// Set albedo color for the PBR and other various shaders
     pub fn albedo_color(&mut self, color: impl Into<Color>) {
         let temp = self.a[3];
         self.a = Vector4::from(color.into().to_rgba_norm());
         self.a[3] = temp;
     }
 
-    /// Set albedo texture for the PBR (and other various) shaders
+    /// Set albedo texture for the PBR and other various shaders
     pub fn albedo_texture(&mut self, texture: Handle<Texture>) {
         self.a[3] = texture.shader_index() as f32;
         self.textures.push(texture);
     }
 
-    /// Set albedo texture as a framebuffer
-    /// for the PBR (and other various) shaders
-    pub fn albedo_framebuffer(&mut self, f: &Handle<Framebuffer>) {
+    /// Set albedo canvas for the PBR and other various shaders
+    pub fn albedo_canvas(&mut self, f: &Handle<Canvas>) {
         self.a[3] = f.shader_index() as f32;
     }
 

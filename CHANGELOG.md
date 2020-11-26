@@ -8,6 +8,8 @@
 
 ### Changed
 
-- Make autosized cameras the default.
+- Made autosized cameras the default.
+- Renamed Framebuffer to Canvas to make the API
+  more beginner friendly.
 
 ### Removed

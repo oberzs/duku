@@ -24,8 +24,8 @@ pub enum Error {
     CubemapLimit,
     /// Material limit has been reached (max 100)
     MaterialLimit,
-    /// Framebuffer limit has been reached (max 100)
-    FramebufferLimit,
+    /// Canvas limit has been reached (max 100)
+    CanvasLimit,
 
     /// Unsupported PNG or JPEG color format
     #[cfg(any(feature = "png", feature = "jpeg"))]

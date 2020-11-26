@@ -9,9 +9,11 @@ use super::ImageLayout;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
+use crate::pipeline::Material;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
+use crate::resources::Handle;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -25,33 +27,35 @@ use crate::vk;
 /// # Example
 ///
 /// ```ignore
-/// let framebuffer = duku.create_framebuffer(400, 400)?;
+/// let canvas = duku.create_canvas(400, 400)?;
 ///
-/// // use framebuffer in material to use later
-/// let mut material = duku.create_material_pbr()?;
-/// material.albedo_framebuffer(&framebuffer);
-///
-/// // render to framebuffer
-/// duku.draw(&framebuffer, None, |target| {
+/// // render to canvas
+/// duku.draw(&canvas, None, |target| {
 ///     // draw commands ...
 /// });
+///
+/// // draw canvas on window
+/// duku.draw_on_window(None, |target| {
+///     target.fullscreen(&canvas);
+/// });
 /// ```
-pub struct Framebuffer {
-    /// framebuffer's image width
+pub struct Canvas {
+    /// canvas image's width
     pub width: u32,
-    /// framebuffer's image height
+    /// canvas image's height
     pub height: u32,
 
-    handle: vk::Framebuffer,
+    framebuffer: vk::Framebuffer,
     render_pass: RenderPass,
     attachments: Vec<Format>,
+    material: Option<Handle<Material>>,
 
     transient_images: Vec<Image>,
     stored_images: Vec<Image>,
     shader_image: Option<(u32, Image)>,
 }
 
-impl Framebuffer {
+impl Canvas {
     pub(crate) fn for_swapchain(
         device: &Device,
         config: ShaderConfig,
@@ -60,7 +64,7 @@ impl Framebuffer {
         let width = swapchain.width();
         let height = swapchain.height();
 
-        // create a framebuffer for each image in the swapchain
+        // create a texture for each image in the swapchain
         device
             .get_swapchain_images(swapchain)
             .into_iter()
@@ -99,15 +103,16 @@ impl Framebuffer {
                     height,
                 };
 
-                let handle = device.create_framebuffer(&info);
+                let framebuffer = device.create_framebuffer(&info);
 
                 Self {
                     shader_image: None,
+                    material: None,
                     attachments,
                     transient_images,
                     stored_images,
                     render_pass,
-                    handle,
+                    framebuffer,
                     width,
                     height,
                 }
@@ -153,7 +158,7 @@ impl Framebuffer {
             height,
         };
 
-        let handle = device.create_framebuffer(&info);
+        let framebuffer = device.create_framebuffer(&info);
 
         let mut shader_image = Image::shader(device, width, height);
         let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
@@ -173,11 +178,12 @@ impl Framebuffer {
 
         Ok(Self {
             shader_image: Some((shader_index, shader_image)),
+            material: None,
             attachments,
             transient_images,
             stored_images,
             render_pass,
-            handle,
+            framebuffer,
             width,
             height,
         })
@@ -186,7 +192,7 @@ impl Framebuffer {
     pub(crate) fn update(&mut self, device: &Device, uniforms: &mut Uniforms) {
         debug_assert!(
             self.shader_image.is_some(),
-            "trying to resize swapchain framebuffer"
+            "trying to resize swapchain render texture"
         );
 
         // cleanup images
@@ -246,8 +252,8 @@ impl Framebuffer {
         }
 
         // reassign new values
-        device.destroy_framebuffer(self.handle);
-        self.handle = device.create_framebuffer(&info);
+        device.destroy_framebuffer(self.framebuffer);
+        self.framebuffer = device.create_framebuffer(&info);
         self.transient_images = transient_images;
         self.stored_images = stored_images;
         self.shader_image = Some((shader_index, shader_image));
@@ -283,23 +289,15 @@ impl Framebuffer {
             image.destroy(device);
         }
         self.render_pass.destroy(device);
-        device.destroy_framebuffer(self.handle);
+        device.destroy_framebuffer(self.framebuffer);
     }
 
-    pub(crate) const fn handle(&self) -> vk::Framebuffer {
-        self.handle
+    pub(crate) const fn framebuffer(&self) -> vk::Framebuffer {
+        self.framebuffer
     }
 
     pub(crate) const fn render_pass(&self) -> vk::RenderPass {
         self.render_pass.handle()
-    }
-
-    pub(crate) const fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub(crate) const fn height(&self) -> u32 {
-        self.height
     }
 
     pub(crate) fn stored_view(&self) -> vk::ImageView {
@@ -308,6 +306,15 @@ impl Framebuffer {
 
     pub(crate) fn attachments(&self) -> impl Iterator<Item = &Format> {
         self.attachments.iter()
+    }
+
+    pub(crate) fn set_material(&mut self, mut material: Handle<Material>) {
+        material.a[3] = self.shader_index() as f32;
+        self.material = Some(material);
+    }
+
+    pub(crate) fn material(&self) -> &Handle<Material> {
+        self.material.as_ref().expect("bad material")
     }
 
     /// Get index to be used in shader for sampling

@@ -417,7 +417,7 @@ impl Uniforms {
     ) -> Result<Descriptor> {
         // check limits
         if self.world_count == MAX_WORLDS {
-            return Err(Error::FramebufferLimit);
+            return Err(Error::CanvasLimit);
         }
         self.world_count += 1;
 
