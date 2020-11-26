@@ -1,12 +1,17 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+use std::cmp::Ordering;
 use std::time::Instant;
 
 use super::Camera;
+use super::LineOrder;
 use super::Pcf;
+use super::ShaderOrder;
 use super::ShadowRenderer;
+use super::ShapeOrder;
 use super::Target;
+use super::TextOrder;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::device::Commands;
@@ -22,6 +27,7 @@ use crate::pipeline::Descriptor;
 use crate::pipeline::ShaderConstants;
 use crate::pipeline::ShaderWorld;
 use crate::pipeline::Uniforms;
+use crate::resources::Builtins;
 
 pub(crate) struct ForwardRenderer {
     target_resources: Vec<TargetResources>,
@@ -125,29 +131,39 @@ impl ForwardRenderer {
         cmd.set_view(canvas.width, canvas.height);
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 
+        let Target {
+            builtins,
+            shape_orders,
+            text_orders,
+            mesh_orders,
+            line_orders,
+            skybox,
+            ..
+        } = target;
+
         // skybox rendering
-        if target.skybox.is_some() {
-            record_skybox(cmd, &target, uniforms, camera);
+        if skybox.is_some() {
+            record_skybox(cmd, uniforms, camera, &builtins);
         }
 
         // normal mesh rendering
-        if !target.mesh_orders.is_empty() {
-            record_meshes(cmd, &target, uniforms);
+        if !mesh_orders.is_empty() {
+            record_meshes(cmd, uniforms, mesh_orders);
         }
 
         // shape rendering
-        if !target.shape_orders.is_empty() {
-            self.record_shapes(device, &target, uniforms);
+        if !shape_orders.is_empty() {
+            self.record_shapes(device, uniforms, &builtins, shape_orders);
         }
 
         // text rendering
-        if !target.text_orders.is_empty() {
-            self.record_text(device, &target, uniforms);
+        if !text_orders.is_empty() {
+            self.record_text(device, uniforms, &builtins, text_orders);
         }
 
         // line rendering
-        if !target.line_orders.is_empty() {
-            self.record_lines(device, &target, uniforms);
+        if !line_orders.is_empty() {
+            self.record_lines(device, uniforms, &builtins, line_orders);
         }
 
         // end rendering
@@ -157,13 +173,14 @@ impl ForwardRenderer {
         self.target_index = (self.target_index + 1) % self.target_resources.len();
     }
 
-    fn record_text(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
+    fn record_text(
+        &mut self,
+        device: &Device,
+        uniforms: &Uniforms,
+        builtins: &Builtins,
+        orders: Vec<TextOrder>,
+    ) {
         let cmd = device.commands();
-        let Target {
-            text_orders,
-            builtins,
-            ..
-        } = &target;
 
         // update text batching mesh
         let mut vertices = vec![];
@@ -172,7 +189,7 @@ impl ForwardRenderer {
         let mut indices = vec![];
         let mut uvs = vec![];
 
-        for order in text_orders {
+        for order in orders {
             let mut transform = order.transform;
             let quat = transform.rotation;
             let start_x = transform.position.x;
@@ -252,20 +269,21 @@ impl ForwardRenderer {
         cmd.draw(text_mesh.index_count(), 0);
     }
 
-    fn record_lines(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
+    fn record_lines(
+        &mut self,
+        device: &Device,
+        uniforms: &Uniforms,
+        builtins: &Builtins,
+        orders: Vec<LineOrder>,
+    ) {
         let cmd = device.commands();
-        let Target {
-            line_orders,
-            builtins,
-            ..
-        } = &target;
 
         // update line batching mesh
         let mut vertices = vec![];
         let mut colors = vec![];
         let mut indices = vec![];
 
-        for order in line_orders {
+        for order in orders {
             let matrix = Matrix4::from(order.transform);
             let point_1 = matrix * order.points[0];
             let point_2 = matrix * order.points[1];
@@ -300,13 +318,14 @@ impl ForwardRenderer {
         cmd.draw(line_mesh.index_count(), 0);
     }
 
-    fn record_shapes(&mut self, device: &Device, target: &Target, uniforms: &Uniforms) {
+    fn record_shapes(
+        &mut self,
+        device: &Device,
+        uniforms: &Uniforms,
+        builtins: &Builtins,
+        mut orders: Vec<ShapeOrder>,
+    ) {
         let cmd = device.commands();
-        let Target {
-            shape_orders,
-            builtins,
-            ..
-        } = &target;
 
         // update shape batching mesh
         let mut vertices = vec![];
@@ -316,7 +335,27 @@ impl ForwardRenderer {
         let mut normals = vec![];
         let mut indices = vec![];
 
-        for order in shape_orders {
+        // order shape orders
+        orders.sort_by(|a, b| {
+            // sort by opacity
+            if a.opaque && !b.opaque {
+                Ordering::Less
+            } else if !a.opaque && b.opaque {
+                Ordering::Greater
+            } else if a.opaque && b.opaque {
+                Ordering::Equal
+            } else {
+                // sort by z. might need to change in the future
+                if a.transform.position.z > b.transform.position.z {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            }
+        });
+
+        // add opaque shapes
+        for order in orders {
             let matrix = Matrix4::from(order.transform);
             let point_1 = matrix * order.points[0];
             let point_2 = matrix * order.points[1];
@@ -396,8 +435,8 @@ impl TargetResources {
     }
 }
 
-fn record_meshes(cmd: &Commands, target: &Target, uniforms: &Uniforms) {
-    for s_order in &target.mesh_orders {
+fn record_meshes(cmd: &Commands, uniforms: &Uniforms, orders: Vec<ShaderOrder>) {
+    for s_order in orders {
         // bind shader
         cmd.bind_shader(&s_order.shader);
 
@@ -420,9 +459,9 @@ fn record_meshes(cmd: &Commands, target: &Target, uniforms: &Uniforms) {
     }
 }
 
-fn record_skybox(cmd: &Commands, target: &Target, uniforms: &Uniforms, camera: &Camera) {
-    cmd.bind_shader(&target.builtins.skybox_shader);
-    cmd.bind_mesh(&target.builtins.cube_mesh);
+fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins: &Builtins) {
+    cmd.bind_shader(&builtins.skybox_shader);
+    cmd.bind_mesh(&builtins.cube_mesh);
 
     let local_to_world = Matrix4::from(Transform {
         position: camera.transform.position,
@@ -436,5 +475,5 @@ fn record_skybox(cmd: &Commands, target: &Target, uniforms: &Uniforms, camera: &
             local_to_world,
         },
     );
-    cmd.draw(target.builtins.cube_mesh.index_count(), 0);
+    cmd.draw(builtins.cube_mesh.index_count(), 0);
 }
