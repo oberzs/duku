@@ -26,23 +26,28 @@ pub(crate) struct JpegData {
 
 impl Duku {
     /// Create a texture from a JPEG file
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB and no mipmaps are used.
     pub fn create_texture_jpeg(
         &mut self,
         path: impl AsRef<Path>,
-        color_space: ColorSpace,
-        mips: Mips,
+        options: Option<(ColorSpace, Mips)>,
     ) -> Result<Handle<Texture>> {
         let bytes = fs::read(path.as_ref())?;
-        self.create_texture_jpeg_bytes(&bytes, color_space, mips)
+        self.create_texture_jpeg_bytes(&bytes, options)
     }
 
     /// Create a texture from JPEG bytes
+    ///
+    /// Note: if `options` is `None`, then
+    /// sRGB and no mipmaps are used.
     pub fn create_texture_jpeg_bytes(
         &mut self,
         bytes: &[u8],
-        color_space: ColorSpace,
-        mips: Mips,
+        options: Option<(ColorSpace, Mips)>,
     ) -> Result<Handle<Texture>> {
+        let (color_space, mips) = options.unwrap_or((ColorSpace::Srgb, Mips::Zero));
         let jpeg_data = load_jpeg(bytes, color_space)?;
         self.create_texture(
             jpeg_data.data,
@@ -54,7 +59,7 @@ impl Duku {
     }
 }
 
-pub(crate) fn load_jpeg(bytes: &[u8], color_space: ColorSpace) -> Result<JpegData> {
+fn load_jpeg(bytes: &[u8], color_space: ColorSpace) -> Result<JpegData> {
     let mut decoder = Decoder::new(bytes);
     let data = decoder.decode().map_err(|_| Error::InvalidJpeg)?;
     let info = decoder.info().ok_or(Error::InvalidJpeg)?;

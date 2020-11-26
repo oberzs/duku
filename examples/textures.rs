@@ -3,9 +3,7 @@
 
 // example that draws textures
 
-use duku::ColorSpace;
 use duku::Duku;
-use duku::Mips;
 use duku::Result;
 
 fn main() -> Result<()> {
@@ -14,14 +12,9 @@ fn main() -> Result<()> {
         .title("Duku example: Textures")
         .build()?;
 
-    let texture_1 = duku.create_texture_png(
-        "examples/textures/prototype/green.png",
-        ColorSpace::Srgb,
-        Mips::Log2,
-    )?;
+    let texture_1 = duku.create_texture_png("examples/textures/prototype/green.png", None)?;
 
-    let texture_2 =
-        duku.create_texture_jpeg("examples/textures/cat.jpg", ColorSpace::Srgb, Mips::Log2)?;
+    let texture_2 = duku.create_texture_jpeg("examples/textures/cat.jpg", None)?;
 
     // save imported jpeg as a png
     texture_2.save("cat.png")?;

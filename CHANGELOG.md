@@ -11,5 +11,4 @@
 - Made autosized cameras the default.
 - Renamed Framebuffer to Canvas.
 - Renamed drawing functions.
-
-### Removed
+- Added `Option` to some creation functions.
