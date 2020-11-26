@@ -7,10 +7,7 @@ use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(800, 400)
-        .title("Duku example: Textures")
-        .build()?;
+    let (mut duku, window) = Duku::windowed(800, 400)?;
 
     let texture_1 = duku.create_texture_png("examples/textures/prototype/green.png", None)?;
 

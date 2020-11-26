@@ -46,7 +46,7 @@ use duku::Result;
 
 fn main() -> Result<()> {
     // initialize duku and OS window with a size of 500x500
-    let (mut duku, window) = Duku::builder().build_window(500, 500).build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     // create a 3D perspective camera with an FOV of 90
     let mut camera = Camera::perspective_autosized(90);

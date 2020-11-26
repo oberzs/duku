@@ -9,10 +9,7 @@ use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(500, 500)
-        .title("Duku example: Canvas")
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     let mut camera = Camera::perspective(90);
     camera.transform.move_by([-2.0, 2.0, -2.0]);

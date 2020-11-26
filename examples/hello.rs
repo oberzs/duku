@@ -1,18 +1,14 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// "Hello, World!" example to open a transparent rainbow window
+// "Hello, World!" example to open a rainbow window
 
 use duku::Color;
 use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(500, 500)
-        .title("Duku example: Hello")
-        .resizable()
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     let mut hue = 0;
 

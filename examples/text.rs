@@ -11,12 +11,7 @@ use duku::Result;
 use duku::ShapeMode;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .no_msaa()
-        .build_window(500, 500)
-        .title("Duku example: Text")
-        .resizable()
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     let mut input = String::new();
     let mut time = 0.0f32;

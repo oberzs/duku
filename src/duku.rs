@@ -48,9 +48,7 @@ const FPS_SAMPLE_COUNT: usize = 64;
 /// # Example
 ///
 /// ```ignore
-/// let (mut duku, window) = Duku::builder()
-///     .build_window(500, 500)
-///     .build()?;
+/// let (mut duku, window) = Duku::windowed(500, 500)?;
 /// ```
 pub struct Duku {
     // Vulkan
