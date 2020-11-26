@@ -20,10 +20,10 @@ fn main() -> Result<()> {
 
     let canvas = duku.create_canvas(500, 500)?;
 
-    window.main_loop(move |_| {
+    window.while_open(move |_| {
         let fps = duku.fps();
 
-        duku.draw(&canvas, None, |target| {
+        duku.draw_on_canvas(&canvas, None, |target| {
             // move (0, 0) to top left
             target.transform.move_left(250.0);
             target.transform.move_up(250.0);
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
             target.draw_text(format!("Fps: {}", fps));
         });
 
-        duku.draw_on_window(Some(&camera), |target| {
+        duku.draw(Some(&camera), |target| {
             target.draw_grid();
             target.draw_cube();
 

@@ -17,8 +17,8 @@ fn main() -> Result<()> {
         .resizable()
         .build()?;
 
-    window.main_loop(move |_| {
-        duku.draw_on_window(None, |target| {
+    window.while_open(move |_| {
+        duku.draw(None, |target| {
             star(target, [0.0, 0.0], Color::BLUE);
             star(target, [50.0, 10.0], Color::GREEN);
             star(target, [-20.0, -40.0], Color::ORANGE);

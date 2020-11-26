@@ -16,10 +16,10 @@ fn main() -> Result<()> {
 
     let mut hue = 0;
 
-    window.main_loop(move |_| {
+    window.while_open(move |_| {
         hue = (hue + 1) % 360;
 
-        duku.draw_on_window(None, |target| {
+        duku.draw(None, |target| {
             target.clear_color = Color::hsv(hue, 255, 255);
         });
     });
