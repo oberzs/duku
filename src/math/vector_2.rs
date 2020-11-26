@@ -122,9 +122,9 @@ impl Vector2 {
     pub const RIGHT: Self = Self::new(1.0, 0.0);
 }
 
-impl From<[f32; 2]> for Vector2 {
-    fn from(a: [f32; 2]) -> Self {
-        Self::new(a[0], a[1])
+impl<N: Into<f32> + Copy> From<[N; 2]> for Vector2 {
+    fn from(a: [N; 2]) -> Self {
+        Self::new(a[0].into(), a[1].into())
     }
 }
 

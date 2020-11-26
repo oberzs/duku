@@ -7,6 +7,7 @@
 - Added `Send` and `Sync` traits to Handle.
 - Added a `Duku` creation convenience function.
 - Added `window` to default features.
+- Added more conversions to `VectorN`.
 
 ### Changed
 

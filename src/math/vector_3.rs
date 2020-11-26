@@ -150,9 +150,9 @@ impl Vector3 {
     pub const RIGHT: Self = Self::new(1.0, 0.0, 0.0);
 }
 
-impl From<[f32; 3]> for Vector3 {
-    fn from(a: [f32; 3]) -> Self {
-        Self::new(a[0], a[1], a[2])
+impl<N: Into<f32> + Copy> From<[N; 3]> for Vector3 {
+    fn from(a: [N; 3]) -> Self {
+        Self::new(a[0].into(), a[1].into(), a[2].into())
     }
 }
 
