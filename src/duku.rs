@@ -28,6 +28,7 @@ use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
 use crate::renderer::Color;
 use crate::renderer::ForwardRenderer;
+use crate::renderer::Projection;
 use crate::renderer::Target;
 use crate::resources;
 use crate::resources::Builtins;
@@ -553,7 +554,7 @@ impl DukuBuilder {
 fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
     match camera {
         Some(c) => {
-            if c.autosize {
+            if c.width.is_none() || c.height.is_none() {
                 let mut cam =
                     Camera::new(c.projection, width as f32, height as f32, c.depth, c.fov);
                 cam.transform = c.transform;
@@ -563,6 +564,12 @@ fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
             }
         }
         // create default camera if not supplied
-        None => Camera::orthographic(width as f32, height as f32),
+        None => Camera::new(
+            Projection::Orthographic,
+            width as f32,
+            height as f32,
+            100.0,
+            90,
+        ),
     }
 }

@@ -14,7 +14,7 @@ fn main() -> Result<()> {
         .title("Duku example: Framebuffer")
         .build()?;
 
-    let mut camera = Camera::perspective_autosized(90);
+    let mut camera = Camera::perspective(90);
     camera.transform.move_by([-2.0, 2.0, -2.0]);
     camera.transform.look_at([0.0, 0.0, 0.0]);
 
