@@ -8,11 +8,7 @@ use duku::Duku;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(500, 500)
-        .title("Duku example: Surface")
-        .resizable()
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     // read custom shader
     let path = "examples/shaders/raymarch.glsl";

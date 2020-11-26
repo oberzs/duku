@@ -9,10 +9,7 @@ use duku::Result;
 use duku::ShapeMode;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(500, 500)
-        .title("Duku example: Shapes")
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     window.while_open(move |_| {
         duku.draw(None, |target| {

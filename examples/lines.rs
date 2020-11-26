@@ -11,11 +11,7 @@ use duku::Vector2;
 use std::f32::consts::PI;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(600, 400)
-        .title("Duku example: Lines")
-        .resizable()
-        .build()?;
+    let (mut duku, window) = Duku::windowed(600, 400)?;
 
     window.while_open(move |_| {
         duku.draw(None, |target| {

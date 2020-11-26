@@ -94,6 +94,13 @@ pub struct WindowBuilder {
     height: u32,
 }
 
+impl Duku {
+    /// Create Duku with a basic window
+    pub fn windowed(width: u32, height: u32) -> Result<(Duku, Window)> {
+        Self::builder().build_window(width, height).build()
+    }
+}
+
 impl DukuBuilder {
     /// Create OS window builder
     pub fn build_window(self, width: u32, height: u32) -> WindowBuilder {

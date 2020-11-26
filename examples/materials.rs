@@ -13,12 +13,7 @@ use duku::Result;
 use duku::Vector3;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .no_vsync()
-        .build_window(500, 500)
-        .title("Duku example: Materials")
-        .resizable()
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     let mut camera = Camera::perspective(90);
     camera.transform.move_by([1.0, 3.0, -3.0]);

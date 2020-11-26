@@ -11,10 +11,7 @@ use duku::Light;
 use duku::Result;
 
 fn main() -> Result<()> {
-    let (mut duku, window) = Duku::builder()
-        .build_window(500, 500)
-        .title("Duku example: Gltf")
-        .build()?;
+    let (mut duku, window) = Duku::windowed(500, 500)?;
 
     let mut camera = Camera::perspective(90);
     camera.transform.move_by([0.0, 0.5, -2.0]);

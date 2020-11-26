@@ -5,10 +5,11 @@
 ### Added
 
 - Added `Send` and `Sync` traits to Handle.
+- Added a `Duku` creation convenience function.
 
 ### Changed
 
-- Made autosized cameras the default.
-- Renamed Framebuffer to Canvas.
+- Made autosized `Camera` the default.
+- Renamed `Framebuffer` to `Canvas`.
 - Renamed drawing functions.
 - Added `Option` to some creation functions.
