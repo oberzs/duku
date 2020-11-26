@@ -42,7 +42,7 @@ pub struct Target {
     // meshes
     pub(crate) shader: Option<Handle<Shader>>,
     pub(crate) material: Option<Handle<Material>>,
-    pub(crate) mesh_orders: Vec<OrdersByShader>,
+    pub(crate) mesh_orders: Vec<ShaderOrder>,
 
     // shadows & lights
     /// coefficient used to calculate shadow map splits (0 - 1).
@@ -135,12 +135,12 @@ pub enum Pcf {
     Disabled,
 }
 
-pub(crate) struct OrdersByShader {
+pub(crate) struct ShaderOrder {
     pub(crate) shader: Handle<Shader>,
-    pub(crate) orders: Vec<OrdersByMaterial>,
+    pub(crate) orders: Vec<MaterialOrder>,
 }
 
-pub(crate) struct OrdersByMaterial {
+pub(crate) struct MaterialOrder {
     pub(crate) material: Handle<Material>,
     pub(crate) orders: Vec<MeshOrder>,
 }
@@ -173,6 +173,7 @@ pub(crate) struct ShapeOrder {
     pub(crate) texture: Handle<Texture>,
     pub(crate) uvs: [Vector2; 3],
     pub(crate) sampler_index: u32,
+    pub(crate) opaque: bool,
 }
 
 struct Cache {
@@ -540,6 +541,8 @@ impl Target {
             return;
         }
 
+        let opaque = self.shape_color.a == 255;
+
         // triangulate points
         let first = Vector3::from((points[0], 0.0));
         for i in 2..points.len() {
@@ -554,6 +557,7 @@ impl Target {
                 texture: self.builtins.white_texture.clone(),
                 uvs: [Vector2::default(); 3],
                 sampler_index: 0,
+                opaque,
             });
         }
 
@@ -641,6 +645,8 @@ impl Target {
     pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
         let s = Vector3::from((size.into(), 0.0));
 
+        let opaque = texture.opaque() && self.shape_color.a == 255;
+
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
@@ -662,6 +668,7 @@ impl Target {
                 Vector2::new(1.0, 1.0),
             ],
             sampler_index: self.sampler_index(),
+            opaque,
         });
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
@@ -674,6 +681,7 @@ impl Target {
                 Vector2::new(1.0, 1.0),
             ],
             sampler_index: self.sampler_index(),
+            opaque,
         });
 
         self.pop();
@@ -711,14 +719,14 @@ impl Target {
         match self.mesh_orders.iter_mut().find(|so| so.shader == shader) {
             Some(so) => match so.orders.iter_mut().find(|mo| mo.material == material) {
                 Some(mo) => mo.orders.push(order),
-                None => so.orders.push(OrdersByMaterial {
+                None => so.orders.push(MaterialOrder {
                     material,
                     orders: vec![order],
                 }),
             },
-            None => self.mesh_orders.push(OrdersByShader {
+            None => self.mesh_orders.push(ShaderOrder {
                 shader,
-                orders: vec![OrdersByMaterial {
+                orders: vec![MaterialOrder {
                     material,
                     orders: vec![order],
                 }],

@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added transparency blending for shapes and textures.
 - Added `Send` and `Sync` traits to Handle.
 - Added a `Duku` creation convenience function.
 - Added `window` to default features.

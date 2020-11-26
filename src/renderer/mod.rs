@@ -1,8 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-// renderers define different/specific rendering paths
-
 mod camera;
 mod color;
 mod forward;
@@ -12,6 +10,10 @@ mod target;
 
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use shadow::ShadowRenderer;
+pub(crate) use target::LineOrder;
+pub(crate) use target::ShaderOrder;
+pub(crate) use target::ShapeOrder;
+pub(crate) use target::TextOrder;
 
 pub use camera::Camera;
 pub use camera::Projection;

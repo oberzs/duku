@@ -20,6 +20,7 @@ pub(crate) struct Resource<T> {
 /// Note: cloning this does not create a new resource
 pub struct Handle<T> {
     _marker: PhantomData<*const T>,
+    valid: bool,
     value: *mut T,
     count: *mut u32,
     mutated: *mut bool,
@@ -39,10 +40,17 @@ impl<T> Resource<T> {
 
         Handle {
             _marker: PhantomData::default(),
+            valid: true,
             value: &mut self.value,
             count: &mut self.count,
             mutated: &mut self.mutated,
         }
+    }
+}
+
+impl<T> Handle<T> {
+    pub(crate) fn invalidate(&mut self) {
+        self.valid = false;
     }
 }
 
@@ -72,6 +80,7 @@ impl<T> Clone for Handle<T> {
 
         Self {
             _marker: PhantomData::default(),
+            valid: true,
             value: self.value,
             count: self.count,
             mutated: self.mutated,
@@ -82,12 +91,9 @@ impl<T> Clone for Handle<T> {
 impl<T> Drop for Handle<T> {
     fn drop(&mut self) {
         // decrease count
-        let count = unsafe { self.count.as_mut().expect("bad pointer") };
-
-        // add checking if user holds on to handle
-        // longer than duku context
-        if let Some(c) = count.checked_sub(1) {
-            *count = c;
+        if self.valid {
+            let count = unsafe { self.count.as_mut().expect("bad pointer") };
+            *count -= 1;
         }
     }
 }

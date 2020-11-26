@@ -29,6 +29,7 @@ use crate::renderer::Color;
 pub struct Texture {
     /// pixel data as bytes
     pub data: Vec<u8>,
+    opaque: bool,
 
     image: Image,
     shader_index: u32,
@@ -55,6 +56,10 @@ impl Texture {
             f => f,
         };
 
+        // check if opaque
+        let opaque = !matches!(format, Format::Srgba | Format::Rgba)
+            || image_data.iter().skip(3).step_by(4).all(|b| *b == 255);
+
         let staging_buffer = Buffer::staging(device, &image_data);
         let mut image = Image::texture(device, format, mips, width, height);
 
@@ -75,6 +80,7 @@ impl Texture {
 
         Ok(Self {
             data: image_data,
+            opaque,
             image,
             shader_index,
         })
@@ -112,6 +118,10 @@ impl Texture {
             self.data[i + 1] = color.g;
             self.data[i + 2] = color.b;
             self.data[i + 3] = color.a;
+
+            if color.a < 255 {
+                self.opaque = false;
+            }
         }
     }
 
@@ -149,6 +159,10 @@ impl Texture {
         }
 
         staging_buffer.destroy(device);
+    }
+
+    pub(crate) const fn opaque(&self) -> bool {
+        self.opaque
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {

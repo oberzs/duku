@@ -423,12 +423,13 @@ impl Duku {
 impl Drop for Duku {
     fn drop(&mut self) {
         self.device.wait_idle();
-        self.resources.clear(&self.device, &mut self.uniforms);
         self.forward_renderer
             .destroy(&self.device, &mut self.uniforms);
         for canvas in &self.window_canvases {
             canvas.destroy(&self.device, &mut self.uniforms);
         }
+        self.builtins.invalidate_handles();
+        self.resources.clear(&self.device, &mut self.uniforms);
         self.uniforms.destroy(&self.device);
         self.device.destroy_swapchain(&self.swapchain);
         self.instance.destroy_surface(&self.surface);

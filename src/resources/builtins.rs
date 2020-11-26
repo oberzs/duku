@@ -254,6 +254,28 @@ impl Builtins {
             fira_font,
         })
     }
+
+    pub(crate) fn invalidate_handles(&mut self) {
+        self.white_texture.invalidate();
+        self.blue_texture.invalidate();
+        self.black_texture.invalidate();
+        self.white_cubemap.invalidate();
+        self.white_material.invalidate();
+        self.surface_mesh.invalidate();
+        self.quad_mesh.invalidate();
+        self.cube_mesh.invalidate();
+        self.ico_sphere_mesh.invalidate();
+        self.uv_sphere_mesh.invalidate();
+        self.pbr_shader.invalidate();
+        self.font_shader.invalidate();
+        self.wireframe_shader.invalidate();
+        self.line_shader.invalidate();
+        self.shape_shader.invalidate();
+        self.unshaded_shader.invalidate();
+        self.skybox_shader.invalidate();
+        self.fullscreen_shader.invalidate();
+        self.fira_font.invalidate();
+    }
 }
 
 fn create_surface(device: &Device) -> Mesh {
