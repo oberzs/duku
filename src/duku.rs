@@ -541,7 +541,9 @@ fn get_camera(camera: Option<&Camera>, width: u32, height: u32) -> Camera {
             if c.width.is_none() || c.height.is_none() {
                 let mut cam =
                     Camera::new(c.projection, width as f32, height as f32, c.depth, c.fov);
-                cam.transform = c.transform;
+                cam.position = c.position;
+                cam.scale = c.scale;
+                cam.rotation = c.rotation;
                 cam
             } else {
                 c.clone()

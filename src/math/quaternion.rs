@@ -60,6 +60,21 @@ impl Quaternion {
         Self::from(m)
     }
 
+    /// local up direction for transformation
+    pub fn local_up(self) -> Vector3 {
+        self.inverse() * Vector3::UP
+    }
+
+    /// local forward direction for transformation
+    pub fn local_forward(self) -> Vector3 {
+        self.inverse() * Vector3::FORWARD
+    }
+
+    /// local right direction for transformation
+    pub fn local_right(self) -> Vector3 {
+        self.inverse() * Vector3::RIGHT
+    }
+
     /// Calculate the inverse rotation
     pub fn inverse(self) -> Quaternion {
         let mut result = self;

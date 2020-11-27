@@ -2,7 +2,7 @@
 // https://github.com/oberzs/duku
 
 use crate::math::Matrix4;
-use crate::math::Transform;
+use crate::math::Quaternion;
 use crate::math::Vector3;
 
 /// The view into a scene.
@@ -18,8 +18,12 @@ use crate::math::Vector3;
 /// ```
 #[derive(Debug, Clone)]
 pub struct Camera {
-    /// the transform of the camera
-    pub transform: Transform,
+    /// the position of the camera
+    pub position: Vector3,
+    /// the scale of the camera
+    pub scale: Vector3,
+    /// the rotation of the camera
+    pub rotation: Quaternion,
     /// field of view for perspective cameras
     pub fov: u32,
     /// the width of the camera, if width is `None`
@@ -49,7 +53,9 @@ impl Camera {
     /// Create a perspective camera that is autosized
     pub fn perspective(fov: u32) -> Self {
         Self {
-            transform: Transform::default(),
+            position: Vector3::default(),
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::default(),
             projection: Projection::Perspective,
             depth: 100.0,
             width: None,
@@ -61,7 +67,9 @@ impl Camera {
     /// Create a orthographic camera that is autosized
     pub fn orthographic() -> Self {
         Self {
-            transform: Transform::default(),
+            position: Vector3::default(),
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::default(),
             projection: Projection::Orthographic,
             depth: 100.0,
             fov: 0,
@@ -73,7 +81,9 @@ impl Camera {
     /// Create a perspective camera
     pub fn perspective_sized(width: f32, height: f32, fov: u32) -> Self {
         Self {
-            transform: Transform::default(),
+            position: Vector3::default(),
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::default(),
             projection: Projection::Perspective,
             depth: 100.0,
             width: Some(width),
@@ -85,7 +95,9 @@ impl Camera {
     /// Create a orthographic camera
     pub fn orthographic_sized(width: f32, height: f32) -> Self {
         Self {
-            transform: Transform::default(),
+            position: Vector3::default(),
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::default(),
             projection: Projection::Orthographic,
             depth: 100.0,
             width: Some(width),
@@ -97,7 +109,9 @@ impl Camera {
     /// Create a new camera
     pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
-            transform: Transform::default(),
+            position: Vector3::default(),
+            scale: Vector3::uniform(1.0),
+            rotation: Quaternion::default(),
             height: Some(height),
             width: Some(width),
             fov,
@@ -122,16 +136,96 @@ impl Camera {
         if enable {
             let height = (self.fov as f32).to_radians().tan() * self.depth;
             let zoom = height / self.height.expect("bad code");
-            self.transform.scale = Vector3::new(zoom, zoom, zoom);
+            self.scale = Vector3::uniform(zoom);
         } else {
-            self.transform.scale = Vector3::new(1.0, 1.0, 1.0);
+            self.scale = Vector3::new(1.0, 1.0, 1.0);
         }
     }
 
+    /// Move camera by specified amount
+    ///
+    /// This moves using global directions
+    pub fn move_by(&mut self, amount: impl Into<Vector3>) {
+        self.position += amount.into();
+    }
+
+    /// Move camera up by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_up(&mut self, amount: f32) {
+        self.move_by(self.rotation.local_up() * amount);
+    }
+
+    /// Move camera down by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_down(&mut self, amount: f32) {
+        self.move_by(-self.rotation.local_up() * amount);
+    }
+
+    /// Move camera right by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_right(&mut self, amount: f32) {
+        self.move_by(self.rotation.local_up() * amount);
+    }
+
+    /// Move camera left by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_left(&mut self, amount: f32) {
+        self.move_by(-self.rotation.local_up() * amount);
+    }
+
+    /// Move camera forward by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_forward(&mut self, amount: f32) {
+        self.move_by(self.rotation.local_up() * amount);
+    }
+
+    /// Move camera back by specified amount
+    ///
+    /// This moves using local directions
+    pub fn move_back(&mut self, amount: f32) {
+        self.move_by(-self.rotation.local_up() * amount);
+    }
+
+    /// Move camera rotating it around
+    /// some point around an axis
+    pub fn move_around_point(
+        &mut self,
+        point: impl Into<Vector3>,
+        angle: f32,
+        axis: impl Into<Vector3>,
+    ) {
+        let point = point.into();
+        let rotation = Quaternion::axis_rotation(axis, angle);
+        self.position -= point;
+        self.position = rotation * self.position;
+        self.position += point;
+    }
+
+    /// Rotate the camera to look in specific direction
+    pub fn look_dir(&mut self, dir: impl Into<Vector3>) {
+        let dir = dir.into().unit();
+        let up = if dir == Vector3::UP {
+            Vector3::FORWARD
+        } else {
+            Vector3::UP
+        };
+        self.rotation = Quaternion::look_rotation(dir, up);
+    }
+
+    /// Rotate the camera to look at specific position
+    pub fn look_at(&mut self, pos: impl Into<Vector3>) {
+        self.look_dir(pos.into() - self.position);
+    }
+
     pub(crate) fn world_to_view(&self) -> Matrix4 {
-        Matrix4::scale(self.transform.scale)
-            * Matrix4::from(self.transform.rotation)
-            * Matrix4::translation(-self.transform.position)
+        Matrix4::scale(self.scale)
+            * Matrix4::from(self.rotation)
+            * Matrix4::translation(-self.position)
     }
 
     pub(crate) fn view_to_clip(&self) -> Matrix4 {

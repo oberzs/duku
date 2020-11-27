@@ -12,7 +12,6 @@ use crate::image::Filter;
 use crate::image::Texture;
 use crate::image::Wrap;
 use crate::math::Matrix4;
-use crate::math::Transform;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
@@ -33,9 +32,8 @@ pub struct Target {
     // global
     /// the clear color of the canvas (background)
     pub clear_color: Rgbf,
-    /// the current transform used when
-    /// doing a render command
-    pub transform: Transform,
+    /// the current matrix
+    pub matrix: Matrix4,
     pub(crate) skybox: Option<Handle<Cubemap>>,
     pub(crate) builtins: Builtins,
 
@@ -160,19 +158,19 @@ pub(crate) struct TextOrder {
     pub(crate) color: Rgbf,
     pub(crate) font: Handle<Font>,
     pub(crate) text: String,
-    pub(crate) transform: Transform,
+    pub(crate) matrix: Matrix4,
 }
 
 pub(crate) struct LineOrder {
     pub(crate) color: Rgbf,
     pub(crate) points: [Vector3; 2],
-    pub(crate) transform: Transform,
+    pub(crate) matrix: Matrix4,
 }
 
 pub(crate) struct ShapeOrder {
     pub(crate) color: Rgbf,
     pub(crate) points: [Vector3; 3],
-    pub(crate) transform: Transform,
+    pub(crate) matrix: Matrix4,
     pub(crate) texture: Handle<Texture>,
     pub(crate) uvs: [Vector2; 3],
     pub(crate) sampler_index: u32,
@@ -180,7 +178,7 @@ pub(crate) struct ShapeOrder {
 }
 
 struct Cache {
-    transform: Transform,
+    matrix: Matrix4,
     line_color: Rgbf,
     shape_color: Rgbf,
     text_color: Rgbf,
@@ -210,7 +208,7 @@ impl Target {
             shape_color: Rgbf::gray(1.0),
             border_color: Rgbf::gray(0.5),
             ambient_color: Rgbf::gray(1.0),
-            transform: Transform::default(),
+            matrix: Matrix4::identity(),
             lights: [
                 Light::main([-1.0, -1.0, 1.0], Rgbf::gray(1.0), 1.0),
                 Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
@@ -240,7 +238,7 @@ impl Target {
     /// Save target settings to stack
     pub fn push(&mut self) {
         self.cache.push(Cache {
-            transform: self.transform,
+            matrix: self.matrix,
             line_color: self.line_color,
             shape_color: self.shape_color,
             text_color: self.text_color,
@@ -258,7 +256,7 @@ impl Target {
     /// Restore target settings from stack
     pub fn pop(&mut self) {
         if let Some(cache) = self.cache.pop() {
-            self.transform = cache.transform;
+            self.matrix = cache.matrix;
             self.line_color = cache.line_color;
             self.shape_color = cache.shape_color;
             self.text_color = cache.text_color;
@@ -317,7 +315,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: mesh.clone(),
-                local_to_world: Matrix4::from(self.transform),
+                local_to_world: self.matrix,
                 shadows: self.shadows,
                 tint_color: self.tint_color,
                 sampler_index: self.sampler_index(),
@@ -335,7 +333,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: mesh.clone(),
-                local_to_world: Matrix4::from(self.transform),
+                local_to_world: self.matrix,
                 tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: 0,
@@ -362,7 +360,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: self.builtins.cube_mesh.clone(),
-                local_to_world: Matrix4::from(self.transform),
+                local_to_world: self.matrix,
                 tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
@@ -389,7 +387,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: self.builtins.ico_sphere_mesh.clone(),
-                local_to_world: Matrix4::from(self.transform),
+                local_to_world: self.matrix,
                 tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
@@ -416,7 +414,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: self.builtins.uv_sphere_mesh.clone(),
-                local_to_world: Matrix4::from(self.transform),
+                local_to_world: self.matrix,
                 tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
@@ -521,7 +519,7 @@ impl Target {
             size: self.font_size,
             color: self.text_color,
             text: text.as_ref().to_string(),
-            transform: self.transform,
+            matrix: self.matrix,
             font,
         });
     }
@@ -533,7 +531,7 @@ impl Target {
             .as_ref()
             .unwrap_or(&self.builtins.fira_font)
             .line_height();
-        self.transform.move_down(line_height as f32);
+        self.matrix *= Matrix4::translation([0.0, -(line_height as f32), 0.0]);
     }
 
     /// Draw a debug 1-pixel wide line
@@ -541,7 +539,7 @@ impl Target {
         self.line_orders.push(LineOrder {
             color: self.line_color,
             points: [point_1.into(), point_2.into()],
-            transform: self.transform,
+            matrix: self.matrix,
         });
     }
 
@@ -564,7 +562,7 @@ impl Target {
                     Vector3::from((points[i - 1], 0.0)),
                     Vector3::from((points[i], 0.0)),
                 ],
-                transform: self.transform,
+                matrix: self.matrix,
                 texture: self.builtins.white_texture.clone(),
                 uvs: [Vector2::default(); 3],
                 sampler_index: 0,
@@ -575,7 +573,7 @@ impl Target {
         // draw borders
         if self.border_mode != BorderMode::Disabled {
             self.push();
-            self.transform.move_back(0.00001);
+            self.matrix *= Matrix4::translation([0.0, 0.0, -0.00001]);
             self.draw_path(
                 points,
                 true,
@@ -605,7 +603,7 @@ impl Target {
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
-            self.transform.position -= Vector3::from((s / 2.0, 0.0));
+            self.matrix *= Matrix4::translation(-Vector3::from((s / 2.0, 0.0)));
         }
 
         self.draw_shape(&[
@@ -631,7 +629,7 @@ impl Target {
         self.push();
 
         if self.shape_mode == ShapeMode::Corner {
-            self.transform.position += Vector3::from((s, 0.0));
+            self.matrix *= Matrix4::translation(Vector3::from((s, 0.0)));
         }
 
         let points: Vec<_> = (0..side_count)
@@ -661,7 +659,7 @@ impl Target {
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
-            self.transform.position -= s / 2.0;
+            self.matrix *= Matrix4::translation(-s / 2.0);
         }
 
         self.shape_orders.push(ShapeOrder {
@@ -671,7 +669,7 @@ impl Target {
                 Vector3::new(0.0, s.y, 0.0),
                 Vector3::new(s.x, 0.0, 0.0),
             ],
-            transform: self.transform,
+            matrix: self.matrix,
             texture: texture.clone(),
             uvs: [
                 Vector2::new(0.0, 1.0),
@@ -684,7 +682,7 @@ impl Target {
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [Vector3::new(0.0, s.y, 0.0), s, Vector3::new(s.x, 0.0, 0.0)],
-            transform: self.transform,
+            matrix: self.matrix,
             texture: texture.clone(),
             uvs: [
                 Vector2::new(0.0, 0.0),
@@ -702,14 +700,13 @@ impl Target {
     pub fn draw_model(&mut self, model: &Handle<Model>) {
         self.push();
         for node in &model.nodes {
-            self.draw_model_node(node, Matrix4::from(self.transform));
+            self.draw_model_node(node, self.matrix);
         }
         self.pop();
     }
 
     fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Matrix4) {
-        let matrix = parent_matrix * node.matrix;
-        self.transform = Transform::from(matrix);
+        self.matrix = parent_matrix * node.matrix;
 
         for (mesh, material) in node.orders() {
             self.set_material(material);
@@ -717,7 +714,7 @@ impl Target {
         }
 
         for child in &node.children {
-            self.draw_model_node(child, matrix);
+            self.draw_model_node(child, self.matrix);
         }
     }
 

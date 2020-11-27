@@ -107,7 +107,6 @@ pub use image::Texture;
 pub use image::Wrap;
 pub use math::Matrix4;
 pub use math::Quaternion;
-pub use math::Transform;
 pub use math::Vector2;
 pub use math::Vector3;
 pub use math::Vector4;
