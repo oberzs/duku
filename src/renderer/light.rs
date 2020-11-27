@@ -2,8 +2,8 @@
 // https://github.com/oberzs/duku
 
 use crate::color::Rgbf;
-use crate::math::Vector3;
-use crate::math::Vector4;
+use crate::math::Vec3;
+use crate::math::Vec4;
 use crate::pipeline::ShaderLight;
 
 /// Light used in shadowing calculations.
@@ -16,7 +16,7 @@ use crate::pipeline::ShaderLight;
 #[derive(Copy, Clone, Debug)]
 pub struct Light {
     /// either direction or position of the light
-    pub coords: Vector3,
+    pub coords: Vec3,
     /// color of the light
     pub color: Rgbf,
     /// brightness of the light,
@@ -39,7 +39,7 @@ pub enum LightType {
 
 impl Light {
     /// Create main light
-    pub fn main(direction: impl Into<Vector3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
+    pub fn main(direction: impl Into<Vec3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Main,
             coords: direction.into().unit(),
@@ -50,7 +50,7 @@ impl Light {
 
     /// Create directional light
     pub fn directional(
-        direction: impl Into<Vector3>,
+        direction: impl Into<Vec3>,
         color: impl Into<Rgbf>,
         brightness: f32,
     ) -> Self {
@@ -63,7 +63,7 @@ impl Light {
     }
 
     /// Create point light
-    pub fn point(position: impl Into<Vector3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
+    pub fn point(position: impl Into<Vec3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Point,
             coords: position.into(),
@@ -81,7 +81,7 @@ impl Light {
 
         ShaderLight {
             coords: self.coords,
-            color: Vector4::from(self.color) * self.brightness,
+            color: Vec4::from(self.color) * self.brightness,
             light_type,
         }
     }

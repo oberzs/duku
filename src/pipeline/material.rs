@@ -11,7 +11,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
 use crate::image::Texture;
-use crate::math::Vector4;
+use crate::math::Vec4;
 use crate::resources::Handle;
 
 /// Material parameters to use in a shader.
@@ -27,21 +27,21 @@ use crate::resources::Handle;
 /// ```
 pub struct Material {
     /// parameter A
-    pub a: Vector4,
+    pub a: Vec4,
     /// parameter B
-    pub b: Vector4,
+    pub b: Vec4,
     /// parameter C
-    pub c: Vector4,
+    pub c: Vec4,
     /// parameter D
-    pub d: Vector4,
+    pub d: Vec4,
     /// parameter E
-    pub e: Vector4,
+    pub e: Vec4,
     /// parameter F
-    pub f: Vector4,
+    pub f: Vec4,
     /// parameter G
-    pub g: Vector4,
+    pub g: Vec4,
     /// parameter H
-    pub h: Vector4,
+    pub h: Vec4,
     /// texture storage for that are used
     /// in the material
     pub textures: Vec<Handle<Texture>>,
@@ -56,14 +56,14 @@ impl Material {
         let descriptor = uniforms.material_set(device, &buffer)?;
 
         Ok(Self {
-            a: Vector4::default(),
-            b: Vector4::default(),
-            c: Vector4::default(),
-            d: Vector4::default(),
-            e: Vector4::default(),
-            f: Vector4::default(),
-            g: Vector4::default(),
-            h: Vector4::default(),
+            a: Vec4::default(),
+            b: Vec4::default(),
+            c: Vec4::default(),
+            d: Vec4::default(),
+            e: Vec4::default(),
+            f: Vec4::default(),
+            g: Vec4::default(),
+            h: Vec4::default(),
             textures: vec![],
             buffer,
             descriptor,

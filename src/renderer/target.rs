@@ -11,9 +11,9 @@ use crate::image::Cubemap;
 use crate::image::Filter;
 use crate::image::Texture;
 use crate::image::Wrap;
-use crate::math::Matrix4;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Mat4;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::mesh::Mesh;
 use crate::mesh::Model;
 use crate::mesh::ModelNode;
@@ -33,7 +33,7 @@ pub struct Target {
     /// the clear color of the canvas (background)
     pub clear_color: Rgbf,
     /// the current matrix
-    pub matrix: Matrix4,
+    pub matrix: Mat4,
     pub(crate) skybox: Option<Handle<Cubemap>>,
     pub(crate) builtins: Builtins,
 
@@ -147,7 +147,7 @@ pub(crate) struct MaterialOrder {
 
 pub(crate) struct MeshOrder {
     pub(crate) mesh: Handle<Mesh>,
-    pub(crate) local_to_world: Matrix4,
+    pub(crate) local_to_world: Mat4,
     pub(crate) tint_color: Rgbf,
     pub(crate) shadows: bool,
     pub(crate) sampler_index: u32,
@@ -158,27 +158,27 @@ pub(crate) struct TextOrder {
     pub(crate) color: Rgbf,
     pub(crate) font: Handle<Font>,
     pub(crate) text: String,
-    pub(crate) matrix: Matrix4,
+    pub(crate) matrix: Mat4,
 }
 
 pub(crate) struct LineOrder {
     pub(crate) color: Rgbf,
-    pub(crate) points: [Vector3; 2],
-    pub(crate) matrix: Matrix4,
+    pub(crate) points: [Vec3; 2],
+    pub(crate) matrix: Mat4,
 }
 
 pub(crate) struct ShapeOrder {
     pub(crate) color: Rgbf,
-    pub(crate) points: [Vector3; 3],
-    pub(crate) matrix: Matrix4,
+    pub(crate) points: [Vec3; 3],
+    pub(crate) matrix: Mat4,
     pub(crate) texture: Handle<Texture>,
-    pub(crate) uvs: [Vector2; 3],
+    pub(crate) uvs: [Vec2; 3],
     pub(crate) sampler_index: u32,
     pub(crate) opaque: bool,
 }
 
 struct Cache {
-    matrix: Matrix4,
+    matrix: Mat4,
     line_color: Rgbf,
     shape_color: Rgbf,
     text_color: Rgbf,
@@ -208,7 +208,7 @@ impl Target {
             shape_color: Rgbf::gray(1.0),
             border_color: Rgbf::gray(0.5),
             ambient_color: Rgbf::gray(1.0),
-            matrix: Matrix4::identity(),
+            matrix: Mat4::identity(),
             lights: [
                 Light::main([-1.0, -1.0, 1.0], Rgbf::gray(1.0), 1.0),
                 Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
@@ -440,7 +440,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Matrix4::identity(),
+                local_to_world: Mat4::identity(),
                 tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: self.sampler_index(),
@@ -458,7 +458,7 @@ impl Target {
             shader,
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Matrix4::identity(),
+                local_to_world: Mat4::identity(),
                 tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: self.sampler_index(),
@@ -531,11 +531,11 @@ impl Target {
             .as_ref()
             .unwrap_or(&self.builtins.fira_font)
             .line_height();
-        self.matrix *= Matrix4::translation([0.0, -(line_height as f32), 0.0]);
+        self.matrix *= Mat4::translation([0.0, -(line_height as f32), 0.0]);
     }
 
     /// Draw a debug 1-pixel wide line
-    pub fn draw_line_debug(&mut self, point_1: impl Into<Vector3>, point_2: impl Into<Vector3>) {
+    pub fn draw_line_debug(&mut self, point_1: impl Into<Vec3>, point_2: impl Into<Vec3>) {
         self.line_orders.push(LineOrder {
             color: self.line_color,
             points: [point_1.into(), point_2.into()],
@@ -544,7 +544,7 @@ impl Target {
     }
 
     /// Draw a custom shape from points
-    pub fn draw_shape(&mut self, points: &[Vector2]) {
+    pub fn draw_shape(&mut self, points: &[Vec2]) {
         // don't draw polygon with less than 2 points
         if points.len() < 3 {
             return;
@@ -553,18 +553,18 @@ impl Target {
         let opaque = (self.shape_color.a - 1.0).abs() < f32::EPSILON;
 
         // triangulate points
-        let first = Vector3::from((points[0], 0.0));
+        let first = Vec3::from((points[0], 0.0));
         for i in 2..points.len() {
             self.shape_orders.push(ShapeOrder {
                 color: self.shape_color,
                 points: [
                     first,
-                    Vector3::from((points[i - 1], 0.0)),
-                    Vector3::from((points[i], 0.0)),
+                    Vec3::from((points[i - 1], 0.0)),
+                    Vec3::from((points[i], 0.0)),
                 ],
                 matrix: self.matrix,
                 texture: self.builtins.white_texture.clone(),
-                uvs: [Vector2::default(); 3],
+                uvs: [Vec2::default(); 3],
                 sampler_index: 0,
                 opaque,
             });
@@ -573,7 +573,7 @@ impl Target {
         // draw borders
         if self.border_mode != BorderMode::Disabled {
             self.push();
-            self.matrix *= Matrix4::translation([0.0, 0.0, -0.00001]);
+            self.matrix *= Mat4::translation([0.0, 0.0, -0.00001]);
             self.draw_path(
                 points,
                 true,
@@ -586,7 +586,7 @@ impl Target {
     }
 
     /// Draw mitered line from points
-    pub fn draw_lines(&mut self, points: &[Vector2], closed: bool) {
+    pub fn draw_lines(&mut self, points: &[Vec2], closed: bool) {
         self.draw_path(
             points,
             closed,
@@ -597,39 +597,34 @@ impl Target {
     }
 
     /// Draw a rectangle
-    pub fn draw_rectangle(&mut self, size: impl Into<Vector2>) {
+    pub fn draw_rectangle(&mut self, size: impl Into<Vec2>) {
         let s = size.into();
 
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
-            self.matrix *= Matrix4::translation(-Vector3::from((s / 2.0, 0.0)));
+            self.matrix *= Mat4::translation(-Vec3::from((s / 2.0, 0.0)));
         }
 
-        self.draw_shape(&[
-            Vector2::new(0.0, s.y),
-            s,
-            Vector2::new(s.x, 0.0),
-            Vector2::default(),
-        ]);
+        self.draw_shape(&[Vec2::new(0.0, s.y), s, Vec2::new(s.x, 0.0), Vec2::default()]);
 
         self.pop();
     }
 
     /// Draw a square
     pub fn draw_square(&mut self, size: f32) {
-        self.draw_rectangle(Vector2::new(size, size));
+        self.draw_rectangle(Vec2::new(size, size));
     }
 
     /// Draw an ellipse
-    pub fn draw_ellipse(&mut self, size: impl Into<Vector2>) {
+    pub fn draw_ellipse(&mut self, size: impl Into<Vec2>) {
         let s = size.into() / 2.0;
         let side_count = (s.length() * 3.0) as u32;
 
         self.push();
 
         if self.shape_mode == ShapeMode::Corner {
-            self.matrix *= Matrix4::translation(Vector3::from((s, 0.0)));
+            self.matrix *= Mat4::translation(Vec3::from((s, 0.0)));
         }
 
         let points: Vec<_> = (0..side_count)
@@ -637,7 +632,7 @@ impl Target {
                 let q = 2.0 * PI * (i as f32 / side_count as f32);
                 let x = s.x * q.cos();
                 let y = s.y * q.sin();
-                Vector2::new(x, y)
+                Vec2::new(x, y)
             })
             .collect();
         self.draw_shape(&points);
@@ -647,47 +642,47 @@ impl Target {
 
     /// Draw a circle
     pub fn draw_circle(&mut self, size: f32) {
-        self.draw_ellipse(Vector2::new(size, size));
+        self.draw_ellipse(Vec2::new(size, size));
     }
 
     /// Draw a textured quad
-    pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
-        let s = Vector3::from((size.into(), 0.0));
+    pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vec2>) {
+        let s = Vec3::from((size.into(), 0.0));
 
         let opaque = texture.opaque() && (self.shape_color.a - 1.0).abs() < f32::EPSILON;
 
         self.push();
 
         if self.shape_mode == ShapeMode::Center {
-            self.matrix *= Matrix4::translation(-s / 2.0);
+            self.matrix *= Mat4::translation(-s / 2.0);
         }
 
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
             points: [
-                Vector3::default(),
-                Vector3::new(0.0, s.y, 0.0),
-                Vector3::new(s.x, 0.0, 0.0),
+                Vec3::default(),
+                Vec3::new(0.0, s.y, 0.0),
+                Vec3::new(s.x, 0.0, 0.0),
             ],
             matrix: self.matrix,
             texture: texture.clone(),
             uvs: [
-                Vector2::new(0.0, 1.0),
-                Vector2::new(0.0, 0.0),
-                Vector2::new(1.0, 1.0),
+                Vec2::new(0.0, 1.0),
+                Vec2::new(0.0, 0.0),
+                Vec2::new(1.0, 1.0),
             ],
             sampler_index: self.sampler_index(),
             opaque,
         });
         self.shape_orders.push(ShapeOrder {
             color: self.shape_color,
-            points: [Vector3::new(0.0, s.y, 0.0), s, Vector3::new(s.x, 0.0, 0.0)],
+            points: [Vec3::new(0.0, s.y, 0.0), s, Vec3::new(s.x, 0.0, 0.0)],
             matrix: self.matrix,
             texture: texture.clone(),
             uvs: [
-                Vector2::new(0.0, 0.0),
-                Vector2::new(1.0, 0.0),
-                Vector2::new(1.0, 1.0),
+                Vec2::new(0.0, 0.0),
+                Vec2::new(1.0, 0.0),
+                Vec2::new(1.0, 1.0),
             ],
             sampler_index: self.sampler_index(),
             opaque,
@@ -705,7 +700,7 @@ impl Target {
         self.pop();
     }
 
-    fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Matrix4) {
+    fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Mat4) {
         self.matrix = parent_matrix * node.matrix;
 
         for (mesh, material) in node.orders() {
@@ -744,7 +739,7 @@ impl Target {
 
     fn draw_path(
         &mut self,
-        path: &[Vector2],
+        path: &[Vec2],
         closed: bool,
         border_mode: BorderMode,
         color: Rgbf,
@@ -846,7 +841,7 @@ impl Target {
     }
 }
 
-fn miter(line_a: Vector2, line_b: Vector2) -> Vector2 {
+fn miter(line_a: Vec2, line_b: Vec2) -> Vec2 {
     let tangent = (line_a + line_b).unit();
     let miter = tangent.normal();
     let norm_a = line_a.normal();

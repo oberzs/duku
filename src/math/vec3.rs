@@ -14,7 +14,7 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
-use super::Vector2;
+use super::Vec2;
 use crate::color::Rgbf;
 
 /// 3-component Vector.
@@ -24,14 +24,14 @@ use crate::color::Rgbf;
 /// # Examples
 ///
 /// ```ignore
-/// let point_1 = Vector3::new(-10.0, -10.0, -10.0);
-/// let point_2 = Vector3::new(10.0, 10.0, 10.0);
+/// let point_1 = Vec3::new(-10.0, -10.0, -10.0);
+/// let point_2 = Vec3::new(10.0, 10.0, 10.0);
 ///
 /// target.draw_line_debug(point_1, point_2);
 /// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Vector3 {
+pub struct Vec3 {
     /// the X component
     pub x: f32,
     /// the Y component
@@ -40,7 +40,7 @@ pub struct Vector3 {
     pub z: f32,
 }
 
-impl Vector3 {
+impl Vec3 {
     /// Create a new vector
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
@@ -70,7 +70,7 @@ impl Vector3 {
     /// Calculate the squared length of a vector
     ///
     /// Can sometimes use this instead of
-    /// [length](crate::math::Vector3::length),
+    /// [length](crate::math::Vec3::length),
     /// because this is faster.
     pub fn sqr_length(&self) -> f32 {
         self.dot(*self)
@@ -97,8 +97,8 @@ impl Vector3 {
     /// # Examples
     ///
     /// ```ignore
-    /// let up = Vector3::UP;
-    /// let right = Vector3::RIGHT;
+    /// let up = Vec3::UP;
+    /// let right = Vec3::RIGHT;
     /// let angle = up.angle_between(right);
     /// // angle is ~90 degrees
     /// ```
@@ -115,60 +115,60 @@ impl Vector3 {
         o.unit() * projected_length
     }
 
-    /// Get the [Vector2](crate::math::Vector2)
+    /// Get the [Vec2](crate::math::Vec2)
     /// made from this vectors x and y
-    pub const fn xy(&self) -> Vector2 {
-        Vector2::new(self.x, self.y)
+    pub const fn xy(&self) -> Vec2 {
+        Vec2::new(self.x, self.y)
     }
 
     /// Floor every component of the vector
     pub fn floor(&self) -> Self {
-        Vector3::new(self.x.floor(), self.y.floor(), self.z.floor())
+        Vec3::new(self.x.floor(), self.y.floor(), self.z.floor())
     }
 
     /// Ceil every component of the vector
     pub fn ceil(&self) -> Self {
-        Vector3::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
+        Vec3::new(self.x.ceil(), self.y.ceil(), self.z.ceil())
     }
 
     /// Round every component of the vector
     pub fn round(&self) -> Self {
-        Vector3::new(self.x.round(), self.y.round(), self.z.round())
+        Vec3::new(self.x.round(), self.y.round(), self.z.round())
     }
 
-    /// Shorthand for `Vector3::new(0.0, 0.0, -1.0)`
+    /// Shorthand for `Vec3::new(0.0, 0.0, -1.0)`
     pub const BACK: Self = Self::new(0.0, 0.0, -1.0);
-    /// Shorthand for `Vector3::new(0.0, 0.0, 1.0)`
+    /// Shorthand for `Vec3::new(0.0, 0.0, 1.0)`
     pub const FORWARD: Self = Self::new(0.0, 0.0, 1.0);
-    /// Shorthand for `Vector3::new(0.0, 1.0, 0.0)`
+    /// Shorthand for `Vec3::new(0.0, 1.0, 0.0)`
     pub const UP: Self = Self::new(0.0, 1.0, 0.0);
-    /// Shorthand for `Vector3::new(0.0, -1.0, 0.0)`
+    /// Shorthand for `Vec3::new(0.0, -1.0, 0.0)`
     pub const DOWN: Self = Self::new(0.0, -1.0, 0.0);
-    /// Shorthand for `Vector3::new(-1.0, 0.0, 0.0)`
+    /// Shorthand for `Vec3::new(-1.0, 0.0, 0.0)`
     pub const LEFT: Self = Self::new(-1.0, 0.0, 0.0);
-    /// Shorthand for `Vector3::new(1.0, 0.0, 0.0)`
+    /// Shorthand for `Vec3::new(1.0, 0.0, 0.0)`
     pub const RIGHT: Self = Self::new(1.0, 0.0, 0.0);
 }
 
-impl<N: Into<f32> + Copy> From<[N; 3]> for Vector3 {
+impl<N: Into<f32> + Copy> From<[N; 3]> for Vec3 {
     fn from(a: [N; 3]) -> Self {
         Self::new(a[0].into(), a[1].into(), a[2].into())
     }
 }
 
-impl From<(Vector2, f32)> for Vector3 {
-    fn from(v: (Vector2, f32)) -> Self {
+impl From<(Vec2, f32)> for Vec3 {
+    fn from(v: (Vec2, f32)) -> Self {
         Self::new(v.0.x, v.0.y, v.1)
     }
 }
 
-impl From<Rgbf> for Vector3 {
+impl From<Rgbf> for Vec3 {
     fn from(c: Rgbf) -> Self {
         Self::from([c.r, c.g, c.b])
     }
 }
 
-impl Index<usize> for Vector3 {
+impl Index<usize> for Vec3 {
     type Output = f32;
 
     fn index(&self, index: usize) -> &f32 {
@@ -181,7 +181,7 @@ impl Index<usize> for Vector3 {
     }
 }
 
-impl IndexMut<usize> for Vector3 {
+impl IndexMut<usize> for Vec3 {
     fn index_mut(&mut self, index: usize) -> &mut f32 {
         match index {
             0 => &mut self.x,
@@ -192,7 +192,7 @@ impl IndexMut<usize> for Vector3 {
     }
 }
 
-impl Neg for Vector3 {
+impl Neg for Vec3 {
     type Output = Self;
 
     fn neg(self) -> Self {
@@ -200,7 +200,7 @@ impl Neg for Vector3 {
     }
 }
 
-impl Add<Self> for Vector3 {
+impl Add<Self> for Vec3 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -208,7 +208,7 @@ impl Add<Self> for Vector3 {
     }
 }
 
-impl<'vec> Sum<&'vec Vector3> for Vector3 {
+impl<'vec> Sum<&'vec Vec3> for Vec3 {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = &'vec Self>,
@@ -217,7 +217,7 @@ impl<'vec> Sum<&'vec Vector3> for Vector3 {
     }
 }
 
-impl Sub<Self> for Vector3 {
+impl Sub<Self> for Vec3 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -225,7 +225,7 @@ impl Sub<Self> for Vector3 {
     }
 }
 
-impl Mul<f32> for Vector3 {
+impl Mul<f32> for Vec3 {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self {
@@ -233,7 +233,7 @@ impl Mul<f32> for Vector3 {
     }
 }
 
-impl Div<f32> for Vector3 {
+impl Div<f32> for Vec3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self {
@@ -241,25 +241,25 @@ impl Div<f32> for Vector3 {
     }
 }
 
-impl AddAssign<Self> for Vector3 {
+impl AddAssign<Self> for Vec3 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl SubAssign<Self> for Vector3 {
+impl SubAssign<Self> for Vec3 {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl MulAssign<f32> for Vector3 {
+impl MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl DivAssign<f32> for Vector3 {
+impl DivAssign<f32> for Vec3 {
     fn div_assign(&mut self, rhs: f32) {
         *self = *self / rhs;
     }
@@ -267,12 +267,12 @@ impl DivAssign<f32> for Vector3 {
 
 #[cfg(test)]
 mod test {
-    use super::Vector2;
-    use super::Vector3;
+    use super::Vec2;
+    use super::Vec3;
 
     #[test]
     fn default() {
-        let v = Vector3::default();
+        let v = Vec3::default();
         assert_eq_delta!(v.x, 0.0);
         assert_eq_delta!(v.y, 0.0);
         assert_eq_delta!(v.z, 0.0);
@@ -280,7 +280,7 @@ mod test {
 
     #[test]
     fn new() {
-        let v = Vector3::new(1.0, 2.0, 3.0);
+        let v = Vec3::new(1.0, 2.0, 3.0);
         assert_eq_delta!(v.x, 1.0);
         assert_eq_delta!(v.y, 2.0);
         assert_eq_delta!(v.z, 3.0);
@@ -288,15 +288,15 @@ mod test {
 
     #[test]
     fn dot() {
-        let a = Vector3::new(1.0, 2.0, 3.0);
-        let b = Vector3::new(5.0, 6.0, 7.0);
+        let a = Vec3::new(1.0, 2.0, 3.0);
+        let b = Vec3::new(5.0, 6.0, 7.0);
         assert_eq_delta!(a.dot(b), 38.0);
     }
 
     #[test]
     fn cross() {
-        let a = Vector3::new(2.0, 3.0, 4.0);
-        let b = Vector3::new(5.0, 6.0, 7.0);
+        let a = Vec3::new(2.0, 3.0, 4.0);
+        let b = Vec3::new(5.0, 6.0, 7.0);
         let r = a.cross(b);
         assert_eq_delta!(r.x, -3.0);
         assert_eq_delta!(r.y, 6.0);
@@ -305,13 +305,13 @@ mod test {
 
     #[test]
     fn length() {
-        let v = Vector3::new(3.0, 4.0, 0.0);
+        let v = Vec3::new(3.0, 4.0, 0.0);
         assert_eq_delta!(v.length(), 5.0);
     }
 
     #[test]
     fn unit() {
-        let v = Vector3::new(3.0, 4.0, 0.0);
+        let v = Vec3::new(3.0, 4.0, 0.0);
         let u = v.unit();
         assert_eq_delta!(u.x, 0.6);
         assert_eq_delta!(u.y, 0.8);
@@ -320,35 +320,35 @@ mod test {
 
     #[test]
     fn angle_between() {
-        let a = Vector3::new(4.0, 0.0, 0.0);
-        let b = Vector3::new(0.0, 13.0, 0.0);
+        let a = Vec3::new(4.0, 0.0, 0.0);
+        let b = Vec3::new(0.0, 13.0, 0.0);
         assert_eq_delta!(a.angle_between(b), 90.0);
     }
 
     #[test]
     fn xy() {
-        let v = Vector3::new(1.0, 3.0, 2.0);
-        assert_eq!(v.xy(), Vector2::new(1.0, 3.0));
+        let v = Vec3::new(1.0, 3.0, 2.0);
+        assert_eq!(v.xy(), Vec2::new(1.0, 3.0));
     }
 
     #[test]
     fn direction() {
-        assert_eq!(Vector3::FORWARD, Vector3::new(0.0, 0.0, 1.0));
-        assert_eq!(Vector3::BACK, Vector3::new(0.0, 0.0, -1.0));
-        assert_eq!(Vector3::DOWN, Vector3::new(0.0, -1.0, 0.0));
-        assert_eq!(Vector3::UP, Vector3::new(0.0, 1.0, 0.0));
-        assert_eq!(Vector3::RIGHT, Vector3::new(1.0, 0.0, 0.0));
-        assert_eq!(Vector3::LEFT, Vector3::new(-1.0, 0.0, 0.0));
+        assert_eq!(Vec3::FORWARD, Vec3::new(0.0, 0.0, 1.0));
+        assert_eq!(Vec3::BACK, Vec3::new(0.0, 0.0, -1.0));
+        assert_eq!(Vec3::DOWN, Vec3::new(0.0, -1.0, 0.0));
+        assert_eq!(Vec3::UP, Vec3::new(0.0, 1.0, 0.0));
+        assert_eq!(Vec3::RIGHT, Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(Vec3::LEFT, Vec3::new(-1.0, 0.0, 0.0));
     }
 
     #[test]
     fn operator() {
-        let v1 = Vector3::new(2.0, 3.0, 4.0);
-        let v2 = Vector3::new(2.0, 8.0, 4.0);
-        assert_eq!(-v1, Vector3::new(-2.0, -3.0, -4.0));
-        assert_eq!(v1 + v2, Vector3::new(4.0, 11.0, 8.0));
-        assert_eq!(v1 - v2, Vector3::new(0.0, -5.0, 0.0));
-        assert_eq!(v1 * 4.0, Vector3::new(8.0, 12.0, 16.0));
-        assert_eq!(v2 / 2.0, Vector3::new(1.0, 4.0, 2.0));
+        let v1 = Vec3::new(2.0, 3.0, 4.0);
+        let v2 = Vec3::new(2.0, 8.0, 4.0);
+        assert_eq!(-v1, Vec3::new(-2.0, -3.0, -4.0));
+        assert_eq!(v1 + v2, Vec3::new(4.0, 11.0, 8.0));
+        assert_eq!(v1 - v2, Vec3::new(0.0, -5.0, 0.0));
+        assert_eq!(v1 * 4.0, Vec3::new(8.0, 12.0, 16.0));
+        assert_eq!(v2 / 2.0, Vec3::new(1.0, 4.0, 2.0));
     }
 }

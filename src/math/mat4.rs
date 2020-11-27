@@ -6,9 +6,9 @@ use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::MulAssign;
 
-use super::Quaternion;
-use super::Vector3;
-use super::Vector4;
+use super::Quat;
+use super::Vec3;
+use super::Vec4;
 
 /// 4x4 Matrix.
 ///
@@ -19,30 +19,30 @@ use super::Vector4;
 /// # Examples
 ///
 /// ```ignore
-/// let vector = Vector3::new(2.0, 0.0, 0.0);
-/// let matrix = Matrix4::scale([5.0, 1.0, 1.0]);
-/// assert_eq!(matrix * vector, Vector3::new(10.0, 0.0, 0.0));
+/// let vector = Vec3::new(2.0, 0.0, 0.0);
+/// let matrix = Mat4::scale([5.0, 1.0, 1.0]);
+/// assert_eq!(matrix * vector, Vec3::new(10.0, 0.0, 0.0));
 /// ```
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Matrix4 {
+pub struct Mat4 {
     /// the X column
-    pub x: Vector4,
+    pub x: Vec4,
     /// the Y column
-    pub y: Vector4,
+    pub y: Vec4,
     /// the Z column
-    pub z: Vector4,
+    pub z: Vec4,
     /// the W column
-    pub w: Vector4,
+    pub w: Vec4,
 }
 
-impl Matrix4 {
+impl Mat4 {
     /// Create matrix from column vectors
     pub fn columns(
-        x: impl Into<Vector4>,
-        y: impl Into<Vector4>,
-        z: impl Into<Vector4>,
-        w: impl Into<Vector4>,
+        x: impl Into<Vec4>,
+        y: impl Into<Vec4>,
+        z: impl Into<Vec4>,
+        w: impl Into<Vec4>,
     ) -> Self {
         Self {
             x: x.into(),
@@ -54,10 +54,10 @@ impl Matrix4 {
 
     /// Create matrix from row vectors
     pub fn rows(
-        x: impl Into<Vector4>,
-        y: impl Into<Vector4>,
-        z: impl Into<Vector4>,
-        w: impl Into<Vector4>,
+        x: impl Into<Vec4>,
+        y: impl Into<Vec4>,
+        z: impl Into<Vec4>,
+        w: impl Into<Vec4>,
     ) -> Self {
         let rx = x.into();
         let ry = y.into();
@@ -89,11 +89,11 @@ impl Matrix4 {
     /// # Examples
     ///
     /// ```ignore
-    /// let vector = Vector3::new(2.0, 0.0, 0.0);
-    /// let matrix = Matrix4::translation([5.0, 1.0, 1.0]);
-    /// assert_eq!(matrix * vector, Vector3::new(7.0, 1.0, 1.0));
+    /// let vector = Vec3::new(2.0, 0.0, 0.0);
+    /// let matrix = Mat4::translation([5.0, 1.0, 1.0]);
+    /// assert_eq!(matrix * vector, Vec3::new(7.0, 1.0, 1.0));
     /// ```
-    pub fn translation(vector: impl Into<Vector3>) -> Self {
+    pub fn translation(vector: impl Into<Vec3>) -> Self {
         let v = vector.into();
         Self::rows(
             [1.0, 0.0, 0.0, v.x],
@@ -110,11 +110,11 @@ impl Matrix4 {
     /// # Examples
     ///
     /// ```ignore
-    /// let vector = Vector3::new(2.0, 0.0, 0.0);
-    /// let matrix = Matrix4::scale([5.0, 1.0, 1.0]);
-    /// assert_eq!(matrix * vector, Vector3::new(10.0, 0.0, 0.0));
+    /// let vector = Vec3::new(2.0, 0.0, 0.0);
+    /// let matrix = Mat4::scale([5.0, 1.0, 1.0]);
+    /// assert_eq!(matrix * vector, Vec3::new(10.0, 0.0, 0.0));
     /// ```
-    pub fn scale(vector: impl Into<Vector3>) -> Self {
+    pub fn scale(vector: impl Into<Vec3>) -> Self {
         let v = vector.into();
         Self::rows(
             [v.x, 0.0, 0.0, 0.0],
@@ -158,7 +158,7 @@ impl Matrix4 {
     /// Create rotation matrix around axis
     ///
     /// This rotates vectors around axis by the angle
-    pub fn axis_rotation(axis: impl Into<Vector3>, angle: f32) -> Self {
+    pub fn axis_rotation(axis: impl Into<Vec3>, angle: f32) -> Self {
         let v = axis.into();
         let sin = angle.to_radians().sin();
         let cos = angle.to_radians().cos();
@@ -189,7 +189,7 @@ impl Matrix4 {
     /// Create rotation matrix to rotate towards direction
     ///
     /// `up` is used as a guide to try aligning to
-    pub fn look_rotation(forward: impl Into<Vector3>, up: impl Into<Vector3>) -> Self {
+    pub fn look_rotation(forward: impl Into<Vec3>, up: impl Into<Vec3>) -> Self {
         let f = forward.into().unit();
         let r = up.into().unit().cross(f).unit();
         let u = f.cross(r).unit();
@@ -252,9 +252,9 @@ impl Matrix4 {
 
     /// Create matrix from position, scale and rotation
     ///
-    /// Oposite of [decompose](crate::math::Matrix4::decompose).
-    pub fn compose(position: Vector3, scale: Vector3, rotation: Quaternion) -> Self {
-        Matrix4::translation(position) * Matrix4::from(rotation) * Matrix4::scale(scale)
+    /// Oposite of [decompose](crate::math::Mat4::decompose).
+    pub fn compose(position: Vec3, scale: Vec3, rotation: Quat) -> Self {
+        Mat4::translation(position) * Mat4::from(rotation) * Mat4::scale(scale)
     }
 
     /// Calculate the inverse of the matrix
@@ -354,8 +354,8 @@ impl Matrix4 {
     }
 
     /// Separate translation, scale and rotation parts of the matrix
-    pub fn decompose(mut self) -> (Vector3, Vector3, Quaternion) {
-        let position = Vector3::new(self.w.x, self.w.y, self.w.z);
+    pub fn decompose(mut self) -> (Vec3, Vec3, Quat) {
+        let position = Vec3::new(self.w.x, self.w.y, self.w.z);
 
         let determinant = self.x.x * (self.y.y * self.z.z - self.z.y * self.y.z)
             - self.y.x * (self.x.y * self.z.z - self.z.y * self.x.z)
@@ -364,42 +364,42 @@ impl Matrix4 {
         let sx = self.x.xyz().length();
         let sy = self.y.xyz().length();
         let sz = self.z.xyz().length() * determinant.signum();
-        let scale = Vector3::new(sx, sy, sz);
+        let scale = Vec3::new(sx, sy, sz);
 
         self.x *= 1.0 / sx;
         self.y *= 1.0 / sy;
         self.z *= 1.0 / sz;
 
-        let rotation = Quaternion::from(self);
+        let rotation = Quat::from(self);
 
         (position, scale, rotation)
     }
 
     /// Access the X row of the matrix
-    pub const fn rx(&self) -> Vector4 {
-        Vector4::new(self.x.x, self.y.x, self.z.x, self.w.x)
+    pub const fn rx(&self) -> Vec4 {
+        Vec4::new(self.x.x, self.y.x, self.z.x, self.w.x)
     }
 
     /// Access the Y row of the matrix
-    pub const fn ry(&self) -> Vector4 {
-        Vector4::new(self.x.y, self.y.y, self.z.y, self.w.y)
+    pub const fn ry(&self) -> Vec4 {
+        Vec4::new(self.x.y, self.y.y, self.z.y, self.w.y)
     }
 
     /// Access the Z row of the matrix
-    pub const fn rz(&self) -> Vector4 {
-        Vector4::new(self.x.z, self.y.z, self.z.z, self.w.z)
+    pub const fn rz(&self) -> Vec4 {
+        Vec4::new(self.x.z, self.y.z, self.z.z, self.w.z)
     }
 
     /// Access the W row of the matrix
-    pub const fn rw(&self) -> Vector4 {
-        Vector4::new(self.x.w, self.y.w, self.z.w, self.w.w)
+    pub const fn rw(&self) -> Vec4 {
+        Vec4::new(self.x.w, self.y.w, self.z.w, self.w.w)
     }
 }
 
-impl Index<usize> for Matrix4 {
-    type Output = Vector4;
+impl Index<usize> for Mat4 {
+    type Output = Vec4;
 
-    fn index(&self, index: usize) -> &Vector4 {
+    fn index(&self, index: usize) -> &Vec4 {
         match index {
             0 => &self.x,
             1 => &self.y,
@@ -410,8 +410,8 @@ impl Index<usize> for Matrix4 {
     }
 }
 
-impl IndexMut<usize> for Matrix4 {
-    fn index_mut(&mut self, index: usize) -> &mut Vector4 {
+impl IndexMut<usize> for Mat4 {
+    fn index_mut(&mut self, index: usize) -> &mut Vec4 {
         match index {
             0 => &mut self.x,
             1 => &mut self.y,
@@ -422,8 +422,8 @@ impl IndexMut<usize> for Matrix4 {
     }
 }
 
-impl Mul<f32> for Matrix4 {
-    type Output = Matrix4;
+impl Mul<f32> for Mat4 {
+    type Output = Mat4;
 
     fn mul(self, rhs: f32) -> Self::Output {
         let mut m = self;
@@ -435,27 +435,27 @@ impl Mul<f32> for Matrix4 {
     }
 }
 
-impl Mul<Vector4> for Matrix4 {
-    type Output = Vector4;
+impl Mul<Vec4> for Mat4 {
+    type Output = Vec4;
 
-    fn mul(self, rhs: Vector4) -> Self::Output {
+    fn mul(self, rhs: Vec4) -> Self::Output {
         let x = self.rx().dot(rhs);
         let y = self.ry().dot(rhs);
         let z = self.rz().dot(rhs);
         let w = self.rw().dot(rhs);
-        Vector4::new(x, y, z, w)
+        Vec4::new(x, y, z, w)
     }
 }
 
-impl Mul<Vector3> for Matrix4 {
-    type Output = Vector3;
+impl Mul<Vec3> for Mat4 {
+    type Output = Vec3;
 
-    fn mul(self, rhs: Vector3) -> Self::Output {
-        (self * Vector4::from((rhs, 1.0))).xyz()
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        (self * Vec4::from((rhs, 1.0))).xyz()
     }
 }
 
-impl Mul<Self> for Matrix4 {
+impl Mul<Self> for Mat4 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -467,26 +467,26 @@ impl Mul<Self> for Matrix4 {
     }
 }
 
-impl MulAssign<Self> for Matrix4 {
+impl MulAssign<Self> for Mat4 {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl From<Quaternion> for Matrix4 {
-    fn from(q: Quaternion) -> Self {
+impl From<Quat> for Mat4 {
+    fn from(q: Quat) -> Self {
         let angle = 2.0 * q.w.acos().to_degrees();
         let scale = (1.0 - q.w * q.w).sqrt();
         let axis = if scale < 0.001 {
-            Vector3::new(1.0, 0.0, 0.0)
+            Vec3::new(1.0, 0.0, 0.0)
         } else {
-            Vector3::new(q.x, q.y, q.z) / scale
+            Vec3::new(q.x, q.y, q.z) / scale
         };
-        Matrix4::axis_rotation(axis, angle)
+        Mat4::axis_rotation(axis, angle)
     }
 }
 
-impl From<[f32; 16]> for Matrix4 {
+impl From<[f32; 16]> for Mat4 {
     fn from(m: [f32; 16]) -> Self {
         Self::columns(
             [m[0], m[1], m[2], m[3]],
@@ -497,7 +497,7 @@ impl From<[f32; 16]> for Matrix4 {
     }
 }
 
-impl Into<[f32; 16]> for Matrix4 {
+impl Into<[f32; 16]> for Mat4 {
     fn into(self) -> [f32; 16] {
         [
             self.x.x, self.x.y, self.x.z, self.x.w, self.y.x, self.y.y, self.y.z, self.y.w,
@@ -508,71 +508,71 @@ impl Into<[f32; 16]> for Matrix4 {
 
 #[cfg(test)]
 mod test {
-    use super::Matrix4;
-    use super::Quaternion;
-    use super::Vector3;
-    use super::Vector4;
+    use super::Mat4;
+    use super::Quat;
+    use super::Vec3;
+    use super::Vec4;
 
     #[test]
     fn columns() {
-        let m = Matrix4::columns(
+        let m = Mat4::columns(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        assert_eq!(m.x, Vector4::new(1.0, 2.0, 3.0, 4.0));
-        assert_eq!(m.y, Vector4::new(5.0, 6.0, 7.0, 8.0));
-        assert_eq!(m.z, Vector4::new(8.0, 7.0, 6.0, 5.0));
-        assert_eq!(m.w, Vector4::new(4.0, 3.0, 2.0, 1.0));
+        assert_eq!(m.x, Vec4::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(m.y, Vec4::new(5.0, 6.0, 7.0, 8.0));
+        assert_eq!(m.z, Vec4::new(8.0, 7.0, 6.0, 5.0));
+        assert_eq!(m.w, Vec4::new(4.0, 3.0, 2.0, 1.0));
     }
 
     #[test]
     fn rows() {
-        let m = Matrix4::rows(
+        let m = Mat4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        assert_eq!(m.x, Vector4::new(1.0, 5.0, 8.0, 4.0));
-        assert_eq!(m.y, Vector4::new(2.0, 6.0, 7.0, 3.0));
-        assert_eq!(m.z, Vector4::new(3.0, 7.0, 6.0, 2.0));
-        assert_eq!(m.w, Vector4::new(4.0, 8.0, 5.0, 1.0));
+        assert_eq!(m.x, Vec4::new(1.0, 5.0, 8.0, 4.0));
+        assert_eq!(m.y, Vec4::new(2.0, 6.0, 7.0, 3.0));
+        assert_eq!(m.z, Vec4::new(3.0, 7.0, 6.0, 2.0));
+        assert_eq!(m.w, Vec4::new(4.0, 8.0, 5.0, 1.0));
 
-        assert_eq!(m.rx(), Vector4::new(1.0, 2.0, 3.0, 4.0));
-        assert_eq!(m.ry(), Vector4::new(5.0, 6.0, 7.0, 8.0));
-        assert_eq!(m.rz(), Vector4::new(8.0, 7.0, 6.0, 5.0));
-        assert_eq!(m.rw(), Vector4::new(4.0, 3.0, 2.0, 1.0));
+        assert_eq!(m.rx(), Vec4::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(m.ry(), Vec4::new(5.0, 6.0, 7.0, 8.0));
+        assert_eq!(m.rz(), Vec4::new(8.0, 7.0, 6.0, 5.0));
+        assert_eq!(m.rw(), Vec4::new(4.0, 3.0, 2.0, 1.0));
     }
 
     #[test]
     fn identity() {
-        let m = Matrix4::identity();
-        assert_eq!(m.rx(), Vector4::new(1.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, 0.0));
-        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, 0.0));
-        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+        let m = Mat4::identity();
+        assert_eq!(m.rx(), Vec4::new(1.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vec4::new(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vec4::new(0.0, 0.0, 1.0, 0.0));
+        assert_eq!(m.rw(), Vec4::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
     fn translation() {
-        let m = Matrix4::translation([3.0, 4.0, 5.0]);
-        let v = Vector3::new(6.0, 7.0, 8.0);
-        assert_eq!(m * v, Vector3::new(9.0, 11.0, 13.0));
+        let m = Mat4::translation([3.0, 4.0, 5.0]);
+        let v = Vec3::new(6.0, 7.0, 8.0);
+        assert_eq!(m * v, Vec3::new(9.0, 11.0, 13.0));
     }
 
     #[test]
     fn scale() {
-        let m = Matrix4::scale([1.0, 2.0, 3.0]);
-        let v = Vector3::new(3.0, 4.0, 5.0);
-        assert_eq!(m * v, Vector3::new(3.0, 8.0, 15.0));
+        let m = Mat4::scale([1.0, 2.0, 3.0]);
+        let v = Vec3::new(3.0, 4.0, 5.0);
+        assert_eq!(m * v, Vec3::new(3.0, 8.0, 15.0));
     }
 
     #[test]
     fn axis_rotation() {
-        let m = Matrix4::axis_rotation([1.0, 0.0, 0.0], 180.0);
-        let v = Vector3::new(1.0, 1.0, 1.0);
+        let m = Mat4::axis_rotation([1.0, 0.0, 0.0], 180.0);
+        let v = Vec3::new(1.0, 1.0, 1.0);
         let r = m * v;
         assert_eq_delta!(r.x, 1.0);
         assert_eq_delta!(r.y, -1.0);
@@ -581,8 +581,8 @@ mod test {
 
     #[test]
     fn look_rotation_x() {
-        let m = Matrix4::look_rotation(Vector3::new(1.0, 0.0, 0.0), Vector3::UP);
-        let r = m * Vector3::FORWARD;
+        let m = Mat4::look_rotation(Vec3::new(1.0, 0.0, 0.0), Vec3::UP);
+        let r = m * Vec3::FORWARD;
         assert_eq_delta!(r.x, -1.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, 0.0);
@@ -590,8 +590,8 @@ mod test {
 
     #[test]
     fn look_rotation_y() {
-        let m = Matrix4::look_rotation([0.0, 1.0, 0.0], Vector3::FORWARD);
-        let r = m * Vector3::FORWARD;
+        let m = Mat4::look_rotation([0.0, 1.0, 0.0], Vec3::FORWARD);
+        let r = m * Vec3::FORWARD;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
         assert_eq_delta!(r.z, 0.0);
@@ -599,8 +599,8 @@ mod test {
 
     #[test]
     fn look_rotation_z() {
-        let m = Matrix4::look_rotation([0.0, 0.0, -1.0], Vector3::UP);
-        let r = m * Vector3::FORWARD;
+        let m = Mat4::look_rotation([0.0, 0.0, -1.0], Vec3::UP);
+        let r = m * Vec3::FORWARD;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, -1.0);
@@ -608,8 +608,8 @@ mod test {
 
     #[test]
     fn euler_rotation_x() {
-        let m = Matrix4::euler_rotation(90.0, 0.0, 0.0);
-        let v = Vector3::new(0.0, 0.0, 1.0);
+        let m = Mat4::euler_rotation(90.0, 0.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, 1.0);
         let r = m * v;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, -1.0);
@@ -618,8 +618,8 @@ mod test {
 
     #[test]
     fn euler_rotation_y() {
-        let m = Matrix4::euler_rotation(0.0, 90.0, 0.0);
-        let v = Vector3::new(0.0, 0.0, 1.0);
+        let m = Mat4::euler_rotation(0.0, 90.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, 1.0);
         let r = m * v;
         assert_eq_delta!(r.x, 1.0);
         assert_eq_delta!(r.y, 0.0);
@@ -628,8 +628,8 @@ mod test {
 
     #[test]
     fn euler_rotation_z() {
-        let m = Matrix4::euler_rotation(0.0, 0.0, 90.0);
-        let v = Vector3::new(1.0, 0.0, 0.0);
+        let m = Mat4::euler_rotation(0.0, 0.0, 90.0);
+        let v = Vec3::new(1.0, 0.0, 0.0);
         let r = m * v;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
@@ -638,58 +638,58 @@ mod test {
 
     #[test]
     fn perspective() {
-        let m = Matrix4::perspective(90.0, 1.0, 0.0, 100.0);
-        assert_eq!(m.rx(), Vector4::new(1.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.ry(), Vector4::new(0.0, 1.0, 0.0, 0.0));
-        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, -0.0));
-        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 1.0, 0.0));
+        let m = Mat4::perspective(90.0, 1.0, 0.0, 100.0);
+        assert_eq!(m.rx(), Vec4::new(1.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vec4::new(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vec4::new(0.0, 0.0, 1.0, -0.0));
+        assert_eq!(m.rw(), Vec4::new(0.0, 0.0, 1.0, 0.0));
     }
 
     #[test]
     fn orthographic() {
-        let m = Matrix4::orthographic(1.0, 1.0, 0.0, 1.0);
-        assert_eq!(m.rx(), Vector4::new(2.0, 0.0, 0.0, 0.0));
-        assert_eq!(m.ry(), Vector4::new(0.0, 2.0, 0.0, 0.0));
-        assert_eq!(m.rz(), Vector4::new(0.0, 0.0, 1.0, -0.0));
-        assert_eq!(m.rw(), Vector4::new(0.0, 0.0, 0.0, 1.0));
+        let m = Mat4::orthographic(1.0, 1.0, 0.0, 1.0);
+        assert_eq!(m.rx(), Vec4::new(2.0, 0.0, 0.0, 0.0));
+        assert_eq!(m.ry(), Vec4::new(0.0, 2.0, 0.0, 0.0));
+        assert_eq!(m.rz(), Vec4::new(0.0, 0.0, 1.0, -0.0));
+        assert_eq!(m.rw(), Vec4::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
     fn mul_with_vector() {
-        let m = Matrix4::rows(
+        let m = Mat4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        let v = Vector4::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(m * v, Vector4::new(30.0, 70.0, 60.0, 20.0));
+        let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(m * v, Vec4::new(30.0, 70.0, 60.0, 20.0));
     }
 
     #[test]
     fn mul_with_self() {
-        let ma = Matrix4::rows(
+        let ma = Mat4::rows(
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
         );
-        let mb = Matrix4::rows(
+        let mb = Mat4::rows(
             [8.0, 7.0, 6.0, 5.0],
             [4.0, 3.0, 2.0, 1.0],
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],
         );
         let r = ma * mb;
-        assert_eq!(r.rx(), Vector4::new(39.0, 43.0, 47.0, 51.0));
-        assert_eq!(r.ry(), Vector4::new(111.0, 115.0, 119.0, 123.0));
-        assert_eq!(r.rz(), Vector4::new(123.0, 119.0, 115.0, 111.0));
-        assert_eq!(r.rw(), Vector4::new(51.0, 47.0, 43.0, 39.0));
+        assert_eq!(r.rx(), Vec4::new(39.0, 43.0, 47.0, 51.0));
+        assert_eq!(r.ry(), Vec4::new(111.0, 115.0, 119.0, 123.0));
+        assert_eq!(r.rz(), Vec4::new(123.0, 119.0, 115.0, 111.0));
+        assert_eq!(r.rw(), Vec4::new(51.0, 47.0, 43.0, 39.0));
     }
 
     #[test]
     fn inverse() {
-        let m = Matrix4::orthographic(20.0, 20.0, 0.1, 50.0);
+        let m = Mat4::orthographic(20.0, 20.0, 0.1, 50.0);
         let r = m * m.inverse().expect("no inverse");
         assert_eq_delta!(r.x.x, 1.0);
         assert_eq_delta!(r.y.y, 1.0);
@@ -699,8 +699,8 @@ mod test {
 
     #[test]
     fn projection() {
-        let matrix = Matrix4::perspective(90.0, 16.0 / 9.0, 0.1, 10.0);
-        let point = Vector4::new(0.0, 0.0, 10.0, 1.0);
+        let matrix = Mat4::perspective(90.0, 16.0 / 9.0, 0.1, 10.0);
+        let point = Vec4::new(0.0, 0.0, 10.0, 1.0);
         let r = matrix * point;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 0.0);
@@ -710,20 +710,20 @@ mod test {
 
     #[test]
     fn compose() {
-        let position = Vector3::new(1.0, 2.0, 3.0);
-        let scale = Vector3::new(1.0, 1.0, 1.0);
-        let rotation = Quaternion::default();
+        let position = Vec3::new(1.0, 2.0, 3.0);
+        let scale = Vec3::new(1.0, 1.0, 1.0);
+        let rotation = Quat::default();
         assert_eq!(
-            Matrix4::compose(position, scale, rotation),
-            Matrix4::translation([1.0, 2.0, 3.0])
+            Mat4::compose(position, scale, rotation),
+            Mat4::translation([1.0, 2.0, 3.0])
         );
     }
 
     #[test]
     fn from_quaternion() {
-        let v = Vector3::new(0.0, 0.0, 1.0);
-        let mq = Matrix4::from(Quaternion::euler_rotation(90.0, 0.0, 0.0));
-        let m = Matrix4::euler_rotation(90.0, 0.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, 1.0);
+        let mq = Mat4::from(Quat::euler_rotation(90.0, 0.0, 0.0));
+        let m = Mat4::euler_rotation(90.0, 0.0, 0.0);
 
         let rq = mq * v;
         let r = m * v;

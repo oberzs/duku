@@ -10,8 +10,8 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Rgbf;
 use crate::device::Device;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::vk;
 
 pub(crate) use vertex::Vertex;
@@ -27,9 +27,9 @@ pub use model::ModelNode;
 /// // setup a triangle
 /// let mut mesh = duku.create_mesh();
 /// mesh.vertices = vec![
-///     Vector3::new(-1.0, -1.0),
-///     Vector3::new(0.0, 1.0),
-///     Vector3::new(1.0, -1.0),
+///     Vec3::new(-1.0, -1.0),
+///     Vec3::new(0.0, 1.0),
+///     Vec3::new(1.0, -1.0),
 /// ];
 /// mesh.indices = vec![0, 1, 2];
 ///
@@ -38,13 +38,13 @@ pub use model::ModelNode;
 /// ```
 pub struct Mesh {
     /// vertex positions
-    pub vertices: Vec<Vector3>,
+    pub vertices: Vec<Vec3>,
     /// vertex UV coordinates
-    pub uvs: Vec<Vector2>,
+    pub uvs: Vec<Vec2>,
     /// vertex normal directions
-    pub normals: Vec<Vector3>,
+    pub normals: Vec<Vec3>,
     /// vertex tangent directions
-    pub tangents: Vec<Vector3>,
+    pub tangents: Vec<Vec3>,
     /// vertex colors
     pub colors: Vec<Rgbf>,
     /// vertex texture indices
@@ -63,10 +63,10 @@ impl Mesh {
         let index_buffer = Buffer::dynamic(device, BufferUsage::Index, 3);
 
         Self {
-            vertices: vec![Vector3::default(); 1],
-            uvs: vec![Vector2::default(); 1],
-            normals: vec![Vector3::default(); 1],
-            tangents: vec![Vector3::default(); 1],
+            vertices: vec![Vec3::default(); 1],
+            uvs: vec![Vec2::default(); 1],
+            normals: vec![Vec3::default(); 1],
+            tangents: vec![Vec3::default(); 1],
             colors: vec![Rgbf::gray(1.0); 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
@@ -116,7 +116,7 @@ impl Mesh {
     /// Calls [calculate_tangents](crate::mesh::Mesh::calculate_tangents)
     /// automatically
     pub fn calculate_normals(&mut self) {
-        self.normals = vec![Vector3::default(); self.vertices.len()];
+        self.normals = vec![Vec3::default(); self.vertices.len()];
 
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
@@ -148,7 +148,7 @@ impl Mesh {
     /// smoothing the values to achieve smooth
     /// shading.
     pub fn calculate_tangents(&mut self) {
-        self.tangents = vec![Vector3::default(); self.vertices.len()];
+        self.tangents = vec![Vec3::default(); self.vertices.len()];
 
         if self.indices.len() % 3 == 0 {
             for tri in self.indices.chunks(3) {
@@ -172,7 +172,7 @@ impl Mesh {
                 let duv_1 = uv_b - uv_a;
                 let duv_2 = uv_c - uv_a;
                 let f = 1.0 / (duv_1.x * duv_2.y - duv_2.x * duv_1.y);
-                let tangent = Vector3::new(
+                let tangent = Vec3::new(
                     duv_2.y * edge_1.x - duv_1.y * edge_2.x,
                     duv_2.y * edge_1.y - duv_1.y * edge_2.y,
                     duv_2.y * edge_1.z - duv_1.y * edge_2.z,
@@ -191,13 +191,9 @@ impl Mesh {
         let vertices: Vec<_> = self
             .vertices
             .iter()
-            .zip(self.uvs.iter().chain(iter::repeat(&Vector2::default())))
-            .zip(self.normals.iter().chain(iter::repeat(&Vector3::default())))
-            .zip(
-                self.tangents
-                    .iter()
-                    .chain(iter::repeat(&Vector3::default())),
-            )
+            .zip(self.uvs.iter().chain(iter::repeat(&Vec2::default())))
+            .zip(self.normals.iter().chain(iter::repeat(&Vec3::default())))
+            .zip(self.tangents.iter().chain(iter::repeat(&Vec3::default())))
             .zip(self.colors.iter().chain(iter::repeat(&Rgbf::gray(1.0))))
             .zip(self.textures.iter().chain(iter::repeat(&0)))
             .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {

@@ -19,10 +19,10 @@ use crate::error::Result;
 use crate::image::ColorSpace;
 use crate::image::Mips;
 use crate::image::Texture;
-use crate::math::Matrix4;
-use crate::math::Quaternion;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Mat4;
+use crate::math::Quat;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::mesh::Mesh;
 use crate::mesh::Model;
 use crate::mesh::ModelNode;
@@ -83,15 +83,15 @@ impl Duku {
                 let mut indices = vec![];
 
                 if let Some(ps) = reader.read_positions() {
-                    vertices.extend(ps.map(|p| Vector3::new(p[0], p[1], -p[2])));
+                    vertices.extend(ps.map(|p| Vec3::new(p[0], p[1], -p[2])));
                 }
 
                 if let Some(ns) = reader.read_normals() {
-                    normals.extend(ns.map(|n| Vector3::new(n[0], n[1], -n[2])));
+                    normals.extend(ns.map(|n| Vec3::new(n[0], n[1], -n[2])));
                 }
 
                 if let Some(ts) = reader.read_tex_coords(0) {
-                    uvs.extend(ts.into_f32().map(|t| Vector2::new(t[0], t[1])));
+                    uvs.extend(ts.into_f32().map(|t| Vec2::new(t[0], t[1])));
                 }
 
                 if let Some(is) = reader.read_indices() {
@@ -295,9 +295,9 @@ fn load_node(
     // get transform matrix
     let matrix = {
         let (t, r, s) = node.transform().decomposed();
-        Matrix4::translation([t[0], t[1], -t[2]])
-            * Matrix4::from(Quaternion::new(r[0], r[1], -r[2], -r[3]))
-            * Matrix4::scale(s)
+        Mat4::translation([t[0], t[1], -t[2]])
+            * Mat4::from(Quat::new(r[0], r[1], -r[2], -r[3]))
+            * Mat4::scale(s)
     };
 
     // get mesh and material

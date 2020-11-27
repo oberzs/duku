@@ -13,16 +13,16 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
-use super::Vector2;
-use super::Vector3;
+use super::Vec2;
+use super::Vec3;
 use crate::color::Rgbf;
 
 /// 4-component Vector.
 ///
-/// Used mostly as columns of [Matrix4](crate::math::Matrix4)
+/// Used mostly as columns of [Mat4](crate::math::Mat4)
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub struct Vector4 {
+pub struct Vec4 {
     /// the X component
     pub x: f32,
     /// the Y component
@@ -33,7 +33,7 @@ pub struct Vector4 {
     pub w: f32,
 }
 
-impl Vector4 {
+impl Vec4 {
     /// Create a new vector
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
@@ -45,21 +45,21 @@ impl Vector4 {
         self.x * o.x + self.y * o.y + self.z * o.z + self.w * o.w
     }
 
-    /// Get the [Vector2](crate::math::Vector2)
+    /// Get the [Vec2](crate::math::Vec2)
     /// made from this vectors x and y
-    pub const fn xy(self) -> Vector2 {
-        Vector2::new(self.x, self.y)
+    pub const fn xy(self) -> Vec2 {
+        Vec2::new(self.x, self.y)
     }
 
-    /// Get the [Vector3](crate::math::Vector3)
+    /// Get the [Vec3](crate::math::Vec3)
     /// made from this vectors x, y and z
-    pub const fn xyz(self) -> Vector3 {
-        Vector3::new(self.x, self.y, self.z)
+    pub const fn xyz(self) -> Vec3 {
+        Vec3::new(self.x, self.y, self.z)
     }
 
     /// Floor every component of the vector
-    pub fn floor(self) -> Vector4 {
-        Vector4::new(
+    pub fn floor(self) -> Vec4 {
+        Vec4::new(
             self.x.floor(),
             self.y.floor(),
             self.z.floor(),
@@ -68,13 +68,13 @@ impl Vector4 {
     }
 
     /// Ceil every component of the vector
-    pub fn ceil(self) -> Vector4 {
-        Vector4::new(self.x.ceil(), self.y.ceil(), self.z.ceil(), self.w.ceil())
+    pub fn ceil(self) -> Vec4 {
+        Vec4::new(self.x.ceil(), self.y.ceil(), self.z.ceil(), self.w.ceil())
     }
 
     /// Round every component of the vector
-    pub fn round(self) -> Vector4 {
-        Vector4::new(
+    pub fn round(self) -> Vec4 {
+        Vec4::new(
             self.x.round(),
             self.y.round(),
             self.z.round(),
@@ -83,25 +83,25 @@ impl Vector4 {
     }
 }
 
-impl<N: Into<f32> + Copy> From<[N; 4]> for Vector4 {
+impl<N: Into<f32> + Copy> From<[N; 4]> for Vec4 {
     fn from(a: [N; 4]) -> Self {
         Self::new(a[0].into(), a[1].into(), a[2].into(), a[3].into())
     }
 }
 
-impl From<(Vector3, f32)> for Vector4 {
-    fn from(v: (Vector3, f32)) -> Self {
+impl From<(Vec3, f32)> for Vec4 {
+    fn from(v: (Vec3, f32)) -> Self {
         Self::new(v.0.x, v.0.y, v.0.z, v.1)
     }
 }
 
-impl From<Rgbf> for Vector4 {
+impl From<Rgbf> for Vec4 {
     fn from(c: Rgbf) -> Self {
         Self::new(c.r, c.g, c.b, c.a)
     }
 }
 
-impl Index<usize> for Vector4 {
+impl Index<usize> for Vec4 {
     type Output = f32;
 
     fn index(&self, index: usize) -> &f32 {
@@ -115,7 +115,7 @@ impl Index<usize> for Vector4 {
     }
 }
 
-impl IndexMut<usize> for Vector4 {
+impl IndexMut<usize> for Vec4 {
     fn index_mut(&mut self, index: usize) -> &mut f32 {
         match index {
             0 => &mut self.x,
@@ -127,7 +127,7 @@ impl IndexMut<usize> for Vector4 {
     }
 }
 
-impl Neg for Vector4 {
+impl Neg for Vec4 {
     type Output = Self;
 
     fn neg(self) -> Self {
@@ -135,7 +135,7 @@ impl Neg for Vector4 {
     }
 }
 
-impl Add<Self> for Vector4 {
+impl Add<Self> for Vec4 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -148,7 +148,7 @@ impl Add<Self> for Vector4 {
     }
 }
 
-impl Sub<Self> for Vector4 {
+impl Sub<Self> for Vec4 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -161,7 +161,7 @@ impl Sub<Self> for Vector4 {
     }
 }
 
-impl Mul<f32> for Vector4 {
+impl Mul<f32> for Vec4 {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self {
@@ -169,7 +169,7 @@ impl Mul<f32> for Vector4 {
     }
 }
 
-impl Div<f32> for Vector4 {
+impl Div<f32> for Vec4 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self {
@@ -177,25 +177,25 @@ impl Div<f32> for Vector4 {
     }
 }
 
-impl AddAssign<Self> for Vector4 {
+impl AddAssign<Self> for Vec4 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl SubAssign<Self> for Vector4 {
+impl SubAssign<Self> for Vec4 {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl MulAssign<f32> for Vector4 {
+impl MulAssign<f32> for Vec4 {
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
 }
 
-impl DivAssign<f32> for Vector4 {
+impl DivAssign<f32> for Vec4 {
     fn div_assign(&mut self, rhs: f32) {
         *self = *self / rhs;
     }
@@ -203,11 +203,11 @@ impl DivAssign<f32> for Vector4 {
 
 #[cfg(test)]
 mod test {
-    use super::Vector4;
+    use super::Vec4;
 
     #[test]
     fn default() {
-        let v = Vector4::default();
+        let v = Vec4::default();
         assert_eq_delta!(v.x, 0.0);
         assert_eq_delta!(v.y, 0.0);
         assert_eq_delta!(v.z, 0.0);
@@ -216,7 +216,7 @@ mod test {
 
     #[test]
     fn new() {
-        let v = Vector4::new(1.0, 2.0, 3.0, 4.0);
+        let v = Vec4::new(1.0, 2.0, 3.0, 4.0);
         assert_eq_delta!(v.x, 1.0);
         assert_eq_delta!(v.y, 2.0);
         assert_eq_delta!(v.z, 3.0);
@@ -225,19 +225,19 @@ mod test {
 
     #[test]
     fn dot() {
-        let a = Vector4::new(1.0, 2.0, 3.0, 1.0);
-        let b = Vector4::new(5.0, 6.0, 7.0, 1.0);
+        let a = Vec4::new(1.0, 2.0, 3.0, 1.0);
+        let b = Vec4::new(5.0, 6.0, 7.0, 1.0);
         assert_eq_delta!(a.dot(b), 39.0);
     }
 
     #[test]
     fn operator() {
-        let v1 = Vector4::new(2.0, 3.0, 4.0, 1.0);
-        let v2 = Vector4::new(2.0, 8.0, 4.0, 1.0);
-        assert_eq!(-v1, Vector4::new(-2.0, -3.0, -4.0, -1.0));
-        assert_eq!(v1 + v2, Vector4::new(4.0, 11.0, 8.0, 2.0));
-        assert_eq!(v1 - v2, Vector4::new(0.0, -5.0, 0.0, 0.0));
-        assert_eq!(v1 * 4.0, Vector4::new(8.0, 12.0, 16.0, 4.0));
-        assert_eq!(v2 / 2.0, Vector4::new(1.0, 4.0, 2.0, 0.5));
+        let v1 = Vec4::new(2.0, 3.0, 4.0, 1.0);
+        let v2 = Vec4::new(2.0, 8.0, 4.0, 1.0);
+        assert_eq!(-v1, Vec4::new(-2.0, -3.0, -4.0, -1.0));
+        assert_eq!(v1 + v2, Vec4::new(4.0, 11.0, 8.0, 2.0));
+        assert_eq!(v1 - v2, Vec4::new(0.0, -5.0, 0.0, 0.0));
+        assert_eq!(v1 * 4.0, Vec4::new(8.0, 12.0, 16.0, 4.0));
+        assert_eq!(v2 / 2.0, Vec4::new(1.0, 4.0, 2.0, 0.5));
     }
 }

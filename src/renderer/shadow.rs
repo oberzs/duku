@@ -14,9 +14,9 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
 use crate::image::Msaa;
-use crate::math::Matrix4;
-use crate::math::Vector3;
-use crate::math::Vector4;
+use crate::math::Mat4;
+use crate::math::Vec3;
+use crate::math::Vec4;
 use crate::pipeline::Descriptor;
 use crate::pipeline::Shader;
 use crate::pipeline::ShaderConfig;
@@ -33,7 +33,7 @@ pub(crate) struct ShadowRenderer {
 }
 
 pub(crate) struct ShadowSplitParams {
-    pub(crate) world_to_shadow: [Matrix4; SHADOW_SPLIT_COUNT],
+    pub(crate) world_to_shadow: [Mat4; SHADOW_SPLIT_COUNT],
     pub(crate) splits: [f32; SHADOW_SPLIT_COUNT],
     pub(crate) texels: [f32; SHADOW_SPLIT_COUNT],
     pub(crate) diameters: [f32; SHADOW_SPLIT_COUNT],
@@ -47,7 +47,7 @@ struct TargetResources {
 }
 
 struct Sphere {
-    center: Vector3,
+    center: Vec3,
     radius: f32,
 }
 
@@ -97,7 +97,7 @@ impl ShadowRenderer {
         target_index: usize,
     ) -> ShadowSplitParams {
         let mut params = ShadowSplitParams {
-            world_to_shadow: [Matrix4::identity(); SHADOW_SPLIT_COUNT],
+            world_to_shadow: [Mat4::identity(); SHADOW_SPLIT_COUNT],
             splits: [0.0; SHADOW_SPLIT_COUNT],
             texels: [0.0; SHADOW_SPLIT_COUNT],
             diameters: [0.0; SHADOW_SPLIT_COUNT],
@@ -128,18 +128,18 @@ impl ShadowRenderer {
             let bounds = bounds_for_split(&view, prev_split, params.splits[i]);
             let diameter = bounds.radius * 2.0;
             let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
-                Vector3::UP
+                Vec3::UP
             } else {
-                Vector3::FORWARD
+                Vec3::FORWARD
             };
             let light_position = bounds.center - light_dir * bounds.radius;
             let light_view_matrix =
-                Matrix4::look_rotation(light_dir, up) * Matrix4::translation(-light_position);
-            let mut light_ortho_matrix = Matrix4::orthographic(diameter, diameter, 0.0, diameter);
+                Mat4::look_rotation(light_dir, up) * Mat4::translation(-light_position);
+            let mut light_ortho_matrix = Mat4::orthographic(diameter, diameter, 0.0, diameter);
 
             // stabilize shadow map by using texel units
             let shadow_matrix = light_ortho_matrix * light_view_matrix;
-            let mut shadow_origin = Vector4::new(0.0, 0.0, 0.0, 1.0);
+            let mut shadow_origin = Vec4::new(0.0, 0.0, 0.0, 1.0);
             shadow_origin = shadow_matrix * shadow_origin;
             shadow_origin *= self.map_size as f32 / 2.0;
             let rounded_origin = shadow_origin.round();
@@ -158,9 +158,9 @@ impl ShadowRenderer {
                 view_to_clip: light_ortho_matrix,
 
                 // these fields are not important
-                world_to_shadow: [Matrix4::identity(); 4],
-                camera_position: Vector3::default(),
-                ambient_color: Vector3::default(),
+                world_to_shadow: [Mat4::identity(); 4],
+                camera_position: Vec3::default(),
+                ambient_color: Vec3::default(),
                 lights: [Default::default(); 4],
                 shadow_splits: [0.0; 4],
                 shadow_texels: [0.0; 4],
@@ -186,7 +186,7 @@ impl ShadowRenderer {
                                 uniforms,
                                 ShaderConstants {
                                     local_to_world: order.local_to_world,
-                                    tint_color: Vector3::default(),
+                                    tint_color: Vec3::default(),
                                     sampler_index: order.sampler_index,
                                 },
                             );
@@ -284,14 +284,14 @@ fn logorithmic_split(near: f32, far: f32, i: usize) -> f32 {
 
 fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
     let mut frustum_corners = [
-        Vector3::new(-1.0, 1.0, 0.0),
-        Vector3::new(1.0, 1.0, 0.0),
-        Vector3::new(1.0, -1.0, 0.0),
-        Vector3::new(-1.0, -1.0, 0.0),
-        Vector3::new(-1.0, 1.0, 1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        Vector3::new(1.0, -1.0, 1.0),
-        Vector3::new(-1.0, -1.0, 1.0),
+        Vec3::new(-1.0, 1.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(1.0, -1.0, 0.0),
+        Vec3::new(-1.0, -1.0, 0.0),
+        Vec3::new(-1.0, 1.0, 1.0),
+        Vec3::new(1.0, 1.0, 1.0),
+        Vec3::new(1.0, -1.0, 1.0),
+        Vec3::new(-1.0, -1.0, 1.0),
     ];
 
     let view_to_clip = view.view_to_clip();
@@ -302,7 +302,7 @@ fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
 
     // get projection frustum corners from NDC
     for corner in &mut frustum_corners {
-        let point = inverse_projection * Vector4::from((*corner, 1.0));
+        let point = inverse_projection * Vec4::from((*corner, 1.0));
         *corner = point.xyz() / point.w;
     }
 
@@ -315,7 +315,7 @@ fn bounds_for_split(view: &Camera, near: f32, far: f32) -> Sphere {
         frustum_corners[i] += near_corner_ray;
     }
 
-    let frustum_center = frustum_corners.iter().sum::<Vector3>() / frustum_corners.len() as f32;
+    let frustum_center = frustum_corners.iter().sum::<Vec3>() / frustum_corners.len() as f32;
 
     // get bounding sphere radius
     // sphere makes it axis-aligned

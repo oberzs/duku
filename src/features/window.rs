@@ -27,9 +27,9 @@ pub use window_dep::window::CursorIcon as Cursor;
 use crate::duku::Duku;
 use crate::duku::DukuBuilder;
 use crate::error::Result;
-use crate::math::Quaternion;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Quat;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::renderer::Camera;
 use crate::surface::WindowHandle;
 
@@ -52,17 +52,17 @@ pub struct Events {
     buttons_clicked: HashSet<MouseButton>,
     typed_char: Option<char>,
 
-    mouse_position: Vector2,
-    mouse_delta: Vector2,
+    mouse_position: Vec2,
+    mouse_delta: Vec2,
     mouse_grab: bool,
-    scroll_delta: Vector2,
+    scroll_delta: Vec2,
 }
 
 /// OS window event.
 #[derive(Debug, Copy, Clone)]
 pub enum Event {
     /// window resize event
-    Resize(Vector2),
+    Resize(Vec2),
 }
 
 /// Simple first person controller.
@@ -78,7 +78,7 @@ pub enum Controller {
     /// orbit-arount-point mode
     Orbit {
         /// center point to rotate around
-        pivot: Vector3,
+        pivot: Vec3,
         /// camera move speed
         move_speed: f32,
     },
@@ -165,10 +165,10 @@ impl Window {
             buttons_pressed: HashSet::new(),
             buttons_released: HashSet::new(),
             buttons_clicked: HashSet::new(),
-            mouse_position: Vector2::default(),
-            mouse_delta: Vector2::default(),
+            mouse_position: Vec2::default(),
+            mouse_delta: Vec2::default(),
             mouse_grab: false,
-            scroll_delta: Vector2::default(),
+            scroll_delta: Vec2::default(),
             typed_char: None,
             window,
         };
@@ -190,7 +190,7 @@ impl Window {
 
                     // mouse position event
                     WindowEvent::CursorMoved { position, .. } => {
-                        events.mouse_position = Vector2::new(position.x as f32, position.y as f32);
+                        events.mouse_position = Vec2::new(position.x as f32, position.y as f32);
                     }
 
                     // keyboard key event
@@ -235,7 +235,7 @@ impl Window {
                     // mouse scroll event
                     WindowEvent::MouseWheel { delta, .. } => {
                         if let MouseScrollDelta::LineDelta(x, y) = delta {
-                            events.scroll_delta = Vector2::new(x as f32, y as f32);
+                            events.scroll_delta = Vec2::new(x as f32, y as f32);
                         }
                     }
 
@@ -247,7 +247,7 @@ impl Window {
             WinitEvent::DeviceEvent { event, .. } => {
                 if let DeviceEvent::MouseMotion { delta } = event {
                     let (x, y) = delta;
-                    events.mouse_delta = Vector2::new(x as f32, y as f32);
+                    events.mouse_delta = Vec2::new(x as f32, y as f32);
                 }
             }
 
@@ -272,8 +272,8 @@ impl Window {
                 events.events.clear();
                 events.keys_typed.clear();
                 events.typed_char = None;
-                events.mouse_delta = Vector2::new(0.0, 0.0);
-                events.scroll_delta = Vector2::new(0.0, 0.0);
+                events.mouse_delta = Vec2::new(0.0, 0.0);
+                events.scroll_delta = Vec2::new(0.0, 0.0);
             }
             _ => (),
         });
@@ -312,24 +312,24 @@ impl Events {
     }
 
     /// Get mouse position
-    pub const fn mouse_position(&self) -> Vector2 {
+    pub const fn mouse_position(&self) -> Vec2 {
         self.mouse_position
     }
 
     /// Set mouse position
-    pub fn set_mouse_position(&mut self, position: Vector2) {
+    pub fn set_mouse_position(&mut self, position: Vec2) {
         self.window
             .set_cursor_position(PhysicalPosition::new(position.x as i32, position.y as i32))
             .expect("cannot set cursor position");
     }
 
     /// Get mouse position's change since last frame
-    pub const fn mouse_delta(&self) -> Vector2 {
+    pub const fn mouse_delta(&self) -> Vec2 {
         self.mouse_delta
     }
 
     /// Get scroll wheel's change since last frame
-    pub const fn scroll_delta(&self) -> Vector2 {
+    pub const fn scroll_delta(&self) -> Vec2 {
         self.scroll_delta
     }
 
@@ -357,9 +357,9 @@ impl Events {
     }
 
     /// Get window size
-    pub fn size(&self) -> Vector2 {
+    pub fn size(&self) -> Vec2 {
         let size = self.window.inner_size();
-        Vector2::new(size.width as f32, size.height as f32)
+        Vec2::new(size.width as f32, size.height as f32)
     }
 
     /// Iterate over window events
@@ -388,7 +388,7 @@ impl Controller {
     }
 
     /// Create a orbit-mode controller
-    pub fn orbit(pivot: impl Into<Vector3>) -> Self {
+    pub fn orbit(pivot: impl Into<Vec3>) -> Self {
         Self::Orbit {
             pivot: pivot.into(),
             move_speed: 2.5,
@@ -428,10 +428,10 @@ impl Controller {
                     camera.move_right(final_speed);
                 }
                 if events.is_key_pressed(Key::Space) {
-                    camera.move_by(Vector3::UP * final_speed);
+                    camera.move_by(Vec3::UP * final_speed);
                 }
                 if events.is_key_pressed(Key::LShift) {
-                    camera.move_by(Vector3::DOWN * final_speed);
+                    camera.move_by(Vec3::DOWN * final_speed);
                 }
 
                 // rotation
@@ -449,8 +449,8 @@ impl Controller {
                         clamp_change(*camera_angle, delta.y * rotation_speed, -90.0, 90.0);
                     *camera_angle += mouse_y;
 
-                    let pitch = Quaternion::euler_rotation(0.0, mouse_x, 0.0);
-                    let roll = Quaternion::euler_rotation(mouse_y, 0.0, 0.0);
+                    let pitch = Quat::euler_rotation(0.0, mouse_x, 0.0);
+                    let roll = Quat::euler_rotation(mouse_y, 0.0, 0.0);
 
                     camera.rotation = pitch * camera.rotation * roll;
                 } else {
@@ -483,7 +483,7 @@ impl Controller {
                     let delta = events.mouse_delta();
                     let speed = 50.0 * delta_time;
 
-                    camera.move_around_point(*pivot, speed * delta.x, Vector3::UP);
+                    camera.move_around_point(*pivot, speed * delta.x, Vec3::UP);
                     camera.move_around_point(
                         *pivot,
                         speed * delta.y,
@@ -499,10 +499,10 @@ impl Controller {
 
                 // horizontal rotation
                 if events.is_key_pressed(Key::D) {
-                    camera.move_around_point(*pivot, -angle, Vector3::UP);
+                    camera.move_around_point(*pivot, -angle, Vec3::UP);
                 }
                 if events.is_key_pressed(Key::A) {
-                    camera.move_around_point(*pivot, angle, Vector3::UP);
+                    camera.move_around_point(*pivot, angle, Vec3::UP);
                 }
 
                 // vertical rotation

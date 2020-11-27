@@ -10,7 +10,7 @@ use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
-use crate::math::Vector4;
+use crate::math::Vec4;
 use crate::pipeline::Uniforms;
 
 pub struct Font {
@@ -23,7 +23,7 @@ pub struct Font {
 pub(crate) struct CharData {
     pub(crate) width: f32,
     pub(crate) height: f32,
-    pub(crate) uvs: Vector4,
+    pub(crate) uvs: Vec4,
     pub(crate) x_offset: f32,
     pub(crate) y_offset: f32,
     pub(crate) advance: f32,
@@ -51,7 +51,7 @@ impl Font {
             let v_min = metrics.y as f32 / atlas_height as f32;
             let u_max = u_min + (metrics.width as f32 / atlas_width as f32);
             let v_max = v_min + (metrics.height as f32 / atlas_height as f32);
-            let uvs = Vector4::new(u_min, v_min, u_max, v_max);
+            let uvs = Vec4::new(u_min, v_min, u_max, v_max);
 
             let width = metrics.width as f32 / line_height as f32;
             let height = metrics.height as f32 / line_height as f32;

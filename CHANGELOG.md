@@ -18,6 +18,7 @@
 - Made autosized `Camera` the default.
 - Renamed `Framebuffer` to `Canvas`.
 - Renamed drawing functions.
+- Renamed math structs.
 - Added `Option` to some creation functions.
 
 ### Removed

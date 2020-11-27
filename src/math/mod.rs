@@ -1,14 +1,14 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-mod matrix_4;
-mod quaternion;
-mod vector_2;
-mod vector_3;
-mod vector_4;
+mod mat4;
+mod quat;
+mod vec2;
+mod vec3;
+mod vec4;
 
-pub use matrix_4::Matrix4;
-pub use quaternion::Quaternion;
-pub use vector_2::Vector2;
-pub use vector_3::Vector3;
-pub use vector_4::Vector4;
+pub use mat4::Mat4;
+pub use quat::Quat;
+pub use vec2::Vec2;
+pub use vec3::Vec3;
+pub use vec4::Vec4;
