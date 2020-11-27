@@ -7,7 +7,7 @@ use crate::math::Vector3;
 
 /// The view into a scene.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let camera = Camera::projection(90);
@@ -108,7 +108,7 @@ impl Camera {
 
     /// Convert perspective camera to a zoomed-in orthographic one
     ///
-    /// Note: camera has to have a set height
+    /// Camera has to have a set height
     pub fn fake_orthographic(&mut self, enable: bool) {
         // validate camera
         if let Projection::Orthographic = self.projection {

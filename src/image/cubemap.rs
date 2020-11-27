@@ -15,7 +15,7 @@ use crate::pipeline::Uniforms;
 /// Contains 6 square side textures of a cube that
 /// can be sampled by a direction in the shader.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let skybox = duku.create_cubemap_png(CubemapSides {
@@ -34,7 +34,7 @@ pub struct Cubemap {
 
 /// 6 square sides of the cubemap.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let skybox = duku.create_cubemap_png(CubemapSides {

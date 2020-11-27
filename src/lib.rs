@@ -68,6 +68,7 @@
 mod macros;
 
 mod buffer;
+mod color;
 mod device;
 mod duku;
 mod error;
@@ -86,6 +87,11 @@ mod vk;
 // normal exports
 pub use self::duku::Duku;
 pub use self::duku::DukuBuilder;
+pub use color::Gradient;
+pub use color::Hsb;
+pub use color::Mix;
+pub use color::Rgb;
+pub use color::Rgbf;
 pub use device::Stats;
 pub use error::Error;
 pub use error::Result;
@@ -112,7 +118,6 @@ pub use pipeline::Material;
 pub use pipeline::Shader;
 pub use renderer::BorderMode;
 pub use renderer::Camera;
-pub use renderer::Color;
 pub use renderer::Light;
 pub use renderer::LightType;
 pub use renderer::Pcf;

@@ -23,7 +23,7 @@ use crate::vk;
 ///
 /// Used for rendering objects in custom ways
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let shader = create_shader_glsl("shader.glsl")?;

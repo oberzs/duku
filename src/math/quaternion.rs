@@ -11,7 +11,7 @@ use std::ops::MulAssign;
 ///
 /// Used for rotating vectors
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let vector = Vector3::UP;
@@ -54,7 +54,7 @@ impl Quaternion {
 
     /// Create quaternion to rotate towards direction
     ///
-    /// Note: `global_up` is used as a guide to try aligning to
+    /// `global_up` is used as a guide to try aligning to
     pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
         let m = Matrix4::look_rotation(dir, global_up);
         Self::from(m)

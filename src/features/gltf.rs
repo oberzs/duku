@@ -45,7 +45,7 @@ impl Duku {
 
     /// Create a model from GLTF bytes
     ///
-    /// Note: `root` is used for relative file path loading
+    /// `root` is used for relative file path loading
     pub fn create_model_gltf_bytes(&mut self, bytes: &[u8], root: &str) -> Result<Handle<Model>> {
         let gltf = Gltf::from_slice(bytes).map_err(|_| Error::InvalidGltf)?;
 

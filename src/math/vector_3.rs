@@ -15,13 +15,13 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use super::Vector2;
-use crate::renderer::Color;
+use crate::color::Rgbf;
 
 /// 3-component Vector.
 ///
 /// Used for 3D sizing and positioning.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let point_1 = Vector3::new(-10.0, -10.0, -10.0);
@@ -92,9 +92,9 @@ impl Vector3 {
 
     /// Calculate the angle between 2 vectors
     ///
-    /// Note: resulting angle is in degrees
+    /// Resulting angle is in degrees
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let up = Vector3::UP;
@@ -162,9 +162,9 @@ impl From<(Vector2, f32)> for Vector3 {
     }
 }
 
-impl From<Color> for Vector3 {
-    fn from(c: Color) -> Self {
-        Self::from(c.to_rgb_norm())
+impl From<Rgbf> for Vector3 {
+    fn from(c: Rgbf) -> Self {
+        Self::from([c.r, c.g, c.b])
     }
 }
 

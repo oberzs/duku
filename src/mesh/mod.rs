@@ -8,11 +8,10 @@ use std::iter;
 
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
+use crate::color::Rgbf;
 use crate::device::Device;
 use crate::math::Vector2;
 use crate::math::Vector3;
-use crate::math::Vector4;
-use crate::renderer::Color;
 use crate::vk;
 
 pub(crate) use vertex::Vertex;
@@ -22,7 +21,7 @@ pub use model::ModelNode;
 
 /// Shape collection for rendering
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// // setup a triangle
@@ -47,7 +46,7 @@ pub struct Mesh {
     /// vertex tangent directions
     pub tangents: Vec<Vector3>,
     /// vertex colors
-    pub colors: Vec<Color>,
+    pub colors: Vec<Rgbf>,
     /// vertex texture indices
     pub textures: Vec<u32>,
     /// vertex indices
@@ -68,7 +67,7 @@ impl Mesh {
             uvs: vec![Vector2::default(); 1],
             normals: vec![Vector3::default(); 1],
             tangents: vec![Vector3::default(); 1],
-            colors: vec![Color::WHITE; 1],
+            colors: vec![Rgbf::gray(1.0); 1],
             textures: vec![0; 1],
             indices: vec![0; 3],
             index_count: 3,
@@ -114,7 +113,7 @@ impl Mesh {
     /// smoothing the values to achieve smooth
     /// shading.
     ///
-    /// Note: calls [calculate_tangents](crate::mesh::Mesh::calculate_tangents)
+    /// Calls [calculate_tangents](crate::mesh::Mesh::calculate_tangents)
     /// automatically
     pub fn calculate_normals(&mut self) {
         self.normals = vec![Vector3::default(); self.vertices.len()];
@@ -199,14 +198,14 @@ impl Mesh {
                     .iter()
                     .chain(iter::repeat(&Vector3::default())),
             )
-            .zip(self.colors.iter().chain(iter::repeat(&Color::WHITE)))
+            .zip(self.colors.iter().chain(iter::repeat(&Rgbf::gray(1.0))))
             .zip(self.textures.iter().chain(iter::repeat(&0)))
             .map(|(((((pos, uv), normal), tangent), col), tex)| Vertex {
                 in_local_position: *pos,
                 in_normal: *normal,
                 in_tangent: *tangent,
                 in_uv: *uv,
-                in_color: Vector4::from(*col),
+                in_color: (*col).into(),
                 in_texture: *tex,
             })
             .collect();

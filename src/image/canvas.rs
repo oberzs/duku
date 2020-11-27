@@ -24,7 +24,7 @@ use crate::vk;
 /// Similar to rendering to the window, but not showing
 /// it on-screen.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let canvas = duku.create_canvas(400, 400)?;

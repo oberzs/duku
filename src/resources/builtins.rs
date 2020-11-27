@@ -123,7 +123,7 @@ impl Builtins {
         // materials
         let white_material = {
             let mut mat = Material::new(device, uniforms)?;
-            mat.albedo_color([255, 255, 255]);
+            mat.albedo_color([1.0, 1.0, 1.0]);
             mat.albedo_texture(white_texture.clone());
             mat.normal_texture(blue_texture.clone());
             mat.update();

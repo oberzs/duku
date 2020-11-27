@@ -12,7 +12,7 @@ use crate::resources::Handle;
 ///
 /// Makes it easier to render complex scenes
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let model = duku.create_model_gltf("house.gltf")?;

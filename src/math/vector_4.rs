@@ -15,7 +15,7 @@ use std::ops::SubAssign;
 
 use super::Vector2;
 use super::Vector3;
-use crate::renderer::Color;
+use crate::color::Rgbf;
 
 /// 4-component Vector.
 ///
@@ -89,15 +89,15 @@ impl<N: Into<f32> + Copy> From<[N; 4]> for Vector4 {
     }
 }
 
-impl From<Color> for Vector4 {
-    fn from(c: Color) -> Self {
-        Self::from(c.to_rgba_norm())
-    }
-}
-
 impl From<(Vector3, f32)> for Vector4 {
     fn from(v: (Vector3, f32)) -> Self {
         Self::new(v.0.x, v.0.y, v.0.z, v.1)
+    }
+}
+
+impl From<Rgbf> for Vector4 {
+    fn from(c: Rgbf) -> Self {
+        Self::new(c.r, c.g, c.b, c.a)
     }
 }
 
