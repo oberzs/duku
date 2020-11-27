@@ -40,6 +40,8 @@ pub struct Target {
     pub(crate) builtins: Builtins,
 
     // meshes
+    /// the color used for tinting meshes
+    pub tint_color: Rgbf,
     pub(crate) shader: Option<Handle<Shader>>,
     pub(crate) material: Option<Handle<Material>>,
     pub(crate) mesh_orders: Vec<ShaderOrder>,
@@ -148,6 +150,7 @@ pub(crate) struct MaterialOrder {
 pub(crate) struct MeshOrder {
     pub(crate) mesh: Handle<Mesh>,
     pub(crate) local_to_world: Matrix4,
+    pub(crate) tint_color: Rgbf,
     pub(crate) shadows: bool,
     pub(crate) sampler_index: u32,
 }
@@ -201,6 +204,7 @@ impl Target {
             cache: vec![],
             shape_mode: ShapeMode::Corner,
             clear_color: Rgbf::gray(0.0),
+            tint_color: Rgbf::gray(1.0),
             text_color: Rgbf::gray(1.0),
             line_color: Rgbf::gray(1.0),
             shape_color: Rgbf::gray(1.0),
@@ -315,6 +319,7 @@ impl Target {
                 mesh: mesh.clone(),
                 local_to_world: Matrix4::from(self.transform),
                 shadows: self.shadows,
+                tint_color: self.tint_color,
                 sampler_index: self.sampler_index(),
             },
         );
@@ -331,6 +336,7 @@ impl Target {
             MeshOrder {
                 mesh: mesh.clone(),
                 local_to_world: Matrix4::from(self.transform),
+                tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: 0,
             },
@@ -357,6 +363,7 @@ impl Target {
             MeshOrder {
                 mesh: self.builtins.cube_mesh.clone(),
                 local_to_world: Matrix4::from(self.transform),
+                tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -383,6 +390,7 @@ impl Target {
             MeshOrder {
                 mesh: self.builtins.ico_sphere_mesh.clone(),
                 local_to_world: Matrix4::from(self.transform),
+                tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -409,6 +417,7 @@ impl Target {
             MeshOrder {
                 mesh: self.builtins.uv_sphere_mesh.clone(),
                 local_to_world: Matrix4::from(self.transform),
+                tint_color: self.tint_color,
                 shadows: self.shadows,
                 sampler_index: self.sampler_index(),
             },
@@ -434,6 +443,7 @@ impl Target {
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
                 local_to_world: Matrix4::identity(),
+                tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: self.sampler_index(),
             },
@@ -451,6 +461,7 @@ impl Target {
             MeshOrder {
                 mesh: self.builtins.surface_mesh.clone(),
                 local_to_world: Matrix4::identity(),
+                tint_color: self.tint_color,
                 shadows: false,
                 sampler_index: self.sampler_index(),
             },

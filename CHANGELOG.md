@@ -10,6 +10,7 @@
 - Added `window` to default features.
 - Added more conversions to `VectorN`.
 - Added color gradients.
+- Added per-mesh tinting.
 
 ### Changed
 

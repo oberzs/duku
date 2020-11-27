@@ -70,7 +70,7 @@ void fragment() {
     vec4 met_rough_tex = tex(int(material.b.b), in_uv);
     float ambient_occlusion = tex(int(material.b.a), in_uv).r;
     vec3 emissive = tex(int(material.c.g), in_uv).rgb * material.d.rgb;
-    vec3 albedo = material.a.rgb * albedo_tex.rgb;
+    vec3 albedo = material.a.rgb * albedo_tex.rgb * object.tint_color;
     float metalness = material.b.r * met_rough_tex.b;
     float roughness = material.b.g * met_rough_tex.g;
 
