@@ -40,7 +40,7 @@ pub(crate) struct ShaderWorld {
     pub(crate) ambient_color: Vec3,
     pub(crate) shadow_pcf: f32,
     pub(crate) skybox_index: u32,
-    pub(crate) max_white_point: f32,
+    pub(crate) exposure: f32,
 }
 
 #[derive(Copy, Clone)]
@@ -129,7 +129,7 @@ impl Uniforms {
             vk::DescriptorSetLayoutBinding {
                 binding: 1,
                 descriptor_type: vk::DESCRIPTOR_TYPE_SAMPLER,
-                descriptor_count: 2 * 3 * 2,
+                descriptor_count: 2 * 3,
                 stage_flags: vk::SHADER_STAGE_FRAGMENT_BIT,
                 p_immutable_samplers: ptr::null(),
             },
@@ -209,9 +209,7 @@ impl Uniforms {
         let mut samplers = vec![];
         for filter in &[Filter::Linear, Filter::Nearest] {
             for wrap in &[Wrap::Repeat, Wrap::ClampBorder, Wrap::ClampEdge] {
-                for mipmaps in &[true, false] {
-                    samplers.push(Sampler::new(device, *wrap, *filter, *mipmaps, anisotropy));
-                }
+                samplers.push(Sampler::new(device, *wrap, *filter, anisotropy));
             }
         }
 

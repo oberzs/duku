@@ -280,6 +280,13 @@ impl Filter {
             Self::Nearest => vk::FILTER_NEAREST,
         }
     }
+
+    pub(crate) const fn mipmap(&self) -> vk::SamplerMipmapMode {
+        match *self {
+            Self::Linear => vk::SAMPLER_MIPMAP_MODE_LINEAR,
+            Self::Nearest => vk::SAMPLER_MIPMAP_MODE_NEAREST,
+        }
+    }
 }
 
 pub(crate) fn with_alpha(data: Vec<u8>) -> Vec<u8> {

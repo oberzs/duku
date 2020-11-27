@@ -119,6 +119,12 @@ impl MulAssign<Self> for Quat {
     }
 }
 
+impl From<[f32; 4]> for Quat {
+    fn from(a: [f32; 4]) -> Self {
+        Self::new(a[0], a[1], a[2], a[3])
+    }
+}
+
 impl From<Mat4> for Quat {
     fn from(m: Mat4) -> Self {
         let mut q = Self::default();

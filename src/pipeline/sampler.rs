@@ -15,21 +15,12 @@ pub(crate) struct Sampler {
 }
 
 impl Sampler {
-    pub(crate) fn new(
-        device: &Device,
-        wrap: Wrap,
-        filter: Filter,
-        mipmaps: bool,
-        anisotropy: f32,
-    ) -> Self {
-        let max_lod = if mipmaps { 16.0 } else { 0.0 };
-        let mipmap_mode = if mipmaps {
-            vk::SAMPLER_MIPMAP_MODE_LINEAR
+    pub(crate) fn new(device: &Device, wrap: Wrap, filter: Filter, anisotropy: f32) -> Self {
+        let anisotropy_enable = if anisotropy > 0.0 {
+            vk::TRUE
         } else {
-            vk::SAMPLER_MIPMAP_MODE_NEAREST
+            vk::FALSE
         };
-        let max_anisotropy = if mipmaps { anisotropy } else { 0.0 };
-        let anisotropy_enable = if mipmaps { vk::TRUE } else { vk::FALSE };
 
         let info = vk::SamplerCreateInfo {
             s_type: vk::STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -46,10 +37,10 @@ impl Sampler {
             min_lod: 0.0,
             border_color: vk::BORDER_COLOR_FLOAT_OPAQUE_WHITE,
             unnormalized_coordinates: vk::FALSE,
-            mipmap_mode,
+            mipmap_mode: filter.mipmap(),
             anisotropy_enable,
-            max_anisotropy,
-            max_lod,
+            max_anisotropy: anisotropy,
+            max_lod: 16.0,
         };
 
         let handle = device.create_sampler(&info);

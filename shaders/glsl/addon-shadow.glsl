@@ -17,19 +17,19 @@ float calc_bias(int index, float dot_nl) {
 
 float tex_sm(int index, vec3 uvc, float dot_nl) {
     float bias = calc_bias(index, dot_nl);
-    return texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy, uvc.z - bias));
+    return texture(sampler2DShadow(shadow_maps[index], sampler_lb), vec3(uvc.xy, uvc.z - bias));
 }
 
 float tex_pcfsm(int index, vec3 uvc, float dot_nl) {
     float depth = 0.0;
     float bias = calc_bias(index, dot_nl);
-    vec2 texel = 1.0 / textureSize(sampler2DShadow(shadow_maps[index], sampler_cm), 0);
+    vec2 texel = 1.0 / textureSize(sampler2DShadow(shadow_maps[index], sampler_lb), 0);
     float softness = 0.5 + world.shadow_pcf;
     for (float x = -softness; x <= softness; x += 1.0) {
         for (float y = -softness; y <= softness; y += 1.0) {
             vec2 offset = vec2(x, y) * texel;
             float bias_mult = (1.0 + 0.5 * length(vec2(x, y)));
-            depth += texture(sampler2DShadow(shadow_maps[index], sampler_cm), vec3(uvc.xy + offset, uvc.z - bias * bias_mult));
+            depth += texture(sampler2DShadow(shadow_maps[index], sampler_lb), vec3(uvc.xy + offset, uvc.z - bias * bias_mult));
         }
     }
     depth /= 16.0;

@@ -9,10 +9,10 @@ mod target;
 
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use shadow::ShadowRenderer;
+pub(crate) use target::CharOrder;
 pub(crate) use target::LineOrder;
 pub(crate) use target::ShaderOrder;
-pub(crate) use target::ShapeOrder;
-pub(crate) use target::TextOrder;
+pub(crate) use target::TriOrder;
 
 pub use camera::Camera;
 pub use camera::Projection;

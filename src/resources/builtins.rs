@@ -37,7 +37,7 @@ pub struct Builtins {
 
     // meshes
     pub surface_mesh: Handle<Mesh>,
-    pub quad_mesh: Handle<Mesh>,
+    pub plane_mesh: Handle<Mesh>,
     pub cube_mesh: Handle<Mesh>,
     pub ico_sphere_mesh: Handle<Mesh>,
     pub uv_sphere_mesh: Handle<Mesh>,
@@ -132,7 +132,7 @@ impl Builtins {
 
         // meshes
         let surface_mesh = resources.add_mesh(create_surface(device));
-        let quad_mesh = resources.add_mesh(create_quad(device));
+        let plane_mesh = resources.add_mesh(create_plane(device));
         let cube_mesh = resources.add_mesh(create_cube(device));
         let ico_sphere_mesh = resources.add_mesh(create_ico_sphere(device, 3));
         let uv_sphere_mesh = resources.add_mesh(create_uv_sphere(device, 30, 30));
@@ -239,7 +239,7 @@ impl Builtins {
             white_cubemap,
             white_material,
             surface_mesh,
-            quad_mesh,
+            plane_mesh,
             cube_mesh,
             ico_sphere_mesh,
             uv_sphere_mesh,
@@ -262,7 +262,7 @@ impl Builtins {
         self.white_cubemap.invalidate();
         self.white_material.invalidate();
         self.surface_mesh.invalidate();
-        self.quad_mesh.invalidate();
+        self.plane_mesh.invalidate();
         self.cube_mesh.invalidate();
         self.ico_sphere_mesh.invalidate();
         self.uv_sphere_mesh.invalidate();
@@ -300,14 +300,14 @@ fn create_surface(device: &Device) -> Mesh {
     mesh
 }
 
-fn create_quad(device: &Device) -> Mesh {
+fn create_plane(device: &Device) -> Mesh {
     let mut mesh = Mesh::new(device);
 
     mesh.vertices = vec![
-        Vec3::new(0.0, 1.0, 0.0),
-        Vec3::new(1.0, 1.0, 0.0),
-        Vec3::new(1.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(-0.5, 0.5, 0.0),
+        Vec3::new(0.5, 0.5, 0.0),
+        Vec3::new(0.5, -0.5, 0.0),
+        Vec3::new(-0.5, -0.5, 0.0),
     ];
     mesh.uvs = vec![
         Vec2::new(0.0, 1.0),

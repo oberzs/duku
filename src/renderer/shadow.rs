@@ -118,7 +118,7 @@ impl ShadowRenderer {
 
         // calculate shadow map splits
         for i in 1..=SHADOW_SPLIT_COUNT {
-            params.splits[i - 1] = pssm_split(view.near(), view.depth, i, target.shadow_split_coef);
+            params.splits[i - 1] = pssm_split(view.near(), view.depth, i, target.shadow_split);
         }
 
         // render shadow map for each split
@@ -165,7 +165,7 @@ impl ShadowRenderer {
                 shadow_splits: [0.0; 4],
                 shadow_texels: [0.0; 4],
                 shadow_diameters: [0.0; 4],
-                max_white_point: 0.0,
+                exposure: 0.0,
                 shadow_pcf: 0.0,
                 skybox_index: 0,
                 time: 0.0,
@@ -185,7 +185,7 @@ impl ShadowRenderer {
                             cmd.push_constants(
                                 uniforms,
                                 ShaderConstants {
-                                    local_to_world: order.local_to_world,
+                                    local_to_world: order.matrix,
                                     tint_color: Vec3::default(),
                                     sampler_index: order.sampler_index,
                                 },

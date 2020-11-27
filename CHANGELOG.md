@@ -15,6 +15,7 @@
 ### Changed
 
 - Changed color API.
+- Changed drawing API.
 - Made autosized `Camera` the default.
 - Renamed `Framebuffer` to `Canvas`.
 - Renamed drawing functions.
