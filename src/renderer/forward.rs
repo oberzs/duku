@@ -19,7 +19,7 @@ use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
 use crate::math::Matrix4;
-use crate::math::Transform;
+use crate::math::Quaternion;
 use crate::math::Vector2;
 use crate::math::Vector3;
 use crate::mesh::Mesh;
@@ -116,7 +116,7 @@ impl ForwardRenderer {
             shadow_diameters: shadow_params.diameters,
             world_to_shadow: shadow_params.world_to_shadow,
             time: self.start_time.elapsed().as_secs_f32(),
-            camera_position: camera.transform.position,
+            camera_position: camera.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
             ambient_color: target.ambient_color.into(),
@@ -190,43 +190,36 @@ impl ForwardRenderer {
         let mut uvs = vec![];
 
         for order in orders {
-            let mut transform = order.transform;
-            let quat = transform.rotation;
-            let start_x = transform.position.x;
-            transform.scale *= order.size as f32;
+            let mut offset = Vector3::default();
+            let scale = Vector3::uniform(order.size as f32);
 
             for c in order.text.chars() {
                 // handle whitespace
                 if c == ' ' {
-                    transform.position.x += transform.scale.x / 3.0;
+                    offset.x += scale.x / 3.0;
                     continue;
                 }
 
                 if c == '\n' {
-                    transform.position.x = start_x;
-                    transform.position.y -= transform.scale.y;
+                    offset.x = 0.0;
+                    offset.y -= scale.y;
                     continue;
                 }
 
                 let data = order.font.char_data(c);
-                let mut local_transform = transform;
-                local_transform.position.x += data.x_offset * transform.scale.x;
-                local_transform.position.y -= data.y_offset * transform.scale.y;
+                let mut local_offset = offset;
+                local_offset.x += data.x_offset * scale.x;
+                local_offset.y -= data.y_offset * scale.y;
 
-                let pos1 = local_transform.position;
-                let pos2 = pos1
-                    + Vector3::new(
-                        data.width * transform.scale.x,
-                        -data.height * transform.scale.y,
-                        0.0,
-                    );
+                let pos1 = local_offset;
+                let pos2 = pos1 + Vector3::new(data.width * scale.x, -data.height * scale.y, 0.0);
 
                 let o = vertices.len() as u32;
                 vertices.extend(&[
-                    quat * Vector3::new(pos1.x, pos1.y, pos1.z),
-                    quat * Vector3::new(pos2.x, pos1.y, pos1.z),
-                    quat * Vector3::new(pos2.x, pos2.y, pos1.z),
-                    quat * Vector3::new(pos1.x, pos2.y, pos1.z),
+                    order.matrix * Vector3::new(pos1.x, pos1.y, pos1.z),
+                    order.matrix * Vector3::new(pos2.x, pos1.y, pos1.z),
+                    order.matrix * Vector3::new(pos2.x, pos2.y, pos1.z),
+                    order.matrix * Vector3::new(pos1.x, pos2.y, pos1.z),
                 ]);
                 uvs.extend(&[
                     Vector2::new(data.uvs.x, data.uvs.y),
@@ -238,7 +231,7 @@ impl ForwardRenderer {
                 textures.extend(&[order.font.texture().shader_index(); 4]);
                 indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
 
-                transform.position.x += data.advance * transform.scale.x;
+                offset.x += data.advance * scale.x;
             }
         }
 
@@ -285,9 +278,8 @@ impl ForwardRenderer {
         let mut indices = vec![];
 
         for order in orders {
-            let matrix = Matrix4::from(order.transform);
-            let point_1 = matrix * order.points[0];
-            let point_2 = matrix * order.points[1];
+            let point_1 = order.matrix * order.points[0];
+            let point_2 = order.matrix * order.points[1];
 
             let o = vertices.len() as u32;
             vertices.extend(&[point_1, point_2]);
@@ -348,7 +340,7 @@ impl ForwardRenderer {
                 Ordering::Equal
             } else {
                 // sort by z. might need to change in the future
-                if a.transform.position.z > b.transform.position.z {
+                if a.points[0].z > b.points[0].z {
                     Ordering::Less
                 } else {
                     Ordering::Greater
@@ -358,10 +350,9 @@ impl ForwardRenderer {
 
         // add opaque shapes
         for order in orders {
-            let matrix = Matrix4::from(order.transform);
-            let point_1 = matrix * order.points[0];
-            let point_2 = matrix * order.points[1];
-            let point_3 = matrix * order.points[2];
+            let point_1 = order.matrix * order.points[0];
+            let point_2 = order.matrix * order.points[1];
+            let point_3 = order.matrix * order.points[2];
 
             let texture = order.texture.shader_index();
             let sampler = order.sampler_index;
@@ -467,11 +458,11 @@ fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins:
     cmd.bind_shader(&builtins.skybox_shader);
     cmd.bind_mesh(&builtins.cube_mesh);
 
-    let local_to_world = Matrix4::from(Transform {
-        position: camera.transform.position,
-        scale: Vector3::uniform(camera.depth * 2.0 - 0.1),
-        ..Default::default()
-    });
+    let local_to_world = Matrix4::compose(
+        camera.position,
+        Vector3::uniform(camera.depth * 2.0 - 0.1),
+        Quaternion::default(),
+    );
     cmd.push_constants(
         uniforms,
         ShaderConstants {

@@ -7,7 +7,6 @@ use std::ops::Mul;
 use std::ops::MulAssign;
 
 use super::Quaternion;
-use super::Transform;
 use super::Vector3;
 use super::Vector4;
 
@@ -251,6 +250,13 @@ impl Matrix4 {
         )
     }
 
+    /// Create matrix from position, scale and rotation
+    ///
+    /// Oposite of [decompose](crate::math::Matrix4::decompose).
+    pub fn compose(position: Vector3, scale: Vector3, rotation: Quaternion) -> Self {
+        Matrix4::translation(position) * Matrix4::from(rotation) * Matrix4::scale(scale)
+    }
+
     /// Calculate the inverse of the matrix
     pub fn inverse(&self) -> Option<Self> {
         let m: [f32; 16] = (*self).into();
@@ -345,6 +351,28 @@ impl Matrix4 {
         det = 1.0 / det;
 
         Some(Self::from(inv) * det)
+    }
+
+    /// Separate translation, scale and rotation parts of the matrix
+    pub fn decompose(mut self) -> (Vector3, Vector3, Quaternion) {
+        let position = Vector3::new(self.w.x, self.w.y, self.w.z);
+
+        let determinant = self.x.x * (self.y.y * self.z.z - self.z.y * self.y.z)
+            - self.y.x * (self.x.y * self.z.z - self.z.y * self.x.z)
+            + self.z.x * (self.x.y * self.y.z - self.y.y * self.x.z);
+
+        let sx = self.x.xyz().length();
+        let sy = self.y.xyz().length();
+        let sz = self.z.xyz().length() * determinant.signum();
+        let scale = Vector3::new(sx, sy, sz);
+
+        self.x *= 1.0 / sx;
+        self.y *= 1.0 / sy;
+        self.z *= 1.0 / sz;
+
+        let rotation = Quaternion::from(self);
+
+        (position, scale, rotation)
     }
 
     /// Access the X row of the matrix
@@ -445,12 +473,6 @@ impl MulAssign<Self> for Matrix4 {
     }
 }
 
-impl From<Transform> for Matrix4 {
-    fn from(t: Transform) -> Self {
-        Matrix4::translation(t.position) * Matrix4::from(t.rotation) * Matrix4::scale(t.scale)
-    }
-}
-
 impl From<Quaternion> for Matrix4 {
     fn from(q: Quaternion) -> Self {
         let angle = 2.0 * q.w.acos().to_degrees();
@@ -488,7 +510,6 @@ impl Into<[f32; 16]> for Matrix4 {
 mod test {
     use super::Matrix4;
     use super::Quaternion;
-    use super::Transform;
     use super::Vector3;
     use super::Vector4;
 
@@ -688,10 +709,14 @@ mod test {
     }
 
     #[test]
-    fn from_transform() {
-        let mut t = Transform::default();
-        t.move_by([1.0, 2.0, 3.0]);
-        assert_eq!(Matrix4::from(t), Matrix4::translation([1.0, 2.0, 3.0]));
+    fn compose() {
+        let position = Vector3::new(1.0, 2.0, 3.0);
+        let scale = Vector3::new(1.0, 1.0, 1.0);
+        let rotation = Quaternion::default();
+        assert_eq!(
+            Matrix4::compose(position, scale, rotation),
+            Matrix4::translation([1.0, 2.0, 3.0])
+        );
     }
 
     #[test]

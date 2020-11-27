@@ -411,28 +411,27 @@ impl Controller {
                 }
 
                 // control in flying mode
-                let transform = &mut camera.transform;
                 let final_speed = 5.0f32.powf(*move_speed) * delta_time;
                 let rotation_speed = 50.0 * delta_time;
 
                 // movement
                 if events.is_key_pressed(Key::W) {
-                    transform.move_forward(final_speed);
+                    camera.move_forward(final_speed);
                 }
                 if events.is_key_pressed(Key::S) {
-                    transform.move_back(final_speed);
+                    camera.move_back(final_speed);
                 }
                 if events.is_key_pressed(Key::A) {
-                    transform.move_left(final_speed);
+                    camera.move_left(final_speed);
                 }
                 if events.is_key_pressed(Key::D) {
-                    transform.move_right(final_speed);
+                    camera.move_right(final_speed);
                 }
                 if events.is_key_pressed(Key::Space) {
-                    transform.move_by(Vector3::UP * final_speed);
+                    camera.move_by(Vector3::UP * final_speed);
                 }
                 if events.is_key_pressed(Key::LShift) {
-                    transform.move_by(Vector3::DOWN * final_speed);
+                    camera.move_by(Vector3::DOWN * final_speed);
                 }
 
                 // rotation
@@ -453,7 +452,7 @@ impl Controller {
                     let pitch = Quaternion::euler_rotation(0.0, mouse_x, 0.0);
                     let roll = Quaternion::euler_rotation(mouse_y, 0.0, 0.0);
 
-                    transform.rotation = pitch * transform.rotation * roll;
+                    camera.rotation = pitch * camera.rotation * roll;
                 } else {
                     // toggle mouse grab if needed
                     if events.mouse_grab() {
@@ -471,7 +470,6 @@ impl Controller {
                 }
 
                 // control orbiting around pivot
-                let transform = &mut camera.transform;
                 let angle = 5.0f32.powf(*move_speed) * delta_time;
 
                 // mouse rotation
@@ -485,8 +483,12 @@ impl Controller {
                     let delta = events.mouse_delta();
                     let speed = 50.0 * delta_time;
 
-                    transform.move_around_point(*pivot, speed * delta.x, Vector3::UP);
-                    transform.move_around_point(*pivot, speed * delta.y, transform.right());
+                    camera.move_around_point(*pivot, speed * delta.x, Vector3::UP);
+                    camera.move_around_point(
+                        *pivot,
+                        speed * delta.y,
+                        camera.rotation.local_right(),
+                    );
                 } else {
                     // toggle mouse grab if needed
                     if events.mouse_grab() {
@@ -497,26 +499,26 @@ impl Controller {
 
                 // horizontal rotation
                 if events.is_key_pressed(Key::D) {
-                    transform.move_around_point(*pivot, -angle, Vector3::UP);
+                    camera.move_around_point(*pivot, -angle, Vector3::UP);
                 }
                 if events.is_key_pressed(Key::A) {
-                    transform.move_around_point(*pivot, angle, Vector3::UP);
+                    camera.move_around_point(*pivot, angle, Vector3::UP);
                 }
 
                 // vertical rotation
                 if events.is_key_pressed(Key::W) {
-                    transform.move_around_point(*pivot, angle, transform.right());
+                    camera.move_around_point(*pivot, angle, camera.rotation.local_right());
                 }
                 if events.is_key_pressed(Key::S) {
-                    transform.move_around_point(*pivot, -angle, transform.right());
+                    camera.move_around_point(*pivot, -angle, camera.rotation.local_right());
                 }
 
                 // zoom
                 let scroll = events.scroll_delta();
-                transform.move_forward(scroll.y * (*pivot - transform.position).length() * 0.05);
+                camera.move_forward(scroll.y * (*pivot - camera.position).length() * 0.05);
 
                 // look at pivot point
-                transform.look_at(*pivot);
+                camera.look_at(*pivot);
             }
         }
     }

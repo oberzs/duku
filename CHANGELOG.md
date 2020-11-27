@@ -23,3 +23,4 @@
 ### Removed
 
 - Removed `Duku::create_texture_color` function.
+- Removed `Transform` struct.
