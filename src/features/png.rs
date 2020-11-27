@@ -49,7 +49,7 @@ impl Texture {
 impl Duku {
     /// Create a texture from a PNG file
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
     pub fn create_texture_png(
         &mut self,
@@ -62,7 +62,7 @@ impl Duku {
 
     /// Create a texture from PNG bytes
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB is used.
     pub fn create_texture_png_bytes(
         &mut self,
@@ -82,7 +82,7 @@ impl Duku {
 
     /// Create a cubemap from PNG files
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB is used.
     pub fn create_cubemap_png(
         &mut self,
@@ -104,7 +104,7 @@ impl Duku {
 
     /// Create a cubemap from PNG bytes
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB is used.
     pub fn create_cubemap_png_bytes(
         &mut self,

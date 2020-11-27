@@ -17,7 +17,7 @@ use std::ops::SubAssign;
 ///
 /// Used for 2D sizing and positioning.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let point_1 = Vector2::new(-10.0, -10.0);
@@ -74,16 +74,16 @@ impl Vector2 {
     /// The normal vector is a vector perpendicular to
     /// the original.
     ///
-    /// Note: may not be unit length
+    /// May not be unit length
     pub fn normal(&self) -> Self {
         Vector2::new(-self.y, self.x)
     }
 
     /// Calculate the angle between 2 vectors
     ///
-    /// Note: resulting angle is in degrees
+    /// Resulting angle is in degrees
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let up = Vector2::UP;

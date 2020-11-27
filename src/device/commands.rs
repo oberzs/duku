@@ -11,6 +11,7 @@ use std::ptr;
 use std::slice;
 
 use super::Stats;
+use crate::color::Rgbf;
 use crate::image::Canvas;
 use crate::image::Image;
 use crate::image::ImageLayout;
@@ -137,7 +138,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn begin_render_pass(&self, canvas: &Canvas, clear: [f32; 4]) {
+    pub(crate) fn begin_render_pass(&self, canvas: &Canvas, clear: Rgbf) {
         // create clear values based on canvas image formats
         let clear_values: Vec<_> = canvas
             .attachments()
@@ -151,7 +152,9 @@ impl Commands {
                     }
                 } else {
                     vk::ClearValue {
-                        color: vk::ClearColorValue { float32: clear },
+                        color: vk::ClearColorValue {
+                            float32: clear.into(),
+                        },
                     }
                 }
             })

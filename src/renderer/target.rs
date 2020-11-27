@@ -3,8 +3,8 @@
 
 use std::f32::consts::PI;
 
-use super::Color;
 use super::Light;
+use crate::color::Rgbf;
 use crate::font::Font;
 use crate::image::Canvas;
 use crate::image::Cubemap;
@@ -27,12 +27,12 @@ use crate::resources::Handle;
 ///
 /// Records rendering commands and settings.
 /// Received from the [draw](crate::duku::Duku::draw) or
-/// [draw_on_window](crate::duku::Duku::draw_on_window)
+/// [draw_on_canvas](crate::duku::Duku::draw_on_canvas)
 /// functions.
 pub struct Target {
     // global
     /// the clear color of the canvas (background)
-    pub clear_color: Color,
+    pub clear_color: Rgbf,
     /// the current transform used when
     /// doing a render command
     pub transform: Transform,
@@ -60,22 +60,22 @@ pub struct Target {
     /// maximum white value for HDR tone mapping
     pub max_white_point: f32,
     /// the ambient color of the scene
-    pub ambient_color: Color,
+    pub ambient_color: Rgbf,
 
     // lines
     /// color used for lines
-    pub line_color: Color,
+    pub line_color: Rgbf,
     /// width used for non-debug lines
     pub line_width: f32,
     pub(crate) line_orders: Vec<LineOrder>,
 
     // shapes
     /// color used for shapes
-    pub shape_color: Color,
+    pub shape_color: Rgbf,
     /// shape positioning mode
     pub shape_mode: ShapeMode,
     /// color used for shape borders
-    pub border_color: Color,
+    pub border_color: Rgbf,
     /// border positioning mode
     pub border_mode: BorderMode,
     /// width used for shape borders
@@ -86,7 +86,7 @@ pub struct Target {
     /// font size used for text
     pub font_size: u32,
     /// color used for text
-    pub text_color: Color,
+    pub text_color: Rgbf,
     pub(crate) font: Option<Handle<Font>>,
     pub(crate) text_orders: Vec<TextOrder>,
 
@@ -154,20 +154,20 @@ pub(crate) struct MeshOrder {
 
 pub(crate) struct TextOrder {
     pub(crate) size: u32,
-    pub(crate) color: Color,
+    pub(crate) color: Rgbf,
     pub(crate) font: Handle<Font>,
     pub(crate) text: String,
     pub(crate) transform: Transform,
 }
 
 pub(crate) struct LineOrder {
-    pub(crate) color: Color,
+    pub(crate) color: Rgbf,
     pub(crate) points: [Vector3; 2],
     pub(crate) transform: Transform,
 }
 
 pub(crate) struct ShapeOrder {
-    pub(crate) color: Color,
+    pub(crate) color: Rgbf,
     pub(crate) points: [Vector3; 3],
     pub(crate) transform: Transform,
     pub(crate) texture: Handle<Texture>,
@@ -178,10 +178,10 @@ pub(crate) struct ShapeOrder {
 
 struct Cache {
     transform: Transform,
-    line_color: Color,
-    shape_color: Color,
-    text_color: Color,
-    border_color: Color,
+    line_color: Rgbf,
+    shape_color: Rgbf,
+    text_color: Rgbf,
+    border_color: Rgbf,
     font_size: u32,
     border_width: f32,
     line_width: f32,
@@ -200,18 +200,18 @@ impl Target {
             shape_orders: vec![],
             cache: vec![],
             shape_mode: ShapeMode::Corner,
-            clear_color: Color::BLACK,
-            text_color: Color::WHITE,
-            line_color: Color::WHITE,
-            shape_color: Color::WHITE,
-            border_color: Color::GRAY,
-            ambient_color: Color::WHITE,
+            clear_color: Rgbf::gray(0.0),
+            text_color: Rgbf::gray(1.0),
+            line_color: Rgbf::gray(1.0),
+            shape_color: Rgbf::gray(1.0),
+            border_color: Rgbf::gray(0.5),
+            ambient_color: Rgbf::gray(1.0),
             transform: Transform::default(),
             lights: [
-                Light::main([-1.0, -1.0, 1.0], Color::WHITE, 1.0),
-                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
-                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
-                Light::point([0.0, 0.0, 0.0], Color::WHITE, 0.0),
+                Light::main([-1.0, -1.0, 1.0], Rgbf::gray(1.0), 1.0),
+                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
+                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
+                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
             ],
             texture_filter: Filter::Linear,
             texture_wrap: Wrap::Repeat,
@@ -472,9 +472,9 @@ impl Target {
 
             // set color
             self.line_color = match x {
-                0 => Color::rgba(0, 0, 255, 150),
-                _ if x % 10 == 0 => Color::rgba(255, 255, 255, 150),
-                _ => Color::rgba(255, 255, 255, 50),
+                0 => Rgbf::blue(1.0).alpha(0.7),
+                _ if x % 10 == 0 => Rgbf::gray(1.0).alpha(0.7),
+                _ => Rgbf::gray(1.0).alpha(0.4),
             };
 
             self.draw_line_debug([xx, 0.0, z_min], [xx, 0.0, z_max]);
@@ -487,9 +487,9 @@ impl Target {
 
             // set color
             self.line_color = match z {
-                0 => Color::rgba(255, 0, 0, 150),
-                _ if z % 10 == 0 => Color::rgba(255, 255, 255, 150),
-                _ => Color::rgba(255, 255, 255, 50),
+                0 => Rgbf::red(1.0).alpha(0.7),
+                _ if z % 10 == 0 => Rgbf::gray(1.0).alpha(0.7),
+                _ => Rgbf::gray(1.0).alpha(0.4),
             };
 
             self.draw_line_debug([x_min, 0.0, zz], [x_max, 0.0, zz]);
@@ -541,7 +541,7 @@ impl Target {
             return;
         }
 
-        let opaque = self.shape_color.a == 255;
+        let opaque = (self.shape_color.a - 1.0).abs() < f32::EPSILON;
 
         // triangulate points
         let first = Vector3::from((points[0], 0.0));
@@ -645,7 +645,7 @@ impl Target {
     pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vector2>) {
         let s = Vector3::from((size.into(), 0.0));
 
-        let opaque = texture.opaque() && self.shape_color.a == 255;
+        let opaque = texture.opaque() && (self.shape_color.a - 1.0).abs() < f32::EPSILON;
 
         self.push();
 
@@ -739,7 +739,7 @@ impl Target {
         path: &[Vector2],
         closed: bool,
         border_mode: BorderMode,
-        color: Color,
+        color: Rgbf,
         width: f32,
     ) {
         // generate normals

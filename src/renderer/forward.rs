@@ -119,7 +119,7 @@ impl ForwardRenderer {
             camera_position: camera.transform.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
-            ambient_color: Vector3::from(target.ambient_color),
+            ambient_color: target.ambient_color.into(),
             max_white_point: target.max_white_point,
             skybox_index,
             lights,
@@ -127,7 +127,7 @@ impl ForwardRenderer {
         }]);
 
         // do render pass
-        cmd.begin_render_pass(canvas, target.clear_color.to_rgba_norm());
+        cmd.begin_render_pass(canvas, target.clear_color);
         cmd.set_view(canvas.width, canvas.height);
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 

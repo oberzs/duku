@@ -2,7 +2,6 @@
 // https://github.com/oberzs/duku
 
 mod camera;
-mod color;
 mod forward;
 mod light;
 mod shadow;
@@ -17,7 +16,6 @@ pub(crate) use target::TextOrder;
 
 pub use camera::Camera;
 pub use camera::Projection;
-pub use color::Color;
 pub use light::Light;
 pub use light::LightType;
 pub use target::BorderMode;

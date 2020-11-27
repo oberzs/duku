@@ -6,12 +6,12 @@ use super::ShaderMaterial;
 use super::Uniforms;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
+use crate::color::Rgbf;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
 use crate::image::Texture;
 use crate::math::Vector4;
-use crate::renderer::Color;
 use crate::resources::Handle;
 
 /// Material parameters to use in a shader.
@@ -71,9 +71,9 @@ impl Material {
     }
 
     /// Set albedo color for the PBR and other various shaders
-    pub fn albedo_color(&mut self, color: impl Into<Color>) {
+    pub fn albedo_color(&mut self, color: impl Into<Rgbf>) {
         let temp = self.a[3];
-        self.a = Vector4::from(color.into().to_rgba_norm());
+        self.a = color.into().into();
         self.a[3] = temp;
     }
 
@@ -99,9 +99,9 @@ impl Material {
     }
 
     /// Set emissive color for the PBR shader
-    pub fn emissive(&mut self, color: impl Into<Color>) {
+    pub fn emissive(&mut self, color: impl Into<Rgbf>) {
         let temp = self.d[3];
-        self.d = Vector4::from(color.into().to_rgba_norm());
+        self.d = color.into().into();
         self.d[3] = temp;
     }
 
@@ -127,17 +127,6 @@ impl Material {
     pub fn emissive_texture(&mut self, texture: Handle<Texture>) {
         self.c[1] = texture.shader_index() as f32;
         self.textures.push(texture);
-    }
-
-    /// Fix material's color space when it is
-    /// incorrectly exported for example with some `gltf`
-    /// models
-    pub fn fix_albedo_color_space(&mut self) {
-        let old = Color::from([self.a[0], self.a[1], self.a[2]]);
-        let new = old.to_linear();
-        let temp = self.a[3];
-        self.a = Vector4::from(new.to_rgba_norm());
-        self.a[3] = temp;
     }
 
     pub(crate) fn update(&mut self) {

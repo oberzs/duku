@@ -15,9 +15,9 @@ use super::Vector4;
 ///
 /// Used for transforming vectors
 ///
-/// Note: column-major
+/// Is column-major
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let vector = Vector3::new(2.0, 0.0, 0.0);
@@ -87,7 +87,7 @@ impl Matrix4 {
     ///
     /// Translation matrix moves vectors around
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let vector = Vector3::new(2.0, 0.0, 0.0);
@@ -108,7 +108,7 @@ impl Matrix4 {
     ///
     /// Scale matrix scales vectors
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let vector = Vector3::new(2.0, 0.0, 0.0);
@@ -189,7 +189,7 @@ impl Matrix4 {
 
     /// Create rotation matrix to rotate towards direction
     ///
-    /// Note: `up` is used as a guide to try aligning to
+    /// `up` is used as a guide to try aligning to
     pub fn look_rotation(forward: impl Into<Vector3>, up: impl Into<Vector3>) -> Self {
         let f = forward.into().unit();
         let r = up.into().unit().cross(f).unit();
@@ -212,7 +212,7 @@ impl Matrix4 {
 
     /// Create perspective projection matrix
     ///
-    /// Note: this is a left-handed matrix
+    /// This is a left-handed matrix
     /// with Z in range of [0; 1]
     pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
         let half_fov = (fov / 2.0).to_radians();
@@ -235,7 +235,7 @@ impl Matrix4 {
 
     /// Create orthographic projection matrix
     ///
-    /// Note: this is a left-handed matrix
+    /// This is a left-handed matrix
     /// with Z in range of [0; 1]
     pub fn orthographic(width: f32, height: f32, near: f32, far: f32) -> Self {
         let x_scale = 2.0 / width;

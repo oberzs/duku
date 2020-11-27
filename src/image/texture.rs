@@ -7,17 +7,17 @@ use super::Image;
 use super::ImageLayout;
 use super::Mips;
 use crate::buffer::Buffer;
+use crate::color::Rgb;
 use crate::device::Device;
 use crate::error::Result;
 use crate::pipeline::Uniforms;
-use crate::renderer::Color;
 
 /// Image that can be sampled in a shader.
 ///
 /// These can be created from bytes of color data, PNGs
 /// JPEGs, etc.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
@@ -98,49 +98,52 @@ impl Texture {
 
     /// Set a pixel in the image to a specific color.
     ///
-    /// Note: works only if the texture has no mips.
+    /// Works only if the texture has no mips.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let tex = duku.texture_mut(&texture);
     /// tex.set_pixel(0, 0, Color::SKY_BLUE);
     /// tex.set_pixel(1, 1, Color::RED);
     /// ```
-    pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: impl Into<Rgb>) {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
         let width = self.image.width();
         let height = self.image.height();
         if x < width && y < height {
             let i = (x + y * width) as usize * 4;
-            self.data[i] = color.r;
-            self.data[i + 1] = color.g;
-            self.data[i + 2] = color.b;
-            self.data[i + 3] = color.a;
 
-            if color.a < 255 {
+            let rgb = color.into();
+
+            self.data[i] = rgb.r;
+            self.data[i + 1] = rgb.g;
+            self.data[i + 2] = rgb.b;
+            self.data[i + 3] = rgb.a;
+
+            if rgb.a < 255 {
                 self.opaque = false;
             }
         }
     }
 
     /// Get a pixel's color in the image
-    pub fn pixel(&self, x: u32, y: u32) -> Color {
+    pub fn pixel(&self, x: u32, y: u32) -> Rgb {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 
         let width = self.image.width();
         let height = self.image.height();
         if x < width && y < height {
             let i = (x + y * width) as usize * 4;
-            Color::rgba(
-                self.data[i],
-                self.data[i + 1],
-                self.data[i + 2],
-                self.data[i + 3],
-            )
+            Rgb {
+                r: self.data[i],
+                g: self.data[i + 1],
+                b: self.data[i + 2],
+                a: self.data[i + 3],
+            }
         } else {
-            Color::BLACK
+            Rgb::gray(0)
         }
     }
 

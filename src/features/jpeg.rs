@@ -27,7 +27,7 @@ pub(crate) struct JpegData {
 impl Duku {
     /// Create a texture from a JPEG file
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
     pub fn create_texture_jpeg(
         &mut self,
@@ -40,7 +40,7 @@ impl Duku {
 
     /// Create a texture from JPEG bytes
     ///
-    /// Note: if `options` is `None`, then
+    /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
     pub fn create_texture_jpeg_bytes(
         &mut self,

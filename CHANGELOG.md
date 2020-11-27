@@ -9,10 +9,16 @@
 - Added a `Duku` creation convenience function.
 - Added `window` to default features.
 - Added more conversions to `VectorN`.
+- Added color gradients.
 
 ### Changed
 
+- Changed color API.
 - Made autosized `Camera` the default.
 - Renamed `Framebuffer` to `Canvas`.
 - Renamed drawing functions.
 - Added `Option` to some creation functions.
+
+### Removed
+
+- Removed `Duku::create_texture_color` function.

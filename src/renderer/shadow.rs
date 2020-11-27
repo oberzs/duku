@@ -9,6 +9,7 @@ use super::LightType;
 use super::Target;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
+use crate::color::Rgbf;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
@@ -172,7 +173,7 @@ impl ShadowRenderer {
 
             // do render pass
             let texture = &target_resources.shadow_maps[i];
-            cmd.begin_render_pass(texture, [1.0, 1.0, 1.0, 1.0]);
+            cmd.begin_render_pass(texture, Rgbf::gray(1.0));
             cmd.set_view(texture.width, texture.height);
             cmd.bind_descriptor(uniforms, target_resources.world_descriptors[i]);
             cmd.bind_shader(&self.shader);

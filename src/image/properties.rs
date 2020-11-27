@@ -7,7 +7,7 @@ use crate::vk;
 ///
 /// Defines how textures should be sampled in the shader.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
@@ -28,7 +28,7 @@ pub enum ColorSpace {
 /// Rendering with mips is faster to sample, but they
 /// require more memory.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
@@ -49,7 +49,7 @@ pub enum Mips {
 /// Higher settings greatly impact performance, also
 /// require more memory for bigger canvases.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let duku = Duku::builder().msaa(Msaa::X4).build()?;
@@ -68,7 +68,7 @@ pub enum Msaa {
 
 /// Filtering mode for texture sampling.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// duku.draw_on_window(None, |target| {
@@ -88,7 +88,7 @@ pub enum Filter {
 /// Defines what should be returned when sampling outside
 /// of the texture's UV range
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// duku.draw_on_window(None, |target| {

@@ -26,7 +26,6 @@ use crate::pipeline::Shader;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
 use crate::renderer::Camera;
-use crate::renderer::Color;
 use crate::renderer::ForwardRenderer;
 use crate::renderer::Projection;
 use crate::renderer::Target;
@@ -45,7 +44,7 @@ const FPS_SAMPLE_COUNT: usize = 64;
 ///
 /// Entrypoint into the duku API
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let (mut duku, window) = Duku::windowed(500, 500)?;
@@ -109,10 +108,10 @@ impl Duku {
 
     /// Start rendering on the window canvas
     ///
-    /// Note: if `camera` is `None` a default camera that fits the
+    /// If `camera` is `None` a default camera that fits the
     /// canvas will be used.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// duku.draw(None, |target| {
@@ -139,10 +138,10 @@ impl Duku {
 
     /// Start rendering on a specified canvas
     ///
-    /// Note: if `camera` is `None` a default camera that fits the
+    /// If `camera` is `None` a default camera that fits the
     /// canvas will be used.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```ignore
     /// let canvas = duku.create_canvas(640, 360)?;
@@ -191,22 +190,6 @@ impl Duku {
             mips,
         )?;
         Ok(self.resources.add_texture(tex))
-    }
-
-    /// Create a texture from colors
-    pub fn create_texture_color(
-        &mut self,
-        pixels: &[Color],
-        width: u32,
-        height: u32,
-    ) -> Result<Handle<Texture>> {
-        let data: Vec<_> = pixels
-            .iter()
-            .map(|p| vec![p.r, p.g, p.b, p.a])
-            .flatten()
-            .collect();
-
-        self.create_texture(data, Format::Rgba, Mips::Zero, width, height)
     }
 
     /// Create a cubemap from byte data
@@ -275,8 +258,8 @@ impl Duku {
         mat.metalness_roughness_texture(self.builtins.white_texture.clone());
         mat.ambient_occlusion_texture(self.builtins.white_texture.clone());
         mat.emissive_texture(self.builtins.black_texture.clone());
-        mat.albedo_color([255, 255, 255]);
-        mat.emissive([0, 0, 0]);
+        mat.albedo_color([1.0, 1.0, 1.0]);
+        mat.emissive([0.0, 0.0, 0.0]);
         mat.metalness(0.0);
         mat.roughness(0.0);
         mat.update();
@@ -335,7 +318,7 @@ impl Duku {
 
     /// Create a shader
     ///
-    /// Note: this should be used only if building a
+    /// This should be used only if building a
     /// 3rd party shader compiler
     pub fn create_shader_bytes(
         &mut self,

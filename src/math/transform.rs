@@ -10,7 +10,7 @@ use super::Vector3;
 /// Used as an easier way to operate with transformations
 /// than matrices
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let transform = Transform {
