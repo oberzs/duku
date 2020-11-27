@@ -15,9 +15,9 @@ use crate::error::Result;
 use crate::image::Filter;
 use crate::image::ImageLayout;
 use crate::image::Wrap;
-use crate::math::Matrix4;
-use crate::math::Vector3;
-use crate::math::Vector4;
+use crate::math::Mat4;
+use crate::math::Vec3;
+use crate::math::Vec4;
 use crate::vk;
 
 const MAX_WORLDS: u32 = 100;
@@ -28,16 +28,16 @@ const MAX_CUBEMAPS: u32 = 100;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct ShaderWorld {
-    pub(crate) world_to_view: Matrix4,
-    pub(crate) view_to_clip: Matrix4,
+    pub(crate) world_to_view: Mat4,
+    pub(crate) view_to_clip: Mat4,
     pub(crate) lights: [ShaderLight; 4],
-    pub(crate) camera_position: Vector3,
+    pub(crate) camera_position: Vec3,
     pub(crate) time: f32,
-    pub(crate) world_to_shadow: [Matrix4; 4],
+    pub(crate) world_to_shadow: [Mat4; 4],
     pub(crate) shadow_splits: [f32; 4],
     pub(crate) shadow_texels: [f32; 4],
     pub(crate) shadow_diameters: [f32; 4],
-    pub(crate) ambient_color: Vector3,
+    pub(crate) ambient_color: Vec3,
     pub(crate) shadow_pcf: f32,
     pub(crate) skybox_index: u32,
     pub(crate) max_white_point: f32,
@@ -46,29 +46,29 @@ pub(crate) struct ShaderWorld {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct ShaderMaterial {
-    pub(crate) a: Vector4,
-    pub(crate) b: Vector4,
-    pub(crate) c: Vector4,
-    pub(crate) d: Vector4,
-    pub(crate) e: Vector4,
-    pub(crate) f: Vector4,
-    pub(crate) g: Vector4,
-    pub(crate) h: Vector4,
+    pub(crate) a: Vec4,
+    pub(crate) b: Vec4,
+    pub(crate) c: Vec4,
+    pub(crate) d: Vec4,
+    pub(crate) e: Vec4,
+    pub(crate) f: Vec4,
+    pub(crate) g: Vec4,
+    pub(crate) h: Vec4,
 }
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub(crate) struct ShaderLight {
-    pub(crate) coords: Vector3,
+    pub(crate) coords: Vec3,
     pub(crate) light_type: i32,
-    pub(crate) color: Vector4,
+    pub(crate) color: Vec4,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub(crate) struct ShaderConstants {
-    pub(crate) local_to_world: Matrix4,
-    pub(crate) tint_color: Vector3,
+    pub(crate) local_to_world: Mat4,
+    pub(crate) tint_color: Vec3,
     pub(crate) sampler_index: u32,
 }
 

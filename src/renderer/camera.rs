@@ -1,9 +1,9 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-use crate::math::Matrix4;
-use crate::math::Quaternion;
-use crate::math::Vector3;
+use crate::math::Mat4;
+use crate::math::Quat;
+use crate::math::Vec3;
 
 /// The view into a scene.
 ///
@@ -19,11 +19,11 @@ use crate::math::Vector3;
 #[derive(Debug, Clone)]
 pub struct Camera {
     /// the position of the camera
-    pub position: Vector3,
+    pub position: Vec3,
     /// the scale of the camera
-    pub scale: Vector3,
+    pub scale: Vec3,
     /// the rotation of the camera
-    pub rotation: Quaternion,
+    pub rotation: Quat,
     /// field of view for perspective cameras
     pub fov: u32,
     /// the width of the camera, if width is `None`
@@ -53,9 +53,9 @@ impl Camera {
     /// Create a perspective camera that is autosized
     pub fn perspective(fov: u32) -> Self {
         Self {
-            position: Vector3::default(),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::default(),
+            position: Vec3::default(),
+            scale: Vec3::uniform(1.0),
+            rotation: Quat::default(),
             projection: Projection::Perspective,
             depth: 100.0,
             width: None,
@@ -67,9 +67,9 @@ impl Camera {
     /// Create a orthographic camera that is autosized
     pub fn orthographic() -> Self {
         Self {
-            position: Vector3::default(),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::default(),
+            position: Vec3::default(),
+            scale: Vec3::uniform(1.0),
+            rotation: Quat::default(),
             projection: Projection::Orthographic,
             depth: 100.0,
             fov: 0,
@@ -81,9 +81,9 @@ impl Camera {
     /// Create a perspective camera
     pub fn perspective_sized(width: f32, height: f32, fov: u32) -> Self {
         Self {
-            position: Vector3::default(),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::default(),
+            position: Vec3::default(),
+            scale: Vec3::uniform(1.0),
+            rotation: Quat::default(),
             projection: Projection::Perspective,
             depth: 100.0,
             width: Some(width),
@@ -95,9 +95,9 @@ impl Camera {
     /// Create a orthographic camera
     pub fn orthographic_sized(width: f32, height: f32) -> Self {
         Self {
-            position: Vector3::default(),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::default(),
+            position: Vec3::default(),
+            scale: Vec3::uniform(1.0),
+            rotation: Quat::default(),
             projection: Projection::Orthographic,
             depth: 100.0,
             width: Some(width),
@@ -109,9 +109,9 @@ impl Camera {
     /// Create a new camera
     pub fn new(projection: Projection, width: f32, height: f32, depth: f32, fov: u32) -> Self {
         Self {
-            position: Vector3::default(),
-            scale: Vector3::uniform(1.0),
-            rotation: Quaternion::default(),
+            position: Vec3::default(),
+            scale: Vec3::uniform(1.0),
+            rotation: Quat::default(),
             height: Some(height),
             width: Some(width),
             fov,
@@ -136,16 +136,16 @@ impl Camera {
         if enable {
             let height = (self.fov as f32).to_radians().tan() * self.depth;
             let zoom = height / self.height.expect("bad code");
-            self.scale = Vector3::uniform(zoom);
+            self.scale = Vec3::uniform(zoom);
         } else {
-            self.scale = Vector3::new(1.0, 1.0, 1.0);
+            self.scale = Vec3::new(1.0, 1.0, 1.0);
         }
     }
 
     /// Move camera by specified amount
     ///
     /// This moves using global directions
-    pub fn move_by(&mut self, amount: impl Into<Vector3>) {
+    pub fn move_by(&mut self, amount: impl Into<Vec3>) {
         self.position += amount.into();
     }
 
@@ -193,51 +193,42 @@ impl Camera {
 
     /// Move camera rotating it around
     /// some point around an axis
-    pub fn move_around_point(
-        &mut self,
-        point: impl Into<Vector3>,
-        angle: f32,
-        axis: impl Into<Vector3>,
-    ) {
+    pub fn move_around_point(&mut self, point: impl Into<Vec3>, angle: f32, axis: impl Into<Vec3>) {
         let point = point.into();
-        let rotation = Quaternion::axis_rotation(axis, angle);
+        let rotation = Quat::axis_rotation(axis, angle);
         self.position -= point;
         self.position = rotation * self.position;
         self.position += point;
     }
 
     /// Rotate the camera to look in specific direction
-    pub fn look_dir(&mut self, dir: impl Into<Vector3>) {
+    pub fn look_dir(&mut self, dir: impl Into<Vec3>) {
         let dir = dir.into().unit();
-        let up = if dir == Vector3::UP {
-            Vector3::FORWARD
+        let up = if dir == Vec3::UP {
+            Vec3::FORWARD
         } else {
-            Vector3::UP
+            Vec3::UP
         };
-        self.rotation = Quaternion::look_rotation(dir, up);
+        self.rotation = Quat::look_rotation(dir, up);
     }
 
     /// Rotate the camera to look at specific position
-    pub fn look_at(&mut self, pos: impl Into<Vector3>) {
+    pub fn look_at(&mut self, pos: impl Into<Vec3>) {
         self.look_dir(pos.into() - self.position);
     }
 
-    pub(crate) fn world_to_view(&self) -> Matrix4 {
-        Matrix4::scale(self.scale)
-            * Matrix4::from(self.rotation)
-            * Matrix4::translation(-self.position)
+    pub(crate) fn world_to_view(&self) -> Mat4 {
+        Mat4::scale(self.scale) * Mat4::from(self.rotation) * Mat4::translation(-self.position)
     }
 
-    pub(crate) fn view_to_clip(&self) -> Matrix4 {
+    pub(crate) fn view_to_clip(&self) -> Mat4 {
         let width = self.width.expect("bad code");
         let height = self.height.expect("bad code");
 
         match self.projection {
-            Projection::Orthographic => {
-                Matrix4::orthographic(width, height, self.near(), self.depth)
-            }
+            Projection::Orthographic => Mat4::orthographic(width, height, self.near(), self.depth),
             Projection::Perspective => {
-                Matrix4::perspective(self.fov as f32, width / height, self.near(), self.depth)
+                Mat4::perspective(self.fov as f32, width / height, self.near(), self.depth)
             }
         }
     }

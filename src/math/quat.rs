@@ -1,8 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-use super::Matrix4;
-use super::Vector3;
+use super::Mat4;
+use super::Vec3;
 
 use std::ops::Mul;
 use std::ops::MulAssign;
@@ -14,12 +14,12 @@ use std::ops::MulAssign;
 /// # Examples
 ///
 /// ```ignore
-/// let vector = Vector3::UP;
-/// let quat = Quaternion::euler_rotation(0.0, 0.0, 90.0);
-/// assert_eq!(quat * vector, Vector3::RIGHT);
+/// let vector = Vec3::UP;
+/// let quat = Quat::euler_rotation(0.0, 0.0, 90.0);
+/// assert_eq!(quat * vector, Vec3::RIGHT);
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Quaternion {
+pub struct Quat {
     /// the X component
     pub x: f32,
     /// the Y component
@@ -30,7 +30,7 @@ pub struct Quaternion {
     pub w: f32,
 }
 
-impl Quaternion {
+impl Quat {
     /// Create quaternion
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
@@ -40,67 +40,67 @@ impl Quaternion {
     ///
     /// This rotation's yaw, pitch and roll are z, y and x
     pub fn euler_rotation(x: f32, y: f32, z: f32) -> Self {
-        let m = Matrix4::euler_rotation(x, y, z);
+        let m = Mat4::euler_rotation(x, y, z);
         Self::from(m)
     }
 
     /// Create quaternion around axis
     ///
     /// This rotates vectors around axis by the angle
-    pub fn axis_rotation(axis: impl Into<Vector3>, angle: f32) -> Self {
-        let m = Matrix4::axis_rotation(axis, angle);
+    pub fn axis_rotation(axis: impl Into<Vec3>, angle: f32) -> Self {
+        let m = Mat4::axis_rotation(axis, angle);
         Self::from(m)
     }
 
     /// Create quaternion to rotate towards direction
     ///
     /// `global_up` is used as a guide to try aligning to
-    pub fn look_rotation(dir: impl Into<Vector3>, global_up: impl Into<Vector3>) -> Self {
-        let m = Matrix4::look_rotation(dir, global_up);
+    pub fn look_rotation(dir: impl Into<Vec3>, global_up: impl Into<Vec3>) -> Self {
+        let m = Mat4::look_rotation(dir, global_up);
         Self::from(m)
     }
 
     /// local up direction for transformation
-    pub fn local_up(self) -> Vector3 {
-        self.inverse() * Vector3::UP
+    pub fn local_up(self) -> Vec3 {
+        self.inverse() * Vec3::UP
     }
 
     /// local forward direction for transformation
-    pub fn local_forward(self) -> Vector3 {
-        self.inverse() * Vector3::FORWARD
+    pub fn local_forward(self) -> Vec3 {
+        self.inverse() * Vec3::FORWARD
     }
 
     /// local right direction for transformation
-    pub fn local_right(self) -> Vector3 {
-        self.inverse() * Vector3::RIGHT
+    pub fn local_right(self) -> Vec3 {
+        self.inverse() * Vec3::RIGHT
     }
 
     /// Calculate the inverse rotation
-    pub fn inverse(self) -> Quaternion {
+    pub fn inverse(self) -> Quat {
         let mut result = self;
         result.w = -result.w;
         result
     }
 }
 
-impl Default for Quaternion {
+impl Default for Quat {
     fn default() -> Self {
         Self::new(0.0, 0.0, 0.0, 1.0)
     }
 }
 
-impl Mul<Vector3> for Quaternion {
-    type Output = Vector3;
+impl Mul<Vec3> for Quat {
+    type Output = Vec3;
 
-    fn mul(self, rhs: Vector3) -> Vector3 {
-        let u = Vector3::new(self.x, self.y, self.z);
+    fn mul(self, rhs: Vec3) -> Vec3 {
+        let u = Vec3::new(self.x, self.y, self.z);
         let s = self.w;
 
         u * 2.0 * u.dot(rhs) + rhs * (s * s - u.dot(u)) + u.cross(rhs) * 2.0 * s
     }
 }
 
-impl Mul<Self> for Quaternion {
+impl Mul<Self> for Quat {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -113,14 +113,14 @@ impl Mul<Self> for Quaternion {
     }
 }
 
-impl MulAssign<Self> for Quaternion {
+impl MulAssign<Self> for Quat {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl From<Matrix4> for Quaternion {
-    fn from(m: Matrix4) -> Self {
+impl From<Mat4> for Quat {
+    fn from(m: Mat4) -> Self {
         let mut q = Self::default();
         let trace = m.x.x + m.y.y + m.z.z;
         if trace > 0.0 {
@@ -154,19 +154,19 @@ impl From<Matrix4> for Quaternion {
 
 #[cfg(test)]
 mod test {
-    use super::Matrix4;
-    use super::Quaternion;
-    use super::Vector3;
+    use super::Mat4;
+    use super::Quat;
+    use super::Vec3;
 
     #[test]
     fn default() {
-        assert_eq!(Quaternion::default(), Quaternion::new(0.0, 0.0, 0.0, 1.0));
+        assert_eq!(Quat::default(), Quat::new(0.0, 0.0, 0.0, 1.0));
     }
 
     #[test]
     fn axis_rotation() {
-        let q = Quaternion::axis_rotation([1.0, 0.0, 0.0], 180.0);
-        let v = Vector3::new(1.0, 1.0, 1.0);
+        let q = Quat::axis_rotation([1.0, 0.0, 0.0], 180.0);
+        let v = Vec3::new(1.0, 1.0, 1.0);
         let r = q * v;
         assert_eq_delta!(r.x, 1.0);
         assert_eq_delta!(r.y, -1.0);
@@ -175,8 +175,8 @@ mod test {
 
     #[test]
     fn look_rotation_x() {
-        let q = Quaternion::look_rotation([1.0, 0.0, 0.0], Vector3::UP);
-        let r = q * Vector3::FORWARD;
+        let q = Quat::look_rotation([1.0, 0.0, 0.0], Vec3::UP);
+        let r = q * Vec3::FORWARD;
         assert_eq_delta!(r.x, -1.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, 0.0);
@@ -184,8 +184,8 @@ mod test {
 
     #[test]
     fn look_rotation_y() {
-        let q = Quaternion::look_rotation([0.0, 1.0, 0.0], Vector3::FORWARD);
-        let r = q * Vector3::FORWARD;
+        let q = Quat::look_rotation([0.0, 1.0, 0.0], Vec3::FORWARD);
+        let r = q * Vec3::FORWARD;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
         assert_eq_delta!(r.z, 0.0);
@@ -193,8 +193,8 @@ mod test {
 
     #[test]
     fn look_rotation_z() {
-        let q = Quaternion::look_rotation([0.0, 0.0, -1.0], Vector3::UP);
-        let r = q * Vector3::FORWARD;
+        let q = Quat::look_rotation([0.0, 0.0, -1.0], Vec3::UP);
+        let r = q * Vec3::FORWARD;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, -1.0);
@@ -202,8 +202,8 @@ mod test {
 
     #[test]
     fn euler_rotation_x() {
-        let q = Quaternion::euler_rotation(90.0, 0.0, 0.0);
-        let v = Vector3::new(0.0, 0.0, 1.0);
+        let q = Quat::euler_rotation(90.0, 0.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, 1.0);
         let r = q * v;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, -1.0);
@@ -212,8 +212,8 @@ mod test {
 
     #[test]
     fn euler_rotation_y() {
-        let q = Quaternion::euler_rotation(0.0, 90.0, 0.0);
-        let v = Vector3::new(0.0, 0.0, 1.0);
+        let q = Quat::euler_rotation(0.0, 90.0, 0.0);
+        let v = Vec3::new(0.0, 0.0, 1.0);
         let r = q * v;
         assert_eq_delta!(r.x, 1.0);
         assert_eq_delta!(r.y, 0.0);
@@ -222,8 +222,8 @@ mod test {
 
     #[test]
     fn euler_rotation_z() {
-        let q = Quaternion::euler_rotation(0.0, 0.0, 90.0);
-        let v = Vector3::new(1.0, 0.0, 0.0);
+        let q = Quat::euler_rotation(0.0, 0.0, 90.0);
+        let v = Vec3::new(1.0, 0.0, 0.0);
         let r = q * v;
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
@@ -232,8 +232,8 @@ mod test {
 
     #[test]
     fn quat_to_mat_to_quat() {
-        let q1 = Quaternion::euler_rotation(0.0, 45.0, 45.0);
-        let q2 = Quaternion::from(Matrix4::from(q1));
+        let q1 = Quat::euler_rotation(0.0, 45.0, 45.0);
+        let q2 = Quat::from(Mat4::from(q1));
 
         assert_eq_delta!(q1.x, q2.x);
         assert_eq_delta!(q1.y, q2.y);
@@ -243,8 +243,8 @@ mod test {
 
     #[test]
     fn mul_vector() {
-        let q = Quaternion::euler_rotation(0.0, 0.0, 90.0);
-        let v = Vector3::RIGHT;
+        let q = Quat::euler_rotation(0.0, 0.0, 90.0);
+        let v = Vec3::RIGHT;
         let r = q * v;
 
         assert_eq_delta!(r.x, 0.0);
@@ -253,9 +253,8 @@ mod test {
     }
     #[test]
     fn mul_self() {
-        let q1 = Quaternion::euler_rotation(0.0, 0.0, 180.0);
-        let q2 =
-            Quaternion::euler_rotation(0.0, 0.0, 90.0) * Quaternion::euler_rotation(0.0, 0.0, 90.0);
+        let q1 = Quat::euler_rotation(0.0, 0.0, 180.0);
+        let q2 = Quat::euler_rotation(0.0, 0.0, 90.0) * Quat::euler_rotation(0.0, 0.0, 90.0);
 
         assert_eq_delta!(q1.x, q2.x);
         assert_eq_delta!(q1.y, q2.y);

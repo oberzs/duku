@@ -15,8 +15,8 @@ use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Msaa;
 use crate::image::Texture;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::mesh::Mesh;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
@@ -282,16 +282,16 @@ fn create_surface(device: &Device) -> Mesh {
     let mut mesh = Mesh::new(device);
 
     mesh.vertices = vec![
-        Vector3::new(-1.0, 1.0, 0.0),
-        Vector3::new(1.0, 1.0, 0.0),
-        Vector3::new(1.0, -1.0, 0.0),
-        Vector3::new(-1.0, -1.0, 0.0),
+        Vec3::new(-1.0, 1.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(1.0, -1.0, 0.0),
+        Vec3::new(-1.0, -1.0, 0.0),
     ];
     mesh.uvs = vec![
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
+        Vec2::new(0.0, 0.0),
+        Vec2::new(1.0, 0.0),
+        Vec2::new(1.0, 1.0),
+        Vec2::new(0.0, 1.0),
     ];
     mesh.indices = vec![0, 1, 2, 0, 2, 3];
 
@@ -304,16 +304,16 @@ fn create_quad(device: &Device) -> Mesh {
     let mut mesh = Mesh::new(device);
 
     mesh.vertices = vec![
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(1.0, 1.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 1.0, 0.0),
+        Vec3::new(1.0, 1.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 0.0),
     ];
     mesh.uvs = vec![
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 0.0),
+        Vec2::new(0.0, 1.0),
+        Vec2::new(1.0, 1.0),
+        Vec2::new(1.0, 0.0),
+        Vec2::new(0.0, 0.0),
     ];
     mesh.indices = vec![0, 1, 2, 0, 2, 3];
 
@@ -381,15 +381,15 @@ pub(crate) fn create_cube(device: &Device) -> Mesh {
     mesh
 }
 
-fn create_rectangle<V: Into<Vector3>>(device: &Device, p1: V, p2: V, p3: V, p4: V) -> Mesh {
+fn create_rectangle<V: Into<Vec3>>(device: &Device, p1: V, p2: V, p3: V, p4: V) -> Mesh {
     let mut mesh = Mesh::new(device);
 
     mesh.vertices = vec![p1.into(), p2.into(), p3.into(), p4.into()];
     mesh.uvs = vec![
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
+        Vec2::new(0.0, 0.0),
+        Vec2::new(1.0, 0.0),
+        Vec2::new(1.0, 1.0),
+        Vec2::new(0.0, 1.0),
     ];
     mesh.indices = vec![0, 1, 2, 0, 2, 3];
     mesh.calculate_normals();
@@ -405,20 +405,20 @@ pub(crate) fn create_ico_sphere(device: &Device, detail_level: u32) -> Mesh {
     // 12 icosahedron vertices
     let t = (1.0 + 5.0f32.sqrt()) / 2.0;
 
-    vertices.push(Vector3::new(-1.0, t, 0.0).unit() * 0.5);
-    vertices.push(Vector3::new(1.0, t, 0.0).unit() * 0.5);
-    vertices.push(Vector3::new(-1.0, -t, 0.0).unit() * 0.5);
-    vertices.push(Vector3::new(1.0, -t, 0.0).unit() * 0.5);
+    vertices.push(Vec3::new(-1.0, t, 0.0).unit() * 0.5);
+    vertices.push(Vec3::new(1.0, t, 0.0).unit() * 0.5);
+    vertices.push(Vec3::new(-1.0, -t, 0.0).unit() * 0.5);
+    vertices.push(Vec3::new(1.0, -t, 0.0).unit() * 0.5);
 
-    vertices.push(Vector3::new(0.0, -1.0, t).unit() * 0.5);
-    vertices.push(Vector3::new(0.0, 1.0, t).unit() * 0.5);
-    vertices.push(Vector3::new(0.0, -1.0, -t).unit() * 0.5);
-    vertices.push(Vector3::new(0.0, 1.0, -t).unit() * 0.5);
+    vertices.push(Vec3::new(0.0, -1.0, t).unit() * 0.5);
+    vertices.push(Vec3::new(0.0, 1.0, t).unit() * 0.5);
+    vertices.push(Vec3::new(0.0, -1.0, -t).unit() * 0.5);
+    vertices.push(Vec3::new(0.0, 1.0, -t).unit() * 0.5);
 
-    vertices.push(Vector3::new(t, 0.0, -1.0).unit() * 0.5);
-    vertices.push(Vector3::new(t, 0.0, 1.0).unit() * 0.5);
-    vertices.push(Vector3::new(-t, 0.0, -1.0).unit() * 0.5);
-    vertices.push(Vector3::new(-t, 0.0, 1.0).unit() * 0.5);
+    vertices.push(Vec3::new(t, 0.0, -1.0).unit() * 0.5);
+    vertices.push(Vec3::new(t, 0.0, 1.0).unit() * 0.5);
+    vertices.push(Vec3::new(-t, 0.0, -1.0).unit() * 0.5);
+    vertices.push(Vec3::new(-t, 0.0, 1.0).unit() * 0.5);
 
     // 20 icosahedron triangles
     indices.extend(&[0, 11, 5]);
@@ -467,7 +467,7 @@ pub(crate) fn create_ico_sphere(device: &Device, detail_level: u32) -> Mesh {
     for vertex in &vertices {
         let u = vertex.z.atan2(vertex.x) / (2.0 * PI);
         let v = (vertex.y.asin() / PI) + 0.5;
-        uvs.push(Vector2::new(u, v));
+        uvs.push(Vec2::new(u, v));
     }
 
     let mut mesh = Mesh::new(device);
@@ -483,7 +483,7 @@ pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) 
     let mut vertices = vec![];
     let mut indices = vec![];
 
-    vertices.push(Vector3::new(0.0, 1.0, 0.0) * 0.5);
+    vertices.push(Vec3::new(0.0, 1.0, 0.0) * 0.5);
     for j in 0..(parallels - 1) {
         let polar = PI * (j + 1) as f32 / parallels as f32;
         let sp = polar.sin();
@@ -497,10 +497,10 @@ pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) 
             let y = cp;
             let z = sp * sa;
 
-            vertices.push(Vector3::new(x, y, z) * 0.5);
+            vertices.push(Vec3::new(x, y, z) * 0.5);
         }
     }
-    vertices.push(Vector3::new(0.0, -1.0, 0.0) * 0.5);
+    vertices.push(Vec3::new(0.0, -1.0, 0.0) * 0.5);
 
     for i in 0..meridians {
         let a = i + 1;
@@ -530,7 +530,7 @@ pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) 
     for vertex in &vertices {
         let u = vertex.z.atan2(vertex.x) / (2.0 * PI);
         let v = (vertex.y.asin() / PI) + 0.5;
-        uvs.push(Vector2::new(u, v));
+        uvs.push(Vec2::new(u, v));
     }
 
     let mut mesh = Mesh::new(device);
@@ -543,7 +543,7 @@ pub(crate) fn create_uv_sphere(device: &Device, meridians: u32, parallels: u32) 
 }
 
 fn get_middle_point(
-    vertices: &mut Vec<Vector3>,
+    vertices: &mut Vec<Vec3>,
     p1: u32,
     p2: u32,
     midpoints: &mut HashMap<(u32, u32), u32>,

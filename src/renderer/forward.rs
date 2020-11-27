@@ -18,10 +18,10 @@ use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
-use crate::math::Matrix4;
-use crate::math::Quaternion;
-use crate::math::Vector2;
-use crate::math::Vector3;
+use crate::math::Mat4;
+use crate::math::Quat;
+use crate::math::Vec2;
+use crate::math::Vec3;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
 use crate::pipeline::ShaderConstants;
@@ -190,8 +190,8 @@ impl ForwardRenderer {
         let mut uvs = vec![];
 
         for order in orders {
-            let mut offset = Vector3::default();
-            let scale = Vector3::uniform(order.size as f32);
+            let mut offset = Vec3::default();
+            let scale = Vec3::uniform(order.size as f32);
 
             for c in order.text.chars() {
                 // handle whitespace
@@ -212,20 +212,20 @@ impl ForwardRenderer {
                 local_offset.y -= data.y_offset * scale.y;
 
                 let pos1 = local_offset;
-                let pos2 = pos1 + Vector3::new(data.width * scale.x, -data.height * scale.y, 0.0);
+                let pos2 = pos1 + Vec3::new(data.width * scale.x, -data.height * scale.y, 0.0);
 
                 let o = vertices.len() as u32;
                 vertices.extend(&[
-                    order.matrix * Vector3::new(pos1.x, pos1.y, pos1.z),
-                    order.matrix * Vector3::new(pos2.x, pos1.y, pos1.z),
-                    order.matrix * Vector3::new(pos2.x, pos2.y, pos1.z),
-                    order.matrix * Vector3::new(pos1.x, pos2.y, pos1.z),
+                    order.matrix * Vec3::new(pos1.x, pos1.y, pos1.z),
+                    order.matrix * Vec3::new(pos2.x, pos1.y, pos1.z),
+                    order.matrix * Vec3::new(pos2.x, pos2.y, pos1.z),
+                    order.matrix * Vec3::new(pos1.x, pos2.y, pos1.z),
                 ]);
                 uvs.extend(&[
-                    Vector2::new(data.uvs.x, data.uvs.y),
-                    Vector2::new(data.uvs.z, data.uvs.y),
-                    Vector2::new(data.uvs.z, data.uvs.w),
-                    Vector2::new(data.uvs.x, data.uvs.w),
+                    Vec2::new(data.uvs.x, data.uvs.y),
+                    Vec2::new(data.uvs.z, data.uvs.y),
+                    Vec2::new(data.uvs.z, data.uvs.w),
+                    Vec2::new(data.uvs.x, data.uvs.w),
                 ]);
                 colors.extend(&[order.color; 4]);
                 textures.extend(&[order.font.texture().shader_index(); 4]);
@@ -255,8 +255,8 @@ impl ForwardRenderer {
         cmd.push_constants(
             uniforms,
             ShaderConstants {
-                local_to_world: Matrix4::identity(),
-                tint_color: Vector3::default(),
+                local_to_world: Mat4::identity(),
+                tint_color: Vec3::default(),
                 sampler_index: 7,
             },
         );
@@ -304,8 +304,8 @@ impl ForwardRenderer {
         cmd.push_constants(
             uniforms,
             ShaderConstants {
-                local_to_world: Matrix4::identity(),
-                tint_color: Vector3::default(),
+                local_to_world: Mat4::identity(),
+                tint_color: Vec3::default(),
                 sampler_index: 0,
             },
         );
@@ -365,7 +365,7 @@ impl ForwardRenderer {
             indices.extend(&[o, o + 1, o + 2]);
 
             // use normal to store sampler
-            normals.extend(&[Vector3::new(sampler as f32, 0.0, 0.0); 3]);
+            normals.extend(&[Vec3::new(sampler as f32, 0.0, 0.0); 3]);
         }
 
         // bind shader
@@ -388,8 +388,8 @@ impl ForwardRenderer {
         cmd.push_constants(
             uniforms,
             ShaderConstants {
-                local_to_world: Matrix4::identity(),
-                tint_color: Vector3::default(),
+                local_to_world: Mat4::identity(),
+                tint_color: Vec3::default(),
                 sampler_index: 0,
             },
         );
@@ -458,16 +458,16 @@ fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins:
     cmd.bind_shader(&builtins.skybox_shader);
     cmd.bind_mesh(&builtins.cube_mesh);
 
-    let local_to_world = Matrix4::compose(
+    let local_to_world = Mat4::compose(
         camera.position,
-        Vector3::uniform(camera.depth * 2.0 - 0.1),
-        Quaternion::default(),
+        Vec3::uniform(camera.depth * 2.0 - 0.1),
+        Quat::default(),
     );
     cmd.push_constants(
         uniforms,
         ShaderConstants {
             sampler_index: 0,
-            tint_color: Vector3::default(),
+            tint_color: Vec3::default(),
             local_to_world,
         },
     );

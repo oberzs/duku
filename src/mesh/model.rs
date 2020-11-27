@@ -4,7 +4,7 @@
 use std::slice::Iter;
 
 use super::Mesh;
-use crate::math::Matrix4;
+use crate::math::Mat4;
 use crate::pipeline::Material;
 use crate::resources::Handle;
 
@@ -35,7 +35,7 @@ pub struct ModelNode {
     /// materials for this node
     pub materials: Vec<Handle<Material>>,
     /// transform in matrix form for this node
-    pub matrix: Matrix4,
+    pub matrix: Mat4,
     /// child nodes
     pub children: Vec<Self>,
 }
