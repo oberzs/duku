@@ -186,6 +186,7 @@ impl ShadowRenderer {
                                 uniforms,
                                 ShaderConstants {
                                     local_to_world: order.local_to_world,
+                                    tint_color: Vector3::default(),
                                     sampler_index: order.sampler_index,
                                 },
                             );

@@ -153,6 +153,7 @@ been passed from the Rust code.
 | Name             | Type   | Description                                                 |
 | ---------------- | ------ | ----------------------------------------------------------- |
 | `local_to_world` | `mat4` | matrix that transforms coordinate from local to world space |
+| `tint_color`     | `vec3` | color used to tint objects                                  |
 | `sampler_index`  | `uint` | sampler index                                               |
 
 The `Light` type is defines like this:

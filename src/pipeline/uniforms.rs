@@ -68,6 +68,7 @@ pub(crate) struct ShaderLight {
 #[repr(C)]
 pub(crate) struct ShaderConstants {
     pub(crate) local_to_world: Matrix4,
+    pub(crate) tint_color: Vector3,
     pub(crate) sampler_index: u32,
 }
 

@@ -38,6 +38,7 @@ layout(set = 1, binding = 0) uniform Material {
 
 layout(push_constant) uniform Constants {
     mat4 local_to_world;
+    vec3 tint_color;
     uint sampler_index;
 } object;
 
