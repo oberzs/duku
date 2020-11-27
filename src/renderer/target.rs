@@ -4,7 +4,7 @@
 use std::f32::consts::PI;
 
 use super::Light;
-use crate::color::Rgbf;
+use crate::color::Rgb;
 use crate::font::Font;
 use crate::image::Canvas;
 use crate::image::Cubemap;
@@ -12,6 +12,7 @@ use crate::image::Filter;
 use crate::image::Texture;
 use crate::image::Wrap;
 use crate::math::Mat4;
+use crate::math::Quat;
 use crate::math::Vec2;
 use crate::math::Vec3;
 use crate::mesh::Mesh;
@@ -29,74 +30,45 @@ use crate::resources::Handle;
 /// [draw_on_canvas](crate::duku::Duku::draw_on_canvas)
 /// functions.
 pub struct Target {
-    // global
-    /// the clear color of the canvas (background)
-    pub clear_color: Rgbf,
-    /// the current matrix
-    pub matrix: Mat4,
+    // colors
+    fill: Rgb,
+    stroke: Rgb,
+    tint: Rgb,
+    pub(crate) background: Rgb,
+
+    // shadows
+    shadows: bool,
+    pub(crate) shadow_depth: f32,
+    pub(crate) shadow_split: f32,
+    pub(crate) shadow_softness: Pcf,
+
+    // lights
+    light_index: usize,
+    pub(crate) lights: [Light; 4],
+    pub(crate) ambient: Rgb,
+    pub(crate) exposure: f32,
+
+    // other
+    matrix: Mat4,
+    stroke_weight: f32,
+    font_size: u32,
+    shape_mode: ShapeMode,
+    border_mode: BorderMode,
+    filter: Filter,
+    wrap: Wrap,
+
+    // resources
+    shader: Option<Handle<Shader>>,
+    material: Option<Handle<Material>>,
+    font: Option<Handle<Font>>,
     pub(crate) skybox: Option<Handle<Cubemap>>,
     pub(crate) builtins: Builtins,
 
-    // meshes
-    /// the color used for tinting meshes
-    pub tint_color: Rgbf,
-    pub(crate) shader: Option<Handle<Shader>>,
-    pub(crate) material: Option<Handle<Material>>,
+    // orders
     pub(crate) mesh_orders: Vec<ShaderOrder>,
-
-    // shadows & lights
-    /// coefficient used to calculate shadow map splits (0 - 1).
-    /// use smaller number to achieve better shadow detail up close.
-    pub shadow_split_coef: f32,
-    /// maximum shadow distance in the scene.
-    /// the smaller the value, the better the shadow quality.
-    pub shadow_depth: f32,
-    /// setting for shadow softening
-    pub shadow_pcf: Pcf,
-    /// controlls whether to use the PBR shader
-    pub shadows: bool,
-    /// the lights used in the scene
-    pub lights: [Light; 4],
-    /// maximum white value for HDR tone mapping
-    pub max_white_point: f32,
-    /// the ambient color of the scene
-    pub ambient_color: Rgbf,
-
-    // lines
-    /// color used for lines
-    pub line_color: Rgbf,
-    /// width used for non-debug lines
-    pub line_width: f32,
     pub(crate) line_orders: Vec<LineOrder>,
-
-    // shapes
-    /// color used for shapes
-    pub shape_color: Rgbf,
-    /// shape positioning mode
-    pub shape_mode: ShapeMode,
-    /// color used for shape borders
-    pub border_color: Rgbf,
-    /// border positioning mode
-    pub border_mode: BorderMode,
-    /// width used for shape borders
-    pub border_width: f32,
-    pub(crate) shape_orders: Vec<ShapeOrder>,
-
-    // text
-    /// font size used for text
-    pub font_size: u32,
-    /// color used for text
-    pub text_color: Rgbf,
-    pub(crate) font: Option<Handle<Font>>,
-    pub(crate) text_orders: Vec<TextOrder>,
-
-    // textures
-    /// filter used for texture sampling
-    pub texture_filter: Filter,
-    /// wrap mode used for texture sampling
-    pub texture_wrap: Wrap,
-    /// whether to use mipmaps in texture sampling
-    pub texture_mipmaps: bool,
+    pub(crate) tri_orders: Vec<TriOrder>,
+    pub(crate) char_orders: Vec<CharOrder>,
 
     cache: Vec<Cache>,
 }
@@ -105,7 +77,13 @@ pub struct Target {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ShapeMode {
     /// position from bottom-left corner
-    Corner,
+    BottomLeft,
+    /// position from bottom-right corner
+    BottomRight,
+    /// position from top-left corner
+    TopLeft,
+    /// position from top-right corner
+    TopRight,
     /// position from center
     Center,
 }
@@ -120,8 +98,6 @@ pub enum BorderMode {
     /// pub border evenly on the inside
     /// and outside of shape
     Center,
-    /// disable borders for shapes
-    Disabled,
 }
 
 /// Shadow softening used when sampling.
@@ -147,604 +123,720 @@ pub(crate) struct MaterialOrder {
 
 pub(crate) struct MeshOrder {
     pub(crate) mesh: Handle<Mesh>,
-    pub(crate) local_to_world: Mat4,
-    pub(crate) tint_color: Rgbf,
+    pub(crate) matrix: Mat4,
+    pub(crate) color: Rgb,
     pub(crate) shadows: bool,
     pub(crate) sampler_index: u32,
 }
 
-pub(crate) struct TextOrder {
-    pub(crate) size: u32,
-    pub(crate) color: Rgbf,
-    pub(crate) font: Handle<Font>,
-    pub(crate) text: String,
-    pub(crate) matrix: Mat4,
+pub(crate) struct CharOrder {
+    pub(crate) points: [Vec3; 4],
+    pub(crate) uvs: [Vec2; 4],
+    pub(crate) color: Rgb,
+    pub(crate) texture: u32,
 }
 
 pub(crate) struct LineOrder {
-    pub(crate) color: Rgbf,
     pub(crate) points: [Vec3; 2],
-    pub(crate) matrix: Mat4,
+    pub(crate) color: Rgb,
 }
 
-pub(crate) struct ShapeOrder {
-    pub(crate) color: Rgbf,
+pub(crate) struct TriOrder {
     pub(crate) points: [Vec3; 3],
-    pub(crate) matrix: Mat4,
-    pub(crate) texture: Handle<Texture>,
     pub(crate) uvs: [Vec2; 3],
+    pub(crate) color: Rgb,
+    pub(crate) texture: u32,
     pub(crate) sampler_index: u32,
     pub(crate) opaque: bool,
 }
 
 struct Cache {
-    matrix: Mat4,
-    line_color: Rgbf,
-    shape_color: Rgbf,
-    text_color: Rgbf,
-    border_color: Rgbf,
-    font_size: u32,
-    border_width: f32,
-    line_width: f32,
-    shape_mode: ShapeMode,
-    border_mode: BorderMode,
     shader: Option<Handle<Shader>>,
     material: Option<Handle<Material>>,
+    font: Option<Handle<Font>>,
+
+    // colors
+    background: Rgb,
+    fill: Rgb,
+    stroke: Rgb,
+    tint: Rgb,
+
+    // shadows
+    shadows: bool,
+
+    // other
+    matrix: Mat4,
+    stroke_weight: f32,
+    font_size: u32,
+    shape_mode: ShapeMode,
+    border_mode: BorderMode,
+    filter: Filter,
+    wrap: Wrap,
 }
 
 impl Target {
     pub(crate) fn new(builtins: &Builtins) -> Self {
         Self {
-            mesh_orders: vec![],
-            text_orders: vec![],
-            line_orders: vec![],
-            shape_orders: vec![],
-            cache: vec![],
-            shape_mode: ShapeMode::Corner,
-            clear_color: Rgbf::gray(0.0),
-            tint_color: Rgbf::gray(1.0),
-            text_color: Rgbf::gray(1.0),
-            line_color: Rgbf::gray(1.0),
-            shape_color: Rgbf::gray(1.0),
-            border_color: Rgbf::gray(0.5),
-            ambient_color: Rgbf::gray(1.0),
+            background: Rgb::gray(255),
+            fill: Rgb::gray(255),
+            stroke: Rgb::gray(0),
+            tint: Rgb::gray(255),
+
+            shadows: false,
+            shadow_depth: 50.0,
+            shadow_split: 0.5,
+            shadow_softness: Pcf::X16,
+
+            lights: [Light::none(); 4],
+            light_index: 0,
+            ambient: Rgb::gray(255),
+            exposure: 1.0,
+
             matrix: Mat4::identity(),
-            lights: [
-                Light::main([-1.0, -1.0, 1.0], Rgbf::gray(1.0), 1.0),
-                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
-                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
-                Light::point([0.0, 0.0, 0.0], Rgbf::gray(1.0), 0.0),
-            ],
-            texture_filter: Filter::Linear,
-            texture_wrap: Wrap::Repeat,
-            max_white_point: 1.0,
-            border_width: 1.0,
-            line_width: 1.0,
-            border_mode: BorderMode::Inside,
+            stroke_weight: 2.0,
             font_size: 24,
+            shape_mode: ShapeMode::Center,
+            border_mode: BorderMode::Center,
+            filter: Filter::Linear,
+            wrap: Wrap::Repeat,
+
             font: None,
             shader: None,
             material: None,
-            texture_mipmaps: true,
             skybox: None,
-            shadow_depth: 50.0,
-            shadow_split_coef: 0.5,
-            shadows: true,
-            shadow_pcf: Pcf::X16,
             builtins: builtins.clone(),
+
+            mesh_orders: vec![],
+            char_orders: vec![],
+            line_orders: vec![],
+            tri_orders: vec![],
+
+            cache: vec![],
         }
     }
 
-    /// Save target settings to stack
-    pub fn push(&mut self) {
-        self.cache.push(Cache {
-            matrix: self.matrix,
-            line_color: self.line_color,
-            shape_color: self.shape_color,
-            text_color: self.text_color,
-            font_size: self.font_size,
-            border_color: self.border_color,
-            line_width: self.line_width,
-            border_mode: self.border_mode,
-            shape_mode: self.shape_mode,
-            border_width: self.border_width,
-            shader: self.shader.clone(),
-            material: self.material.clone(),
-        });
+    /// Set background color of canvas
+    pub fn background(&mut self, color: impl Into<Rgb>) {
+        self.background = color.into();
     }
 
-    /// Restore target settings from stack
-    pub fn pop(&mut self) {
-        if let Some(cache) = self.cache.pop() {
-            self.matrix = cache.matrix;
-            self.line_color = cache.line_color;
-            self.shape_color = cache.shape_color;
-            self.text_color = cache.text_color;
-            self.font_size = cache.font_size;
-            self.border_color = cache.border_color;
-            self.line_width = cache.line_width;
-            self.border_mode = cache.border_mode;
-            self.shape_mode = cache.shape_mode;
-            self.border_width = cache.border_width;
-            self.shader = cache.shader;
-            self.material = cache.material;
-        }
+    /// Set fill color for shapes and text
+    pub fn fill(&mut self, color: impl Into<Rgb>) {
+        self.fill = color.into();
     }
 
-    /// Set currently used material for mesh rendering
-    pub fn set_material(&mut self, material: &Handle<Material>) {
-        self.material = Some(material.clone());
+    /// Set stroke color for borders and lines
+    pub fn stroke(&mut self, color: impl Into<Rgb>) {
+        self.stroke = color.into();
     }
 
-    /// Set material to default for mesh rendering
-    pub fn unset_material(&mut self) {
+    /// Set tint color for meshes and textures
+    pub fn tint(&mut self, color: impl Into<Rgb>) {
+        self.tint = color.into();
+    }
+
+    /// Set material for meshes
+    pub fn material(&mut self, m: &Handle<Material>) {
+        self.material = Some(m.clone());
+    }
+
+    /// Use default material for meshes
+    pub fn no_material(&mut self) {
         self.material = None;
     }
 
-    /// Set currently used shader for mesh rendering
-    pub fn set_shader(&mut self, shader: &Handle<Shader>) {
-        self.shader = Some(shader.clone());
+    /// Set shader for meshes
+    pub fn shader(&mut self, s: &Handle<Shader>) {
+        self.shader = Some(s.clone());
     }
 
-    /// Set shader to default for mesh rendering
-    pub fn unset_shader(&mut self) {
+    /// Use default shader for meshes
+    pub fn no_shader(&mut self) {
         self.shader = None;
     }
 
-    /// Set cubemap to be used as a skybox
-    pub fn set_skybox(&mut self, cubemap: &Handle<Cubemap>) {
-        self.skybox = Some(cubemap.clone());
+    /// Set skybox for rendering
+    pub fn skybox(&mut self, s: &Handle<Cubemap>) {
+        self.skybox = Some(s.clone());
     }
 
-    /// Draw custom mesh
-    pub fn draw_mesh(&mut self, mesh: &Handle<Mesh>) {
-        let default_shader = if self.shadows {
-            &self.builtins.pbr_shader
-        } else {
-            &self.builtins.unshaded_shader
-        };
-        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: mesh.clone(),
-                local_to_world: self.matrix,
-                shadows: self.shadows,
-                tint_color: self.tint_color,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Enable shadows for meshes
+    pub fn shadows(&mut self) {
+        self.shadows = true;
     }
 
-    /// Draw wireframes for custom mesh
-    pub fn draw_mesh_wireframe(&mut self, mesh: &Handle<Mesh>) {
-        let shader = self.builtins.wireframe_shader.clone();
-        let material = self.builtins.white_material.clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: mesh.clone(),
-                local_to_world: self.matrix,
-                tint_color: self.tint_color,
-                shadows: false,
-                sampler_index: 0,
-            },
-        );
+    /// Disable shadows for meshes
+    pub fn no_shadows(&mut self) {
+        self.shadows = false;
     }
 
-    /// Draw a cube
-    pub fn draw_cube(&mut self) {
-        let default_shader = if self.shadows {
-            &self.builtins.pbr_shader
-        } else {
-            &self.builtins.unshaded_shader
-        };
-        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.cube_mesh.clone(),
-                local_to_world: self.matrix,
-                tint_color: self.tint_color,
-                shadows: self.shadows,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Set max shadow depth
+    pub fn shadow_depth(&mut self, d: f32) {
+        self.shadow_depth = d;
     }
 
-    /// Draw an ico-sphere
-    pub fn draw_sphere_ico(&mut self) {
-        let default_shader = if self.shadows {
-            &self.builtins.pbr_shader
-        } else {
-            &self.builtins.unshaded_shader
-        };
-        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.ico_sphere_mesh.clone(),
-                local_to_world: self.matrix,
-                tint_color: self.tint_color,
-                shadows: self.shadows,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Set shadow split coefficient
+    ///
+    /// 0 to 1, higher values make closer shadows
+    /// look better.
+    pub fn shadow_split(&mut self, s: f32) {
+        self.shadow_split = s;
     }
 
-    /// Draw a uv-sphere
-    pub fn draw_sphere_uv(&mut self) {
-        let default_shader = if self.shadows {
-            &self.builtins.pbr_shader
-        } else {
-            &self.builtins.unshaded_shader
-        };
-        let shader = self.shader.as_ref().unwrap_or(default_shader).clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.uv_sphere_mesh.clone(),
-                local_to_world: self.matrix,
-                tint_color: self.tint_color,
-                shadows: self.shadows,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Set how soft shadows appear
+    pub fn shadow_softness(&mut self, pcf: Pcf) {
+        self.shadow_softness = pcf;
     }
 
-    /// Draw a flat surface
-    pub fn draw_surface(&mut self) {
-        let shader = self
-            .shader
-            .as_ref()
-            .unwrap_or(&self.builtins.unshaded_shader)
-            .clone();
-        let material = self
-            .material
-            .as_ref()
-            .unwrap_or(&self.builtins.white_material)
-            .clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Mat4::identity(),
-                tint_color: self.tint_color,
-                shadows: false,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Add light to scene
+    ///
+    /// Max is 4. When lights are full,
+    /// removes first lights.
+    pub fn light(&mut self, l: Light) {
+        self.lights[self.light_index] = l;
+        self.light_index = (self.light_index + 1) % 4;
     }
 
-    /// Draw a fullscreen quad
-    pub fn draw_fullscreen(&mut self, canvas: &Handle<Canvas>) {
-        let shader = self.builtins.fullscreen_shader.clone();
-        let material = canvas.material().clone();
-
-        self.add_mesh_order(
-            material,
-            shader,
-            MeshOrder {
-                mesh: self.builtins.surface_mesh.clone(),
-                local_to_world: Mat4::identity(),
-                tint_color: self.tint_color,
-                shadows: false,
-                sampler_index: self.sampler_index(),
-            },
-        );
+    /// Set the environment ambient color
+    pub fn ambient(&mut self, c: impl Into<Rgb>) {
+        self.ambient = c.into();
     }
 
-    /// Draw a XY line grid
-    pub fn draw_grid(&mut self) {
-        let size = 100;
-        let half = size / 2;
-        let width = 1.0;
-
-        self.push();
-
-        for x in -half..half {
-            let xx = x as f32 * width;
-            let z_min = -half as f32 * width;
-            let z_max = half as f32 * width;
-
-            // set color
-            self.line_color = match x {
-                0 => Rgbf::blue(1.0).alpha(0.7),
-                _ if x % 10 == 0 => Rgbf::gray(1.0).alpha(0.7),
-                _ => Rgbf::gray(1.0).alpha(0.4),
-            };
-
-            self.draw_line_debug([xx, 0.0, z_min], [xx, 0.0, z_max]);
-        }
-
-        for z in -half..half {
-            let zz = z as f32 * width;
-            let x_min = -half as f32 * width;
-            let x_max = half as f32 * width;
-
-            // set color
-            self.line_color = match z {
-                0 => Rgbf::red(1.0).alpha(0.7),
-                _ if z % 10 == 0 => Rgbf::gray(1.0).alpha(0.7),
-                _ => Rgbf::gray(1.0).alpha(0.4),
-            };
-
-            self.draw_line_debug([x_min, 0.0, zz], [x_max, 0.0, zz]);
-        }
-
-        self.pop();
+    /// Set the exposure for tone mapping
+    pub fn exposure(&mut self, e: f32) {
+        self.exposure = e;
     }
 
-    /// Draw a string of text
-    pub fn draw_text(&mut self, text: impl AsRef<str>) {
-        let font = self
-            .font
-            .as_ref()
-            .unwrap_or(&self.builtins.fira_font)
-            .clone();
-
-        self.text_orders.push(TextOrder {
-            size: self.font_size,
-            color: self.text_color,
-            text: text.as_ref().to_string(),
-            matrix: self.matrix,
-            font,
-        });
+    /// Set the stroke weight for lines and borders
+    pub fn stroke_weight(&mut self, w: f32) {
+        self.stroke_weight = w;
     }
 
-    /// Move transform down one line's heigth for the current font
-    pub fn new_line(&mut self) {
-        let line_height = self
-            .font
-            .as_ref()
-            .unwrap_or(&self.builtins.fira_font)
-            .line_height();
-        self.matrix *= Mat4::translation([0.0, -(line_height as f32), 0.0]);
+    /// Set font size for text
+    pub fn font_size(&mut self, s: u32) {
+        self.font_size = s;
     }
 
-    /// Draw a debug 1-pixel wide line
-    pub fn draw_line_debug(&mut self, point_1: impl Into<Vec3>, point_2: impl Into<Vec3>) {
+    /// Set border mode
+    pub fn border_mode(&mut self, mode: BorderMode) {
+        self.border_mode = mode;
+    }
+
+    /// Set shape mode
+    pub fn shape_mode(&mut self, mode: ShapeMode) {
+        self.shape_mode = mode;
+    }
+
+    /// Set filter for textures
+    pub fn filter(&mut self, f: Filter) {
+        self.filter = f;
+    }
+
+    /// Set wrap mode for textures
+    pub fn wrap(&mut self, w: Wrap) {
+        self.wrap = w;
+    }
+
+    /// Transform points by matrix
+    pub fn transform(&mut self, matrix: impl Into<Mat4>) {
+        self.matrix = matrix.into() * self.matrix;
+    }
+
+    /// Reset transform to default
+    pub fn reset_transform(&mut self) {
+        self.matrix = Mat4::identity();
+    }
+
+    /// Move transform by vector
+    pub fn translate(&mut self, v: impl Into<Vec3>) {
+        self.matrix = Mat4::translation(v) * self.matrix;
+    }
+
+    /// Scale transform by vector
+    pub fn scale(&mut self, v: impl Into<Vec3>) {
+        self.matrix = Mat4::scale(v) * self.matrix;
+    }
+
+    /// Rotate transform by quaternion
+    pub fn rotate(&mut self, q: impl Into<Quat>) {
+        self.matrix = Mat4::from(q.into()) * self.matrix;
+    }
+
+    /// Rotate transform on the X axis
+    ///
+    /// This angle is in degrees.
+    pub fn rotate_x(&mut self, d: f32) {
+        self.matrix = Mat4::euler_rotation(d, 0.0, 0.0) * self.matrix;
+    }
+
+    /// Rotate transform on the Y axis
+    ///
+    /// This angle is in degrees.
+    pub fn rotate_y(&mut self, d: f32) {
+        self.matrix = Mat4::euler_rotation(0.0, d, 0.0) * self.matrix;
+    }
+
+    /// Rotate transform on the Z axis
+    ///
+    /// This angle is in degrees.
+    pub fn rotate_z(&mut self, d: f32) {
+        self.matrix = Mat4::euler_rotation(0.0, 0.0, d) * self.matrix;
+    }
+
+    /// Draw a 2D line
+    pub fn line(&mut self, p1: impl Into<Vec2>, p2: impl Into<Vec2>) {
+        let weight = self.stroke_weight / 2.0;
+        self.path(&[p1.into(), p2.into()], false, weight, weight);
+    }
+
+    /// Draw mitered 2D lines
+    pub fn lines(&mut self, points: &[Vec2]) {
+        let weight = self.stroke_weight / 2.0;
+        self.path(points, false, weight, weight);
+    }
+
+    /// Draw a 3D debug line that isn't controlled by
+    /// [stroke_weight](crate::renderer::Target::stroke_weight)
+    pub fn debug_line<V: Into<Vec3>>(&mut self, p1: V, p2: V) {
         self.line_orders.push(LineOrder {
-            color: self.line_color,
-            points: [point_1.into(), point_2.into()],
-            matrix: self.matrix,
+            points: [self.matrix * p1.into(), self.matrix * p2.into()],
+            color: self.stroke,
         });
     }
 
-    /// Draw a custom shape from points
-    pub fn draw_shape(&mut self, points: &[Vec2]) {
-        // don't draw polygon with less than 2 points
-        if points.len() < 3 {
-            return;
-        }
-
-        let opaque = (self.shape_color.a - 1.0).abs() < f32::EPSILON;
-
-        // triangulate points
-        let first = Vec3::from((points[0], 0.0));
-        for i in 2..points.len() {
-            self.shape_orders.push(ShapeOrder {
-                color: self.shape_color,
-                points: [
-                    first,
-                    Vec3::from((points[i - 1], 0.0)),
-                    Vec3::from((points[i], 0.0)),
-                ],
-                matrix: self.matrix,
-                texture: self.builtins.white_texture.clone(),
-                uvs: [Vec2::default(); 3],
-                sampler_index: 0,
-                opaque,
-            });
-        }
-
-        // draw borders
-        if self.border_mode != BorderMode::Disabled {
-            self.push();
-            self.matrix *= Mat4::translation([0.0, 0.0, -0.00001]);
-            self.draw_path(
-                points,
-                true,
-                self.border_mode,
-                self.border_color,
-                self.border_width,
-            );
-            self.pop();
-        }
-    }
-
-    /// Draw mitered line from points
-    pub fn draw_lines(&mut self, points: &[Vec2], closed: bool) {
-        self.draw_path(
-            points,
-            closed,
-            BorderMode::Center,
-            self.line_color,
-            self.line_width,
-        );
-    }
-
-    /// Draw a rectangle
-    pub fn draw_rectangle(&mut self, size: impl Into<Vec2>) {
-        let s = size.into();
-
-        self.push();
-
-        if self.shape_mode == ShapeMode::Center {
-            self.matrix *= Mat4::translation(-Vec3::from((s / 2.0, 0.0)));
-        }
-
-        self.draw_shape(&[Vec2::new(0.0, s.y), s, Vec2::new(s.x, 0.0), Vec2::default()]);
-
-        self.pop();
-    }
-
-    /// Draw a square
-    pub fn draw_square(&mut self, size: f32) {
-        self.draw_rectangle(Vec2::new(size, size));
-    }
-
-    /// Draw an ellipse
-    pub fn draw_ellipse(&mut self, size: impl Into<Vec2>) {
-        let s = size.into() / 2.0;
-        let side_count = (s.length() * 3.0) as u32;
-
-        self.push();
-
-        if self.shape_mode == ShapeMode::Corner {
-            self.matrix *= Mat4::translation(Vec3::from((s, 0.0)));
-        }
-
-        let points: Vec<_> = (0..side_count)
-            .map(|i| {
-                let q = 2.0 * PI * (i as f32 / side_count as f32);
-                let x = s.x * q.cos();
-                let y = s.y * q.sin();
-                Vec2::new(x, y)
-            })
-            .collect();
-        self.draw_shape(&points);
-
-        self.pop();
-    }
-
-    /// Draw a circle
-    pub fn draw_circle(&mut self, size: f32) {
-        self.draw_ellipse(Vec2::new(size, size));
-    }
-
-    /// Draw a textured quad
-    pub fn draw_texture(&mut self, texture: &Handle<Texture>, size: impl Into<Vec2>) {
-        let s = Vec3::from((size.into(), 0.0));
-
-        let opaque = texture.opaque() && (self.shape_color.a - 1.0).abs() < f32::EPSILON;
-
-        self.push();
-
-        if self.shape_mode == ShapeMode::Center {
-            self.matrix *= Mat4::translation(-s / 2.0);
-        }
-
-        self.shape_orders.push(ShapeOrder {
-            color: self.shape_color,
-            points: [
-                Vec3::default(),
-                Vec3::new(0.0, s.y, 0.0),
-                Vec3::new(s.x, 0.0, 0.0),
-            ],
+    /// Draw a custom 3D mesh
+    pub fn mesh(&mut self, mesh: &Handle<Mesh>) {
+        let order = MeshOrder {
+            mesh: mesh.clone(),
             matrix: self.matrix,
-            texture: texture.clone(),
-            uvs: [
-                Vec2::new(0.0, 1.0),
-                Vec2::new(0.0, 0.0),
-                Vec2::new(1.0, 1.0),
-            ],
+            color: self.tint,
+            shadows: self.shadows,
             sampler_index: self.sampler_index(),
-            opaque,
-        });
-        self.shape_orders.push(ShapeOrder {
-            color: self.shape_color,
-            points: [Vec3::new(0.0, s.y, 0.0), s, Vec3::new(s.x, 0.0, 0.0)],
-            matrix: self.matrix,
-            texture: texture.clone(),
-            uvs: [
-                Vec2::new(0.0, 0.0),
-                Vec2::new(1.0, 0.0),
-                Vec2::new(1.0, 1.0),
-            ],
-            sampler_index: self.sampler_index(),
-            opaque,
-        });
+        };
 
-        self.pop();
-    }
+        let shader = match &self.shader {
+            Some(s) => s,
+            None if self.shadows => &self.builtins.pbr_shader,
+            None => &self.builtins.unshaded_shader,
+        };
 
-    /// Draw all of the meshes of a model
-    pub fn draw_model(&mut self, model: &Handle<Model>) {
-        self.push();
-        for node in &model.nodes {
-            self.draw_model_node(node, self.matrix);
-        }
-        self.pop();
-    }
+        let material = match &self.material {
+            Some(m) => m,
+            None => &self.builtins.white_material,
+        };
 
-    fn draw_model_node(&mut self, node: &ModelNode, parent_matrix: Mat4) {
-        self.matrix = parent_matrix * node.matrix;
-
-        for (mesh, material) in node.orders() {
-            self.set_material(material);
-            self.draw_mesh(mesh);
-        }
-
-        for child in &node.children {
-            self.draw_model_node(child, self.matrix);
-        }
-    }
-
-    fn add_mesh_order(
-        &mut self,
-        material: Handle<Material>,
-        shader: Handle<Shader>,
-        order: MeshOrder,
-    ) {
-        match self.mesh_orders.iter_mut().find(|so| so.shader == shader) {
-            Some(so) => match so.orders.iter_mut().find(|mo| mo.material == material) {
+        match self.mesh_orders.iter_mut().find(|so| &so.shader == shader) {
+            Some(so) => match so.orders.iter_mut().find(|mo| &mo.material == material) {
                 Some(mo) => mo.orders.push(order),
                 None => so.orders.push(MaterialOrder {
-                    material,
+                    material: material.clone(),
                     orders: vec![order],
                 }),
             },
             None => self.mesh_orders.push(ShaderOrder {
-                shader,
+                shader: shader.clone(),
                 orders: vec![MaterialOrder {
-                    material,
+                    material: material.clone(),
                     orders: vec![order],
                 }],
             }),
         }
     }
 
-    fn draw_path(
+    /// Draw a wireframe for a 3D mesh
+    pub fn wireframe(&mut self, mesh: &Handle<Mesh>) {
+        self.push();
+        self.shadows = false;
+        self.shader = Some(self.builtins.wireframe_shader.clone());
+        self.mesh(mesh);
+        self.pop();
+    }
+
+    /// Draw a scaled cube
+    pub fn cube(&mut self, scale: impl Into<Vec3>) {
+        self.push();
+        self.matrix *= Mat4::scale(scale);
+        let mesh = self.builtins.cube_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw a scaled uv sphere
+    pub fn sphere_uv(&mut self, scale: impl Into<Vec3>) {
+        self.push();
+        self.matrix *= Mat4::scale(scale);
+        let mesh = self.builtins.uv_sphere_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw a scaled ico sphere
+    pub fn sphere_ico(&mut self, scale: impl Into<Vec3>) {
+        self.push();
+        self.matrix *= Mat4::scale(scale);
+        let mesh = self.builtins.ico_sphere_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw a scaled plane
+    pub fn plane(&mut self, scale: impl Into<Vec2>) {
+        self.push();
+        self.matrix *= Mat4::scale(Vec3::from((scale.into(), 1.0)));
+        let mesh = self.builtins.plane_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw a surface with a custom shader
+    pub fn surface(&mut self, shader: &Handle<Shader>) {
+        self.push();
+        self.shader = Some(shader.clone());
+        let mesh = self.builtins.surface_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw a fullscreen canvas
+    pub fn fullscreen(&mut self, canvas: &Handle<Canvas>) {
+        self.push();
+        self.shader = Some(self.builtins.fullscreen_shader.clone());
+        self.material = Some(canvas.material().clone());
+        let mesh = self.builtins.surface_mesh.clone();
+        self.mesh(&mesh);
+        self.pop();
+    }
+
+    /// Draw all of the meshes of a model
+    pub fn model(&mut self, model: &Handle<Model>) {
+        self.push();
+        for node in &model.nodes {
+            self.model_node(node, self.matrix);
+        }
+        self.pop();
+    }
+
+    /// Draw 3D guide grid for X and Z axis
+    pub fn grid(&mut self) {
+        let size = 100;
+        let half = size / 2;
+        let width = 1.0;
+
+        self.push();
+        for x in -half..half {
+            let xx = x as f32 * width;
+            let z_min = -half as f32 * width;
+            let z_max = half as f32 * width;
+
+            let color = match x {
+                0 => "#0000fff0",
+                _ if x % 10 == 0 => "#fffffff0",
+                _ => "#ffffff0f",
+            };
+
+            self.stroke(color);
+            self.debug_line([xx, 0.0, z_min], [xx, 0.0, z_max]);
+        }
+        for z in -half..half {
+            let zz = z as f32 * width;
+            let x_min = -half as f32 * width;
+            let x_max = half as f32 * width;
+
+            let color = match z {
+                0 => "#ff0000f0",
+                _ if z % 10 == 0 => "#fffffff0",
+                _ => "#ffffff0f",
+            };
+
+            self.stroke(color);
+            self.debug_line([x_min, 0.0, zz], [x_max, 0.0, zz]);
+        }
+        self.pop();
+    }
+
+    /// Draw text string
+    pub fn text(&mut self, t: impl AsRef<str>, pos: impl Into<Vec2>) {
+        let mut advance = pos.into();
+        let scale = Vec3::uniform(self.font_size as f32);
+        let font = self.font.as_ref().unwrap_or(&self.builtins.fira_font);
+
+        for c in t.as_ref().chars() {
+            // handle whitespace
+            if c == ' ' {
+                advance.x += scale.x / 3.0;
+                continue;
+            }
+            if c == '\n' {
+                advance.x = 0.0;
+                advance.y -= scale.y;
+                continue;
+            }
+
+            // calculate positions
+            let data = font.char_data(c);
+            let mut pos = advance;
+            pos.x += data.x_offset * scale.x;
+            pos.y -= data.y_offset * scale.y;
+            let width = data.width * scale.x;
+            let height = data.height * scale.y;
+
+            // calculate points
+            let p1 = self.matrix * Vec3::new(pos.x, pos.y + height, 0.0);
+            let p2 = self.matrix * Vec3::new(pos.x + width, pos.y + height, 0.0);
+            let p3 = self.matrix * Vec3::new(pos.x + width, pos.y, 0.0);
+            let p4 = self.matrix * Vec3::new(pos.x, pos.y + height, 0.0);
+
+            let uv1 = Vec2::new(data.uvs.x, data.uvs.y);
+            let uv2 = Vec2::new(data.uvs.z, data.uvs.y);
+            let uv3 = Vec2::new(data.uvs.z, data.uvs.w);
+            let uv4 = Vec2::new(data.uvs.x, data.uvs.w);
+
+            // add order
+            self.char_orders.push(CharOrder {
+                points: [p1, p2, p3, p4],
+                uvs: [uv1, uv2, uv3, uv4],
+                color: self.fill,
+                texture: font.texture().shader_index(),
+            });
+
+            advance.x += data.advance * scale.x;
+        }
+    }
+
+    /// Draw a custom shape from points
+    ///
+    /// Shape must be convex
+    pub fn shape(&mut self, points: &[Vec2]) {
+        // don't draw shape with less than 2 points
+        if points.len() < 3 {
+            return;
+        }
+
+        // check if should draw shape
+        if self.fill.a > 0 {
+            let texture = self.builtins.white_texture.shader_index();
+            let opaque = self.fill.a == 255;
+
+            // triangulate points
+            let first = Vec3::from((points[0], 0.0));
+            for i in 2..points.len() {
+                self.tri_orders.push(TriOrder {
+                    points: [
+                        self.matrix * first,
+                        self.matrix * Vec3::from((points[i - 1], 0.0)),
+                        self.matrix * Vec3::from((points[i], 0.0)),
+                    ],
+                    uvs: [Vec2::default(); 3],
+                    color: self.fill,
+                    sampler_index: 0,
+                    texture,
+                    opaque,
+                });
+            }
+        }
+
+        // check if should draw borders
+        if self.stroke.a > 0 {
+            let outer_weight = match self.border_mode {
+                BorderMode::Center => self.stroke_weight / 2.0,
+                BorderMode::Outside => self.stroke_weight,
+                BorderMode::Inside => 0.0,
+            };
+            let inner_weight = match self.border_mode {
+                BorderMode::Center => self.stroke_weight / 2.0,
+                BorderMode::Outside => 0.0,
+                BorderMode::Inside => self.stroke_weight,
+            };
+
+            self.path(points, true, inner_weight, outer_weight);
+        }
+    }
+
+    /// Draw a rectangle
+    pub fn rect(&mut self, pos: impl Into<Vec2>, size: impl Into<Vec2>) {
+        let s = size.into();
+        let p = pos.into();
+
+        let offset = match self.shape_mode {
+            ShapeMode::BottomLeft => Vec2::new(0.0, 0.0),
+            ShapeMode::BottomRight => Vec2::new(-s.x, 0.0),
+            ShapeMode::TopLeft => Vec2::new(0.0, -s.y),
+            ShapeMode::TopRight => Vec2::new(-s.x, -s.y),
+            ShapeMode::Center => Vec2::new(-s.x / 2.0, -s.y / 2.0),
+        };
+
+        self.shape(&[
+            Vec2::new(p.x, p.y + s.y) + offset,
+            Vec2::new(p.x + s.x, p.y + s.y) + offset,
+            Vec2::new(p.x + s.x, p.y) + offset,
+            Vec2::new(p.x, p.y) + offset,
+        ]);
+    }
+
+    /// Draw a square
+    pub fn square(&mut self, pos: impl Into<Vec2>, size: f32) {
+        self.rect(pos, Vec2::new(size, size));
+    }
+
+    /// Draw an ellipse
+    pub fn ellipse(&mut self, pos: impl Into<Vec2>, size: impl Into<Vec2>) {
+        let s = size.into() / 2.0;
+        let side_count = (s.length() * 3.0) as u32;
+        let position = pos.into();
+
+        let offset = match self.shape_mode {
+            ShapeMode::BottomLeft => s,
+            ShapeMode::BottomRight => Vec2::new(-s.x, s.y),
+            ShapeMode::TopLeft => Vec2::new(s.x, -s.y),
+            ShapeMode::TopRight => Vec2::new(-s.x, -s.y),
+            ShapeMode::Center => Vec2::new(0.0, 0.0),
+        };
+
+        let points: Vec<_> = (0..side_count)
+            .map(|i| {
+                let q = 2.0 * PI * (i as f32 / side_count as f32);
+                let x = s.x * q.cos();
+                let y = s.y * q.sin();
+                position + offset + Vec2::new(x, y)
+            })
+            .collect();
+        self.shape(&points);
+    }
+
+    /// Draw a circle
+    pub fn circle(&mut self, pos: impl Into<Vec2>, size: f32) {
+        self.ellipse(pos, Vec2::new(size, size));
+    }
+
+    /// Draw a textured quad
+    pub fn texture(
         &mut self,
-        path: &[Vec2],
-        closed: bool,
-        border_mode: BorderMode,
-        color: Rgbf,
-        width: f32,
+        texture: &Handle<Texture>,
+        pos: impl Into<Vec2>,
+        size: impl Into<Vec2>,
     ) {
+        let tw = texture.width() as f32;
+        let th = texture.height() as f32;
+        self.texture_part(texture, pos, size, [0.0, 0.0], [tw, th]);
+    }
+
+    /// Draw a quad with part of a texture
+    ///
+    /// Part is defined in pixels
+    pub fn texture_part(
+        &mut self,
+        texture: &Handle<Texture>,
+        pos: impl Into<Vec2>,
+        size: impl Into<Vec2>,
+        part_pos: impl Into<Vec2>,
+        part_size: impl Into<Vec2>,
+    ) {
+        let s = size.into();
+        let p = pos.into();
+        let pp = part_pos.into();
+        let ps = part_size.into();
+        let tw = texture.width() as f32;
+        let th = texture.height() as f32;
+        let opaque = texture.opaque() && self.tint.a == 255;
+
+        let offset = match self.shape_mode {
+            ShapeMode::BottomLeft => Vec3::new(0.0, 0.0, 0.0),
+            ShapeMode::BottomRight => Vec3::new(-s.x, 0.0, 0.0),
+            ShapeMode::TopLeft => Vec3::new(0.0, -s.y, 0.0),
+            ShapeMode::TopRight => Vec3::new(-s.x, -s.y, 0.0),
+            ShapeMode::Center => Vec3::new(-s.x / 2.0, -s.y / 2.0, 0.0),
+        };
+
+        let p1 = self.matrix * (Vec3::new(p.x, p.y + s.y, 0.0) + offset);
+        let p2 = self.matrix * (Vec3::new(p.x + s.x, p.y + s.y, 0.0) + offset);
+        let p3 = self.matrix * (Vec3::new(p.x + s.x, p.y, 0.0) + offset);
+        let p4 = self.matrix * (Vec3::new(p.x, p.y, 0.0) + offset);
+
+        let uv1 = Vec2::new(pp.x / tw, pp.y / th);
+        let uv2 = Vec2::new((pp.x + ps.x) / tw, pp.y / th);
+        let uv3 = Vec2::new((pp.x + ps.x) / tw, (pp.y + ps.y) / th);
+        let uv4 = Vec2::new(pp.x / tw, (pp.y + ps.y) / th);
+
+        self.tri_orders.push(TriOrder {
+            points: [p1, p2, p3],
+            color: self.tint,
+            uvs: [uv1, uv2, uv3],
+            texture: texture.shader_index(),
+            sampler_index: self.sampler_index(),
+            opaque,
+        });
+        self.tri_orders.push(TriOrder {
+            points: [p1, p3, p4],
+            color: self.tint,
+            uvs: [uv1, uv3, uv4],
+            texture: texture.shader_index(),
+            sampler_index: self.sampler_index(),
+            opaque,
+        });
+    }
+
+    /// Save target settings to stack
+    pub fn push(&mut self) {
+        self.cache.push(Cache {
+            shader: self.shader.clone(),
+            material: self.material.clone(),
+            font: self.font.clone(),
+
+            background: self.background,
+            fill: self.fill,
+            stroke: self.stroke,
+            tint: self.tint,
+
+            shadows: self.shadows,
+
+            matrix: self.matrix,
+            stroke_weight: self.stroke_weight,
+            font_size: self.font_size,
+            shape_mode: self.shape_mode,
+            border_mode: self.border_mode,
+            filter: self.filter,
+            wrap: self.wrap,
+        });
+    }
+
+    /// Restore target settings from stack
+    pub fn pop(&mut self) {
+        if let Some(cache) = self.cache.pop() {
+            self.shader = cache.shader;
+            self.material = cache.material;
+            self.font = cache.font;
+
+            self.background = cache.background;
+            self.fill = cache.fill;
+            self.stroke = cache.stroke;
+            self.tint = cache.tint;
+
+            self.shadows = cache.shadows;
+
+            self.matrix = cache.matrix;
+            self.stroke_weight = cache.stroke_weight;
+            self.font_size = cache.font_size;
+            self.shape_mode = cache.shape_mode;
+            self.border_mode = cache.border_mode;
+            self.filter = cache.filter;
+            self.wrap = cache.wrap;
+        }
+    }
+
+    fn model_node(&mut self, node: &ModelNode, parent: Mat4) {
+        self.matrix = parent * node.matrix;
+
+        for (mesh, material) in node.orders() {
+            self.material(material);
+            self.mesh(mesh);
+        }
+
+        for child in &node.children {
+            self.model_node(child, self.matrix);
+        }
+    }
+
+    fn path(&mut self, path: &[Vec2], closed: bool, inner_weight: f32, outer_weight: f32) {
         // generate normals
         let mut normals = vec![];
 
@@ -788,55 +880,47 @@ impl Target {
             normals[points.len() - 1] = m;
         }
 
-        // render lines
-        self.push();
-        self.shape_color = color;
-        self.border_mode = BorderMode::Disabled;
+        // draw tris
         for i in 0..(normals.len() - 1) {
             let curr_norm = normals[i];
             let next_norm = normals[i + 1];
             let curr_point = points[i];
             let next_point = *points.get(i + 1).unwrap_or(&points[0]);
 
-            match border_mode {
-                BorderMode::Center => self.draw_shape(&[
-                    curr_point + curr_norm * width * 0.5,
-                    next_point + next_norm * width * 0.5,
-                    next_point - next_norm * width * 0.5,
-                    curr_point - curr_norm * width * 0.5,
-                ]),
-                BorderMode::Outside => self.draw_shape(&[
-                    curr_point + curr_norm * width,
-                    next_point + next_norm * width,
-                    next_point,
-                    curr_point,
-                ]),
-                BorderMode::Inside => self.draw_shape(&[
-                    curr_point,
-                    next_point,
-                    next_point - next_norm * width,
-                    curr_point - curr_norm * width,
-                ]),
-                BorderMode::Disabled => (),
-            }
+            let p1 = self.matrix * Vec3::from((curr_point + curr_norm * outer_weight, -0.00001));
+            let p2 = self.matrix * Vec3::from((next_point + next_norm * outer_weight, -0.00001));
+            let p3 = self.matrix * Vec3::from((next_point - next_norm * inner_weight, -0.00001));
+            let p4 = self.matrix * Vec3::from((curr_point - curr_norm * inner_weight, -0.00001));
+
+            let texture = self.builtins.white_texture.shader_index();
+
+            self.tri_orders.push(TriOrder {
+                points: [p1, p2, p3],
+                color: self.stroke,
+                uvs: [Vec2::default(); 3],
+                opaque: self.stroke.a == 255,
+                sampler_index: 0,
+                texture,
+            });
+            self.tri_orders.push(TriOrder {
+                points: [p1, p3, p4],
+                color: self.stroke,
+                uvs: [Vec2::default(); 3],
+                opaque: self.stroke.a == 255,
+                sampler_index: 0,
+                texture,
+            });
         }
-        self.pop();
     }
 
     const fn sampler_index(&self) -> u32 {
-        match (self.texture_filter, self.texture_wrap, self.texture_mipmaps) {
-            (Filter::Linear, Wrap::Repeat, true) => 0,
-            (Filter::Linear, Wrap::Repeat, false) => 1,
-            (Filter::Linear, Wrap::ClampBorder, true) => 2,
-            (Filter::Linear, Wrap::ClampBorder, false) => 3,
-            (Filter::Linear, Wrap::ClampEdge, true) => 4,
-            (Filter::Linear, Wrap::ClampEdge, false) => 5,
-            (Filter::Nearest, Wrap::Repeat, true) => 6,
-            (Filter::Nearest, Wrap::Repeat, false) => 7,
-            (Filter::Nearest, Wrap::ClampBorder, true) => 8,
-            (Filter::Nearest, Wrap::ClampBorder, false) => 9,
-            (Filter::Nearest, Wrap::ClampEdge, true) => 10,
-            (Filter::Nearest, Wrap::ClampEdge, false) => 11,
+        match (self.filter, self.wrap) {
+            (Filter::Linear, Wrap::Repeat) => 0,
+            (Filter::Linear, Wrap::ClampBorder) => 1,
+            (Filter::Linear, Wrap::ClampEdge) => 2,
+            (Filter::Nearest, Wrap::Repeat) => 3,
+            (Filter::Nearest, Wrap::ClampBorder) => 4,
+            (Filter::Nearest, Wrap::ClampEdge) => 5,
         }
     }
 }

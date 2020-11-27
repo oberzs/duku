@@ -133,7 +133,7 @@ been passed from the Rust code.
 | `shadow_texels`    | `vec4`     | shadow map texel sizes                                        |
 | `shadow_diameters` | `vec4`     | shadow map area diameters                                     |
 | `shadow_pcf`       | `float`    | shadow map softness value                                     |
-| `max_white_point`  | `float`    | value used to do tone mapping                                 |
+| `exposure`         | `float`    | value used to do tone mapping                                 |
 
 `material` defines values that are set for each material.
 

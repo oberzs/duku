@@ -5,22 +5,22 @@ use std::cmp::Ordering;
 use std::time::Instant;
 
 use super::Camera;
+use super::CharOrder;
 use super::LineOrder;
 use super::Pcf;
 use super::ShaderOrder;
 use super::ShadowRenderer;
-use super::ShapeOrder;
 use super::Target;
-use super::TextOrder;
+use super::TriOrder;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
+use crate::color::Rgbf;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
 use crate::image::Canvas;
 use crate::math::Mat4;
 use crate::math::Quat;
-use crate::math::Vec2;
 use crate::math::Vec3;
 use crate::mesh::Mesh;
 use crate::pipeline::Descriptor;
@@ -90,7 +90,7 @@ impl ForwardRenderer {
         let target_resources = &mut self.target_resources[self.target_index];
         let cmd = device.commands();
 
-        let shadow_pcf = match target.shadow_pcf {
+        let shadow_pcf = match target.shadow_softness {
             Pcf::Disabled => 2.0,
             Pcf::X4 => 0.0,
             Pcf::X16 => 1.0,
@@ -119,22 +119,22 @@ impl ForwardRenderer {
             camera_position: camera.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
-            ambient_color: target.ambient_color.into(),
-            max_white_point: target.max_white_point,
+            ambient_color: Rgbf::from(target.ambient).into(),
+            exposure: target.exposure,
             skybox_index,
             lights,
             shadow_pcf,
         }]);
 
         // do render pass
-        cmd.begin_render_pass(canvas, target.clear_color);
+        cmd.begin_render_pass(canvas, target.background.into());
         cmd.set_view(canvas.width, canvas.height);
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 
         let Target {
             builtins,
-            shape_orders,
-            text_orders,
+            tri_orders,
+            char_orders,
             mesh_orders,
             line_orders,
             skybox,
@@ -151,14 +151,14 @@ impl ForwardRenderer {
             record_meshes(cmd, uniforms, mesh_orders);
         }
 
-        // shape rendering
-        if !shape_orders.is_empty() {
-            self.record_shapes(device, uniforms, &builtins, shape_orders);
+        // tri rendering
+        if !tri_orders.is_empty() {
+            self.record_shapes(device, uniforms, &builtins, tri_orders);
         }
 
         // text rendering
-        if !text_orders.is_empty() {
-            self.record_text(device, uniforms, &builtins, text_orders);
+        if !char_orders.is_empty() {
+            self.record_text(device, uniforms, &builtins, char_orders);
         }
 
         // line rendering
@@ -178,7 +178,7 @@ impl ForwardRenderer {
         device: &Device,
         uniforms: &Uniforms,
         builtins: &Builtins,
-        orders: Vec<TextOrder>,
+        orders: Vec<CharOrder>,
     ) {
         let cmd = device.commands();
 
@@ -190,49 +190,17 @@ impl ForwardRenderer {
         let mut uvs = vec![];
 
         for order in orders {
-            let mut offset = Vec3::default();
-            let scale = Vec3::uniform(order.size as f32);
-
-            for c in order.text.chars() {
-                // handle whitespace
-                if c == ' ' {
-                    offset.x += scale.x / 3.0;
-                    continue;
-                }
-
-                if c == '\n' {
-                    offset.x = 0.0;
-                    offset.y -= scale.y;
-                    continue;
-                }
-
-                let data = order.font.char_data(c);
-                let mut local_offset = offset;
-                local_offset.x += data.x_offset * scale.x;
-                local_offset.y -= data.y_offset * scale.y;
-
-                let pos1 = local_offset;
-                let pos2 = pos1 + Vec3::new(data.width * scale.x, -data.height * scale.y, 0.0);
-
-                let o = vertices.len() as u32;
-                vertices.extend(&[
-                    order.matrix * Vec3::new(pos1.x, pos1.y, pos1.z),
-                    order.matrix * Vec3::new(pos2.x, pos1.y, pos1.z),
-                    order.matrix * Vec3::new(pos2.x, pos2.y, pos1.z),
-                    order.matrix * Vec3::new(pos1.x, pos2.y, pos1.z),
-                ]);
-                uvs.extend(&[
-                    Vec2::new(data.uvs.x, data.uvs.y),
-                    Vec2::new(data.uvs.z, data.uvs.y),
-                    Vec2::new(data.uvs.z, data.uvs.w),
-                    Vec2::new(data.uvs.x, data.uvs.w),
-                ]);
-                colors.extend(&[order.color; 4]);
-                textures.extend(&[order.font.texture().shader_index(); 4]);
-                indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
-
-                offset.x += data.advance * scale.x;
-            }
+            let o = vertices.len() as u32;
+            vertices.extend(&[
+                order.points[0],
+                order.points[1],
+                order.points[2],
+                order.points[3],
+            ]);
+            uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2], order.uvs[3]]);
+            colors.extend(&[order.color.into(); 4]);
+            textures.extend(&[order.texture; 4]);
+            indices.extend(&[o, o + 1, o + 2, o, o + 2, o + 3]);
         }
 
         // bind shader
@@ -278,12 +246,10 @@ impl ForwardRenderer {
         let mut indices = vec![];
 
         for order in orders {
-            let point_1 = order.matrix * order.points[0];
-            let point_2 = order.matrix * order.points[1];
-
             let o = vertices.len() as u32;
-            vertices.extend(&[point_1, point_2]);
-            colors.extend(&[order.color, order.color]);
+            let color = order.color.into();
+            vertices.extend(&[order.points[0], order.points[0]]);
+            colors.extend(&[color, color]);
             indices.extend(&[o, o + 1]);
         }
 
@@ -317,7 +283,7 @@ impl ForwardRenderer {
         device: &Device,
         uniforms: &Uniforms,
         builtins: &Builtins,
-        mut orders: Vec<ShapeOrder>,
+        mut orders: Vec<TriOrder>,
     ) {
         let cmd = device.commands();
 
@@ -350,16 +316,13 @@ impl ForwardRenderer {
 
         // add opaque shapes
         for order in orders {
-            let point_1 = order.matrix * order.points[0];
-            let point_2 = order.matrix * order.points[1];
-            let point_3 = order.matrix * order.points[2];
-
-            let texture = order.texture.shader_index();
+            let texture = order.texture;
             let sampler = order.sampler_index;
+            let color = order.color.into();
 
             let o = vertices.len() as u32;
-            vertices.extend(&[point_1, point_2, point_3]);
-            colors.extend(&[order.color, order.color, order.color]);
+            vertices.extend(&[order.points[0], order.points[1], order.points[2]]);
+            colors.extend(&[color, color, color]);
             textures.extend(&[texture, texture, texture]);
             uvs.extend(&[order.uvs[0], order.uvs[1], order.uvs[2]]);
             indices.extend(&[o, o + 1, o + 2]);
@@ -442,8 +405,8 @@ fn record_meshes(cmd: &Commands, uniforms: &Uniforms, orders: Vec<ShaderOrder>) 
                 cmd.push_constants(
                     uniforms,
                     ShaderConstants {
-                        local_to_world: order.local_to_world,
-                        tint_color: order.tint_color.into(),
+                        local_to_world: order.matrix,
+                        tint_color: Rgbf::from(order.color).into(),
                         sampler_index: order.sampler_index,
                     },
                 );

@@ -28,9 +28,9 @@ vec3 change_luminance(vec3 color, float lum) {
 // uses Extended Reinhard (Luminance Tone Map)
 // tone maps the input color
 vec3 tone_map(vec3 color) {
-    float max_white = world.max_white_point;
+    float exposure = world.exposure;
     float lum = luminance(color);
-    float num = lum * (1.0 + (lum / (max_white * max_white)));
+    float num = lum * (1.0 + (lum / (exposure * exposure)));
     float new_lum = num / (1.0 + lum);
     return change_luminance(color, new_lum);
 }

@@ -1,6 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+use crate::color::Rgb;
 use crate::color::Rgbf;
 use crate::math::Vec3;
 use crate::math::Vec4;
@@ -18,7 +19,7 @@ pub struct Light {
     /// either direction or position of the light
     pub coords: Vec3,
     /// color of the light
-    pub color: Rgbf,
+    pub color: Rgb,
     /// brightness of the light,
     /// multiplied with the color in shaders
     pub brightness: f32,
@@ -39,7 +40,7 @@ pub enum LightType {
 
 impl Light {
     /// Create main light
-    pub fn main(direction: impl Into<Vec3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
+    pub fn main(direction: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Main,
             coords: direction.into().unit(),
@@ -49,11 +50,7 @@ impl Light {
     }
 
     /// Create directional light
-    pub fn directional(
-        direction: impl Into<Vec3>,
-        color: impl Into<Rgbf>,
-        brightness: f32,
-    ) -> Self {
+    pub fn directional(direction: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Directional,
             coords: direction.into().unit(),
@@ -63,13 +60,17 @@ impl Light {
     }
 
     /// Create point light
-    pub fn point(position: impl Into<Vec3>, color: impl Into<Rgbf>, brightness: f32) -> Self {
+    pub fn point(position: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
         Self {
             light_type: LightType::Point,
             coords: position.into(),
             color: color.into(),
             brightness,
         }
+    }
+
+    pub(crate) fn none() -> Self {
+        Self::point([0.0, 0.0, 0.0], Rgb::clear(), 0.0)
     }
 
     pub(crate) fn shader(&self) -> ShaderLight {
@@ -81,7 +82,7 @@ impl Light {
 
         ShaderLight {
             coords: self.coords,
-            color: Vec4::from(self.color) * self.brightness,
+            color: Vec4::from(Rgbf::from(self.color)) * self.brightness,
             light_type,
         }
     }
