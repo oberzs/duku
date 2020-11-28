@@ -5,7 +5,7 @@
 // using parallel-split shadow maps (PSSM)
 
 use super::Camera;
-use super::LightType;
+use super::Light;
 use super::Target;
 use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
@@ -32,6 +32,7 @@ pub(crate) struct ShadowRenderer {
     map_size: u32,
 }
 
+#[derive(Default)]
 pub(crate) struct ShadowSplitParams {
     pub(crate) world_to_shadow: [Mat4; SHADOW_SPLIT_COUNT],
     pub(crate) splits: [f32; SHADOW_SPLIT_COUNT],
@@ -93,9 +94,12 @@ impl ShadowRenderer {
         device: &Device,
         uniforms: &Uniforms,
         target: &Target,
+        light: Light,
         view: Camera,
         target_index: usize,
     ) -> ShadowSplitParams {
+        let light_dir = light.coords;
+
         let mut params = ShadowSplitParams {
             world_to_shadow: [Mat4::identity(); SHADOW_SPLIT_COUNT],
             splits: [0.0; SHADOW_SPLIT_COUNT],
@@ -105,14 +109,6 @@ impl ShadowRenderer {
 
         let target_resources = &mut self.target_resources[target_index];
         let cmd = device.commands();
-
-        // get main light direction
-        let light_dir = target
-            .lights
-            .iter()
-            .find(|l| l.light_type == LightType::Main)
-            .map(|l| l.coords)
-            .unwrap_or_default();
 
         cmd.bind_descriptor(uniforms, target_resources.shadow_descriptor);
 
@@ -158,6 +154,7 @@ impl ShadowRenderer {
                 view_to_clip: light_ortho_matrix,
 
                 // these fields are not important
+                shadow_light_index: 0,
                 world_to_shadow: [Mat4::identity(); 4],
                 camera_position: Vec3::default(),
                 ambient_color: Vec3::default(),

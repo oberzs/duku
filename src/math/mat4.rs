@@ -24,7 +24,7 @@ use super::Vec4;
 /// assert_eq!(matrix * vector, Vec3::new(10.0, 0.0, 0.0));
 /// ```
 #[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Mat4 {
     /// the X column
     pub x: Vec4,

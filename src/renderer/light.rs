@@ -30,8 +30,6 @@ pub struct Light {
 /// Type of a light.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LightType {
-    /// directional light that casts shadows
-    Main,
     /// directional light (like from the sun)
     Directional,
     /// point light (like from a lightbulb)
@@ -39,45 +37,38 @@ pub enum LightType {
 }
 
 impl Light {
-    /// Create main light
-    pub fn main(direction: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
-        Self {
-            light_type: LightType::Main,
-            coords: direction.into().unit(),
-            color: color.into(),
-            brightness,
-        }
-    }
-
     /// Create directional light
-    pub fn directional(direction: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
+    pub fn directional(color: impl Into<Rgb>, direction: impl Into<Vec3>) -> Self {
         Self {
             light_type: LightType::Directional,
             coords: direction.into().unit(),
             color: color.into(),
-            brightness,
+            brightness: 1.0,
         }
     }
 
     /// Create point light
-    pub fn point(position: impl Into<Vec3>, color: impl Into<Rgb>, brightness: f32) -> Self {
+    pub fn point(color: impl Into<Rgb>, position: impl Into<Vec3>) -> Self {
         Self {
             light_type: LightType::Point,
             coords: position.into(),
             color: color.into(),
-            brightness,
+            brightness: 1.0,
         }
     }
 
     pub(crate) fn none() -> Self {
-        Self::point([0.0, 0.0, 0.0], Rgb::clear(), 0.0)
+        Self::point(Rgb::clear(), [0.0, 0.0, 0.0])
+    }
+
+    pub(crate) const fn is_none(&self) -> bool {
+        self.color.a == 0
     }
 
     pub(crate) fn shader(&self) -> ShaderLight {
         let light_type = match self.light_type {
-            LightType::Main => 0,
-            LightType::Directional => 1,
-            LightType::Point => 2,
+            LightType::Directional => 0,
+            LightType::Point => 1,
         };
 
         ShaderLight {

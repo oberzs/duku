@@ -41,6 +41,7 @@ pub(crate) struct ShaderWorld {
     pub(crate) shadow_pcf: f32,
     pub(crate) skybox_index: u32,
     pub(crate) exposure: f32,
+    pub(crate) shadow_light_index: u32,
 }
 
 #[derive(Copy, Clone)]

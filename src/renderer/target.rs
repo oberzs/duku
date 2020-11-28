@@ -5,6 +5,7 @@ use std::f32::consts::PI;
 
 use super::Light;
 use crate::color::Rgb;
+use crate::color::Rgbf;
 use crate::font::Font;
 use crate::image::Canvas;
 use crate::image::Cubemap;
@@ -45,7 +46,7 @@ pub struct Target {
     // lights
     light_index: usize,
     pub(crate) lights: [Light; 4],
-    pub(crate) ambient: Rgb,
+    pub(crate) ambient: Vec3,
     pub(crate) exposure: f32,
 
     // other
@@ -189,7 +190,7 @@ impl Target {
 
             lights: [Light::none(); 4],
             light_index: 0,
-            ambient: Rgb::gray(255),
+            ambient: Vec3::uniform(0.03),
             exposure: 1.0,
 
             matrix: Mat4::identity(),
@@ -260,12 +261,15 @@ impl Target {
         self.skybox = Some(s.clone());
     }
 
-    /// Enable shadows for meshes
+    /// Enable casting shadows for meshes
+    ///
+    /// Uses the first directional light for
+    /// casting the shadows.
     pub fn shadows(&mut self) {
         self.shadows = true;
     }
 
-    /// Disable shadows for meshes
+    /// Disable casting shadows for meshes
     pub fn no_shadows(&mut self) {
         self.shadows = false;
     }
@@ -297,9 +301,9 @@ impl Target {
         self.light_index = (self.light_index + 1) % 4;
     }
 
-    /// Set the environment ambient color
-    pub fn ambient(&mut self, c: impl Into<Rgb>) {
-        self.ambient = c.into();
+    /// Set the ambient light that affects the entire scene
+    pub fn ambient(&mut self, color: impl Into<Rgbf>, brightness: f32) {
+        self.ambient = Vec3::from(color.into()) * brightness;
     }
 
     /// Set the exposure for tone mapping
@@ -406,6 +410,8 @@ impl Target {
 
     /// Draw a custom 3D mesh
     pub fn mesh(&mut self, mesh: &Handle<Mesh>) {
+        let unshaded = self.lights.iter().all(|l| l.is_none());
+
         let order = MeshOrder {
             mesh: mesh.clone(),
             matrix: self.matrix,
@@ -416,8 +422,8 @@ impl Target {
 
         let shader = match &self.shader {
             Some(s) => s,
-            None if self.shadows => &self.builtins.pbr_shader,
-            None => &self.builtins.unshaded_shader,
+            None if unshaded => &self.builtins.unshaded_shader,
+            None => &self.builtins.pbr_shader,
         };
 
         let material = match &self.material {
