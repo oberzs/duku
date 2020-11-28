@@ -555,36 +555,47 @@ impl Target {
     }
 
     /// Draw text string
-    pub fn text(&mut self, t: impl AsRef<str>, pos: impl Into<Vec2>) {
+    pub fn text(&mut self, text: impl AsRef<str>, pos: impl Into<Vec2>) {
         let mut advance = pos.into();
-        let scale = Vec3::uniform(self.font_size as f32);
+        let t = text.as_ref();
         let font = self.font.as_ref().unwrap_or(&self.builtins.fira_font);
 
-        for c in t.as_ref().chars() {
+        let w = self.text_width(t);
+        let fs = self.font_size as f32;
+
+        advance += match self.shape_mode {
+            ShapeMode::BottomLeft => Vec2::new(0.0, fs),
+            ShapeMode::BottomRight => Vec2::new(-w, fs),
+            ShapeMode::TopLeft => Vec2::new(0.0, 0.0),
+            ShapeMode::TopRight => Vec2::new(-w, 0.0),
+            ShapeMode::Center => Vec2::new(-w / 2.0, fs / 2.0),
+        };
+
+        for c in t.chars() {
             // handle whitespace
             if c == ' ' {
-                advance.x += scale.x / 3.0;
+                advance.x += fs / 3.0;
                 continue;
             }
             if c == '\n' {
                 advance.x = 0.0;
-                advance.y -= scale.y;
+                advance.y -= fs;
                 continue;
             }
 
             // calculate positions
             let data = font.char_data(c);
             let mut pos = advance;
-            pos.x += data.x_offset * scale.x;
-            pos.y -= data.y_offset * scale.y;
-            let width = data.width * scale.x;
-            let height = data.height * scale.y;
+            pos.x += data.x_offset * fs;
+            pos.y -= data.y_offset * fs;
+            let width = data.width * fs;
+            let height = data.height * fs;
 
             // calculate points
-            let p1 = self.matrix * Vec3::new(pos.x, pos.y + height, 0.0);
-            let p2 = self.matrix * Vec3::new(pos.x + width, pos.y + height, 0.0);
-            let p3 = self.matrix * Vec3::new(pos.x + width, pos.y, 0.0);
-            let p4 = self.matrix * Vec3::new(pos.x, pos.y + height, 0.0);
+            let p1 = self.matrix * Vec3::new(pos.x, pos.y, 0.0);
+            let p2 = self.matrix * Vec3::new(pos.x + width, pos.y, 0.0);
+            let p3 = self.matrix * Vec3::new(pos.x + width, pos.y - height, 0.0);
+            let p4 = self.matrix * Vec3::new(pos.x, pos.y - height, 0.0);
 
             let uv1 = Vec2::new(data.uvs.x, data.uvs.y);
             let uv2 = Vec2::new(data.uvs.z, data.uvs.y);
@@ -595,11 +606,11 @@ impl Target {
             self.char_orders.push(CharOrder {
                 points: [p1, p2, p3, p4],
                 uvs: [uv1, uv2, uv3, uv4],
-                color: self.fill,
+                color: self.stroke,
                 texture: font.texture().shader_index(),
             });
 
-            advance.x += data.advance * scale.x;
+            advance.x += data.advance * fs;
         }
     }
 
@@ -773,6 +784,26 @@ impl Target {
             sampler_index: self.sampler_index(),
             opaque,
         });
+    }
+
+    /// Get text width for current font
+    pub fn text_width(&self, text: impl AsRef<str>) -> f32 {
+        let font = self.font.as_ref().unwrap_or(&self.builtins.fira_font);
+        let scale = self.font_size as f32;
+        let mut width = 0.0;
+
+        for c in text.as_ref().chars() {
+            // handle whitespace
+            if c == ' ' {
+                width += scale / 3.0;
+                continue;
+            }
+
+            let data = font.char_data(c);
+            width += data.advance * scale;
+        }
+
+        width
     }
 
     /// Save target settings to stack

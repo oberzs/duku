@@ -83,9 +83,9 @@ impl Vec4 {
     }
 }
 
-impl<N: Into<f32> + Copy> From<[N; 4]> for Vec4 {
-    fn from(a: [N; 4]) -> Self {
-        Self::new(a[0].into(), a[1].into(), a[2].into(), a[3].into())
+impl From<[f32; 4]> for Vec4 {
+    fn from(a: [f32; 4]) -> Self {
+        Self::new(a[0], a[1], a[2], a[3])
     }
 }
 

@@ -62,17 +62,17 @@ impl Quat {
 
     /// local up direction for transformation
     pub fn local_up(self) -> Vec3 {
-        self.inverse() * Vec3::UP
+        self.inverse() * Vec3::up()
     }
 
     /// local forward direction for transformation
     pub fn local_forward(self) -> Vec3 {
-        self.inverse() * Vec3::FORWARD
+        self.inverse() * Vec3::forward()
     }
 
     /// local right direction for transformation
     pub fn local_right(self) -> Vec3 {
-        self.inverse() * Vec3::RIGHT
+        self.inverse() * Vec3::right()
     }
 
     /// Calculate the inverse rotation
@@ -181,8 +181,8 @@ mod test {
 
     #[test]
     fn look_rotation_x() {
-        let q = Quat::look_rotation([1.0, 0.0, 0.0], Vec3::UP);
-        let r = q * Vec3::FORWARD;
+        let q = Quat::look_rotation([1.0, 0.0, 0.0], Vec3::up());
+        let r = q * Vec3::forward();
         assert_eq_delta!(r.x, -1.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, 0.0);
@@ -190,8 +190,8 @@ mod test {
 
     #[test]
     fn look_rotation_y() {
-        let q = Quat::look_rotation([0.0, 1.0, 0.0], Vec3::FORWARD);
-        let r = q * Vec3::FORWARD;
+        let q = Quat::look_rotation([0.0, 1.0, 0.0], Vec3::forward());
+        let r = q * Vec3::forward();
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
         assert_eq_delta!(r.z, 0.0);
@@ -199,8 +199,8 @@ mod test {
 
     #[test]
     fn look_rotation_z() {
-        let q = Quat::look_rotation([0.0, 0.0, -1.0], Vec3::UP);
-        let r = q * Vec3::FORWARD;
+        let q = Quat::look_rotation([0.0, 0.0, -1.0], Vec3::up());
+        let r = q * Vec3::forward();
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, -1.0);
@@ -250,7 +250,7 @@ mod test {
     #[test]
     fn mul_vector() {
         let q = Quat::euler_rotation(0.0, 0.0, 90.0);
-        let v = Vec3::RIGHT;
+        let v = Vec3::right();
         let r = q * v;
 
         assert_eq_delta!(r.x, 0.0);

@@ -95,6 +95,7 @@ pub use color::Rgbf;
 pub use device::Stats;
 pub use error::Error;
 pub use error::Result;
+pub use font::Font;
 pub use image::Canvas;
 pub use image::ColorSpace;
 pub use image::Cubemap;

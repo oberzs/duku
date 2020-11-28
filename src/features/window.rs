@@ -428,10 +428,10 @@ impl Controller {
                     camera.move_right(final_speed);
                 }
                 if events.is_key_pressed(Key::Space) {
-                    camera.move_by(Vec3::UP * final_speed);
+                    camera.move_by(Vec3::up() * final_speed);
                 }
                 if events.is_key_pressed(Key::LShift) {
-                    camera.move_by(Vec3::DOWN * final_speed);
+                    camera.move_by(Vec3::down() * final_speed);
                 }
 
                 // rotation
@@ -483,7 +483,7 @@ impl Controller {
                     let delta = events.mouse_delta();
                     let speed = 50.0 * delta_time;
 
-                    camera.move_around_point(*pivot, speed * delta.x, Vec3::UP);
+                    camera.move_around_point(*pivot, speed * delta.x, Vec3::up());
                     camera.move_around_point(
                         *pivot,
                         speed * delta.y,
@@ -499,10 +499,10 @@ impl Controller {
 
                 // horizontal rotation
                 if events.is_key_pressed(Key::D) {
-                    camera.move_around_point(*pivot, -angle, Vec3::UP);
+                    camera.move_around_point(*pivot, -angle, Vec3::up());
                 }
                 if events.is_key_pressed(Key::A) {
-                    camera.move_around_point(*pivot, angle, Vec3::UP);
+                    camera.move_around_point(*pivot, angle, Vec3::up());
                 }
 
                 // vertical rotation

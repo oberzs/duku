@@ -204,10 +204,10 @@ impl Camera {
     /// Rotate the camera to look in specific direction
     pub fn look_dir(&mut self, dir: impl Into<Vec3>) {
         let dir = dir.into().unit();
-        let up = if dir == Vec3::UP {
-            Vec3::FORWARD
+        let up = if dir == Vec3::up() {
+            Vec3::forward()
         } else {
-            Vec3::UP
+            Vec3::up()
         };
         self.rotation = Quat::look_rotation(dir, up);
     }
