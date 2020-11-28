@@ -35,9 +35,29 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
-    /// Create a new vector
+    /// Create a vector
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
+    }
+
+    /// Create a vector facing up
+    pub const fn up() -> Self {
+        Self::new(0.0, 1.0)
+    }
+
+    /// Create a vector facing down
+    pub const fn down() -> Self {
+        Self::new(0.0, -1.0)
+    }
+
+    /// Create a vector facing left
+    pub const fn left() -> Self {
+        Self::new(-1.0, 0.0)
+    }
+
+    /// Create a vector facing right
+    pub const fn right() -> Self {
+        Self::new(1.0, 0.0)
     }
 
     /// Calculate the dot-product of the vector
@@ -111,20 +131,11 @@ impl Vec2 {
     pub fn round(&self) -> Self {
         Self::new(self.x.round(), self.y.round())
     }
-
-    /// Shorthand for `Vec2::new(0.0, 1.0)`
-    pub const UP: Self = Self::new(0.0, 1.0);
-    /// Shorthand for `Vec2::new(0.0, -1.0)`
-    pub const DOWN: Self = Self::new(0.0, -1.0);
-    /// Shorthand for `Vec2::new(-1.0, 0.0)`
-    pub const LEFT: Self = Self::new(-1.0, 0.0);
-    /// Shorthand for `Vec2::new(1.0, 0.0)`
-    pub const RIGHT: Self = Self::new(1.0, 0.0);
 }
 
-impl<N: Into<f32> + Copy> From<[N; 2]> for Vec2 {
-    fn from(a: [N; 2]) -> Self {
-        Self::new(a[0].into(), a[1].into())
+impl From<[f32; 2]> for Vec2 {
+    fn from(a: [f32; 2]) -> Self {
+        Self::new(a[0], a[1])
     }
 }
 

@@ -46,6 +46,36 @@ impl Vec3 {
         Self { x, y, z }
     }
 
+    /// Create a vector facing up
+    pub const fn up() -> Self {
+        Self::new(0.0, 1.0, 0.0)
+    }
+
+    /// Create a vector facing down
+    pub const fn down() -> Self {
+        Self::new(0.0, -1.0, 0.0)
+    }
+
+    /// Create a vector facing left
+    pub const fn left() -> Self {
+        Self::new(-1.0, 0.0, 0.0)
+    }
+
+    /// Create a vector facing right
+    pub const fn right() -> Self {
+        Self::new(1.0, 0.0, 0.0)
+    }
+
+    /// Create a vector facing forward
+    pub const fn forward() -> Self {
+        Self::new(0.0, 0.0, 1.0)
+    }
+
+    /// Create a vector facing back
+    pub const fn back() -> Self {
+        Self::new(0.0, 0.0, -1.0)
+    }
+
     /// Create a new vector with all components
     /// with the same value
     pub const fn uniform(v: f32) -> Self {
@@ -135,24 +165,11 @@ impl Vec3 {
     pub fn round(&self) -> Self {
         Vec3::new(self.x.round(), self.y.round(), self.z.round())
     }
-
-    /// Shorthand for `Vec3::new(0.0, 0.0, -1.0)`
-    pub const BACK: Self = Self::new(0.0, 0.0, -1.0);
-    /// Shorthand for `Vec3::new(0.0, 0.0, 1.0)`
-    pub const FORWARD: Self = Self::new(0.0, 0.0, 1.0);
-    /// Shorthand for `Vec3::new(0.0, 1.0, 0.0)`
-    pub const UP: Self = Self::new(0.0, 1.0, 0.0);
-    /// Shorthand for `Vec3::new(0.0, -1.0, 0.0)`
-    pub const DOWN: Self = Self::new(0.0, -1.0, 0.0);
-    /// Shorthand for `Vec3::new(-1.0, 0.0, 0.0)`
-    pub const LEFT: Self = Self::new(-1.0, 0.0, 0.0);
-    /// Shorthand for `Vec3::new(1.0, 0.0, 0.0)`
-    pub const RIGHT: Self = Self::new(1.0, 0.0, 0.0);
 }
 
-impl<N: Into<f32> + Copy> From<[N; 3]> for Vec3 {
-    fn from(a: [N; 3]) -> Self {
-        Self::new(a[0].into(), a[1].into(), a[2].into())
+impl From<[f32; 3]> for Vec3 {
+    fn from(a: [f32; 3]) -> Self {
+        Self::new(a[0], a[1], a[2])
     }
 }
 
@@ -333,12 +350,12 @@ mod test {
 
     #[test]
     fn direction() {
-        assert_eq!(Vec3::FORWARD, Vec3::new(0.0, 0.0, 1.0));
-        assert_eq!(Vec3::BACK, Vec3::new(0.0, 0.0, -1.0));
-        assert_eq!(Vec3::DOWN, Vec3::new(0.0, -1.0, 0.0));
-        assert_eq!(Vec3::UP, Vec3::new(0.0, 1.0, 0.0));
-        assert_eq!(Vec3::RIGHT, Vec3::new(1.0, 0.0, 0.0));
-        assert_eq!(Vec3::LEFT, Vec3::new(-1.0, 0.0, 0.0));
+        assert_eq!(Vec3::forward(), Vec3::new(0.0, 0.0, 1.0));
+        assert_eq!(Vec3::back(), Vec3::new(0.0, 0.0, -1.0));
+        assert_eq!(Vec3::down(), Vec3::new(0.0, -1.0, 0.0));
+        assert_eq!(Vec3::up(), Vec3::new(0.0, 1.0, 0.0));
+        assert_eq!(Vec3::right(), Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(Vec3::left(), Vec3::new(-1.0, 0.0, 0.0));
     }
 
     #[test]

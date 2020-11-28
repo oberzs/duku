@@ -128,9 +128,9 @@ impl ShadowRenderer {
             let bounds = bounds_for_split(&view, prev_split, params.splits[i]);
             let diameter = bounds.radius * 2.0;
             let up = if light_dir.y < 1.0 && light_dir.y > -1.0 {
-                Vec3::UP
+                Vec3::up()
             } else {
-                Vec3::FORWARD
+                Vec3::forward()
             };
             let light_position = bounds.center - light_dir * bounds.radius;
             let light_view_matrix =

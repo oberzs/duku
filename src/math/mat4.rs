@@ -581,8 +581,8 @@ mod test {
 
     #[test]
     fn look_rotation_x() {
-        let m = Mat4::look_rotation(Vec3::new(1.0, 0.0, 0.0), Vec3::UP);
-        let r = m * Vec3::FORWARD;
+        let m = Mat4::look_rotation(Vec3::new(1.0, 0.0, 0.0), Vec3::up());
+        let r = m * Vec3::forward();
         assert_eq_delta!(r.x, -1.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, 0.0);
@@ -590,8 +590,8 @@ mod test {
 
     #[test]
     fn look_rotation_y() {
-        let m = Mat4::look_rotation([0.0, 1.0, 0.0], Vec3::FORWARD);
-        let r = m * Vec3::FORWARD;
+        let m = Mat4::look_rotation([0.0, 1.0, 0.0], Vec3::forward());
+        let r = m * Vec3::forward();
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 1.0);
         assert_eq_delta!(r.z, 0.0);
@@ -599,8 +599,8 @@ mod test {
 
     #[test]
     fn look_rotation_z() {
-        let m = Mat4::look_rotation([0.0, 0.0, -1.0], Vec3::UP);
-        let r = m * Vec3::FORWARD;
+        let m = Mat4::look_rotation([0.0, 0.0, -1.0], Vec3::up());
+        let r = m * Vec3::forward();
         assert_eq_delta!(r.x, 0.0);
         assert_eq_delta!(r.y, 0.0);
         assert_eq_delta!(r.z, -1.0);

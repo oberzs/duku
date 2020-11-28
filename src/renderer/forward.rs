@@ -225,7 +225,7 @@ impl ForwardRenderer {
             ShaderConstants {
                 local_to_world: Mat4::identity(),
                 tint_color: Vec3::default(),
-                sampler_index: 7,
+                sampler_index: 3,
             },
         );
         cmd.draw(text_mesh.index_count(), 0);
@@ -248,7 +248,7 @@ impl ForwardRenderer {
         for order in orders {
             let o = vertices.len() as u32;
             let color = order.color.into();
-            vertices.extend(&[order.points[0], order.points[0]]);
+            vertices.extend(&[order.points[0], order.points[1]]);
             colors.extend(&[color, color]);
             indices.extend(&[o, o + 1]);
         }
