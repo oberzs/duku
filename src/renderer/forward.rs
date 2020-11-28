@@ -6,10 +6,12 @@ use std::time::Instant;
 
 use super::Camera;
 use super::CharOrder;
+use super::LightType;
 use super::LineOrder;
 use super::Pcf;
 use super::ShaderOrder;
 use super::ShadowRenderer;
+use super::ShadowSplitParams;
 use super::Target;
 use super::TriOrder;
 use crate::buffer::Buffer;
@@ -80,12 +82,28 @@ impl ForwardRenderer {
         uniforms: &Uniforms,
         target: Target,
     ) {
-        // shadow mapping pass
-        let mut view = camera.clone();
-        view.depth = target.shadow_depth;
-        let shadow_params =
-            self.shadow_renderer
-                .render(device, uniforms, &target, view, self.target_index);
+        // check whether should do shadow mapping
+        // if there is no lights, then not
+        let shadow_light = target
+            .lights
+            .iter()
+            .enumerate()
+            .find(|(_, l)| l.light_type == LightType::Directional);
+        let mut shadow_light_index = 4;
+        let mut shadow_params = ShadowSplitParams::default();
+        if let Some(l) = shadow_light {
+            shadow_light_index = l.0 as u32;
+            let mut view = camera.clone();
+            view.depth = target.shadow_depth;
+            shadow_params = self.shadow_renderer.render(
+                device,
+                uniforms,
+                &target,
+                *l.1,
+                view,
+                self.target_index,
+            );
+        }
 
         let target_resources = &mut self.target_resources[self.target_index];
         let cmd = device.commands();
@@ -119,8 +137,9 @@ impl ForwardRenderer {
             camera_position: camera.position,
             world_to_view: camera.world_to_view(),
             view_to_clip: camera.view_to_clip(),
-            ambient_color: Rgbf::from(target.ambient).into(),
+            ambient_color: target.ambient,
             exposure: target.exposure,
+            shadow_light_index,
             skybox_index,
             lights,
             shadow_pcf,

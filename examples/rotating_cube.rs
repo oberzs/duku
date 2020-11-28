@@ -18,9 +18,8 @@ fn main() -> Result<()> {
     // create 3D camera with 90 fov
     let camera = Camera::perspective(90);
 
-    // create main directional light
-    // that can cast shadows
-    let light = Light::main([-1.0, -1.0, 1.0], "#ffffff", 1.0);
+    // create directional light
+    let light = Light::directional("#ffffff", [-1.0, -1.0, 1.0]);
 
     // start timer for rotation and color
     let timer = Instant::now();
@@ -32,7 +31,6 @@ fn main() -> Result<()> {
             // setup scene
             t.background("#ababab");
             t.light(light);
-            t.shadows();
 
             // get elapsed time since start
             let elapsed = timer.elapsed().as_secs_f32();

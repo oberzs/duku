@@ -119,21 +119,22 @@ been passed from the Rust code.
 
 `world` defines values that are set for each canvas target.
 
-| Name               | Type       | Description                                                   |
-| ------------------ | ---------- | ------------------------------------------------------------- |
-| `world_to_view`    | `mat4`     | matrix that transforms coordinate from world to view space    |
-| `view_to_clip`     | `mat4`     | matrix that transforms coordinate from view to clip space     |
-| `world_to_shadow`  | `mat4[4]`  | matrices that transform coordinate from world to shadow space |
-| `camera_position`  | `vec3`     | camera position in world space                                |
-| `skybox_index`     | `uint`     | index for current skybox                                      |
-| `time`             | `float`    | time since the start of context creation                      |
-| `lights`           | `Light[4]` | lights that are in the scene                                  |
-| `ambient_color`    | `vec3`     | ambient light's color                                         |
-| `shadow_splits`    | `vec4`     | shadow map split values                                       |
-| `shadow_texels`    | `vec4`     | shadow map texel sizes                                        |
-| `shadow_diameters` | `vec4`     | shadow map area diameters                                     |
-| `shadow_pcf`       | `float`    | shadow map softness value                                     |
-| `exposure`         | `float`    | value used to do tone mapping                                 |
+| Name                 | Type       | Description                                                                      |
+| -------------------- | ---------- | -------------------------------------------------------------------------------- |
+| `world_to_view`      | `mat4`     | matrix that transforms coordinate from world to view space                       |
+| `view_to_clip`       | `mat4`     | matrix that transforms coordinate from view to clip space                        |
+| `world_to_shadow`    | `mat4[4]`  | matrices that transform coordinate from world to shadow space                    |
+| `camera_position`    | `vec3`     | camera position in world space                                                   |
+| `skybox_index`       | `uint`     | index for current skybox                                                         |
+| `time`               | `float`    | time since the start of context creation                                         |
+| `lights`             | `Light[4]` | lights that are in the scene                                                     |
+| `ambient_color`      | `vec3`     | ambient light's color                                                            |
+| `shadow_splits`      | `vec4`     | shadow map split values                                                          |
+| `shadow_texels`      | `vec4`     | shadow map texel sizes                                                           |
+| `shadow_diameters`   | `vec4`     | shadow map area diameters                                                        |
+| `shadow_pcf`         | `float`    | shadow map softness value                                                        |
+| `shadow_light_index` | `uint`     | index of the light that casts shadows. 4 means there is no shadow casting light. |
+| `exposure`           | `float`    | value used to do tone mapping                                                    |
 
 `material` defines values that are set for each material.
 

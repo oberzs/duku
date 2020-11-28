@@ -23,6 +23,7 @@ layout(set = 0, binding = 0) uniform World {
     float shadow_pcf;
     uint skybox_index;
     float exposure;
+    uint shadow_light_index;
 } world;
 
 layout(set = 1, binding = 0) uniform Material {
@@ -42,6 +43,5 @@ layout(push_constant) uniform Constants {
     uint sampler_index;
 } object;
 
-#define LIGHT_TYPE_MAIN 0
-#define LIGHT_TYPE_DIRECTIONAL 1
-#define LIGHT_TYPE_POINT 2
+#define LIGHT_TYPE_DIRECTIONAL 0
+#define LIGHT_TYPE_POINT 1

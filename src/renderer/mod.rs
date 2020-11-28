@@ -9,6 +9,7 @@ mod target;
 
 pub(crate) use forward::ForwardRenderer;
 pub(crate) use shadow::ShadowRenderer;
+pub(crate) use shadow::ShadowSplitParams;
 pub(crate) use target::CharOrder;
 pub(crate) use target::LineOrder;
 pub(crate) use target::ShaderOrder;

@@ -85,19 +85,21 @@ void fragment() {
     vec3 base_refl = mix(vec3(0.04), albedo, metalness);
 
     vec3 light_amount = vec3(0.0);
+
+    // calculate shadow casting contribution
     float shadow_occlusion = 1.0;
+    if (world.shadow_light_index < 4) {
+        uint i = world.shadow_light_index;
+        shadow_occlusion *= shadow(world.lights[i], normal);
+    }
 
     for (int i = 0; i < 4; ++i) {
         Light light = world.lights[i];
-    
-        if (light.type == LIGHT_TYPE_MAIN) {
-            shadow_occlusion *= shadow(light, normal);
-        }
 
         vec3 light_dir = vec3(0.0);
         vec3 radiance = vec3(0.0);
 
-        if (light.type == LIGHT_TYPE_DIRECTIONAL || light.type == LIGHT_TYPE_MAIN) {
+        if (light.type == LIGHT_TYPE_DIRECTIONAL) {
             light_dir = normalize(-light.coords.xyz);
             radiance = light.color.xyz;
         } else if (light.type == LIGHT_TYPE_POINT) {
@@ -132,7 +134,7 @@ void fragment() {
         light_amount += (diffuse + specular) * radiance * n_dot_l;
     }
 
-    vec3 ambient = vec3(0.03) * albedo;
+    vec3 ambient = world.ambient_color * albedo;
     vec3 color = ambient + emissive + light_amount * ambient_occlusion * shadow_occlusion;
 
     // tone mapping
