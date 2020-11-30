@@ -1,6 +1,9 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+// This example splits a sprite sheet texture into
+// parts and draws it as an animation.
+
 use duku::Duku;
 use duku::Handle;
 use duku::Result;
@@ -21,14 +24,17 @@ struct Frame {
 
 fn main() -> Result<()> {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(256, 256)?;
 
+    // load sprite sheet into texture
     let run = duku.create_texture_png("examples/textures/run.png", None)?;
 
+    // split texture into animation parts
     let mut animation = Animation::new(&run, 10.0, 8);
 
     // start window loop
     window.while_open(move |_| {
+        // update the animation with the delta time
         animation.update(duku.delta_time());
 
         // start drawing on window
