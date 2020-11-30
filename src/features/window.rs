@@ -27,7 +27,6 @@ pub use window_dep::window::CursorIcon as Cursor;
 use crate::duku::Duku;
 use crate::duku::DukuBuilder;
 use crate::error::Result;
-use crate::math::Quat;
 use crate::math::Vec2;
 use crate::math::Vec3;
 use crate::renderer::Camera;
@@ -65,23 +64,13 @@ pub enum Event {
     Resize(Vec2),
 }
 
-/// Simple first person controller.
+/// Simple orbit camera controller.
 #[derive(Debug, Copy, Clone)]
-pub enum Controller {
-    /// WASD fly-around mode
-    Fly {
-        /// vertical angle of the camera
-        camera_angle: f32,
-        /// camera move speed
-        move_speed: f32,
-    },
-    /// orbit-arount-point mode
-    Orbit {
-        /// center point to rotate around
-        pivot: Vec3,
-        /// camera move speed
-        move_speed: f32,
-    },
+pub struct Orbit {
+    /// center point to rotate around
+    pivot: Vec3,
+    /// camera move speed
+    move_speed: f32,
 }
 
 /// OS window builder.
@@ -378,149 +367,63 @@ impl Events {
     }
 }
 
-impl Controller {
-    /// Create a fly-mode controller
-    pub const fn fly() -> Self {
-        Self::Fly {
-            camera_angle: 0.0,
-            move_speed: 1.0,
-        }
-    }
-
-    /// Create a orbit-mode controller
-    pub fn orbit(pivot: impl Into<Vec3>) -> Self {
-        Self::Orbit {
+impl Orbit {
+    /// Create a orbit controller
+    pub fn new(pivot: impl Into<Vec3>) -> Self {
+        Self {
             pivot: pivot.into(),
             move_speed: 2.5,
         }
     }
 
-    /// Update camera and window based on controller
+    /// Update camera
     pub fn update(&mut self, camera: &mut Camera, events: &mut Events, delta_time: f32) {
-        match self {
-            Self::Fly {
-                camera_angle,
-                move_speed,
-            } => {
-                // update move speed
-                if events.is_key_typed(Key::Plus) {
-                    *move_speed += 0.5;
-                }
-                if events.is_key_typed(Key::Minus) {
-                    *move_speed -= 0.5;
-                }
+        // control orbiting around pivot
+        let angle = 5.0f32.powf(self.move_speed) * delta_time;
 
-                // control in flying mode
-                let final_speed = 5.0f32.powf(*move_speed) * delta_time;
-                let rotation_speed = 50.0 * delta_time;
-
-                // movement
-                if events.is_key_pressed(Key::W) {
-                    camera.move_forward(final_speed);
-                }
-                if events.is_key_pressed(Key::S) {
-                    camera.move_back(final_speed);
-                }
-                if events.is_key_pressed(Key::A) {
-                    camera.move_left(final_speed);
-                }
-                if events.is_key_pressed(Key::D) {
-                    camera.move_right(final_speed);
-                }
-                if events.is_key_pressed(Key::Space) {
-                    camera.move_by(Vec3::up() * final_speed);
-                }
-                if events.is_key_pressed(Key::LShift) {
-                    camera.move_by(Vec3::down() * final_speed);
-                }
-
-                // rotation
-                if events.is_button_pressed(MouseButton::Middle) {
-                    // toggle mouse grab if needed
-                    if !events.mouse_grab() {
-                        events.set_mouse_grab(true);
-                    }
-
-                    // rotate view
-                    let delta = events.mouse_delta();
-
-                    let mouse_x = delta.x * rotation_speed;
-                    let mouse_y =
-                        clamp_change(*camera_angle, delta.y * rotation_speed, -90.0, 90.0);
-                    *camera_angle += mouse_y;
-
-                    let pitch = Quat::euler_rotation(0.0, mouse_x, 0.0);
-                    let roll = Quat::euler_rotation(mouse_y, 0.0, 0.0);
-
-                    camera.rotation = pitch * camera.rotation * roll;
-                } else {
-                    // toggle mouse grab if needed
-                    if events.mouse_grab() {
-                        events.set_mouse_grab(false);
-                    }
-                }
+        // mouse rotation
+        if events.is_button_pressed(MouseButton::Middle) {
+            // toggle mouse grab if needed
+            if !events.mouse_grab() {
+                events.set_mouse_grab(true);
+                events.hide_cursor(true);
             }
-            Self::Orbit { pivot, move_speed } => {
-                // update move speed
-                if events.is_key_typed(Key::Plus) {
-                    *move_speed += 0.5;
-                }
-                if events.is_key_typed(Key::Minus) {
-                    *move_speed -= 0.5;
-                }
 
-                // control orbiting around pivot
-                let angle = 5.0f32.powf(*move_speed) * delta_time;
+            let delta = events.mouse_delta();
+            let speed = 50.0 * delta_time;
 
-                // mouse rotation
-                if events.is_button_pressed(MouseButton::Middle) {
-                    // toggle mouse grab if needed
-                    if !events.mouse_grab() {
-                        events.set_mouse_grab(true);
-                        events.hide_cursor(true);
-                    }
-
-                    let delta = events.mouse_delta();
-                    let speed = 50.0 * delta_time;
-
-                    camera.move_around_point(*pivot, speed * delta.x, Vec3::up());
-                    camera.move_around_point(
-                        *pivot,
-                        speed * delta.y,
-                        camera.rotation.local_right(),
-                    );
-                } else {
-                    // toggle mouse grab if needed
-                    if events.mouse_grab() {
-                        events.set_mouse_grab(false);
-                        events.hide_cursor(false);
-                    }
-                }
-
-                // horizontal rotation
-                if events.is_key_pressed(Key::D) {
-                    camera.move_around_point(*pivot, -angle, Vec3::up());
-                }
-                if events.is_key_pressed(Key::A) {
-                    camera.move_around_point(*pivot, angle, Vec3::up());
-                }
-
-                // vertical rotation
-                if events.is_key_pressed(Key::W) {
-                    camera.move_around_point(*pivot, angle, camera.rotation.local_right());
-                }
-                if events.is_key_pressed(Key::S) {
-                    camera.move_around_point(*pivot, -angle, camera.rotation.local_right());
-                }
-
-                // zoom
-                let scroll = events.scroll_delta();
-                camera.move_forward(scroll.y * (*pivot - camera.position).length() * 0.05);
-
-                // look at pivot point
-                camera.look_at(*pivot);
+            camera.move_around_point(self.pivot, speed * delta.x, Vec3::up());
+            camera.move_around_point(self.pivot, speed * delta.y, camera.rotation.local_right());
+        } else {
+            // toggle mouse grab if needed
+            if events.mouse_grab() {
+                events.set_mouse_grab(false);
+                events.hide_cursor(false);
             }
         }
+
+        // horizontal rotation
+        if events.is_key_pressed(Key::D) {
+            camera.move_around_point(self.pivot, -angle, Vec3::up());
+        }
+        if events.is_key_pressed(Key::A) {
+            camera.move_around_point(self.pivot, angle, Vec3::up());
+        }
+
+        // vertical rotation
+        if events.is_key_pressed(Key::W) {
+            camera.move_around_point(self.pivot, angle, camera.rotation.local_right());
+        }
+        if events.is_key_pressed(Key::S) {
+            camera.move_around_point(self.pivot, -angle, camera.rotation.local_right());
+        }
+
+        // zoom
+        let scroll = events.scroll_delta();
+        camera.move_forward(scroll.y * (self.pivot - camera.position).length() * 0.05);
+
+        // look at pivot point
+        camera.look_at(self.pivot);
     }
 }
 
@@ -543,13 +446,5 @@ impl WindowBuilder {
         let duku = self.duku.attach_window(window.handle()).build()?;
 
         Ok((duku, window))
-    }
-}
-
-fn clamp_change(current: f32, change: f32, min: f32, max: f32) -> f32 {
-    if current + change > min && current + change < max {
-        change
-    } else {
-        0.0
     }
 }

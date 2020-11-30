@@ -414,15 +414,6 @@ impl Target {
         self.path(points, false, weight, weight);
     }
 
-    /// Draw a 3D debug line that isn't controlled by
-    /// [stroke_weight](crate::renderer::Target::stroke_weight)
-    pub fn debug_line<V: Into<Vec3>>(&mut self, p1: V, p2: V) {
-        self.line_orders.push(LineOrder {
-            points: [self.matrix * p1.into(), self.matrix * p2.into()],
-            color: self.stroke,
-        });
-    }
-
     /// Draw a custom 3D mesh
     pub fn mesh(&mut self, mesh: &Handle<Mesh>) {
         let unshaded = self.lights.iter().all(|l| l.is_none());
@@ -537,8 +528,17 @@ impl Target {
         self.pop();
     }
 
+    /// Draw a 3D debug line that isn't controlled by
+    /// [stroke_weight](crate::renderer::Target::stroke_weight)
+    pub fn debug_line<V: Into<Vec3>>(&mut self, p1: V, p2: V) {
+        self.line_orders.push(LineOrder {
+            points: [self.matrix * p1.into(), self.matrix * p2.into()],
+            color: self.stroke,
+        });
+    }
+
     /// Draw 3D guide grid for X and Z axis
-    pub fn grid(&mut self) {
+    pub fn debug_grid(&mut self) {
         let size = 100;
         let half = size / 2;
         let width = 1.0;
