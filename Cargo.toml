@@ -1,6 +1,6 @@
 [package]
 name = "duku"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
@@ -64,8 +64,8 @@ path = "examples/3d-examples/rotating_cube.rs"
 required-features = ["window"]
 
 [[example]]
-name = "raytracing"
-path = "examples/3d-examples/raytracing.rs"
+name = "raymarch"
+path = "examples/3d-examples/raymarch.rs"
 required-features = ["window", "glsl"]
 
 [[example]]
