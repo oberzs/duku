@@ -11,7 +11,7 @@ repository = "https://github.com/oberzs/duku"
 documentation = "https://docs.rs/duku"
 readme = "README.md"
 exclude = [
-  "examples/*",
+  "examples/screenshots/*",
   ".github/*",
   "shaders/glsl/*"
 ]
@@ -57,3 +57,23 @@ features = ["utils"]
 name = "dc"
 path = "src/dc.rs"
 required-features = ["glsl"]
+
+[[example]]
+name = "rotating_cube"
+path = "examples/3d-examples/rotating_cube.rs"
+required-features = ["window"]
+
+[[example]]
+name = "raytracing"
+path = "examples/3d-examples/raytracing.rs"
+required-features = ["window", "glsl"]
+
+[[example]]
+name = "run_animation"
+path = "examples/2d-examples/run_animation.rs"
+required-features = ["window", "png"]
+
+[[example]]
+name = "gradient_squares"
+path = "examples/2d-examples/gradient_squares.rs"
+required-features = ["window"]

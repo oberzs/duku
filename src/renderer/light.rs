@@ -11,8 +11,15 @@ use crate::pipeline::ShaderLight;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// target.lights[0] = Light::main([-1.0, 1.0, 0.0], Color::RED, 5.0);
+/// ```no_run
+/// # use duku::Duku;
+/// # use duku::Light;
+/// # let (mut d, _) = Duku::windowed(1, 1).unwrap();
+/// let light = Light::directional("#ffffff", [-1.0, 1.0, 0.0]);
+///
+/// # d.draw(None, |t| {
+/// t.light(light);
+/// # });
 /// ```
 #[derive(Copy, Clone, Debug)]
 pub struct Light {

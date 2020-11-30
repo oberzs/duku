@@ -25,10 +25,15 @@ use crate::vk;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let shader = create_shader_glsl("shader.glsl")?;
+/// ```no_run
+/// # use duku::Duku;
+/// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+/// let shader = duku.create_shader_spirv("shader.spirv").unwrap();
 ///
-/// target.set_shader(&shader);
+/// # duku.draw(None, |t| {
+/// // when drawing
+/// t.shader(&shader);
+/// # });
 /// ```
 pub struct Shader {
     handle: vk::Pipeline,

@@ -40,7 +40,7 @@ impl<C: Mix + Default + Copy> Gradient<C> {
             values = vec![C::default(), C::default()];
         }
 
-        let part = 1.0 / values.len() as f32;
+        let part = 1.0 / (values.len() - 1) as f32;
         Self { values, part }
     }
 
@@ -54,7 +54,11 @@ impl<C: Mix + Default + Copy> Gradient<C> {
         } else {
             let i = (p / self.part).floor();
             let ip = (p - (self.part * i)) * self.values.len() as f32;
-            C::mix(self.values[i as usize], self.values[i as usize + 1], ip)
+
+            let c1 = self.values[i as usize];
+            let c2 = self.values.get(i as usize + 1).copied().unwrap_or(c1);
+
+            C::mix(c1, c2, ip)
         }
     }
 }

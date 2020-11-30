@@ -11,14 +11,6 @@ use crate::resources::Handle;
 /// Collection of meshes and materials.
 ///
 /// Makes it easier to render complex scenes
-///
-/// # Examples
-///
-/// ```ignore
-/// let model = duku.create_model_gltf("house.gltf")?;
-///
-/// target.draw_model(&model);
-/// ```
 pub struct Model {
     /// render-nodes of the model
     pub nodes: Vec<ModelNode>,

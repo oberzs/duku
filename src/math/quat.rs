@@ -13,10 +13,12 @@ use std::ops::MulAssign;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let vector = Vec3::UP;
+/// ```
+/// # use duku::Vec3;
+/// # use duku::Quat;
+/// let vector = Vec3::up();
 /// let quat = Quat::euler_rotation(0.0, 0.0, 90.0);
-/// assert_eq!(quat * vector, Vec3::RIGHT);
+/// let rotated = quat * vector;
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Quat {

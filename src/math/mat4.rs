@@ -18,10 +18,12 @@ use super::Vec4;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use duku::Vec3;
+/// # use duku::Mat4;
 /// let vector = Vec3::new(2.0, 0.0, 0.0);
 /// let matrix = Mat4::scale([5.0, 1.0, 1.0]);
-/// assert_eq!(matrix * vector, Vec3::new(10.0, 0.0, 0.0));
+/// let scaled = matrix * vector;
 /// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -85,14 +87,6 @@ impl Mat4 {
     /// Create translation matrix
     ///
     /// Translation matrix moves vectors around
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let vector = Vec3::new(2.0, 0.0, 0.0);
-    /// let matrix = Mat4::translation([5.0, 1.0, 1.0]);
-    /// assert_eq!(matrix * vector, Vec3::new(7.0, 1.0, 1.0));
-    /// ```
     pub fn translation(vector: impl Into<Vec3>) -> Self {
         let v = vector.into();
         Self::rows(
@@ -106,14 +100,6 @@ impl Mat4 {
     /// Create scale matrix
     ///
     /// Scale matrix scales vectors
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let vector = Vec3::new(2.0, 0.0, 0.0);
-    /// let matrix = Mat4::scale([5.0, 1.0, 1.0]);
-    /// assert_eq!(matrix * vector, Vec3::new(10.0, 0.0, 0.0));
-    /// ```
     pub fn scale(vector: impl Into<Vec3>) -> Self {
         let v = vector.into();
         Self::rows(

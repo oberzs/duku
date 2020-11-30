@@ -14,38 +14,12 @@ use crate::pipeline::Uniforms;
 ///
 /// Contains 6 square side textures of a cube that
 /// can be sampled by a direction in the shader.
-///
-/// # Examples
-///
-/// ```ignore
-/// let skybox = duku.create_cubemap_png(CubemapSides {
-///     top: "path/to/top.png",
-///     bottom: "path/to/bottom.png",
-///     front: "path/to/front.png",
-///     back: "path/to/back.png",
-///     left: "path/to/left.png",
-///     right: "path/to/right.png",
-/// });
-/// ```
 pub struct Cubemap {
     image: Image,
     shader_index: u32,
 }
 
 /// 6 square sides of the cubemap.
-///
-/// # Examples
-///
-/// ```ignore
-/// let skybox = duku.create_cubemap_png(CubemapSides {
-///     top: "path/to/top.png",
-///     bottom: "path/to/bottom.png",
-///     front: "path/to/front.png",
-///     back: "path/to/back.png",
-///     left: "path/to/left.png",
-///     right: "path/to/right.png",
-/// });
-/// ```
 pub struct CubemapSides<T> {
     /// top face of the cube
     pub top: T,

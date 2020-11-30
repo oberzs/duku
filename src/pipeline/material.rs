@@ -18,12 +18,17 @@ use crate::resources::Handle;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let mut material = duku.create_material_pbr()?;
+/// ```no_run
+/// # use duku::Duku;
+/// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+/// let mut material = duku.create_material_pbr().unwrap();
 /// material.roughness(0.5);
 ///
-/// target.set_material(&material);
-/// target.draw_cube();
+/// # duku.draw(None, |t| {
+/// // when drawing
+/// t.material(&material);
+/// t.cube([1.0, 1.0, 1.0]);
+/// # });
 /// ```
 pub struct Material {
     /// parameter A

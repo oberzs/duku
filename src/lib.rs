@@ -7,33 +7,51 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use duku::Color;
+//! ```no_run
+//! // This example draws a cube in the center of the window,
+//! // rotating and coloring it based on the time that has passed.
+//!
 //! use duku::Camera;
 //! use duku::Duku;
+//! use duku::Hsb;
+//! use duku::Light;
 //! use duku::Result;
+//! use std::time::Instant;
 //!
 //! fn main() -> Result<()> {
-//!     // initialize duku and OS window with a size of 500x500
+//!     // create duku context and window
 //!     let (mut duku, window) = Duku::windowed(500, 500)?;
 //!
-//!     // create a 3D perspective camera with an FOV of 90
-//!     let mut camera = Camera::perspective_autosized(90);
+//!     // create 3D camera with 90 fov
+//!     let camera = Camera::perspective(90);
 //!
-//!     // move the camera to some location
-//!     // and make it look at the center of the world
-//!     camera.transform.move_by([2.0, 1.5, -2.0]);
-//!     camera.transform.look_at([0.0, 0.0, 0.0]);
+//!     // create directional light
+//!     let light = Light::directional("#ffffff", [-1.0, -1.0, 1.0]);
 //!
-//!     // start up the main event loop
+//!     // start timer for rotation and color
+//!     let timer = Instant::now();
+//!
+//!     // start window loop
 //!     window.while_open(move |_| {
-//!       // start drawing on the window using our camera
-//!       duku.draw_on_window(Some(&camera), |target| {
-//!             // set the background color to sky blue
-//!             target.clear = Color::SKY_BLUE;
+//!         // start drawing on window
+//!         duku.draw(Some(&camera), |t| {
+//!             // setup scene
+//!             t.background("#ababab");
+//!             t.light(light);
 //!
-//!             // draw a cube at the center of the world
-//!             target.draw_cube();
+//!             // get elapsed time since start
+//!             let elapsed = timer.elapsed().as_secs_f32();
+//!
+//!             // transform scene
+//!             let angle = elapsed * 45.0;
+//!             t.rotate_x(angle);
+//!             t.rotate_y(angle);
+//!             t.translate_z(2.0);
+//!
+//!             // draw cube
+//!             let hue = (elapsed * 60.0) as u16;
+//!             t.tint(Hsb::new(hue, 70, 80));
+//!             t.cube([1.0, 1.0, 1.0]);
 //!         });
 //!     });
 //!

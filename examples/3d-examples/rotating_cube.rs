@@ -39,7 +39,7 @@ fn main() -> Result<()> {
             let angle = elapsed * 45.0;
             t.rotate_x(angle);
             t.rotate_y(angle);
-            t.translate([0.0, 0.0, 2.0]);
+            t.translate_z(2.0);
 
             // draw cube
             let hue = (elapsed * 60.0) as u16;

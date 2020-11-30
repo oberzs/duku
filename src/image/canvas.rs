@@ -26,17 +26,19 @@ use crate::vk;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let canvas = duku.create_canvas(400, 400)?;
+/// ```no_run
+/// # use duku::Duku;
+/// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+/// let canvas = duku.create_canvas(400, 400).unwrap();
 ///
 /// // render to canvas
-/// duku.draw(&canvas, None, |target| {
+/// duku.draw_on_canvas(&canvas, None, |t| {
 ///     // draw commands ...
 /// });
 ///
 /// // draw canvas on window
-/// duku.draw_on_window(None, |target| {
-///     target.fullscreen(&canvas);
+/// duku.draw(None, |t| {
+///     t.fullscreen(&canvas);
 /// });
 /// ```
 pub struct Canvas {
