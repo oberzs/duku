@@ -1,4 +1,4 @@
-<h1 align="center">Duku Renderer 🎨</h1>
+<h1 align="center">Duku 🎨</h1>
 
 <div align="center">
   <!-- Version -->
@@ -31,48 +31,63 @@
 
 <br>
 
-This Rust crate makes it easy to render 2D and 3D graphics.
+A Rust crate for creating graphic experiences, with a focus on ease of use and beginner friendliness.
+Also helpful for visualizing algorithms when learning Rust.
+
+This creative coding library draws a lot of inspiration from [p5.js].
 
 ## Simple Example
 
-A simple example that initiates duku, sets up a 3D camera
-and draws a cube on the screen.
+This example draws a cube in the center of the window, rotating and coloring it based on the time that has passed.
 
 ```rust
-use duku::Color;
 use duku::Camera;
 use duku::Duku;
+use duku::Hsb;
+use duku::Light;
 use duku::Result;
+use std::time::Instant;
 
 fn main() -> Result<()> {
-    // initialize duku and OS window with a size of 500x500
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+  // create duku context and window
+  let (mut duku, window) = Duku::windowed(500, 500)?;
 
-    // create a 3D perspective camera with an FOV of 90
-    let mut camera = Camera::perspective_autosized(90);
+  // create 3D camera with 90 fov
+  let camera = Camera::perspective(90);
 
-    // move the camera to some location
-    // and make it look at the center of the world
-    camera.transform.move_by([2.0, 1.5, -2.0]);
-    camera.transform.look_at([0.0, 0.0, 0.0]);
+  // create directional light
+  let light = Light::directional("#ffffff", [-1.0, -1.0, 1.0]);
 
-    // start up the main event loop
-    window.while_open(move |_| {
-      // start drawing on the window using our camera
-      duku.draw(Some(&camera), |target| {
-            // set the background color to sky blue
-            target.clear = Color::SKY_BLUE;
+  // start timer for rotation and color
+  let timer = Instant::now();
 
-            // draw a cube at the center of the world
-            target.draw_cube();
-        });
-    });
+  // start window loop
+  window.while_open(move |_| {
+      // start drawing on window
+      duku.draw(Some(&camera), |t| {
+          // setup scene
+          t.background("#ababab");
+          t.light(light);
 
-    Ok(())
+          // get elapsed time since start
+          let elapsed = timer.elapsed().as_secs_f32();
+
+          // transform scene
+          let angle = elapsed * 45.0;
+          t.rotate_x(angle);
+          t.rotate_y(angle);
+          t.translate_z(2.0);
+
+          // draw cube
+          let hue = (elapsed * 60.0) as u16;
+          t.tint(Hsb::new(hue, 70, 80));
+          t.cube([1.0, 1.0, 1.0]);
+      });
+  });
+
+  Ok(())
 }
 ```
-
-This example uses the optional feature `window` for OS window creation.
 
 Want more? Check out these other [examples].
 
@@ -121,6 +136,7 @@ The features include:
 | `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
 | `log`    | no      | n/a            | adds informational logs               |
 
+[p5.js]: https://p5js.org/
 [examples]: https://github.com/oberzs/duku/tree/release/examples
 [crates.io]: https://crates.io
 [vulkan sdk]: https://vulkan.lunarg.com/
