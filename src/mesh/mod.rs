@@ -23,18 +23,23 @@ pub use model::ModelNode;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```no_run
+/// # use duku::Duku;
+/// # use duku::Vec3;
+/// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
 /// // setup a triangle
 /// let mut mesh = duku.create_mesh();
 /// mesh.vertices = vec![
-///     Vec3::new(-1.0, -1.0),
-///     Vec3::new(0.0, 1.0),
-///     Vec3::new(1.0, -1.0),
+///     Vec3::new(-1.0, -1.0, 0.0),
+///     Vec3::new(0.0, 1.0, 0.0),
+///     Vec3::new(1.0, -1.0, 0.0),
 /// ];
 /// mesh.indices = vec![0, 1, 2];
 ///
-/// // render a triangle
-/// target.draw_mesh(&mesh);
+/// # duku.draw(None, |t| {
+/// // while rendering
+/// t.mesh(&mesh);
+/// # });
 /// ```
 pub struct Mesh {
     /// vertex positions

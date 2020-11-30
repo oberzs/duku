@@ -16,16 +16,6 @@ use crate::pipeline::Uniforms;
 ///
 /// These can be created from bytes of color data, PNGs
 /// JPEGs, etc.
-///
-/// # Examples
-///
-/// ```ignore
-/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
-///
-/// // use the texture in a material
-/// let mut material = duku.create_material_pbr()?;
-/// material.albedo_texture(&texture);
-/// ```
 pub struct Texture {
     /// pixel data as bytes
     pub data: Vec<u8>,
@@ -99,14 +89,6 @@ impl Texture {
     /// Set a pixel in the image to a specific color.
     ///
     /// Works only if the texture has no mips.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let tex = duku.texture_mut(&texture);
-    /// tex.set_pixel(0, 0, Color::SKY_BLUE);
-    /// tex.set_pixel(1, 1, Color::RED);
-    /// ```
     pub fn set_pixel(&mut self, x: u32, y: u32, color: impl Into<Rgb>) {
         debug_assert!(matches!(self.image.format(), Format::Rgba | Format::Srgba));
 

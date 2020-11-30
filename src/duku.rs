@@ -46,8 +46,9 @@ const FPS_SAMPLE_COUNT: usize = 64;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let (mut duku, window) = Duku::windowed(500, 500)?;
+/// ```no_run
+/// # use duku::Duku;
+/// let (mut duku, window) = Duku::windowed(500, 500).unwrap();
 /// ```
 pub struct Duku {
     // Vulkan
@@ -113,8 +114,10 @@ impl Duku {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// duku.draw(None, |target| {
+    /// ```no_run
+    /// # use duku::Duku;
+    /// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+    /// duku.draw(None, |t| {
     ///     // record drawing commands
     /// });
     /// ```
@@ -143,10 +146,12 @@ impl Duku {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let canvas = duku.create_canvas(640, 360)?;
+    /// ```no_run
+    /// # use duku::Duku;
+    /// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+    /// let canvas = duku.create_canvas(640, 360).unwrap();
     ///
-    /// duku.draw_on_canvas(&canvas, None, |target| {
+    /// duku.draw_on_canvas(&canvas, None, |t| {
     ///     // record drawing commands
     /// });
     /// ```

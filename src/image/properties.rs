@@ -6,12 +6,6 @@ use crate::vk;
 /// Color value representation mode.
 ///
 /// Defines how textures should be sampled in the shader.
-///
-/// # Examples
-///
-/// ```ignore
-/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
-/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ColorSpace {
     /// a linear representation of color values
@@ -27,12 +21,6 @@ pub enum ColorSpace {
 ///
 /// Rendering with mips is faster to sample, but they
 /// require more memory.
-///
-/// # Examples
-///
-/// ```ignore
-/// let texture = duku.create_texture_png("path/to/image.png", ColorSpace::Srgb, Mips::Log2);
-/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mips {
     /// generates as many mips as possible
@@ -48,12 +36,6 @@ pub enum Mips {
 ///
 /// Higher settings greatly impact performance, also
 /// require more memory for bigger canvases.
-///
-/// # Examples
-///
-/// ```ignore
-/// let duku = Duku::builder().msaa(Msaa::X4).build()?;
-/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Msaa {
     /// samples each pixel 4 times
@@ -67,14 +49,6 @@ pub enum Msaa {
 }
 
 /// Filtering mode for texture sampling.
-///
-/// # Examples
-///
-/// ```ignore
-/// duku.draw_on_window(None, |target| {
-///     target.texture_filter = Filter::Nearest;
-/// });
-/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Filter {
     /// interpolates linearly between texture pixels
@@ -87,14 +61,6 @@ pub enum Filter {
 ///
 /// Defines what should be returned when sampling outside
 /// of the texture's UV range
-///
-/// # Examples
-///
-/// ```ignore
-/// duku.draw_on_window(None, |target| {
-///     target.texture_filter = Wrap::Repeat;
-/// });
-/// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Wrap {
     /// samples black outside of texture

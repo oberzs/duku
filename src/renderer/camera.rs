@@ -9,10 +9,13 @@ use crate::math::Vec3;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let camera = Camera::projection(90);
+/// ```no_run
+/// # use duku::Duku;
+/// # use duku::Camera;
+/// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+/// let camera = Camera::perspective(90);
 ///
-/// duku.draw_on_window(Some(&camera), |target| {
+/// duku.draw(Some(&camera), |t| {
 ///     // draw commands
 /// });
 /// ```

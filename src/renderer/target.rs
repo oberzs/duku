@@ -356,6 +356,21 @@ impl Target {
         self.matrix = Mat4::translation(v) * self.matrix;
     }
 
+    /// Move transform on X axis
+    pub fn translate_x(&mut self, x: f32) {
+        self.matrix = Mat4::translation(Vec3::right() * x) * self.matrix;
+    }
+
+    /// Move transform on Y axis
+    pub fn translate_y(&mut self, y: f32) {
+        self.matrix = Mat4::translation(Vec3::up() * y) * self.matrix;
+    }
+
+    /// Move transform on Z axis
+    pub fn translate_z(&mut self, z: f32) {
+        self.matrix = Mat4::translation(Vec3::forward() * z) * self.matrix;
+    }
+
     /// Scale transform by vector
     pub fn scale(&mut self, v: impl Into<Vec3>) {
         self.matrix = Mat4::scale(v) * self.matrix;

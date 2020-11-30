@@ -5,14 +5,16 @@
 ///
 /// Can be used to diagnose the complexity of your
 /// render loop, like resource rebinds and draw calls.
-/// Should be called after the rendering has been done.
+/// Should be called after the drawing has been done.
 ///
 /// # Examples
 ///
-/// ```ignore
-/// // rendering has happened before
+/// ```no_run
+/// # use duku::Duku;
+/// let (mut duku, _) = Duku::windowed(1, 1).unwrap();
+///
+/// // after drawing
 /// let stats = duku.stats();
-/// println!("{:#?}", stats);
 /// ```
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Stats {

@@ -23,11 +23,17 @@ use crate::color::Rgbf;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let point_1 = Vec3::new(-10.0, -10.0, -10.0);
-/// let point_2 = Vec3::new(10.0, 10.0, 10.0);
+/// ```no_run
+/// # use duku::Duku;
+/// # use duku::Vec3;
+/// # let (mut d, _) = Duku::windowed(1, 1).unwrap();
+/// let point1 = Vec3::new(-10.0, -10.0, -10.0);
+/// let point2 = Vec3::new(10.0, 10.0, 10.0);
 ///
-/// target.draw_line_debug(point_1, point_2);
+/// # d.draw(None, |t| {
+/// // when drawing
+/// t.debug_line(point1, point2);
+/// # });
 /// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -126,9 +132,10 @@ impl Vec3 {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let up = Vec3::UP;
-    /// let right = Vec3::RIGHT;
+    /// ```
+    /// # use duku::Vec3;
+    /// let up = Vec3::up();
+    /// let right = Vec3::right();
     /// let angle = up.angle_between(right);
     /// // angle is ~90 degrees
     /// ```

@@ -19,11 +19,17 @@ use std::ops::SubAssign;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// let point_1 = Vec2::new(-10.0, -10.0);
-/// let point_2 = Vec2::new(10.0, 10.0);
+/// ```no_run
+/// # use duku::Duku;
+/// # use duku::Vec2;
+/// # let (mut d, _) = Duku::windowed(1, 1).unwrap();
+/// let point1 = Vec2::new(-10.0, -10.0);
+/// let point2 = Vec2::new(10.0, 10.0);
 ///
-/// target.draw_lines(&[point_1, point_2], false);
+/// # d.draw(None, |t| {
+/// // when drawing
+/// t.line(point1, point2);
+/// # });
 /// ```
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -105,9 +111,10 @@ impl Vec2 {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// let up = Vec2::UP;
-    /// let right = Vec2::RIGHT;
+    /// ```
+    /// # use duku::Vec2;
+    /// let up = Vec2::up();
+    /// let right = Vec2::right();
     /// let angle = up.angle_between(right);
     /// // angle is ~90 degrees
     /// ```
