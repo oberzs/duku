@@ -1,42 +1,18 @@
-<h1 align="center">Duku 🎨</h1>
+<img alt="duku" src="duku-logo.svg" width="300">
 
-<div align="center">
-  <!-- Version -->
-  <span>
-    <img src="https://img.shields.io/badge/version-0.1.0-green?style=flat-square" alt="Version" />
-  </span>
-  <!-- Docs -->
-  <a href="https://docs.rs/duku">
-    <img src="https://img.shields.io/badge/docs-0.1.0-blue?style=flat-square" alt="Docs" />
-  </a>
-  <!-- Build status -->
-  <span>
-    <img src="https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square" alt="Build Status" />
-  </span>
-  <!-- Rust Version -->
-  <a href="https://www.rust-lang.org/">
-    <img src="https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square" alt="Rust Version" />
-  </a>
-  <!-- License -->
-  <a href="https://github.com/oberzs/duku/blob/release/LICENSE">
-    <img src="https://img.shields.io/github/license/oberzs/duku?style=flat-square" alt="License" />
-  </a>
-</div>
+[Simple Example](#simple-example) • [Usage](#usage) • [Features](#features)
 
-<div align="center">
-  <a href="#simple-example">Simple Example</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#features">Features</a>
-</div>
-
-<br>
+![Build Status](https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.2.0-green?style=flat-square)
+[![Rust Version](https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/github/license/oberzs/duku?style=flat-square)](LICENSE)
 
 A Rust crate for creating graphic experiences, with a focus on ease of use and beginner friendliness.
 Also helpful for visualizing algorithms when learning Rust.
 
 This creative coding library draws a lot of inspiration from [p5.js].
 
-## Simple Example
+### Simple Example
 
 This example draws a cube in the center of the window, rotating and coloring it based on the time that has passed.
 
@@ -89,11 +65,11 @@ fn main() -> Result<()> {
 }
 ```
 
-Want more? Check out these other [examples].
+Want more? Check out these other [examples](examples).
 
 ---
 
-## Usage
+### Usage
 
 To use this crate, add this dependency to your `Cargo.toml` file.
 
@@ -104,7 +80,7 @@ duku = "0.1.0"
 
 ---
 
-## Features
+### Features
 
 - **Supports** - Windows and Linux X11
 - **Vulkan** - uses the [Vulkan SDK]
@@ -113,9 +89,7 @@ duku = "0.1.0"
 - **PBR** - uses a PBR material/shader system
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] font
-- **Shaders** - adding custom shaders is documented [here](https://github.com/oberzs/duku/tree/release/DC_DOCS.md)
-
-#### Additional Features
+- **Shaders** - adding custom shaders is documented [here](DC_DOCS.md)
 
 This crate supports additional features that you can add
 to your dependency in your `Cargo.toml` file.
@@ -137,7 +111,6 @@ The features include:
 | `log`    | no      | n/a            | adds informational logs               |
 
 [p5.js]: https://p5js.org/
-[examples]: https://github.com/oberzs/duku/tree/release/examples
 [crates.io]: https://crates.io
 [vulkan sdk]: https://vulkan.lunarg.com/
 [fira mono]: https://fonts.google.com/specimen/Fira+Mono?query=fira

@@ -1,18 +1,10 @@
-<h1 align="center">Dc Docs</h1>
+# dc Docs
 
-<div align="center">
-  <strong>Shader compilation for Duku</strong>
-</div>
+[Simple Example](#simple-example) • [Using Compiler](#using-compiler) • [Writing Shaders](#writing-shaders)
 
-<br />
+Shader compilation for Duku
 
-<div align="center">
-  <a href="#simple-example">Simple Example</a> •
-  <a href="#using-compiler">Using Compiler</a> •
-  <a href="#writing-shaders">Writing Shaders</a>
-</div>
-
-## Simple Example
+### Simple Example
 
 ```glsl
 // file: shader.glsl
@@ -39,7 +31,7 @@ Can be compiled to `.spirv` or imported directly as a `.glsl`
 
 ---
 
-## Using Compiler
+### Using Compiler
 
 To compile a duku `.spirv` file, you can use the CLI utilicy
 `dc` downloaded from the release page or compiling the `dc` binary target from source with cargo.
@@ -64,7 +56,7 @@ There are some additional options available to customize the compilation process
 
 ---
 
-## Writing Shaders
+### Writing Shaders
 
 The language used for writing shaders is [glsl]
 with some custom additions, which will be specified
