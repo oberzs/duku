@@ -143,6 +143,8 @@ pub use renderer::Projection;
 pub use renderer::ShapeMode;
 pub use renderer::Target;
 pub use resources::Handle;
+pub use resources::ReadGuard;
+pub use resources::WriteGuard;
 pub use surface::VSync;
 pub use surface::WindowHandle;
 

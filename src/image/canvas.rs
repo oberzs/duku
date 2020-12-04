@@ -310,8 +310,8 @@ impl Canvas {
         self.attachments.iter()
     }
 
-    pub(crate) fn set_material(&mut self, mut material: Handle<Material>) {
-        material.a[3] = self.shader_index() as f32;
+    pub(crate) fn set_material(&mut self, material: Handle<Material>) {
+        material.write().a[3] = self.shader_index() as f32;
         self.material = Some(material);
     }
 

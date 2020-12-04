@@ -14,10 +14,11 @@ fn main() -> Result<()> {
     camera.move_back(2.0);
     let mut orbit = Orbit::new([0.0, 0.0, 0.0]);
 
-    let cube = duku.create_model_gltf("examples/models/cube.glb", None)?;
-    // ship.fix_color_space();
+    let cube = duku.create_model_gltf("examples/models/building_wall.glb", None)?;
+    cube.write().fix_color_space();
 
-    let light = Light::directional("#ffffff", [-0.7, -0.5, 1.0]);
+    let mut light = Light::directional("#ffffff", [-0.7, -0.5, 1.0]);
+    light.brightness = 5.0;
 
     window.while_open(move |events| {
         orbit.update(&mut camera, events, duku.delta_time());

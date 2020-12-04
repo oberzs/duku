@@ -84,13 +84,13 @@ impl Material {
 
     /// Set albedo texture for the PBR and other various shaders
     pub fn albedo_texture(&mut self, texture: Handle<Texture>) {
-        self.a[3] = texture.shader_index() as f32;
+        self.a[3] = texture.read().shader_index() as f32;
         self.textures.push(texture);
     }
 
     /// Set albedo canvas for the PBR and other various shaders
     pub fn albedo_canvas(&mut self, f: &Handle<Canvas>) {
-        self.a[3] = f.shader_index() as f32;
+        self.a[3] = f.read().shader_index() as f32;
     }
 
     /// Set metalness factor for the PBR shader
@@ -112,25 +112,25 @@ impl Material {
 
     /// Set metalness-roughness texture for the PBR shader
     pub fn metalness_roughness_texture(&mut self, texture: Handle<Texture>) {
-        self.b[2] = texture.shader_index() as f32;
+        self.b[2] = texture.read().shader_index() as f32;
         self.textures.push(texture);
     }
 
     /// Set ambient occlusion texture for the PBR shader
     pub fn ambient_occlusion_texture(&mut self, texture: Handle<Texture>) {
-        self.b[3] = texture.shader_index() as f32;
+        self.b[3] = texture.read().shader_index() as f32;
         self.textures.push(texture);
     }
 
     /// Set normal texture for the PBR shader
     pub fn normal_texture(&mut self, texture: Handle<Texture>) {
-        self.c[0] = texture.shader_index() as f32;
+        self.c[0] = texture.read().shader_index() as f32;
         self.textures.push(texture);
     }
 
     /// Set emissive texture for the PBR shader
     pub fn emissive_texture(&mut self, texture: Handle<Texture>) {
-        self.c[1] = texture.shader_index() as f32;
+        self.c[1] = texture.read().shader_index() as f32;
         self.textures.push(texture);
     }
 

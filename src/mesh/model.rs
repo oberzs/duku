@@ -1,10 +1,12 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+use std::collections::HashSet;
 use std::slice::Iter;
 
 use super::Mesh;
 use crate::math::Mat4;
+use crate::pipeline::Descriptor;
 use crate::pipeline::Material;
 use crate::resources::Handle;
 
@@ -40,7 +42,10 @@ impl Model {
     /// fix the color space for materials, if the .gltf file
     /// was exported incorrectly
     pub fn fix_color_space(&mut self) {
-        self.nodes.iter_mut().for_each(|n| n.fix_color_space());
+        let mut fixed = HashSet::new();
+        self.nodes
+            .iter_mut()
+            .for_each(|n| n.fix_color_space(&mut fixed));
     }
 
     /// iterate through all meshes in the model
@@ -59,14 +64,20 @@ impl ModelNode {
         self.meshes.iter().zip(self.materials.iter())
     }
 
-    fn fix_color_space(&mut self) {
+    fn fix_color_space(&mut self, fixed: &mut HashSet<Descriptor>) {
         for mat in &mut self.materials {
-            mat.a[0] = to_linear(mat.a[0]);
-            mat.a[1] = to_linear(mat.a[1]);
-            mat.a[2] = to_linear(mat.a[2]);
+            let mut m = mat.write();
+            if !fixed.contains(&m.descriptor()) {
+                m.a[0] = to_linear(m.a[0]);
+                m.a[1] = to_linear(m.a[1]);
+                m.a[2] = to_linear(m.a[2]);
+                fixed.insert(m.descriptor());
+            }
         }
 
-        self.children.iter_mut().for_each(|c| c.fix_color_space());
+        self.children
+            .iter_mut()
+            .for_each(|c| c.fix_color_space(fixed));
     }
 
     fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {

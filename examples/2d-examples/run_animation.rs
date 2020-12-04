@@ -49,8 +49,10 @@ fn main() -> Result<()> {
 
 impl Animation {
     fn new(texture: &Handle<Texture>, speed: f32, frame_count: u32) -> Self {
-        let width = texture.width() / frame_count;
-        let height = texture.height();
+        let (width, height) = {
+            let tex = texture.read();
+            (tex.width() / frame_count, tex.height())
+        };
 
         let frames: Vec<_> = (0..frame_count)
             .map(|i| Frame {

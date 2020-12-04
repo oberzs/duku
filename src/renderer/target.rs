@@ -513,7 +513,7 @@ impl Target {
     pub fn fullscreen(&mut self, canvas: &Handle<Canvas>) {
         self.push();
         self.shader = Some(self.builtins.fullscreen_shader.clone());
-        self.material = Some(canvas.material().clone());
+        self.material = Some(canvas.read().material().clone());
         let mesh = self.builtins.surface_mesh.clone();
         self.mesh(&mesh);
         self.pop();
@@ -521,11 +521,11 @@ impl Target {
 
     /// Draw all of the meshes of a model
     pub fn model(&mut self, model: &Handle<Model>) {
-        self.push();
-        for node in &model.nodes {
+        for node in &model.read().nodes {
+            self.push();
             self.model_node(node, self.matrix);
+            self.pop();
         }
-        self.pop();
     }
 
     /// Draw a 3D debug line that isn't controlled by
@@ -577,7 +577,11 @@ impl Target {
     pub fn text(&mut self, text: impl AsRef<str>, pos: impl Into<Vec2>) {
         let mut advance = pos.into();
         let t = text.as_ref();
-        let font = self.font.as_ref().unwrap_or(&self.builtins.fira_font);
+        let font = self
+            .font
+            .as_ref()
+            .unwrap_or(&self.builtins.fira_font)
+            .read();
 
         let w = self.text_width(t);
         let fs = self.font_size as f32;
@@ -644,7 +648,7 @@ impl Target {
 
         // check if should draw shape
         if self.fill.a > 0 {
-            let texture = self.builtins.white_texture.shader_index();
+            let texture = self.builtins.white_texture.read().shader_index();
             let opaque = self.fill.a == 255;
 
             // triangulate points
@@ -745,8 +749,10 @@ impl Target {
         pos: impl Into<Vec2>,
         size: impl Into<Vec2>,
     ) {
-        let tw = texture.width() as f32;
-        let th = texture.height() as f32;
+        let (tw, th) = {
+            let tex = texture.read();
+            (tex.width() as f32, tex.height() as f32)
+        };
         self.texture_part(texture, pos, size, [0.0, 0.0], [tw, th]);
     }
 
@@ -765,9 +771,10 @@ impl Target {
         let p = pos.into();
         let pp = part_pos.into();
         let ps = part_size.into();
-        let tw = texture.width() as f32;
-        let th = texture.height() as f32;
-        let opaque = texture.opaque() && self.tint.a == 255;
+        let tex = texture.read();
+        let tw = tex.width() as f32;
+        let th = tex.height() as f32;
+        let opaque = tex.opaque() && self.tint.a == 255;
 
         let offset = match self.shape_mode {
             ShapeMode::BottomLeft => Vec3::new(0.0, 0.0, 0.0),
@@ -791,7 +798,7 @@ impl Target {
             points: [p1, p2, p3],
             color: self.tint,
             uvs: [uv1, uv2, uv3],
-            texture: texture.shader_index(),
+            texture: tex.shader_index(),
             sampler_index: self.sampler_index(),
             opaque,
         });
@@ -799,7 +806,7 @@ impl Target {
             points: [p1, p3, p4],
             color: self.tint,
             uvs: [uv1, uv3, uv4],
-            texture: texture.shader_index(),
+            texture: tex.shader_index(),
             sampler_index: self.sampler_index(),
             opaque,
         });
@@ -807,7 +814,11 @@ impl Target {
 
     /// Get text width for current font
     pub fn text_width(&self, text: impl AsRef<str>) -> f32 {
-        let font = self.font.as_ref().unwrap_or(&self.builtins.fira_font);
+        let font = self
+            .font
+            .as_ref()
+            .unwrap_or(&self.builtins.fira_font)
+            .read();
         let scale = self.font_size as f32;
         let mut width = 0.0;
 
@@ -883,7 +894,9 @@ impl Target {
         }
 
         for child in &node.children {
+            self.push();
             self.model_node(child, self.matrix);
+            self.pop();
         }
     }
 
@@ -943,7 +956,7 @@ impl Target {
             let p3 = self.matrix * Vec3::from((next_point - next_norm * inner_weight, -0.00001));
             let p4 = self.matrix * Vec3::from((curr_point - curr_norm * inner_weight, -0.00001));
 
-            let texture = self.builtins.white_texture.shader_index();
+            let texture = self.builtins.white_texture.read().shader_index();
 
             self.tri_orders.push(TriOrder {
                 points: [p1, p2, p3],
