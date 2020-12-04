@@ -26,7 +26,6 @@ use crate::pipeline::Uniforms;
 pub struct Builtins {
     // textures
     pub white_texture: Handle<Texture>,
-    pub blue_texture: Handle<Texture>,
     pub black_texture: Handle<Texture>,
 
     // cubemaps
@@ -76,18 +75,6 @@ impl Builtins {
             )?;
             resources.add_texture(tex)
         };
-        let blue_texture = {
-            let tex = Texture::new(
-                device,
-                uniforms,
-                vec![128, 128, 255, 255],
-                1,
-                1,
-                Format::Rgba,
-                Mips::Zero,
-            )?;
-            resources.add_texture(tex)
-        };
         let black_texture = {
             let tex = Texture::new(
                 device,
@@ -125,7 +112,7 @@ impl Builtins {
             let mut mat = Material::new(device, uniforms)?;
             mat.albedo_color([1.0, 1.0, 1.0]);
             mat.albedo_texture(white_texture.clone());
-            mat.normal_texture(blue_texture.clone());
+            mat.normal_texture(white_texture.clone());
             mat.update();
             resources.add_material(mat)
         };
@@ -234,7 +221,6 @@ impl Builtins {
 
         Ok(Self {
             white_texture,
-            blue_texture,
             black_texture,
             white_cubemap,
             white_material,
@@ -257,7 +243,6 @@ impl Builtins {
 
     pub(crate) fn invalidate_handles(&mut self) {
         self.white_texture.invalidate();
-        self.blue_texture.invalidate();
         self.black_texture.invalidate();
         self.white_cubemap.invalidate();
         self.white_material.invalidate();

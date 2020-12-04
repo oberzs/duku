@@ -170,28 +170,28 @@ impl Camera {
     ///
     /// This moves using local directions
     pub fn move_right(&mut self, amount: f32) {
-        self.move_by(self.rotation.local_up() * amount);
+        self.move_by(self.rotation.local_right() * amount);
     }
 
     /// Move camera left by specified amount
     ///
     /// This moves using local directions
     pub fn move_left(&mut self, amount: f32) {
-        self.move_by(-self.rotation.local_up() * amount);
+        self.move_by(-self.rotation.local_right() * amount);
     }
 
     /// Move camera forward by specified amount
     ///
     /// This moves using local directions
     pub fn move_forward(&mut self, amount: f32) {
-        self.move_by(self.rotation.local_up() * amount);
+        self.move_by(self.rotation.local_forward() * amount);
     }
 
     /// Move camera back by specified amount
     ///
     /// This moves using local directions
     pub fn move_back(&mut self, amount: f32) {
-        self.move_by(-self.rotation.local_up() * amount);
+        self.move_by(-self.rotation.local_forward() * amount);
     }
 
     /// Move camera rotating it around

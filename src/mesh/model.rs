@@ -37,12 +37,18 @@ struct ChildIter<'a> {
 }
 
 impl Model {
-    /// iterates through all meshes in the model
+    /// fix the color space for materials, if the .gltf file
+    /// was exported incorrectly
+    pub fn fix_color_space(&mut self) {
+        self.nodes.iter_mut().for_each(|n| n.fix_color_space());
+    }
+
+    /// iterate through all meshes in the model
     pub fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {
         self.nodes.iter().map(|node| node.meshes()).flatten()
     }
 
-    /// iterates through all materials in the model
+    /// iterate through all materials in the model
     pub fn materials(&self) -> impl Iterator<Item = &Handle<Material>> {
         self.nodes.iter().map(|node| node.materials()).flatten()
     }
@@ -51,6 +57,16 @@ impl Model {
 impl ModelNode {
     pub(crate) fn orders(&self) -> impl Iterator<Item = (&Handle<Mesh>, &Handle<Material>)> {
         self.meshes.iter().zip(self.materials.iter())
+    }
+
+    fn fix_color_space(&mut self) {
+        for mat in &mut self.materials {
+            mat.a[0] = to_linear(mat.a[0]);
+            mat.a[1] = to_linear(mat.a[1]);
+            mat.a[2] = to_linear(mat.a[2]);
+        }
+
+        self.children.iter_mut().for_each(|c| c.fix_color_space());
     }
 
     fn meshes(&self) -> impl Iterator<Item = &Handle<Mesh>> {
@@ -93,5 +109,27 @@ impl<'a> Iterator for ChildIter<'a> {
                 return None;
             }
         }
+    }
+}
+
+fn to_linear(value: f32) -> f32 {
+    let s = clamp(value, 0.0, 1.0);
+    let cutoff = 0.04045;
+    let gamma = 2.2;
+
+    if s <= cutoff {
+        s / 12.92
+    } else {
+        ((s + 0.055) / 1.055).powf(gamma)
+    }
+}
+
+fn clamp(value: f32, min: f32, max: f32) -> f32 {
+    if value < min {
+        min
+    } else if value > max {
+        max
+    } else {
+        value
     }
 }

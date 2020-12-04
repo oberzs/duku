@@ -1,6 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+//! Optional feature `gltf` module for glTF file support.
+
 #![cfg(feature = "gltf")]
 
 use gltf_dep::buffer;
@@ -29,9 +31,22 @@ use crate::mesh::ModelNode;
 use crate::pipeline::Material;
 use crate::resources::Handle;
 
+/// Y axis for the gltf model
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum YAxis {
+    /// +Y is up
+    Up,
+    /// +Y is down
+    Down,
+}
+
 impl Duku {
     /// Create a model from a GLTF file
-    pub fn create_model_gltf(&mut self, path: impl AsRef<Path>) -> Result<Handle<Model>> {
+    pub fn create_model_gltf(
+        &mut self,
+        path: impl AsRef<Path>,
+        options: Option<YAxis>,
+    ) -> Result<Handle<Model>> {
         let p = path.as_ref();
         let bytes = fs::read(p)?;
         self.create_model_gltf_bytes(
@@ -40,13 +55,19 @@ impl Duku {
                 .unwrap_or_else(|| Path::new("./"))
                 .to_str()
                 .expect("bad path"),
+            options,
         )
     }
 
     /// Create a model from GLTF bytes
     ///
     /// `root` is used for relative file path loading
-    pub fn create_model_gltf_bytes(&mut self, bytes: &[u8], root: &str) -> Result<Handle<Model>> {
+    pub fn create_model_gltf_bytes(
+        &mut self,
+        bytes: &[u8],
+        root: &str,
+        options: Option<YAxis>,
+    ) -> Result<Handle<Model>> {
         let gltf = Gltf::from_slice(bytes).map_err(|_| Error::InvalidGltf)?;
 
         // load buffers
@@ -64,56 +85,6 @@ impl Duku {
                     let blob = gltf.blob.as_deref().ok_or(Error::InvalidGltf)?;
                     buffers.push(blob.to_vec());
                 }
-            }
-        }
-
-        // load meshes
-        let mut meshes = HashMap::new();
-        for mesh in gltf.meshes() {
-            for primitive in mesh.primitives() {
-                let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
-
-                if primitive.mode() != Mode::Triangles {
-                    return Err(Error::UnsupportedPrimitive);
-                }
-
-                let mut vertices = vec![];
-                let mut normals = vec![];
-                let mut uvs = vec![];
-                let mut indices = vec![];
-
-                if let Some(ps) = reader.read_positions() {
-                    vertices.extend(ps.map(|p| Vec3::new(p[0], p[1], -p[2])));
-                }
-
-                if let Some(ns) = reader.read_normals() {
-                    normals.extend(ns.map(|n| Vec3::new(n[0], n[1], -n[2])));
-                }
-
-                if let Some(ts) = reader.read_tex_coords(0) {
-                    uvs.extend(ts.into_f32().map(|t| Vec2::new(t[0], t[1])));
-                }
-
-                if let Some(is) = reader.read_indices() {
-                    let ccw: Vec<_> = is.into_u32().collect();
-                    for chunk in ccw.chunks(3) {
-                        indices.extend(&[chunk[0], chunk[2], chunk[1]]);
-                    }
-                }
-
-                let mut m = self.create_mesh();
-                m.vertices = vertices;
-                m.uvs = uvs;
-                m.indices = indices;
-
-                if normals.is_empty() {
-                    m.calculate_normals();
-                } else {
-                    m.normals = normals;
-                    m.calculate_tangents();
-                }
-
-                meshes.insert((mesh.index(), primitive.index()), m);
             }
         }
 
@@ -151,10 +122,71 @@ impl Duku {
         }
 
         // load materials
+        let mut has_normal_map = false;
         let mut materials = HashMap::new();
         for material in gltf.materials() {
+            if material.normal_texture().is_some() {
+                has_normal_map = true;
+            }
             let mat = self.load_material(&mut texture_data, &material)?;
             materials.insert(material.index().unwrap_or(0), mat);
+        }
+
+        // load meshes
+        let sy = match options {
+            Some(YAxis::Down) => -1.0,
+            _ => 1.0,
+        };
+
+        let mut meshes = HashMap::new();
+        for mesh in gltf.meshes() {
+            for primitive in mesh.primitives() {
+                let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+
+                if primitive.mode() != Mode::Triangles {
+                    return Err(Error::UnsupportedPrimitive);
+                }
+
+                let mut vertices = vec![];
+                let mut normals = vec![];
+                let mut uvs = vec![];
+                let mut indices = vec![];
+
+                if let Some(ps) = reader.read_positions() {
+                    vertices.extend(ps.map(|p| Vec3::new(p[0], sy * p[1], -p[2])));
+                }
+
+                if let Some(ns) = reader.read_normals() {
+                    normals.extend(ns.map(|n| Vec3::new(n[0], sy * n[1], -n[2])));
+                }
+
+                if let Some(ts) = reader.read_tex_coords(0) {
+                    uvs.extend(ts.into_f32().map(|t| Vec2::new(t[0], t[1])));
+                }
+
+                if let Some(is) = reader.read_indices() {
+                    let ccw: Vec<_> = is.into_u32().collect();
+                    for chunk in ccw.chunks(3) {
+                        indices.extend(&[chunk[0], chunk[2], chunk[1]]);
+                    }
+                }
+
+                let mut m = self.create_mesh();
+                m.vertices = vertices;
+                m.uvs = uvs;
+                m.indices = indices;
+
+                if normals.is_empty() {
+                    m.calculate_normals();
+                } else {
+                    m.normals = normals;
+                }
+                if has_normal_map {
+                    m.calculate_tangents();
+                }
+
+                meshes.insert((mesh.index(), primitive.index()), m);
+            }
         }
 
         // load scenes

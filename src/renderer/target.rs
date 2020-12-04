@@ -551,8 +551,7 @@ impl Target {
 
             let color = match x {
                 0 => "#0000fff0",
-                _ if x % 10 == 0 => "#fffffff0",
-                _ => "#ffffff0f",
+                _ => "#85858585",
             };
 
             self.stroke(color);
@@ -565,8 +564,7 @@ impl Target {
 
             let color = match z {
                 0 => "#ff0000f0",
-                _ if z % 10 == 0 => "#fffffff0",
-                _ => "#ffffff0f",
+                _ => "#85858585",
             };
 
             self.stroke(color);
@@ -877,6 +875,7 @@ impl Target {
 
     fn model_node(&mut self, node: &ModelNode, parent: Mat4) {
         self.matrix = parent * node.matrix;
+        // self.matrix = node.matrix * parent;
 
         for (mesh, material) in node.orders() {
             self.material(material);

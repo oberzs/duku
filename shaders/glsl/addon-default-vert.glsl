@@ -20,10 +20,17 @@ void vertex() {
     out_shadow_position[3] = world.world_to_shadow[3] * world_position;
 
     mat3 local_to_normal = mat3(transpose(inverse(object.local_to_world)));
-    vec3 normal = local_to_normal * in_normal;
-    vec3 tangent = local_to_normal * in_tangent;
+    vec3 normal = normalize(local_to_normal * in_normal);
+    vec3 tangent = normalize(local_to_normal * in_tangent);
     tangent = normalize(tangent - dot(tangent, normal) * normal);
     vec3 bitangent = cross(tangent, normal);
+
+    if (isnan(tangent)[0]) {
+        tangent = vec3(0.0);
+    }
+    if (isnan(bitangent)[0]) {
+        bitangent = vec3(0.0);
+    }
 
     out_tbn = mat3(tangent, bitangent, normal);
     out_color = in_color;
