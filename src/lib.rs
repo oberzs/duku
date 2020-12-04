@@ -149,5 +149,7 @@ pub use surface::WindowHandle;
 // optional feature exports
 #[cfg(feature = "glsl")]
 pub use features::glsl;
+#[cfg(feature = "gltf")]
+pub use features::gltf;
 #[cfg(feature = "window")]
 pub use features::window;

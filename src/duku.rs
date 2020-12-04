@@ -259,7 +259,7 @@ impl Duku {
         let mut mat = Material::new(&self.device, &mut self.uniforms)?;
 
         mat.albedo_texture(self.builtins.white_texture.clone());
-        mat.normal_texture(self.builtins.blue_texture.clone());
+        mat.normal_texture(self.builtins.white_texture.clone());
         mat.metalness_roughness_texture(self.builtins.white_texture.clone());
         mat.ambient_occlusion_texture(self.builtins.white_texture.clone());
         mat.emissive_texture(self.builtins.black_texture.clone());

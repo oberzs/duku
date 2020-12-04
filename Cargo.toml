@@ -69,6 +69,11 @@ path = "examples/3d-examples/raymarch.rs"
 required-features = ["window", "glsl"]
 
 [[example]]
+name = "ship_model"
+path = "examples/3d-examples/ship_model.rs"
+required-features = ["window", "gltf"]
+
+[[example]]
 name = "run_animation"
 path = "examples/2d-examples/run_animation.rs"
 required-features = ["window", "png"]

@@ -2,9 +2,9 @@
 // https://github.com/oberzs/duku
 
 pub mod glsl;
+pub mod gltf;
 pub mod window;
 
 mod glsl_compiler;
-mod gltf;
 mod jpeg;
 mod png;

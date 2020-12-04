@@ -117,9 +117,6 @@ impl Mesh {
     /// Calculate vertex normals automatically
     /// smoothing the values to achieve smooth
     /// shading.
-    ///
-    /// Calls [calculate_tangents](crate::mesh::Mesh::calculate_tangents)
-    /// automatically
     pub fn calculate_normals(&mut self) {
         self.normals = vec![Vec3::default(); self.vertices.len()];
 
@@ -144,14 +141,14 @@ impl Mesh {
                 *norm = norm.unit();
             }
         }
-
-        // calculate tangents for the new normals
-        self.calculate_tangents();
     }
 
     /// Calculate vertex tangents automatically
     /// smoothing the values to achieve smooth
     /// shading.
+    ///
+    /// Should only be called if normal texture is
+    /// used in material.
     pub fn calculate_tangents(&mut self) {
         self.tangents = vec![Vec3::default(); self.vertices.len()];
 
@@ -162,9 +159,9 @@ impl Mesh {
                 let c = tri[2] as usize;
 
                 // get vertices
-                let vtx_a = self.vertices[a];
-                let vtx_b = self.vertices[b];
-                let vtx_c = self.vertices[c];
+                let pos_a = self.vertices[a];
+                let pos_b = self.vertices[b];
+                let pos_c = self.vertices[c];
 
                 // get uvs
                 let uv_a = self.uvs.get(a).copied().unwrap_or_default();
@@ -172,22 +169,17 @@ impl Mesh {
                 let uv_c = self.uvs.get(c).copied().unwrap_or_default();
 
                 // calculate tangent
-                let edge_1 = vtx_b - vtx_a;
-                let edge_2 = vtx_c - vtx_a;
-                let duv_1 = uv_b - uv_a;
-                let duv_2 = uv_c - uv_a;
-                let f = 1.0 / (duv_1.x * duv_2.y - duv_2.x * duv_1.y);
-                let tangent = Vec3::new(
-                    duv_2.y * edge_1.x - duv_1.y * edge_2.x,
-                    duv_2.y * edge_1.y - duv_1.y * edge_2.y,
-                    duv_2.y * edge_1.z - duv_1.y * edge_2.z,
-                ) * f;
+                let dp1 = pos_b - pos_a;
+                let dp2 = pos_c - pos_a;
+                let du1 = uv_b - uv_a;
+                let du2 = uv_c - uv_a;
+
+                let r = 1.0 / (du1.x * du2.y - du1.y * du2.x);
+                let tangent = (dp1 * du2.y - dp2 * du1.y) * r;
+
                 self.tangents[a] += tangent;
                 self.tangents[b] += tangent;
                 self.tangents[c] += tangent;
-            }
-            for tan in &mut self.tangents {
-                *tan = tan.unit();
             }
         }
     }
