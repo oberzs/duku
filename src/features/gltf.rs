@@ -171,21 +171,24 @@ impl Duku {
                     }
                 }
 
-                let mut m = self.create_mesh();
-                m.vertices = vertices;
-                m.uvs = uvs;
-                m.indices = indices;
+                let msh = self.create_mesh();
+                {
+                    let mut m = msh.write();
+                    m.vertices = vertices;
+                    m.uvs = uvs;
+                    m.indices = indices;
 
-                if normals.is_empty() {
-                    m.calculate_normals();
-                } else {
-                    m.normals = normals;
-                }
-                if has_normal_map {
-                    m.calculate_tangents();
+                    if normals.is_empty() {
+                        m.calculate_normals();
+                    } else {
+                        m.normals = normals;
+                    }
+                    if has_normal_map {
+                        m.calculate_tangents();
+                    }
                 }
 
-                meshes.insert((mesh.index(), primitive.index()), m);
+                meshes.insert((mesh.index(), primitive.index()), msh);
             }
         }
 
@@ -197,8 +200,8 @@ impl Duku {
             }
         }
 
-        let mut model = self.create_model();
-        model.nodes = nodes;
+        let model = self.create_model();
+        model.write().nodes = nodes;
 
         Ok(model)
     }
@@ -270,25 +273,28 @@ impl Duku {
         };
 
         // build material
-        let mut mat = self.create_material()?;
-        mat.albedo_color(albedo);
-        mat.metalness(metalness);
-        mat.roughness(roughness);
-        mat.emissive(emissive);
-        if let Some(tex) = albedo_tex {
-            mat.albedo_texture(tex);
-        }
-        if let Some(tex) = emissive_tex {
-            mat.emissive_texture(tex);
-        }
-        if let Some(tex) = met_rough_tex {
-            mat.metalness_roughness_texture(tex);
-        }
-        if let Some(tex) = normal_tex {
-            mat.normal_texture(tex);
-        }
-        if let Some(tex) = occ_tex {
-            mat.ambient_occlusion_texture(tex);
+        let mat = self.create_material()?;
+        {
+            let mut m = mat.write();
+            m.albedo_color(albedo);
+            m.metalness(metalness);
+            m.roughness(roughness);
+            m.emissive(emissive);
+            if let Some(tex) = albedo_tex {
+                m.albedo_texture(tex);
+            }
+            if let Some(tex) = emissive_tex {
+                m.emissive_texture(tex);
+            }
+            if let Some(tex) = met_rough_tex {
+                m.metalness_roughness_texture(tex);
+            }
+            if let Some(tex) = normal_tex {
+                m.normal_texture(tex);
+            }
+            if let Some(tex) = occ_tex {
+                m.ambient_occlusion_texture(tex);
+            }
         }
         Ok(mat)
     }

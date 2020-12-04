@@ -124,7 +124,7 @@ impl ForwardRenderer {
         let skybox_index = target
             .skybox
             .as_ref()
-            .map(|s| s.shader_index())
+            .map(|s| s.read().shader_index())
             .unwrap_or(0);
 
         // update world uniform
@@ -223,10 +223,10 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        cmd.bind_shader(&builtins.font_shader);
+        cmd.bind_shader(&builtins.font_shader.read());
 
         // bind material
-        cmd.bind_material(uniforms, &builtins.white_material);
+        cmd.bind_material(uniforms, &builtins.white_material.read());
 
         // bind and draw mesh
         let text_mesh = &mut self.target_resources[self.target_index].text_mesh;
@@ -273,10 +273,10 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        cmd.bind_shader(&builtins.line_shader);
+        cmd.bind_shader(&builtins.line_shader.read());
 
         // bind material
-        cmd.bind_material(uniforms, &builtins.white_material);
+        cmd.bind_material(uniforms, &builtins.white_material.read());
 
         // bind and draw mesh
         let line_mesh = &mut self.target_resources[self.target_index].line_mesh;
@@ -351,10 +351,10 @@ impl ForwardRenderer {
         }
 
         // bind shader
-        cmd.bind_shader(&builtins.shape_shader);
+        cmd.bind_shader(&builtins.shape_shader.read());
 
         // bind material
-        cmd.bind_material(uniforms, &builtins.white_material);
+        cmd.bind_material(uniforms, &builtins.white_material.read());
 
         // bind and draw mesh
         let shape_mesh = &mut self.target_resources[self.target_index].shape_mesh;
@@ -414,11 +414,11 @@ impl TargetResources {
 fn record_meshes(cmd: &Commands, uniforms: &Uniforms, orders: Vec<ShaderOrder>) {
     for s_order in orders {
         // bind shader
-        cmd.bind_shader(&s_order.shader);
+        cmd.bind_shader(&s_order.shader.read());
 
         for m_order in &s_order.orders {
             // bind material
-            cmd.bind_material(uniforms, &m_order.material);
+            cmd.bind_material(uniforms, &m_order.material.read());
 
             for order in &m_order.orders {
                 cmd.push_constants(
@@ -429,17 +429,18 @@ fn record_meshes(cmd: &Commands, uniforms: &Uniforms, orders: Vec<ShaderOrder>) 
                         sampler_index: order.sampler_index,
                     },
                 );
-                cmd.bind_mesh(&order.mesh);
-                cmd.draw(order.mesh.index_count(), 0);
+                {
+                    let m = order.mesh.read();
+                    cmd.bind_mesh(&m);
+                    cmd.draw(m.index_count(), 0);
+                }
             }
         }
     }
 }
 
 fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins: &Builtins) {
-    cmd.bind_shader(&builtins.skybox_shader);
-    cmd.bind_mesh(&builtins.cube_mesh);
-
+    cmd.bind_shader(&builtins.skybox_shader.read());
     let local_to_world = Mat4::compose(
         camera.position,
         Vec3::uniform(camera.depth * 2.0 - 0.1),
@@ -453,5 +454,9 @@ fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins:
             local_to_world,
         },
     );
-    cmd.draw(builtins.cube_mesh.index_count(), 0);
+    {
+        let m = builtins.cube_mesh.read();
+        cmd.bind_mesh(&m);
+        cmd.draw(m.index_count(), 0);
+    }
 }

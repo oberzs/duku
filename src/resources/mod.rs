@@ -1,10 +1,8 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-#![allow(clippy::vec_box)]
-
 mod builtins;
-mod resource;
+mod handle;
 
 use crate::device::Device;
 use crate::font::Font;
@@ -16,24 +14,25 @@ use crate::mesh::Model;
 use crate::pipeline::Material;
 use crate::pipeline::Shader;
 use crate::pipeline::Uniforms;
-use resource::Resource;
 
 pub(crate) use builtins::create_cube;
 pub(crate) use builtins::create_ico_sphere;
 pub(crate) use builtins::create_uv_sphere;
 pub(crate) use builtins::Builtins;
-pub use resource::Handle;
+pub use handle::Handle;
+pub use handle::ReadGuard;
+pub use handle::WriteGuard;
 
 #[derive(Default)]
 pub(crate) struct Resources {
-    shaders: Vec<Box<Resource<Shader>>>,
-    fonts: Vec<Box<Resource<Font>>>,
-    textures: Vec<Box<Resource<Texture>>>,
-    cubemaps: Vec<Box<Resource<Cubemap>>>,
-    canvases: Vec<Box<Resource<Canvas>>>,
-    materials: Vec<Box<Resource<Material>>>,
-    meshes: Vec<Box<Resource<Mesh>>>,
-    models: Vec<Box<Resource<Model>>>,
+    shaders: Vec<Handle<Shader>>,
+    fonts: Vec<Handle<Font>>,
+    textures: Vec<Handle<Texture>>,
+    cubemaps: Vec<Handle<Cubemap>>,
+    canvases: Vec<Handle<Canvas>>,
+    materials: Vec<Handle<Material>>,
+    meshes: Vec<Handle<Mesh>>,
+    models: Vec<Handle<Model>>,
 }
 
 impl Resources {
@@ -93,50 +92,45 @@ impl Resources {
 
     pub(crate) fn update_if_needed(&mut self, device: &Device, uniforms: &mut Uniforms) {
         // update meshes
-        for r in &mut self.meshes {
-            if r.mutated {
-                r.value.update(device);
+        for h in &mut self.meshes {
+            if h.mutated() {
+                h.get_mut().update(device);
             }
-            r.mutated = false;
         }
 
         // update materials
-        for r in &mut self.materials {
-            if r.mutated {
-                r.value.update();
+        for h in &mut self.materials {
+            if h.mutated() {
+                h.get_mut().update();
             }
-            r.mutated = false;
         }
 
         // update canvases
-        for r in &mut self.canvases {
-            if r.mutated {
-                r.value.update(device, uniforms);
+        for h in &mut self.canvases {
+            if h.mutated() {
+                h.get_mut().update(device, uniforms);
             }
-            r.mutated = false;
         }
 
         // update textures
-        for r in &mut self.textures {
-            if r.mutated {
-                r.value.update(device);
+        for h in &mut self.textures {
+            if h.mutated() {
+                h.get_mut().update(device);
             }
-            r.mutated = false;
         }
     }
 }
 
-fn add<T>(resources: &mut Vec<Box<Resource<T>>>, value: T) -> Handle<T> {
-    let mut resource = Box::new(Resource::new(value));
-    let handle = resource.handle();
-    resources.push(resource);
+fn add<T>(handles: &mut Vec<Handle<T>>, value: T) -> Handle<T> {
+    let handle = Handle::new(value);
+    handles.push(handle.clone());
     handle
 }
 
-fn clear_unused<T>(resources: &mut Vec<Box<Resource<T>>>, mut clear_fn: impl FnMut(&T)) {
-    resources.retain(|r| {
-        if r.count == 0 {
-            clear_fn(&r.value);
+fn clear_unused<T>(handles: &mut Vec<Handle<T>>, mut clear_fn: impl FnMut(&T)) {
+    handles.retain(|h| {
+        if h.count() == 0 {
+            clear_fn(&h.read());
             false
         } else {
             true
@@ -144,9 +138,9 @@ fn clear_unused<T>(resources: &mut Vec<Box<Resource<T>>>, mut clear_fn: impl FnM
     });
 }
 
-fn clear<T>(resources: &mut Vec<Box<Resource<T>>>, mut clear_fn: impl FnMut(&T)) {
-    for r in resources.iter() {
-        clear_fn(&r.value);
+fn clear<T>(handles: &mut Vec<Handle<T>>, mut clear_fn: impl FnMut(&T)) {
+    for h in handles.iter() {
+        clear_fn(&h.read());
     }
-    resources.clear();
+    handles.clear();
 }

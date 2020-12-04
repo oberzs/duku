@@ -187,8 +187,11 @@ impl ShadowRenderer {
                                     sampler_index: order.sampler_index,
                                 },
                             );
-                            cmd.bind_mesh(&order.mesh);
-                            cmd.draw(order.mesh.index_count(), 0);
+                            {
+                                let m = order.mesh.read();
+                                cmd.bind_mesh(&m);
+                                cmd.draw(m.index_count(), 0);
+                            }
                         }
                     }
                 }

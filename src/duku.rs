@@ -3,7 +3,6 @@
 
 use std::convert::TryInto;
 use std::fs;
-use std::ops::Deref;
 use std::path::Path;
 use std::time::Instant;
 
@@ -169,11 +168,14 @@ impl Duku {
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
 
-        let cam = get_camera(camera, canvas.width, canvas.height);
+        {
+            let cnv = canvas.read();
+            let cam = get_camera(camera, cnv.width, cnv.height);
 
-        // render
-        self.forward_renderer
-            .render(&self.device, canvas, &cam, &self.uniforms, target);
+            // render
+            self.forward_renderer
+                .render(&self.device, &cnv, &cam, &self.uniforms, target);
+        }
     }
 
     /// Create a texture from byte data
@@ -235,13 +237,6 @@ impl Duku {
         ))
     }
 
-    /// Combine multiple meshes into a new one
-    pub fn combine_meshes(&mut self, meshes: &[Handle<Mesh>]) -> Handle<Mesh> {
-        let ms: Vec<&Mesh> = meshes.iter().map(|m| m.deref()).collect();
-        let mesh = Mesh::combine(&self.device, &ms);
-        self.resources.add_mesh(mesh)
-    }
-
     /// Create a model
     pub fn create_model(&mut self) -> Handle<Model> {
         let model = Model { nodes: vec![] };
@@ -274,7 +269,7 @@ impl Duku {
 
     /// Create a canvas
     pub fn create_canvas(&mut self, width: u32, height: u32) -> Result<Handle<Canvas>> {
-        let shader_config = self.builtins.pbr_shader.config();
+        let shader_config = self.builtins.pbr_shader.read().config();
         let mut canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
@@ -295,7 +290,7 @@ impl Duku {
         width: u32,
         height: u32,
     ) -> Result<Handle<Canvas>> {
-        let shader_config = shader.config();
+        let shader_config = shader.read().config();
         let mut canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
@@ -401,7 +396,7 @@ impl Duku {
                 canvas.destroy(&self.device, &mut self.uniforms);
             }
 
-            let shader_config = self.builtins.pbr_shader.config();
+            let shader_config = self.builtins.pbr_shader.read().config();
             self.window_canvases =
                 Canvas::for_swapchain(&self.device, shader_config, &self.swapchain);
         }
@@ -416,7 +411,6 @@ impl Drop for Duku {
         for canvas in &self.window_canvases {
             canvas.destroy(&self.device, &mut self.uniforms);
         }
-        self.builtins.invalidate_handles();
         self.resources.clear(&self.device, &mut self.uniforms);
         self.uniforms.destroy(&self.device);
         self.device.destroy_swapchain(&self.swapchain);
@@ -506,7 +500,7 @@ impl DukuBuilder {
         let builtins = Builtins::new(&device, &mut resources, &mut uniforms, msaa)?;
 
         // setup canvases
-        let shader_config = builtins.pbr_shader.config();
+        let shader_config = builtins.pbr_shader.read().config();
         let window_canvases = Canvas::for_swapchain(&device, shader_config, &swapchain);
 
         // setup renderer
