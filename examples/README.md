@@ -1,15 +1,8 @@
-<h1 align="center">Examples</h1>
+# Examples
 
-<div align="center">
-  <strong>Duku usage examples</strong>
-</div>
+Duku usage examples
 
-<br />
-
-These examples use these CC0-licensed assets:
-
-- [Kenney Assets]
-- [glTF Sample Models]
+Most examples use the [Kenney Assets].
 
 ---
 
@@ -76,4 +69,3 @@ Required features are listed on this page by each example name.
 ![textures.png](screenshots/textures.png)
 
 [kenney assets]: https://www.kenney.nl/assets
-[gltf sample models]: https://github.com/KhronosGroup/glTF-Sample-Models

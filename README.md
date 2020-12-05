@@ -1,11 +1,11 @@
 <img alt="duku" src="duku-logo.svg" width="300">
 
-[Simple Example](#simple-example) • [Usage](#usage) • [Features](#features)
+[Simple Example](#simple-example) • [Usage](#usage) • [Features](#features) • [Documentation](#documentation)
 
 ![Build Status](https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.2.0-green?style=flat-square)
 [![Rust Version](https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/github/license/oberzs/duku?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/github/license/oberzs/duku?style=flat-square)](https://github.com/oberzs/duku/blob/release/LICENSE)
 
 A Rust crate for creating graphic experiences, with a focus on ease of use and beginner friendliness.
 Also helpful for visualizing algorithms when learning Rust.
@@ -65,8 +65,6 @@ fn main() -> Result<()> {
 }
 ```
 
-Want more? Check out these other [examples](examples).
-
 ---
 
 ### Usage
@@ -75,7 +73,7 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 
 ```toml
 [dependencies]
-duku = "0.1.0"
+duku = "0.2.0"
 ```
 
 ---
@@ -89,7 +87,7 @@ duku = "0.1.0"
 - **PBR** - uses a PBR material/shader system
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] font
-- **Shaders** - adding custom shaders is documented [here](DC_DOCS.md)
+- **Shaders** - uses custom glsl shaders
 
 This crate supports additional features that you can add
 to your dependency in your `Cargo.toml` file.
@@ -109,6 +107,12 @@ The features include:
 | `gltf`   | no      | [gltf]         | adds gltf file loading support        |
 | `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
 | `log`    | no      | n/a            | adds informational logs               |
+
+### Documentation
+
+The crate documentation can be found [here](https://docs.rs/duku) and for shader
+compilation [here](https://github.com/oberzs/duku/blob/release/DC_DOCS.md). Commented examples on how to use this crate can
+be found [here](https://github.com/oberzs/duku/tree/release/examples).
 
 [p5.js]: https://p5js.org/
 [crates.io]: https://crates.io

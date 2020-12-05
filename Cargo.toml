@@ -5,7 +5,7 @@ edition = "2018"
 
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
 license = "Apache-2.0"
-description = "Easy to use rendering library for Rust"
+description = "A Rust crate for creating graphic experiences"
 homepage = "https://github.com/oberzs/duku"
 repository = "https://github.com/oberzs/duku"
 documentation = "https://docs.rs/duku"
@@ -79,6 +79,6 @@ path = "examples/2d-examples/run_animation.rs"
 required-features = ["window", "png"]
 
 [[example]]
-name = "gradient_squares"
-path = "examples/2d-examples/gradient_squares.rs"
+name = "gradient"
+path = "examples/2d-examples/gradient.rs"
 required-features = ["window"]
