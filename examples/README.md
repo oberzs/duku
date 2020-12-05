@@ -1,71 +1,53 @@
 # Examples
 
-Duku usage examples
+[Running](#running) • [3D Examples](#3d-examples) • [2D Examples](#2d-examples)
 
-Most examples use the [Kenney Assets].
+Duku usage examples. Most examples use the [Kenney Assets].
 
----
+## Running
 
 To run these examples use:
 
 ```bash
-cargo run --example [example-name] --features="[features]"
+cargo run --example [example_name] --features="[features]"
 ```
 
 Required features are listed on this page by each example name.
 
----
+## 3D Examples
 
-[canvas](https://github.com/oberzs/duku/tree/release/examples/canvas.rs) - `window`
+[rotating_cube](3d-examples/rotating_cube.rs) - `window`
 <br>
-![framebuffer.png](screenshots/framebuffer.png)
-
----
-
-[gltf](https://github.com/oberzs/duku/tree/release/examples/gltf.rs) - `window` `gltf`
-<br>
-![gltf.png](screenshots/gltf.png)
+![rotating_cube.gif](screenshots/rotating_cube.gif)
 
 ---
 
-[hello](https://github.com/oberzs/duku/tree/release/examples/hello.rs) - `window`
+[raymarch](3d-examples/raymarch.rs) - `window` `glsl`
 <br>
-![hello.png](screenshots/hello.png)
+![raymarch.gif](screenshots/raymarch.gif)
 
 ---
 
-[lines](https://github.com/oberzs/duku/tree/release/examples/lines.rs) - `window`
+[ship_model](3d-examples/ship_model.rs) - `window` `gltf`
 <br>
-![lines.png](screenshots/lines.png)
+![ship_model.gif](screenshots/ship_model.gif)
+
+## 2D Examples
+
+[textbox](2d-examples/textbox.rs) - `window`
+<br>
+![textbox.gif](screenshots/textbox.gif)
 
 ---
 
-[materials](https://github.com/oberzs/duku/tree/release/examples/materials.rs) - `window` `png`
+[run_animation](2d-examples/run_animation.rs) - `window` `png`
 <br>
-![materials.png](screenshots/materials.png)
+![run_animation.gif](screenshots/run_animation.gif)
 
 ---
 
-[shapes](https://github.com/oberzs/duku/tree/release/examples/shapes.rs) - `window`
+[gradient](2d-examples/gradient.rs) - `window`
 <br>
-![shapes.png](screenshots/shapes.png)
-
----
-
-[surface](https://github.com/oberzs/duku/tree/release/examples/surface.rs) - `window` `glsl`
-<br>
-![surface.png](screenshots/surface.png)
-
----
-
-[text](https://github.com/oberzs/duku/tree/release/examples/text.rs) - `window`
-<br>
-![text.png](screenshots/text.png)
-
----
-
-[textures](https://github.com/oberzs/duku/tree/release/examples/textures.rs) - `window` `png` `jpeg`
-<br>
-![textures.png](screenshots/textures.png)
+![gradient.png](screenshots/gradient.png)
 
 [kenney assets]: https://www.kenney.nl/assets

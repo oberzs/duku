@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 05.12.2020
 
 ### Added
 
@@ -26,3 +26,7 @@
 
 - Removed `Duku::create_texture_color` function.
 - Removed `Transform` struct.
+
+### Fixed
+
+- A lot of bugs were fixed.

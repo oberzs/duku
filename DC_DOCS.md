@@ -4,7 +4,7 @@
 
 Shader compilation for Duku
 
-### Simple Example
+## Simple Example
 
 ```glsl
 // file: shader.glsl
@@ -29,9 +29,7 @@ void fragment() {
 
 Can be compiled to `.spirv` or imported directly as a `.glsl`
 
----
-
-### Using Compiler
+## Using Compiler
 
 To compile a duku `.spirv` file, you can use the CLI utilicy
 `dc` downloaded from the release page or compiling the `dc` binary target from source with cargo.
@@ -54,9 +52,7 @@ There are some additional options available to customize the compilation process
 | `--no-color`      |  n/a  | will disable the colors in the output                      |
 | `--version`       |  n/a  | will print out the compiler version                        |
 
----
-
-### Writing Shaders
+## Writing Shaders
 
 The language used for writing shaders is [glsl]
 with some custom additions, which will be specified
