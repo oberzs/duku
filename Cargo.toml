@@ -82,3 +82,8 @@ required-features = ["window", "png"]
 name = "gradient"
 path = "examples/2d-examples/gradient.rs"
 required-features = ["window"]
+
+[[example]]
+name = "textbox"
+path = "examples/2d-examples/textbox.rs"
+required-features = ["window"]

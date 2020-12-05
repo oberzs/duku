@@ -593,6 +593,7 @@ impl Target {
             ShapeMode::TopRight => Vec2::new(-w, 0.0),
             ShapeMode::Center => Vec2::new(-w / 2.0, fs / 2.0),
         };
+        let start_x = advance.x;
 
         for c in t.chars() {
             // handle whitespace
@@ -601,7 +602,7 @@ impl Target {
                 continue;
             }
             if c == '\n' {
-                advance.x = 0.0;
+                advance.x = start_x;
                 advance.y -= fs;
                 continue;
             }
