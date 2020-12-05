@@ -12,9 +12,11 @@ Also helpful for visualizing algorithms when learning Rust.
 
 This creative coding library draws a lot of inspiration from [p5.js].
 
-### Simple Example
+## Simple Example
 
 This example draws a cube in the center of the window, rotating and coloring it based on the time that has passed.
+
+![rotating_cube.gif](https://github.com/oberzs/duku/blob/release/examples/screenshots/rotating_cube.gif)
 
 ```rust
 use duku::Camera;
@@ -65,9 +67,7 @@ fn main() -> Result<()> {
 }
 ```
 
----
-
-### Usage
+## Usage
 
 To use this crate, add this dependency to your `Cargo.toml` file.
 
@@ -76,9 +76,7 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 duku = "0.2.0"
 ```
 
----
-
-### Features
+## Features
 
 - **Supports** - Windows and Linux X11
 - **Vulkan** - uses the [Vulkan SDK]
@@ -108,7 +106,7 @@ The features include:
 | `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
 | `log`    | no      | n/a            | adds informational logs               |
 
-### Documentation
+## Documentation
 
 The crate documentation can be found [here](https://docs.rs/duku) and for shader
 compilation [here](https://github.com/oberzs/duku/blob/release/DC_DOCS.md). Commented examples on how to use this crate can
