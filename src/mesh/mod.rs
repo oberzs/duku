@@ -28,13 +28,16 @@ pub use model::ModelNode;
 /// # use duku::Vec3;
 /// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
 /// // setup a triangle
-/// let mut mesh = duku.create_mesh();
-/// mesh.vertices = vec![
-///     Vec3::new(-1.0, -1.0, 0.0),
-///     Vec3::new(0.0, 1.0, 0.0),
-///     Vec3::new(1.0, -1.0, 0.0),
-/// ];
-/// mesh.indices = vec![0, 1, 2];
+/// let mesh = duku.create_mesh();
+/// {
+///     let mut m = mesh.write();
+///     m.vertices = vec![
+///         Vec3::new(-1.0, -1.0, 0.0),
+///         Vec3::new(0.0, 1.0, 0.0),
+///         Vec3::new(1.0, -1.0, 0.0),
+///     ];
+///     m.indices = vec![0, 1, 2];
+/// }
 ///
 /// # duku.draw(None, |t| {
 /// // while rendering
