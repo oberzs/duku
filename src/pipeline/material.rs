@@ -21,8 +21,8 @@ use crate::resources::Handle;
 /// ```no_run
 /// # use duku::Duku;
 /// # let (mut duku, _) = Duku::windowed(1, 1).unwrap();
-/// let mut material = duku.create_material_pbr().unwrap();
-/// material.roughness(0.5);
+/// let material = duku.create_material_pbr().unwrap();
+/// material.write().roughness(0.5);
 ///
 /// # duku.draw(None, |t| {
 /// // when drawing
