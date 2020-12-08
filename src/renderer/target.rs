@@ -575,7 +575,7 @@ impl Target {
 
     /// Draw text string
     pub fn text(&mut self, text: impl AsRef<str>, pos: impl Into<Vec2>) {
-        let mut advance = pos.into();
+        let mut position = pos.into();
         let t = text.as_ref();
         let font = self
             .font
@@ -584,42 +584,47 @@ impl Target {
             .read();
 
         let w = self.text_width(t);
-        let fs = self.font_size as f32;
+        let h = self.text_height(t);
 
-        advance += match self.shape_mode {
-            ShapeMode::BottomLeft => Vec2::new(0.0, fs),
-            ShapeMode::BottomRight => Vec2::new(-w, fs),
-            ShapeMode::TopLeft => Vec2::new(0.0, 0.0),
-            ShapeMode::TopRight => Vec2::new(-w, 0.0),
-            ShapeMode::Center => Vec2::new(-w / 2.0, fs / 2.0),
+        position.y += h - self.text_height("a");
+
+        position += match self.shape_mode {
+            ShapeMode::BottomLeft => Vec2::new(0.0, 0.0),
+            ShapeMode::BottomRight => Vec2::new(-w, 0.0),
+            ShapeMode::TopLeft => Vec2::new(0.0, -h),
+            ShapeMode::TopRight => Vec2::new(-w, -h),
+            ShapeMode::Center => Vec2::new(-w / 2.0, -h / 2.0),
         };
-        let start_x = advance.x;
+
+        let metrics = font.metrics().scaled(self.font_size);
+        let start_x = position.x;
 
         for c in t.chars() {
             // handle whitespace
             if c == ' ' {
-                advance.x += fs / 3.0;
+                position.x += metrics.space_width;
                 continue;
             }
             if c == '\n' {
-                advance.x = start_x;
-                advance.y -= fs;
+                position.x = start_x;
+                position.y -= metrics.height + metrics.line_gap;
                 continue;
             }
 
             // calculate positions
-            let data = font.char_data(c);
-            let mut pos = advance;
-            pos.x += data.x_offset * fs;
-            pos.y -= data.y_offset * fs;
-            let width = data.width * fs;
-            let height = data.height * fs;
+            let data = font.char_data(c).scaled(self.font_size);
+            let bx = data.bounds.x;
+            let by = data.bounds.y;
+            let mut cp = position;
+            cp.x += data.bearing.x;
+            cp.y -= metrics.descender;
+            cp.y -= data.bearing.y;
 
             // calculate points
-            let p1 = self.matrix * Vec3::new(pos.x, pos.y, 0.0);
-            let p2 = self.matrix * Vec3::new(pos.x + width, pos.y, 0.0);
-            let p3 = self.matrix * Vec3::new(pos.x + width, pos.y - height, 0.0);
-            let p4 = self.matrix * Vec3::new(pos.x, pos.y - height, 0.0);
+            let p1 = self.matrix * Vec3::new(cp.x, cp.y + by, 0.0);
+            let p2 = self.matrix * Vec3::new(cp.x + bx, cp.y + by, 0.0);
+            let p3 = self.matrix * Vec3::new(cp.x + bx, cp.y, 0.0);
+            let p4 = self.matrix * Vec3::new(cp.x, cp.y, 0.0);
 
             let uv1 = Vec2::new(data.uvs.x, data.uvs.y);
             let uv2 = Vec2::new(data.uvs.z, data.uvs.y);
@@ -634,7 +639,7 @@ impl Target {
                 texture: font.texture().shader_index(),
             });
 
-            advance.x += data.advance * fs;
+            position.x += data.advance;
         }
     }
 
@@ -820,21 +825,39 @@ impl Target {
             .as_ref()
             .unwrap_or(&self.builtins.fira_font)
             .read();
-        let scale = self.font_size as f32;
-        let mut width = 0.0;
+        let metrics = font.metrics().scaled(self.font_size);
+        let mut max_width = 0.0;
 
-        for c in text.as_ref().chars() {
-            // handle whitespace
-            if c == ' ' {
-                width += scale / 3.0;
-                continue;
+        // get the width of the longest line
+        for line in text.as_ref().lines() {
+            let mut width = 0.0;
+            for c in line.chars() {
+                // handle whitespace
+                if c == ' ' {
+                    width += metrics.space_width;
+                    continue;
+                }
+                let data = font.char_data(c).scaled(self.font_size);
+                width += data.advance;
             }
-
-            let data = font.char_data(c);
-            width += data.advance * scale;
+            if width > max_width {
+                max_width = width;
+            }
         }
 
-        width
+        max_width
+    }
+
+    /// Get text height for current font
+    pub fn text_height(&self, text: impl AsRef<str>) -> f32 {
+        let font = self
+            .font
+            .as_ref()
+            .unwrap_or(&self.builtins.fira_font)
+            .read();
+        let metrics = font.metrics().scaled(self.font_size);
+        let lines = text.as_ref().lines().count();
+        (metrics.height + metrics.line_gap) * lines as f32
     }
 
     /// Save target settings to stack

@@ -10,74 +10,80 @@ use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
+use crate::math::Vec2;
 use crate::math::Vec4;
 use crate::pipeline::Uniforms;
+use fira_mono::fira_mono;
 
 /// Font for text drawing.
 pub struct Font {
+    metrics: FontMetrics,
     char_data: HashMap<char, CharData>,
     texture: Texture,
 }
 
+#[derive(Debug)]
+pub struct FontData<'a> {
+    pub height: f32,
+    pub line_gap: f32,
+    pub ascender: f32,
+    pub descender: f32,
+    pub char_data: HashMap<char, CharData>,
+    pub texture_data: &'a [u8],
+    pub texture_width: u32,
+    pub texture_height: u32,
+}
+
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct CharData {
-    pub(crate) width: f32,
+pub struct FontMetrics {
     pub(crate) height: f32,
-    pub(crate) uvs: Vec4,
-    pub(crate) x_offset: f32,
-    pub(crate) y_offset: f32,
-    pub(crate) advance: f32,
+    pub(crate) line_gap: f32,
+    pub(crate) ascender: f32,
+    pub(crate) descender: f32,
+    pub(crate) space_width: f32,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct CharData {
+    pub uvs: Vec4,
+    pub bounds: Vec2,
+    pub bearing: Vec2,
+    pub advance: f32,
 }
 
 impl Font {
     pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
-        let atlas_width = fira_mono::ATLAS_WIDTH;
-        let atlas_height = fira_mono::ATLAS_HEIGHT;
-        let line_height = fira_mono::LINE_HEIGHT;
+        let font_data = fira_mono();
 
         let texture = Texture::new(
             device,
             uniforms,
-            fira_mono::DATA.to_vec(),
-            atlas_width,
-            atlas_height,
+            font_data.texture_data.to_vec(),
+            font_data.texture_width,
+            font_data.texture_height,
             Format::Gray,
             Mips::Zero,
         )?;
 
-        let mut char_data = HashMap::new();
-        for (c, metrics) in fira_mono::metrics() {
-            let u_min = metrics.x as f32 / atlas_width as f32;
-            let v_min = metrics.y as f32 / atlas_height as f32;
-            let u_max = u_min + (metrics.width as f32 / atlas_width as f32);
-            let v_max = v_min + (metrics.height as f32 / atlas_height as f32);
-            let uvs = Vec4::new(u_min, v_min, u_max, v_max);
-
-            let width = metrics.width as f32 / line_height as f32;
-            let height = metrics.height as f32 / line_height as f32;
-
-            let x_offset = metrics.xo as f32 / line_height as f32;
-            let y_offset = metrics.yo as f32 / line_height as f32;
-            let advance = metrics.advance as f32 / line_height as f32;
-
-            char_data.insert(
-                c,
-                CharData {
-                    width,
-                    height,
-                    uvs,
-                    x_offset,
-                    y_offset,
-                    advance,
-                },
-            );
-        }
-
-        Ok(Self { char_data, texture })
+        Ok(Self {
+            metrics: FontMetrics {
+                height: font_data.height,
+                line_gap: font_data.line_gap,
+                ascender: font_data.ascender,
+                descender: font_data.descender,
+                space_width: 1.0 / 3.0,
+            },
+            char_data: font_data.char_data,
+            texture,
+        })
     }
 
     pub(crate) const fn texture(&self) -> &Texture {
         &self.texture
+    }
+
+    pub(crate) const fn metrics(&self) -> FontMetrics {
+        self.metrics
     }
 
     pub(crate) fn char_data(&self, c: char) -> CharData {
@@ -89,5 +95,30 @@ impl Font {
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         self.texture.destroy(device, uniforms);
+    }
+}
+
+impl FontMetrics {
+    pub(crate) fn scaled(self, px: u32) -> Self {
+        let scale = px as f32;
+        Self {
+            height: self.height * scale,
+            line_gap: self.line_gap * scale,
+            ascender: self.ascender * scale,
+            descender: self.descender * scale,
+            space_width: self.space_width * scale,
+        }
+    }
+}
+
+impl CharData {
+    pub(crate) fn scaled(self, px: u32) -> Self {
+        let scale = px as f32;
+        Self {
+            uvs: self.uvs,
+            bounds: self.bounds * scale,
+            bearing: self.bearing * scale,
+            advance: self.advance * scale,
+        }
     }
 }

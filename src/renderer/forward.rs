@@ -244,7 +244,7 @@ impl ForwardRenderer {
             ShaderConstants {
                 local_to_world: Mat4::identity(),
                 tint_color: Vec3::default(),
-                sampler_index: 3,
+                sampler_index: 0,
             },
         );
         cmd.draw(text_mesh.index_count(), 0);

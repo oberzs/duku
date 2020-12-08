@@ -37,6 +37,12 @@ fn main() -> Result<()> {
 
         // start drawing on window
         duku.draw(None, |t| {
+            t.stroke("#ffaaaa");
+            t.debug_line([-200.0, 24.0, 0.0], [200.0, 24.0, 0.0]);
+            t.debug_line([-200.0, 0.0, 0.0], [200.0, 0.0, 0.0]);
+            t.debug_line([-200.0, -24.0, 0.0], [200.0, -24.0, 0.0]);
+            t.debug_line([0.0, -100.0, 0.0], [0.0, 100.0, 0.0]);
+
             if is_textbox_open {
                 // translate scene forwards to
                 // allow room for UI in front
@@ -50,12 +56,12 @@ fn main() -> Result<()> {
                 t.translate_z(-1.0);
 
                 // set shape drawing mode to draw from top-left
-                t.shape_mode(ShapeMode::TopLeft);
+                t.shape_mode(ShapeMode::Center);
 
                 // draw textbox text
                 t.text(
                     "This is a textbox\nthat you can close\nwith the 'X' button on\nthe top right!",
-                    [-125.0, 65.0],
+                    [0.0, 0.0],
                 );
 
                 // translate scene back to
