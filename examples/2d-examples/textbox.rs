@@ -4,6 +4,7 @@
 // This example draws a openable and closable textbox
 // using shapes and text
 
+use duku::otf::CharSet;
 use duku::window::Cursor;
 use duku::window::Events;
 use duku::window::MouseButton;
@@ -16,6 +17,13 @@ use duku::Target;
 fn main() -> Result<()> {
     // create duku context and window
     let (mut duku, window) = Duku::windowed(500, 500)?;
+
+    // load font-awesome font for 'x' icon
+    let fontawesome = duku.create_font_otf(
+        "examples/fonts/fontawesome.ttf",
+        24,
+        Some(CharSet::Custom("\u{f00d}\u{f27a}")),
+    )?;
 
     let mut is_textbox_open = false;
 
@@ -37,12 +45,6 @@ fn main() -> Result<()> {
 
         // start drawing on window
         duku.draw(None, |t| {
-            t.stroke("#ffaaaa");
-            t.debug_line([-200.0, 24.0, 0.0], [200.0, 24.0, 0.0]);
-            t.debug_line([-200.0, 0.0, 0.0], [200.0, 0.0, 0.0]);
-            t.debug_line([-200.0, -24.0, 0.0], [200.0, -24.0, 0.0]);
-            t.debug_line([0.0, -100.0, 0.0], [0.0, 100.0, 0.0]);
-
             if is_textbox_open {
                 // translate scene forwards to
                 // allow room for UI in front
@@ -60,7 +62,7 @@ fn main() -> Result<()> {
 
                 // draw textbox text
                 t.text(
-                    "This is a textbox\nthat you can close\nwith the 'X' button on\nthe top right!",
+                    "This is a textbox\nthat you can close\nwith the 'x' button on\nthe top right!",
                     [0.0, 0.0],
                 );
 
@@ -71,35 +73,31 @@ fn main() -> Result<()> {
                 // set shape drawing mode to draw from center
                 t.shape_mode(ShapeMode::Center);
 
-                // draw background for 'X' button
+                // draw background for 'x' button
                 textbox(t, 125.0, 75.0, 50.0, 50.0);
 
-                // draw first line of the 'X'
-                t.rotate_z(45.0);
-                t.translate([125.0, 75.0, -1.0]);
-                t.fill("#ffffff");
-                t.stroke(Rgb::clear());
-                t.rect([0.0, 0.0], [20.0, 5.0]);
+                // translate scene back to
+                // draw the rest in front
+                t.translate_z(-1.0);
 
-                // draw first line of the 'X'
-                t.reset_transform();
-                t.rotate_z(-45.0);
-                t.translate([125.0, 75.0, 0.0]);
-                t.rect([0.0, 0.0], [20.0, 5.0]);
+                // set font to fontawesome and draw 'x' icon
+                t.font(&fontawesome);
+                t.text("\u{f00d}", [125.0, 75.0]);
             } else {
                 // translate scene forwards to
                 // allow room for UI in front
                 t.translate_z(5.0);
 
                 // draw textbox
-                textbox(t, 0.0, 0.0, 100.0, 50.0);
+                textbox(t, 0.0, 0.0, 50.0, 50.0);
 
                 // translate scene back to
                 // draw text in front
                 t.translate_z(-1.0);
 
                 // draw 'Open' label
-                t.text("Open", [0.0, 0.0]);
+                t.font(&fontawesome);
+                t.text("\u{f27a}", [0.0, 0.0]);
             }
         });
     });

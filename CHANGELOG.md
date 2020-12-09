@@ -2,6 +2,10 @@
 
 ## [0.2.1] - Unreleased
 
+### Added
+
+- Added custom OTF/TTF font loading.
+
 ### Changed
 
 - Use linear interpolation for text sampling.

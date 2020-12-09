@@ -67,7 +67,6 @@
     future_incompatible,
     missing_docs,
     missing_doc_code_examples,
-    single_use_lifetimes,
     unused_qualifications,
     clippy::missing_const_for_fn,
     clippy::unwrap_used,
@@ -113,7 +112,9 @@ pub use color::Rgbf;
 pub use device::Stats;
 pub use error::Error;
 pub use error::Result;
+pub use font::CharData;
 pub use font::Font;
+pub use font::FontData;
 pub use image::Canvas;
 pub use image::ColorSpace;
 pub use image::Cubemap;
@@ -153,5 +154,7 @@ pub use surface::WindowHandle;
 pub use features::glsl;
 #[cfg(feature = "gltf")]
 pub use features::gltf;
+#[cfg(feature = "otf")]
+pub use features::otf;
 #[cfg(feature = "window")]
 pub use features::window;

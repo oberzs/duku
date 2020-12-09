@@ -84,7 +84,7 @@ duku = "0.2.0"
 - **2D** - shape, texture and text rendering with batching
 - **PBR** - uses a PBR material/shader system
 - **Shadows** - uses PCF shadow maps
-- **Text** - uses [Fira Mono] font
+- **Text** - uses [Fira Mono] or other OTF/TTF fonts
 - **Shaders** - uses custom glsl shaders
 
 This crate supports additional features that you can add
@@ -104,6 +104,7 @@ The features include:
 | `jpeg`   | no      | [jpeg-decoder] | adds jpeg file loading support        |
 | `gltf`   | no      | [gltf]         | adds gltf file loading support        |
 | `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
+| `otf`    | no      | [ab_glyph]     | adds otf/ttf file loading support     |
 | `log`    | no      | n/a            | adds informational logs               |
 
 ## Documentation
@@ -121,3 +122,4 @@ be found [here](https://github.com/oberzs/duku/tree/release/examples).
 [gltf]: https://github.com/gltf-rs/gltf
 [shaderc]: https://github.com/google/shaderc-rs
 [winit]: https://github.com/rust-windowing/winit
+[ab_glyph]: https://github.com/alexheretic/ab-glyph

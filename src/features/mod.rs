@@ -3,6 +3,7 @@
 
 pub mod glsl;
 pub mod gltf;
+pub mod otf;
 pub mod window;
 
 mod glsl_compiler;

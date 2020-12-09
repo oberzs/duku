@@ -261,6 +261,16 @@ impl Target {
         self.skybox = Some(s.clone());
     }
 
+    /// Set font for text
+    pub fn font(&mut self, f: &Handle<Font>) {
+        self.font = Some(f.clone());
+    }
+
+    /// Use default font for text
+    pub fn no_font(&mut self) {
+        self.font = None;
+    }
+
     /// Enable casting shadows for meshes
     ///
     /// Uses the first directional light for
