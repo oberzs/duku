@@ -2,7 +2,7 @@
 
 [Running](#running) • [3D Examples](#3d-examples) • [2D Examples](#2d-examples)
 
-Duku usage examples. Most examples use the [Kenney Assets].
+Duku usage examples. Examples use the [Kenney Assets] and [Font Awesome].
 
 ## Running
 
@@ -34,7 +34,7 @@ Required features are listed on this page by each example name.
 
 ## 2D Examples
 
-[textbox](2d-examples/textbox.rs) - `window`
+[textbox](2d-examples/textbox.rs) - `window` `otf`
 <br>
 ![textbox.gif](screenshots/textbox.gif)
 
@@ -51,3 +51,4 @@ Required features are listed on this page by each example name.
 ![gradient.png](screenshots/gradient.png)
 
 [kenney assets]: https://www.kenney.nl/assets
+[font awesome]: https://fontawesome.com/

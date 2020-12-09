@@ -10,84 +10,144 @@ use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
+use crate::math::Vec2;
 use crate::math::Vec4;
 use crate::pipeline::Uniforms;
+use fira_mono::fira_mono;
 
 /// Font for text drawing.
 pub struct Font {
+    metrics: FontMetrics,
     char_data: HashMap<char, CharData>,
     texture: Texture,
 }
 
+/// Font data and metrics.
+///
+/// Used to construct a new font
+#[derive(Debug)]
+pub struct FontData<'a> {
+    /// the height of the font
+    pub height: f32,
+    /// the gap between 2 different lines
+    pub line_gap: f32,
+    /// the highest point above the baseline
+    pub ascender: f32,
+    /// the lowest point below the baseline (negative)
+    pub descender: f32,
+    /// data for all loaded characters
+    pub char_data: HashMap<char, CharData>,
+    /// grayscale bytes for creating the font atlas texture
+    pub texture_data: &'a [u8],
+    /// atlas texture's width
+    pub texture_width: u32,
+    /// atlas texture's height
+    pub texture_height: u32,
+}
+
+/// Character data and metrics.
+///
+/// Used to construct a character
+/// in a font
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct CharData {
-    pub(crate) width: f32,
+pub struct CharData {
+    /// top-left and bottom-right corner for character's texture
+    pub uvs: Vec4,
+    /// width and height of the character's texture
+    pub bounds: Vec2,
+    /// offset of the character
+    pub bearing: Vec2,
+    /// advance between this and the next character in a string
+    pub advance: f32,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct FontMetrics {
     pub(crate) height: f32,
-    pub(crate) uvs: Vec4,
-    pub(crate) x_offset: f32,
-    pub(crate) y_offset: f32,
-    pub(crate) advance: f32,
+    pub(crate) line_gap: f32,
+    pub(crate) ascender: f32,
+    pub(crate) descender: f32,
+    pub(crate) space_width: f32,
 }
 
 impl Font {
     pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
-        let atlas_width = fira_mono::ATLAS_WIDTH;
-        let atlas_height = fira_mono::ATLAS_HEIGHT;
-        let line_height = fira_mono::LINE_HEIGHT;
+        Self::new(device, uniforms, fira_mono())
+    }
 
+    pub(crate) fn new(
+        device: &Device,
+        uniforms: &mut Uniforms,
+        data: FontData<'_>,
+    ) -> Result<Self> {
         let texture = Texture::new(
             device,
             uniforms,
-            fira_mono::DATA.to_vec(),
-            atlas_width,
-            atlas_height,
+            data.texture_data.to_vec(),
+            data.texture_width,
+            data.texture_height,
             Format::Gray,
             Mips::Zero,
         )?;
 
-        let mut char_data = HashMap::new();
-        for (c, metrics) in fira_mono::metrics() {
-            let u_min = metrics.x as f32 / atlas_width as f32;
-            let v_min = metrics.y as f32 / atlas_height as f32;
-            let u_max = u_min + (metrics.width as f32 / atlas_width as f32);
-            let v_max = v_min + (metrics.height as f32 / atlas_height as f32);
-            let uvs = Vec4::new(u_min, v_min, u_max, v_max);
-
-            let width = metrics.width as f32 / line_height as f32;
-            let height = metrics.height as f32 / line_height as f32;
-
-            let x_offset = metrics.xo as f32 / line_height as f32;
-            let y_offset = metrics.yo as f32 / line_height as f32;
-            let advance = metrics.advance as f32 / line_height as f32;
-
-            char_data.insert(
-                c,
-                CharData {
-                    width,
-                    height,
-                    uvs,
-                    x_offset,
-                    y_offset,
-                    advance,
-                },
-            );
-        }
-
-        Ok(Self { char_data, texture })
+        Ok(Self {
+            metrics: FontMetrics {
+                height: data.height,
+                line_gap: data.line_gap,
+                ascender: data.ascender,
+                descender: data.descender,
+                space_width: 1.0 / 3.0,
+            },
+            char_data: data.char_data,
+            texture,
+        })
     }
 
     pub(crate) const fn texture(&self) -> &Texture {
         &self.texture
     }
 
+    pub(crate) const fn metrics(&self) -> FontMetrics {
+        self.metrics
+    }
+
     pub(crate) fn char_data(&self, c: char) -> CharData {
         match self.char_data.get(&c) {
             Some(data) => *data,
-            None => *self.char_data.get(&'?').expect("bad default"),
+            None => *self
+                .char_data
+                .values()
+                .next()
+                .expect("font has no characters"),
         }
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
         self.texture.destroy(device, uniforms);
+    }
+}
+
+impl FontMetrics {
+    pub(crate) fn scaled(self, px: u32) -> Self {
+        let scale = px as f32;
+        Self {
+            height: self.height * scale,
+            line_gap: self.line_gap * scale,
+            ascender: self.ascender * scale,
+            descender: self.descender * scale,
+            space_width: self.space_width * scale,
+        }
+    }
+}
+
+impl CharData {
+    pub(crate) fn scaled(self, px: u32) -> Self {
+        let scale = px as f32;
+        Self {
+            uvs: self.uvs,
+            bounds: self.bounds * scale,
+            bearing: self.bearing * scale,
+            advance: self.advance * scale,
+        }
     }
 }

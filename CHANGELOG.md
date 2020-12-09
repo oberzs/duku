@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.1] - 09.12.2020
+
+### Added
+
+- Added custom OTF/TTF font loading.
+
+### Changed
+
+- Use linear interpolation for text sampling.
+
+### Fixed
+
+- Fixed text shader for light text.
+
 ## [0.2.0] - 05.12.2020
 
 ### Added

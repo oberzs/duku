@@ -52,6 +52,13 @@ pub enum Error {
     /// Unsupported GLTF primitive mode
     #[cfg(feature = "gltf")]
     UnsupportedPrimitive,
+
+    /// Invalid OTF data
+    #[cfg(feature = "otf")]
+    InvalidOtf,
+    /// Unsupported character
+    #[cfg(feature = "otf")]
+    UnsupportedChar(char),
 }
 
 impl error::Error for Error {}

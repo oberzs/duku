@@ -1,6 +1,6 @@
 [package]
 name = "duku"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 
 authors = ["Oliver Berzs <oliver.berzs@gmail.com>"]
@@ -22,6 +22,7 @@ png = ["png_dep"]
 jpeg = ["jpeg_dep"]
 gltf = ["gltf_dep", "png", "jpeg"]
 glsl = ["glsl_dep"]
+otf = ["otf_dep"]
 window = ["window_dep"]
 log = []
 
@@ -52,6 +53,11 @@ version = "0.15.2"
 optional = true
 default-features = false
 features = ["utils"]
+
+[dependencies.otf_dep]
+package = "ab_glyph"
+version = "0.2.6"
+optional = true
 
 [[bin]]
 name = "dc"
@@ -86,4 +92,4 @@ required-features = ["window"]
 [[example]]
 name = "textbox"
 path = "examples/2d-examples/textbox.rs"
-required-features = ["window"]
+required-features = ["window", "otf"]

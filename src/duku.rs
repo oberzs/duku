@@ -10,6 +10,8 @@ use crate::device::pick_gpu;
 use crate::device::Device;
 use crate::device::Stats;
 use crate::error::Result;
+use crate::font::Font;
+use crate::font::FontData;
 use crate::image::Canvas;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
@@ -336,6 +338,15 @@ impl Duku {
         let shader = Shader::new(&self.device, &self.uniforms, &vert, &frag, config)?;
 
         Ok(self.resources.add_shader(shader))
+    }
+
+    /// Create a font
+    ///
+    /// This should be used only if building a
+    /// 3rd party font support
+    pub fn create_font(&mut self, data: FontData<'_>) -> Result<Handle<Font>> {
+        let font = Font::new(&self.device, &mut self.uniforms, data)?;
+        Ok(self.resources.add_font(font))
     }
 
     /// Get last render's statistics
