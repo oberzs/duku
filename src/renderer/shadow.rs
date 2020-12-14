@@ -184,6 +184,7 @@ impl ShadowRenderer {
                                 ShaderConstants {
                                     local_to_world: order.matrix,
                                     tint_color: Vec3::default(),
+                                    texture_index: 0,
                                     sampler_index: order.sampler_index,
                                 },
                             );

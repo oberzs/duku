@@ -127,6 +127,7 @@ pub(crate) struct MeshOrder {
     pub(crate) matrix: Mat4,
     pub(crate) color: Rgb,
     pub(crate) shadows: bool,
+    pub(crate) texture_index: u32,
     pub(crate) sampler_index: u32,
 }
 
@@ -425,7 +426,7 @@ impl Target {
     }
 
     /// Draw a custom 3D mesh
-    pub fn mesh(&mut self, mesh: &Handle<Mesh>) {
+    pub fn mesh(&mut self, mesh: &Handle<Mesh>, texture: u32) {
         let unshaded = self.lights.iter().all(|l| l.is_none());
 
         let order = MeshOrder {
@@ -433,6 +434,7 @@ impl Target {
             matrix: self.matrix,
             color: self.tint,
             shadows: self.shadows,
+            texture_index: texture,
             sampler_index: self.sampler_index(),
         };
 
@@ -470,7 +472,7 @@ impl Target {
         self.push();
         self.shadows = false;
         self.shader = Some(self.builtins.wireframe_shader.clone());
-        self.mesh(mesh);
+        self.mesh(mesh, 0);
         self.pop();
     }
 
@@ -479,7 +481,7 @@ impl Target {
         self.push();
         self.matrix *= Mat4::scale(scale);
         let mesh = self.builtins.cube_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, 0);
         self.pop();
     }
 
@@ -488,7 +490,7 @@ impl Target {
         self.push();
         self.matrix *= Mat4::scale(scale);
         let mesh = self.builtins.uv_sphere_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, 0);
         self.pop();
     }
 
@@ -497,7 +499,7 @@ impl Target {
         self.push();
         self.matrix *= Mat4::scale(scale);
         let mesh = self.builtins.ico_sphere_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, 0);
         self.pop();
     }
 
@@ -506,7 +508,7 @@ impl Target {
         self.push();
         self.matrix *= Mat4::scale(Vec3::from((scale.into(), 1.0)));
         let mesh = self.builtins.plane_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, 0);
         self.pop();
     }
 
@@ -515,7 +517,7 @@ impl Target {
         self.push();
         self.shader = Some(shader.clone());
         let mesh = self.builtins.surface_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, 0);
         self.pop();
     }
 
@@ -523,9 +525,8 @@ impl Target {
     pub fn fullscreen(&mut self, canvas: &Handle<Canvas>) {
         self.push();
         self.shader = Some(self.builtins.fullscreen_shader.clone());
-        self.material = Some(canvas.read().material().clone());
         let mesh = self.builtins.surface_mesh.clone();
-        self.mesh(&mesh);
+        self.mesh(&mesh, canvas.read().shader_index(0).unwrap_or(0));
         self.pop();
     }
 
@@ -924,7 +925,7 @@ impl Target {
 
         for (mesh, material) in node.orders() {
             self.material(material);
-            self.mesh(mesh);
+            self.mesh(mesh, 0);
         }
 
         for child in &node.children {

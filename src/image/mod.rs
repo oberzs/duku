@@ -141,8 +141,12 @@ impl Image {
         }
     }
 
-    pub(crate) fn shader(device: &Device, width: u32, height: u32) -> Self {
-        let format = Format::Bgra;
+    pub(crate) fn shader(device: &Device, format: Format, width: u32, height: u32) -> Self {
+        let shader_usage = if format.is_depth() {
+            ImageUsage::Depth
+        } else {
+            ImageUsage::Color
+        };
 
         // create image
         let image_info = vk::ImageCreateInfo {
@@ -161,7 +165,7 @@ impl Image {
             usage: ImageUsage::combine(&[
                 ImageUsage::TransferDst,
                 ImageUsage::Sampled,
-                ImageUsage::Color,
+                shader_usage,
             ]),
             sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
             queue_family_index_count: 0,

@@ -70,6 +70,7 @@ pub(crate) struct ShaderLight {
 pub(crate) struct ShaderConstants {
     pub(crate) local_to_world: Mat4,
     pub(crate) tint_color: Vec3,
+    pub(crate) texture_index: u32,
     pub(crate) sampler_index: u32,
 }
 

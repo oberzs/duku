@@ -90,7 +90,7 @@ impl Material {
 
     /// Set albedo canvas for the PBR and other various shaders
     pub fn albedo_canvas(&mut self, f: &Handle<Canvas>) {
-        self.a[3] = f.read().shader_index() as f32;
+        self.a[3] = f.read().shader_index(0).expect("invalid canvas") as f32;
     }
 
     /// Set metalness factor for the PBR shader

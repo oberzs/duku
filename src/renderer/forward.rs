@@ -244,6 +244,7 @@ impl ForwardRenderer {
             ShaderConstants {
                 local_to_world: Mat4::identity(),
                 tint_color: Vec3::default(),
+                texture_index: 0,
                 sampler_index: 0,
             },
         );
@@ -291,6 +292,7 @@ impl ForwardRenderer {
             ShaderConstants {
                 local_to_world: Mat4::identity(),
                 tint_color: Vec3::default(),
+                texture_index: 0,
                 sampler_index: 0,
             },
         );
@@ -372,6 +374,7 @@ impl ForwardRenderer {
             ShaderConstants {
                 local_to_world: Mat4::identity(),
                 tint_color: Vec3::default(),
+                texture_index: 0,
                 sampler_index: 0,
             },
         );
@@ -426,6 +429,7 @@ fn record_meshes(cmd: &Commands, uniforms: &Uniforms, orders: Vec<ShaderOrder>) 
                     ShaderConstants {
                         local_to_world: order.matrix,
                         tint_color: Rgbf::from(order.color).into(),
+                        texture_index: order.texture_index,
                         sampler_index: order.sampler_index,
                     },
                 );
@@ -450,6 +454,7 @@ fn record_skybox(cmd: &Commands, uniforms: &Uniforms, camera: &Camera, builtins:
         uniforms,
         ShaderConstants {
             sampler_index: 0,
+            texture_index: 0,
             tint_color: Vec3::default(),
             local_to_world,
         },

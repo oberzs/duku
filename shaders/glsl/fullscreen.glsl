@@ -12,5 +12,5 @@
 layout(location = 0) out vec4 out_color;
 
 void fragment() {
-    out_color = tex(int(material.a.a), in_uv);
+    out_color = tex(object.texture_index, in_uv);
 }

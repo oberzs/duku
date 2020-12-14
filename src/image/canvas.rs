@@ -9,11 +9,9 @@ use super::ImageLayout;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
-use crate::pipeline::Material;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
-use crate::resources::Handle;
 use crate::surface::Swapchain;
 use crate::vk;
 
@@ -49,20 +47,22 @@ pub struct Canvas {
 
     framebuffer: vk::Framebuffer,
     render_pass: RenderPass,
-    attachments: Vec<Format>,
-    material: Option<Handle<Material>>,
 
+    attachments: Vec<Format>,
     transient_images: Vec<Image>,
     stored_images: Vec<Image>,
-    shader_image: Option<(u32, Image)>,
+
+    base_layouts: Vec<ImageLayout>,
+    shader_images: Vec<(u32, Image)>,
 }
 
 impl Canvas {
     pub(crate) fn for_swapchain(
         device: &Device,
+        uniforms: &mut Uniforms,
         config: ShaderConfig,
         swapchain: &Swapchain,
-    ) -> Vec<Self> {
+    ) -> Result<Vec<Self>> {
         let width = swapchain.width();
         let height = swapchain.height();
 
@@ -74,9 +74,10 @@ impl Canvas {
                 let render_pass = RenderPass::new(device, config, true);
 
                 let mut transient_images = vec![];
-                let mut stored_images = vec![];
                 let mut attachments = vec![];
                 let mut views = vec![];
+
+                let mut stored_image = None;
 
                 for attachment in render_pass.attachments() {
                     attachments.push(attachment.format());
@@ -85,7 +86,7 @@ impl Canvas {
                         let mut image =
                             Image::attachment(device, &attachment, width, height, Some(img));
                         views.push(image.add_view(device));
-                        stored_images.push(image);
+                        stored_image = Some(image);
                     } else {
                         let mut image = Image::attachment(device, &attachment, width, height, None);
                         views.push(image.add_view(device));
@@ -106,18 +107,29 @@ impl Canvas {
                 };
 
                 let framebuffer = device.create_framebuffer(&info);
+                let stored_image = stored_image.expect("bad framebuffer");
 
-                Self {
-                    shader_image: None,
-                    material: None,
+                let mut shader_image = Image::shader(device, stored_image.format(), width, height);
+                let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
+
+                let layout = if shader_image.format().is_depth() {
+                    ImageLayout::ShaderDepth
+                } else {
+                    ImageLayout::ShaderColor
+                };
+                shader_image.change_layout(device, ImageLayout::Undefined, layout);
+
+                Ok(Self {
+                    shader_images: vec![(shader_index, shader_image)],
+                    base_layouts: vec![ImageLayout::Present],
+                    stored_images: vec![stored_image],
                     attachments,
                     transient_images,
-                    stored_images,
                     render_pass,
                     framebuffer,
                     width,
                     height,
-                }
+                })
             })
             .collect()
     }
@@ -129,7 +141,7 @@ impl Canvas {
         width: u32,
         height: u32,
     ) -> Result<Self> {
-        let render_pass = RenderPass::new(device, config, true);
+        let render_pass = RenderPass::new(device, config, false);
 
         let mut transient_images = vec![];
         let mut stored_images = vec![];
@@ -162,25 +174,26 @@ impl Canvas {
 
         let framebuffer = device.create_framebuffer(&info);
 
-        let mut shader_image = Image::shader(device, width, height);
-        let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
-
-        // ready image layouts
-        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
+        let mut shader_images = vec![];
+        let mut base_layouts = vec![];
         for image in &stored_images {
-            image.change_layout(
-                device,
-                ImageLayout::Undefined,
-                match image.format() {
-                    Format::Depth => ImageLayout::ShaderDepth,
-                    _ => ImageLayout::ShaderColor,
-                },
-            );
+            let base_layout = match image.format() {
+                Format::Depth => ImageLayout::ShaderDepth,
+                _ => ImageLayout::ShaderColor,
+            };
+
+            let mut shader_image = Image::shader(device, image.format(), width, height);
+            let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
+
+            shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
+
+            shader_images.push((shader_index, shader_image));
+            base_layouts.push(base_layout);
         }
 
         Ok(Self {
-            shader_image: Some((shader_index, shader_image)),
-            material: None,
+            shader_images,
+            base_layouts,
             attachments,
             transient_images,
             stored_images,
@@ -192,11 +205,6 @@ impl Canvas {
     }
 
     pub(crate) fn update(&mut self, device: &Device, uniforms: &mut Uniforms) {
-        debug_assert!(
-            self.shader_image.is_some(),
-            "trying to resize swapchain render texture"
-        );
-
         // cleanup images
         for image in &self.transient_images {
             image.destroy(device);
@@ -204,7 +212,7 @@ impl Canvas {
         for image in &self.stored_images {
             image.destroy(device);
         }
-        if let Some((_, image)) = &self.shader_image {
+        for (_, image) in &self.shader_images {
             image.destroy(device);
         }
 
@@ -236,21 +244,22 @@ impl Canvas {
             height: self.height,
         };
 
-        let mut shader_image = Image::shader(device, self.width, self.height);
-        let shader_index = self.shader_image.as_ref().expect("bad shader image").0;
-        uniforms.replace_texture(shader_index, shader_image.add_view(device));
+        let mut shader_images = vec![];
+        let mut base_layouts = vec![];
+        for (i, image) in stored_images.iter().enumerate() {
+            let base_layout = match image.format() {
+                Format::Depth => ImageLayout::ShaderDepth,
+                _ => ImageLayout::ShaderColor,
+            };
 
-        // ready image layouts
-        shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
-        for image in &stored_images {
-            image.change_layout(
-                device,
-                ImageLayout::Undefined,
-                match image.format() {
-                    Format::Depth => ImageLayout::ShaderDepth,
-                    _ => ImageLayout::ShaderColor,
-                },
-            );
+            let mut shader_image = Image::shader(device, image.format(), self.width, self.height);
+            let shader_index = self.shader_images[i].0;
+            uniforms.replace_texture(shader_index, shader_image.add_view(device));
+
+            shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
+
+            shader_images.push((shader_index, shader_image));
+            base_layouts.push(base_layout);
         }
 
         // reassign new values
@@ -258,29 +267,31 @@ impl Canvas {
         self.framebuffer = device.create_framebuffer(&info);
         self.transient_images = transient_images;
         self.stored_images = stored_images;
-        self.shader_image = Some((shader_index, shader_image));
+        self.shader_images = shader_images;
     }
 
     pub(crate) fn blit_to_texture(&self, cmd: &Commands) {
-        if let Some((_, dst)) = &self.shader_image {
-            // transfer only first stored image to shader for now
-            let src = &self.stored_images[0];
-
+        for ((src, (_, dst)), layout) in self
+            .stored_images
+            .iter()
+            .zip(self.shader_images.iter())
+            .zip(self.base_layouts.iter())
+        {
             // prepare images for transfer
-            src.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferSrc);
+            src.change_layout_sync(cmd, *layout, ImageLayout::TransferSrc);
             dst.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferDst);
 
             // blit to shader image
             cmd.blit_image(src, dst);
 
             // set images back to initial state
-            src.change_layout_sync(cmd, ImageLayout::TransferSrc, ImageLayout::ShaderColor);
+            src.change_layout_sync(cmd, ImageLayout::TransferSrc, *layout);
             dst.change_layout_sync(cmd, ImageLayout::TransferDst, ImageLayout::ShaderColor);
         }
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {
-        if let Some((index, image)) = &self.shader_image {
+        for (index, image) in &self.shader_images {
             uniforms.remove_texture(*index);
             image.destroy(device);
         }
@@ -310,17 +321,8 @@ impl Canvas {
         self.attachments.iter()
     }
 
-    pub(crate) fn set_material(&mut self, material: Handle<Material>) {
-        material.write().a[3] = self.shader_index() as f32;
-        self.material = Some(material);
-    }
-
-    pub(crate) fn material(&self) -> &Handle<Material> {
-        self.material.as_ref().expect("bad material")
-    }
-
     /// Get index to be used in shader for sampling
-    pub fn shader_index(&self) -> u32 {
-        self.shader_image.as_ref().expect("bad shader image").0
+    pub fn shader_index(&self, i: usize) -> Option<u32> {
+        self.shader_images.get(i).map(|i| i.0)
     }
 }

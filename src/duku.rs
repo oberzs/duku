@@ -272,14 +272,13 @@ impl Duku {
     /// Create a canvas
     pub fn create_canvas(&mut self, width: u32, height: u32) -> Result<Handle<Canvas>> {
         let shader_config = self.builtins.pbr_shader.read().config();
-        let mut canvas = Canvas::new(
+        let canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             width,
             height,
         )?;
-        canvas.set_material(self.create_material()?);
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
         Ok(self.resources.add_canvas(canvas))
@@ -293,14 +292,13 @@ impl Duku {
         height: u32,
     ) -> Result<Handle<Canvas>> {
         let shader_config = shader.read().config();
-        let mut canvas = Canvas::new(
+        let canvas = Canvas::new(
             &self.device,
             &mut self.uniforms,
             shader_config,
             width,
             height,
         )?;
-        canvas.set_material(self.create_material()?);
         self.forward_renderer
             .add_target(&self.device, &mut self.uniforms)?;
         Ok(self.resources.add_canvas(canvas))
@@ -408,8 +406,13 @@ impl Duku {
             }
 
             let shader_config = self.builtins.pbr_shader.read().config();
-            self.window_canvases =
-                Canvas::for_swapchain(&self.device, shader_config, &self.swapchain);
+            self.window_canvases = Canvas::for_swapchain(
+                &self.device,
+                &mut self.uniforms,
+                shader_config,
+                &self.swapchain,
+            )
+            .expect("cannot resize swapchain canvas")
         }
     }
 }
@@ -512,7 +515,8 @@ impl DukuBuilder {
 
         // setup canvases
         let shader_config = builtins.pbr_shader.read().config();
-        let window_canvases = Canvas::for_swapchain(&device, shader_config, &swapchain);
+        let window_canvases =
+            Canvas::for_swapchain(&device, &mut uniforms, shader_config, &swapchain)?;
 
         // setup renderer
         let forward_renderer = ForwardRenderer::new(
