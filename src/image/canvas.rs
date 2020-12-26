@@ -6,6 +6,7 @@ use std::ptr;
 use super::Format;
 use super::Image;
 use super::ImageLayout;
+use crate::buffer::Buffer;
 use crate::device::Commands;
 use crate::device::Device;
 use crate::error::Result;
@@ -54,6 +55,8 @@ pub struct Canvas {
 
     base_layouts: Vec<ImageLayout>,
     shader_images: Vec<(u32, Image)>,
+
+    query_buffer: Buffer<u8>,
 }
 
 impl Canvas {
@@ -119,10 +122,14 @@ impl Canvas {
                 };
                 shader_image.change_layout(device, ImageLayout::Undefined, layout);
 
+                let len = width * height * 4;
+                let query_buffer = Buffer::query(device, len as usize);
+
                 Ok(Self {
                     shader_images: vec![(shader_index, shader_image)],
                     base_layouts: vec![ImageLayout::Present],
                     stored_images: vec![stored_image],
+                    query_buffer,
                     attachments,
                     transient_images,
                     render_pass,
@@ -191,8 +198,12 @@ impl Canvas {
             base_layouts.push(base_layout);
         }
 
+        let len = width * height * 4;
+        let query_buffer = Buffer::query(device, len as usize);
+
         Ok(Self {
             shader_images,
+            query_buffer,
             base_layouts,
             attachments,
             transient_images,
@@ -202,6 +213,37 @@ impl Canvas {
             width,
             height,
         })
+    }
+
+    pub(crate) fn data(&self, device: &Device) -> Vec<u8> {
+        let src = &self.shader_images[0].1;
+
+        device.do_commands(|cmd| {
+            let subresource = vk::ImageSubresourceLayers {
+                aspect_mask: src.format().aspect(),
+                mip_level: 0,
+                base_array_layer: 0,
+                layer_count: 1,
+            };
+            let region = vk::BufferImageCopy {
+                buffer_offset: 0,
+                buffer_row_length: self.width,
+                buffer_image_height: self.height,
+                image_subresource: subresource,
+                image_offset: vk::Offset3D { x: 0, y: 0, z: 0 },
+                image_extent: vk::Extent3D {
+                    depth: 1,
+                    width: self.width,
+                    height: self.height,
+                },
+            };
+
+            src.change_layout_sync(cmd, ImageLayout::ShaderColor, ImageLayout::TransferSrc);
+            cmd.copy_image_to_buffer(src.handle(), self.query_buffer.handle(), region);
+            src.change_layout_sync(cmd, ImageLayout::TransferSrc, ImageLayout::ShaderColor);
+        });
+
+        self.query_buffer.data()
     }
 
     pub(crate) fn update(&mut self, device: &Device, uniforms: &mut Uniforms) {
@@ -301,6 +343,7 @@ impl Canvas {
         for image in &self.stored_images {
             image.destroy(device);
         }
+        self.query_buffer.destroy(device);
         self.render_pass.destroy(device);
         device.destroy_framebuffer(self.framebuffer);
     }

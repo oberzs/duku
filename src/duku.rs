@@ -90,7 +90,7 @@ pub struct DukuBuilder {
     window: Option<WindowHandle>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum RenderStage {
     Before,
     During,
@@ -108,7 +108,7 @@ impl Duku {
         }
     }
 
-    /// Start rendering on the window canvas
+    /// Draw on the window canvas
     ///
     /// If `camera` is `None` a default camera that fits the
     /// canvas will be used.
@@ -122,9 +122,13 @@ impl Duku {
     ///     // record drawing commands
     /// });
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if drawing hasn't begun.
     pub fn draw(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
-        if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
+        if self.render_stage == RenderStage::Before {
+            panic!("cannot draw before calling 'begin'");
         }
 
         // let user record draw calls
@@ -136,11 +140,9 @@ impl Duku {
         // render
         self.forward_renderer
             .render(&self.device, canvas, &cam, &self.uniforms, target);
-
-        self.end_draw();
     }
 
-    /// Start rendering on a specified canvas
+    /// Draw on a specified canvas
     ///
     /// If `camera` is `None` a default camera that fits the
     /// canvas will be used.
@@ -156,27 +158,105 @@ impl Duku {
     ///     // record drawing commands
     /// });
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if drawing hasn't begun.
     pub fn draw_on_canvas(
         &mut self,
         canvas: &Handle<Canvas>,
         camera: Option<&Camera>,
         draw_fn: impl Fn(&mut Target),
     ) {
-        if let RenderStage::Before = self.render_stage {
-            self.begin_draw();
+        if self.render_stage == RenderStage::Before {
+            panic!("cannot draw before calling 'begin'");
         }
 
         // let user record draw calls
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
 
-        {
-            let cnv = canvas.read();
-            let cam = get_camera(camera, cnv.width, cnv.height);
+        let cnv = canvas.read();
+        let cam = get_camera(camera, cnv.width, cnv.height);
 
-            // render
-            self.forward_renderer
-                .render(&self.device, &cnv, &cam, &self.uniforms, target);
+        // render
+        self.forward_renderer
+            .render(&self.device, &cnv, &cam, &self.uniforms, target);
+    }
+
+    /// Begin this frame's drawing process
+    ///
+    /// # Panics
+    ///
+    /// Panics if drawing has already begun.
+    pub fn begin(&mut self) {
+        // validate render stage
+        if self.render_stage == RenderStage::During {
+            panic!("cannot call 'begin' 2 times in a row");
+        } else {
+            self.render_stage = RenderStage::During;
+        }
+
+        self.device.next_frame(&mut self.swapchain);
+        self.resources
+            .clear_unused(&self.device, &mut self.uniforms);
+        self.resources
+            .update_if_needed(&self.device, &mut self.uniforms);
+        self.uniforms.update_if_needed(&self.device);
+        self.device
+            .commands()
+            .bind_descriptor(&self.uniforms, self.uniforms.image_descriptor());
+    }
+
+    /// End this frame's drawing process
+    ///
+    /// # Panics
+    ///
+    /// Panics if drawing hasn't begun.
+    pub fn end(&mut self) {
+        // validate render stage
+        if self.render_stage == RenderStage::Before {
+            panic!("cannot call 'end' before calling 'begin'");
+        } else {
+            self.render_stage = RenderStage::Before;
+        }
+
+        self.device.submit();
+        let should_resize = self.device.present(&self.swapchain);
+
+        // update delta time
+        let delta_time = self.frame_time.elapsed();
+        self.delta_time = delta_time.as_secs_f32();
+        self.frame_time = Instant::now();
+        self.fps_samples[self.frame_count % FPS_SAMPLE_COUNT] =
+            1_000_000 / delta_time.as_micros() as u32;
+        self.frame_count += 1;
+        self.fps =
+            (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
+
+        // resize if needed
+        if should_resize {
+            self.device.wait_idle();
+
+            let gpu_properties = self
+                .instance
+                .gpu_properties(&self.surface)
+                .remove(self.gpu_index);
+            self.swapchain
+                .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
+
+            for canvas in &self.window_canvases {
+                canvas.destroy(&self.device, &mut self.uniforms);
+            }
+
+            let shader_config = self.builtins.pbr_shader.read().config();
+            self.window_canvases = Canvas::for_swapchain(
+                &self.device,
+                &mut self.uniforms,
+                shader_config,
+                &self.swapchain,
+            )
+            .expect("cannot resize swapchain canvas")
         }
     }
 
@@ -304,6 +384,18 @@ impl Duku {
         Ok(self.resources.add_canvas(canvas))
     }
 
+    /// Get color data for window canvas as bytes
+    pub fn window_canvas_data(&self) -> Vec<u8> {
+        self.device.wait_idle();
+        self.window_canvases[self.swapchain.current()].data(&self.device)
+    }
+
+    /// Get color data for specific canvas as bytes
+    pub fn canvas_data(&self, canvas: &Handle<Canvas>) -> Vec<u8> {
+        self.device.wait_idle();
+        canvas.read().data(&self.device)
+    }
+
     /// Create a shader from a SPIR-V file
     pub fn create_shader_spirv(&mut self, path: impl AsRef<Path>) -> Result<Handle<Shader>> {
         let bytes = fs::read(path.as_ref())?;
@@ -360,60 +452,6 @@ impl Duku {
     /// Get current FPS
     pub const fn fps(&self) -> u32 {
         self.fps
-    }
-
-    fn begin_draw(&mut self) {
-        self.render_stage = RenderStage::During;
-        self.device.next_frame(&mut self.swapchain);
-        self.resources
-            .clear_unused(&self.device, &mut self.uniforms);
-        self.resources
-            .update_if_needed(&self.device, &mut self.uniforms);
-        self.uniforms.update_if_needed(&self.device);
-        self.device
-            .commands()
-            .bind_descriptor(&self.uniforms, self.uniforms.image_descriptor());
-    }
-
-    fn end_draw(&mut self) {
-        self.render_stage = RenderStage::Before;
-        self.device.submit();
-        let should_resize = self.device.present(&self.swapchain);
-
-        // update delta time
-        let delta_time = self.frame_time.elapsed();
-        self.delta_time = delta_time.as_secs_f32();
-        self.frame_time = Instant::now();
-        self.fps_samples[self.frame_count % FPS_SAMPLE_COUNT] =
-            1_000_000 / delta_time.as_micros() as u32;
-        self.frame_count += 1;
-        self.fps =
-            (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
-
-        // resize if needed
-        if should_resize {
-            self.device.wait_idle();
-
-            let gpu_properties = self
-                .instance
-                .gpu_properties(&self.surface)
-                .remove(self.gpu_index);
-            self.swapchain
-                .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
-
-            for canvas in &self.window_canvases {
-                canvas.destroy(&self.device, &mut self.uniforms);
-            }
-
-            let shader_config = self.builtins.pbr_shader.read().config();
-            self.window_canvases = Canvas::for_swapchain(
-                &self.device,
-                &mut self.uniforms,
-                shader_config,
-                &self.swapchain,
-            )
-            .expect("cannot resize swapchain canvas")
-        }
     }
 }
 

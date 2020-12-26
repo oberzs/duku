@@ -163,6 +163,7 @@ impl Image {
             samples: Msaa::Disabled.flag(),
             tiling: vk::IMAGE_TILING_OPTIMAL,
             usage: ImageUsage::combine(&[
+                ImageUsage::TransferSrc,
                 ImageUsage::TransferDst,
                 ImageUsage::Sampled,
                 shader_usage,
@@ -210,11 +211,7 @@ impl Image {
         // attachments that stay in memory can be read from
         if attachment.is_stored() {
             usage.push(ImageUsage::Sampled);
-
-            if external.is_none() {
-                // swapchain images don't need to be transfered
-                usage.push(ImageUsage::TransferSrc);
-            }
+            usage.push(ImageUsage::TransferSrc);
         } else {
             usage.push(ImageUsage::Transient);
         }

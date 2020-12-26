@@ -3,7 +3,7 @@
 [Simple Example](#simple-example) • [Usage](#usage) • [Features](#features) • [Documentation](#documentation)
 
 ![Build Status](https://img.shields.io/github/workflow/status/oberzs/duku/Full%20Build?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.2.1-green?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.3.0-green?style=flat-square)
 [![Rust Version](https://img.shields.io/badge/rust-1.48.0-orange?style=flat-square)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/github/license/oberzs/duku?style=flat-square)](https://github.com/oberzs/duku/blob/release/LICENSE)
 
@@ -42,6 +42,7 @@ fn main() -> Result<()> {
   // start window loop
   window.while_open(move |_| {
       // start drawing on window
+      duku.begin();
       duku.draw(Some(&camera), |t| {
           // setup scene
           t.background("#ababab");
@@ -61,6 +62,7 @@ fn main() -> Result<()> {
           t.tint(Hsb::new(hue, 70, 80));
           t.cube([1.0, 1.0, 1.0]);
       });
+      duku.end();
   });
 
   Ok(())
@@ -73,7 +75,7 @@ To use this crate, add this dependency to your `Cargo.toml` file.
 
 ```toml
 [dependencies]
-duku = "0.2.1"
+duku = "0.3.0"
 ```
 
 ## Features

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0] - Unreleased
+
+### Added
+
+- Added explicit `begin` and `end` functions to control drawing flow.
+- Added ability to get pixel data for canvases.
+
 ## [0.2.1] - 09.12.2020
 
 ### Added

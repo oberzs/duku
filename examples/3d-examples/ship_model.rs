@@ -35,6 +35,7 @@ fn main() -> Result<()> {
         orbit.update(&mut camera, events, duku.delta_time());
 
         // start drawing on window
+        duku.begin();
         duku.draw(Some(&camera), |t| {
             // setup scene
             t.light(light);
@@ -49,6 +50,7 @@ fn main() -> Result<()> {
             // draw ship model
             t.model(&ship);
         });
+        duku.end();
     });
 
     Ok(())

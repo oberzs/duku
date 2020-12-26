@@ -84,6 +84,36 @@ impl<T: Copy> Buffer<T> {
         buffer
     }
 
+    pub(crate) fn query(device: &Device, len: usize) -> Self {
+        let size = mem::size_of::<T>() * len;
+        let usage = BufferUsage::TransferDst;
+
+        // create buffer
+        let info = vk::BufferCreateInfo {
+            s_type: vk::STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: 0,
+            size: size as u64,
+            usage: usage.flag(),
+            sharing_mode: vk::SHARING_MODE_EXCLUSIVE,
+            queue_family_index_count: 0,
+            p_queue_family_indices: ptr::null(),
+        };
+
+        let (handle, memory) = device.allocate_buffer(&info, MemoryAccess::Cpu);
+
+        let mapped = device.map_memory(memory, size);
+
+        Self {
+            marker: PhantomData,
+            handle,
+            memory,
+            mapped,
+            size,
+            usage,
+        }
+    }
+
     pub(crate) fn resize(&mut self, device: &Device, len: usize) {
         debug_assert!(
             self.usage != BufferUsage::TransferSrc,
@@ -121,6 +151,18 @@ impl<T: Copy> Buffer<T> {
         unsafe {
             ptr::copy_nonoverlapping(data as *const [T] as *const c_void, self.mapped, size);
         }
+    }
+
+    pub(crate) fn data(&self) -> Vec<T> {
+        let len = self.size / mem::size_of::<T>();
+        let mut data = Vec::with_capacity(len);
+
+        unsafe {
+            ptr::copy_nonoverlapping(self.mapped, data.as_mut_ptr() as *mut c_void, self.size);
+            data.set_len(len);
+        }
+
+        data
     }
 
     pub(crate) fn handle(&self) -> vk::Buffer {

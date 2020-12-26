@@ -27,6 +27,7 @@ fn main() -> Result<()> {
     // start window loop
     window.while_open(move |_| {
         // start drawing on window
+        duku.begin();
         duku.draw(Some(&camera), |t| {
             // setup scene
             t.background("#ababab");
@@ -46,6 +47,7 @@ fn main() -> Result<()> {
             t.tint(Hsb::new(hue, 70, 80));
             t.cube([1.0, 1.0, 1.0]);
         });
+        duku.end();
     });
 
     Ok(())

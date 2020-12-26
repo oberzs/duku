@@ -314,6 +314,25 @@ impl Commands {
         }
     }
 
+    pub(crate) fn copy_image_to_buffer(
+        &self,
+        src: vk::Image,
+        dst: vk::Buffer,
+        region: vk::BufferImageCopy,
+    ) {
+        let regions = [region];
+        unsafe {
+            vk::cmd_copy_image_to_buffer(
+                self.buffer.get(),
+                src,
+                ImageLayout::TransferSrc.flag(),
+                dst,
+                1,
+                regions.as_ptr(),
+            );
+        }
+    }
+
     pub(crate) fn set_view(&self, width: u32, height: u32) {
         let viewport = [vk::Viewport {
             x: 0.0,

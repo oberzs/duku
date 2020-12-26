@@ -17,10 +17,12 @@ fn main() -> Result<()> {
     // start window loop
     window.while_open(move |_| {
         // start drawing on window
+        duku.begin();
         duku.draw(None, |t| {
             // draw a surface with the shader
             t.surface(&shader);
         });
+        duku.end();
     });
 
     Ok(())

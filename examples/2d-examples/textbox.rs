@@ -44,6 +44,7 @@ fn main() -> Result<()> {
         }
 
         // start drawing on window
+        duku.begin();
         duku.draw(None, |t| {
             if is_textbox_open {
                 // translate scene forwards to
@@ -100,6 +101,7 @@ fn main() -> Result<()> {
                 t.text("\u{f27a}", [0.0, 0.0]);
             }
         });
+        duku.end();
     });
 
     Ok(())

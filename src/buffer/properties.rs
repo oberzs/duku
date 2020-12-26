@@ -9,6 +9,7 @@ pub(crate) enum BufferUsage {
     Index,
     Uniform,
     TransferSrc,
+    TransferDst,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -24,6 +25,7 @@ impl BufferUsage {
             Self::Index => vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
             Self::Uniform => vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             Self::TransferSrc => vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+            Self::TransferDst => vk::BUFFER_USAGE_TRANSFER_DST_BIT,
         }
     }
 }

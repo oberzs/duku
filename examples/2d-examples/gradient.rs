@@ -30,6 +30,7 @@ fn main() -> Result<()> {
     // start window loop
     window.while_open(move |_| {
         // start drawing on window
+        duku.begin();
         duku.draw(None, |t| {
             // for each circle
             for i in 0..count {
@@ -53,6 +54,7 @@ fn main() -> Result<()> {
                 t.circle([x, y], small_r);
             }
         });
+        duku.end();
     });
 
     Ok(())

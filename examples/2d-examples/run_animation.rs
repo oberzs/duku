@@ -38,10 +38,12 @@ fn main() -> Result<()> {
         animation.update(duku.delta_time());
 
         // start drawing on window
+        duku.begin();
         duku.draw(None, |t| {
             let Frame { offset, size } = animation.get();
             t.texture_part(&run, [0.0, 0.0], size, offset, size);
         });
+        duku.end();
     });
 
     Ok(())
