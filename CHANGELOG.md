@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added ability to save canvases to png files.
 - Added explicit `begin` and `end` functions to control drawing flow.
 - Added ability to get pixel data for canvases.
 

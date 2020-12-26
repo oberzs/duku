@@ -15,6 +15,7 @@ use std::path::Path;
 use crate::duku::Duku;
 use crate::error::Error;
 use crate::error::Result;
+use crate::image::Canvas;
 use crate::image::ColorSpace;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
@@ -172,6 +173,42 @@ impl Duku {
                 back: back.data,
             },
         )
+    }
+
+    /// Save window canvas to a PNG file
+    pub fn save_window_canvas(&self, path: impl AsRef<Path>) -> Result<()> {
+        let file = File::create(path.as_ref())?;
+
+        let width = self.window_canvas_width();
+        let height = self.window_canvas_height();
+
+        let mut encoder = Encoder::new(BufWriter::new(file), width, height);
+        encoder.set_color(ColorType::RGBA);
+        encoder.set_depth(BitDepth::Eight);
+        let mut writer = encoder.write_header().expect("bad write");
+
+        let data = self.window_canvas_data();
+        writer.write_image_data(&data).expect("bad write");
+
+        Ok(())
+    }
+
+    /// Save canvas to a PNG file
+    pub fn save_canvas(&self, canvas: &Handle<Canvas>, path: impl AsRef<Path>) -> Result<()> {
+        let file = File::create(path.as_ref())?;
+
+        let width = canvas.read().width;
+        let height = canvas.read().height;
+
+        let mut encoder = Encoder::new(BufWriter::new(file), width, height);
+        encoder.set_color(ColorType::RGBA);
+        encoder.set_depth(BitDepth::Eight);
+        let mut writer = encoder.write_header().expect("bad write");
+
+        let data = self.canvas_data(canvas);
+        writer.write_image_data(&data).expect("bad write");
+
+        Ok(())
     }
 }
 

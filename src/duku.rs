@@ -390,6 +390,16 @@ impl Duku {
         self.window_canvases[self.swapchain.current()].data(&self.device)
     }
 
+    /// Get width of the window canvas
+    pub fn window_canvas_width(&self) -> u32 {
+        self.window_canvases[self.swapchain.current()].width
+    }
+
+    /// Get height of the window canvas
+    pub fn window_canvas_height(&self) -> u32 {
+        self.window_canvases[self.swapchain.current()].height
+    }
+
     /// Get color data for specific canvas as bytes
     pub fn canvas_data(&self, canvas: &Handle<Canvas>) -> Vec<u8> {
         self.device.wait_idle();
