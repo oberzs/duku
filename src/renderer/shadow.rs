@@ -11,7 +11,6 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Rgbf;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::Canvas;
 use crate::image::Msaa;
 use crate::math::Mat4;
@@ -53,12 +52,7 @@ struct Sphere {
 }
 
 impl ShadowRenderer {
-    pub(crate) fn new(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        map_size: u32,
-        target_count: u32,
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, map_size: u32) -> Self {
         let shader = Shader::from_spirv_bytes(
             device,
             uniforms,
@@ -67,32 +61,26 @@ impl ShadowRenderer {
         )
         .expect("bad shader");
 
-        let target_resources: Vec<_> = (0..target_count)
-            .map(|_| TargetResources::new(device, uniforms, shader.config(), map_size))
-            .collect::<Result<_>>()?;
-
-        Ok(Self {
-            target_resources,
+        Self {
+            target_resources: vec![],
             shader,
             map_size,
-        })
+        }
     }
 
-    pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) -> Result<()> {
+    pub(crate) fn require_target(&mut self, device: &Device, uniforms: &mut Uniforms) {
         self.target_resources.push(TargetResources::new(
             device,
             uniforms,
             self.shader.config(),
             self.map_size,
-        )?);
-
-        Ok(())
+        ));
     }
 
     pub(crate) fn render(
         &mut self,
         device: &Device,
-        uniforms: &Uniforms,
+        uniforms: &mut Uniforms,
         target: &Target,
         light: Light,
         view: Camera,
@@ -212,17 +200,12 @@ impl ShadowRenderer {
 }
 
 impl TargetResources {
-    fn new(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        config: ShaderConfig,
-        map_size: u32,
-    ) -> Result<Self> {
+    fn new(device: &Device, uniforms: &mut Uniforms, config: ShaderConfig, map_size: u32) -> Self {
         let shadow_maps = [
-            Canvas::new(device, uniforms, config, map_size, map_size)?,
-            Canvas::new(device, uniforms, config, map_size, map_size)?,
-            Canvas::new(device, uniforms, config, map_size, map_size)?,
-            Canvas::new(device, uniforms, config, map_size, map_size)?,
+            Canvas::new(device, uniforms, config, map_size, map_size),
+            Canvas::new(device, uniforms, config, map_size, map_size),
+            Canvas::new(device, uniforms, config, map_size, map_size),
+            Canvas::new(device, uniforms, config, map_size, map_size),
         ];
         let shadow_descriptor = uniforms.shadow_map_set(
             device,
@@ -241,18 +224,18 @@ impl TargetResources {
             Buffer::dynamic(device, BufferUsage::Uniform, 1),
         ];
         let world_descriptors = [
-            uniforms.world_set(device, &world_buffers[0])?,
-            uniforms.world_set(device, &world_buffers[1])?,
-            uniforms.world_set(device, &world_buffers[2])?,
-            uniforms.world_set(device, &world_buffers[3])?,
+            uniforms.world_set(device, &world_buffers[0]),
+            uniforms.world_set(device, &world_buffers[1]),
+            uniforms.world_set(device, &world_buffers[2]),
+            uniforms.world_set(device, &world_buffers[3]),
         ];
 
-        Ok(Self {
+        Self {
             world_descriptors,
             world_buffers,
             shadow_maps,
             shadow_descriptor,
-        })
+        }
     }
 
     fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {

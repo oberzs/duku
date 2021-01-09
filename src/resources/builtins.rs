@@ -7,7 +7,6 @@ use std::f32::consts::PI;
 use super::Handle;
 use super::Resources;
 use crate::device::Device;
-use crate::error::Result;
 use crate::font::Font;
 use crate::image::Cubemap;
 use crate::image::CubemapSides;
@@ -61,7 +60,7 @@ impl Builtins {
         resources: &mut Resources,
         uniforms: &mut Uniforms,
         msaa: Msaa,
-    ) -> Result<Self> {
+    ) -> Self {
         // textures
         let white_texture = {
             let tex = Texture::new(
@@ -72,7 +71,7 @@ impl Builtins {
                 1,
                 Format::Rgba,
                 Mips::Zero,
-            )?;
+            );
             resources.add_texture(tex)
         };
         let black_texture = {
@@ -84,7 +83,7 @@ impl Builtins {
                 1,
                 Format::Rgba,
                 Mips::Zero,
-            )?;
+            );
             resources.add_texture(tex)
         };
 
@@ -103,13 +102,13 @@ impl Builtins {
                     left: vec![255, 255, 255, 255],
                     right: vec![255, 255, 255, 255],
                 },
-            )?;
+            );
             resources.add_cubemap(cub)
         };
 
         // materials
         let white_material = {
-            let mut mat = Material::new(device, uniforms)?;
+            let mut mat = Material::new(device, uniforms);
             mat.albedo_color([1.0, 1.0, 1.0]);
             mat.albedo_texture(white_texture.clone());
             mat.normal_texture(white_texture.clone());
@@ -215,11 +214,11 @@ impl Builtins {
 
         // fonts
         let fira_font = {
-            let font = Font::fira_mono(device, uniforms)?;
+            let font = Font::fira_mono(device, uniforms);
             resources.add_font(font)
         };
 
-        Ok(Self {
+        Self {
             white_texture,
             black_texture,
             white_cubemap,
@@ -238,7 +237,7 @@ impl Builtins {
             skybox_shader,
             fullscreen_shader,
             fira_font,
-        })
+        }
     }
 }
 

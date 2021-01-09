@@ -42,6 +42,11 @@ pub enum YAxis {
 
 impl Duku {
     /// Create a model from a GLTF file
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the material
+    /// or texture limit of 100 has been reached.
     pub fn create_model_gltf(
         &mut self,
         path: impl AsRef<Path>,
@@ -62,6 +67,11 @@ impl Duku {
     /// Create a model from GLTF bytes
     ///
     /// `root` is used for relative file path loading
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the material
+    /// or texture limit of 100 has been reached.
     pub fn create_model_gltf_bytes(
         &mut self,
         bytes: &[u8],
@@ -273,7 +283,7 @@ impl Duku {
         };
 
         // build material
-        let mat = self.create_material()?;
+        let mat = self.create_material();
         {
             let mut m = mat.write();
             m.albedo_color(albedo);

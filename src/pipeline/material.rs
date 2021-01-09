@@ -8,7 +8,6 @@ use crate::buffer::Buffer;
 use crate::buffer::BufferUsage;
 use crate::color::Rgbf;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::Canvas;
 use crate::image::Texture;
 use crate::math::Vec4;
@@ -56,11 +55,11 @@ pub struct Material {
 }
 
 impl Material {
-    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms) -> Self {
         let buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let descriptor = uniforms.material_set(device, &buffer)?;
+        let descriptor = uniforms.material_set(device, &buffer);
 
-        Ok(Self {
+        Self {
             a: Vec4::default(),
             b: Vec4::default(),
             c: Vec4::default(),
@@ -72,7 +71,7 @@ impl Material {
             textures: vec![],
             buffer,
             descriptor,
-        })
+        }
     }
 
     /// Set albedo color for the PBR and other various shaders

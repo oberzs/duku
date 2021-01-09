@@ -8,12 +8,11 @@ use duku::Camera;
 use duku::Duku;
 use duku::Hsb;
 use duku::Light;
-use duku::Result;
 use std::time::Instant;
 
-fn main() -> Result<()> {
+fn main() {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(500, 500);
 
     // create 3D camera with 90 fov
     let camera = Camera::perspective(90);
@@ -49,6 +48,4 @@ fn main() -> Result<()> {
         });
         duku.end();
     });
-
-    Ok(())
 }

@@ -52,6 +52,11 @@ impl Duku {
     ///
     /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_texture_png(
         &mut self,
         path: impl AsRef<Path>,
@@ -65,6 +70,11 @@ impl Duku {
     ///
     /// If `options` is `None`, then
     /// sRGB is used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_texture_png_bytes(
         &mut self,
         bytes: &[u8],
@@ -72,19 +82,24 @@ impl Duku {
     ) -> Result<Handle<Texture>> {
         let (color_space, mips) = options.unwrap_or((ColorSpace::Srgb, Mips::Zero));
         let png_data = load_png(bytes, color_space)?;
-        self.create_texture(
+        Ok(self.create_texture(
             png_data.data,
             png_data.format,
             mips,
             png_data.width,
             png_data.height,
-        )
+        ))
     }
 
     /// Create a cubemap from PNG files
     ///
     /// If `options` is `None`, then
     /// sRGB is used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_cubemap_png(
         &mut self,
         options: Option<ColorSpace>,
@@ -107,6 +122,11 @@ impl Duku {
     ///
     /// If `options` is `None`, then
     /// sRGB is used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_cubemap_png_bytes(
         &mut self,
         options: Option<ColorSpace>,
@@ -161,7 +181,7 @@ impl Duku {
             return Err(Error::InvalidPng);
         }
 
-        self.create_cubemap(
+        Ok(self.create_cubemap(
             top.format,
             top.width,
             CubemapSides {
@@ -172,10 +192,15 @@ impl Duku {
                 front: front.data,
                 back: back.data,
             },
-        )
+        ))
     }
 
     /// Save window canvas to a PNG file
+    ///
+    /// # Panics
+    ///
+    /// This function panics if duku was created
+    /// in headless mode.
     pub fn save_window_canvas(&self, path: impl AsRef<Path>) -> Result<()> {
         let file = File::create(path.as_ref())?;
 

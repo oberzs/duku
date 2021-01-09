@@ -16,16 +16,6 @@ pub enum Error {
     Io(String),
     /// Invalid SPIR-V data
     InvalidSpirv,
-    /// Cannot find suitable GPU
-    NoSuitableGpu,
-    /// Texture limit has been reached (max 100)
-    TextureLimit,
-    /// Cubemap limit has been reached (max 100)
-    CubemapLimit,
-    /// Material limit has been reached (max 100)
-    MaterialLimit,
-    /// Canvas limit has been reached (max 100)
-    CanvasLimit,
 
     /// Unsupported PNG or JPEG color format
     #[cfg(any(feature = "png", feature = "jpeg"))]

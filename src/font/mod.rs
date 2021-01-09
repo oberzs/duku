@@ -6,7 +6,6 @@ mod fira_mono;
 use std::collections::HashMap;
 
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::Format;
 use crate::image::Mips;
 use crate::image::Texture;
@@ -71,15 +70,11 @@ pub(crate) struct FontMetrics {
 }
 
 impl Font {
-    pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
+    pub(crate) fn fira_mono(device: &Device, uniforms: &mut Uniforms) -> Self {
         Self::new(device, uniforms, fira_mono())
     }
 
-    pub(crate) fn new(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        data: FontData<'_>,
-    ) -> Result<Self> {
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, data: FontData<'_>) -> Self {
         let texture = Texture::new(
             device,
             uniforms,
@@ -88,9 +83,9 @@ impl Font {
             data.texture_height,
             Format::Gray,
             Mips::Zero,
-        )?;
+        );
 
-        Ok(Self {
+        Self {
             metrics: FontMetrics {
                 height: data.height,
                 line_gap: data.line_gap,
@@ -100,7 +95,7 @@ impl Font {
             },
             char_data: data.char_data,
             texture,
-        })
+        }
     }
 
     pub(crate) const fn texture(&self) -> &Texture {

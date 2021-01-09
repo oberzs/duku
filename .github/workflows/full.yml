@@ -1,6 +1,8 @@
 name: Full Build
 
-on: workflow_dispatch
+on:
+  push:
+    branches: [release]
 
 jobs:
   windows:

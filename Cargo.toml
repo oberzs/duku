@@ -65,6 +65,11 @@ path = "src/dc.rs"
 required-features = ["glsl"]
 
 [[example]]
+name = "headless"
+path = "examples/3d-examples/headless.rs"
+required-features = ["window", "png"]
+
+[[example]]
 name = "rotating_cube"
 path = "examples/3d-examples/rotating_cube.rs"
 required-features = ["window"]

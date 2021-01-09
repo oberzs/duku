@@ -9,7 +9,7 @@ use duku::Result;
 
 fn main() -> Result<()> {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(500, 500);
 
     // load custom glsl shader from file
     let shader = duku.create_shader_glsl("examples/shaders/raymarch.glsl")?;

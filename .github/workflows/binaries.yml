@@ -1,6 +1,8 @@
 name: Binaries
 
-on: workflow_dispatch
+on:
+  push:
+    branches: [release]
 
 jobs:
   windows:

@@ -24,7 +24,7 @@ struct Frame {
 
 fn main() -> Result<()> {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(256, 256)?;
+    let (mut duku, window) = Duku::windowed(256, 256);
 
     // load sprite sheet into texture
     let run = duku.create_texture_png("examples/textures/run.png", None)?;

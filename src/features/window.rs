@@ -26,7 +26,6 @@ pub use window_dep::window::CursorIcon as Cursor;
 
 use crate::duku::Duku;
 use crate::duku::DukuBuilder;
-use crate::error::Result;
 use crate::math::Vec2;
 use crate::math::Vec3;
 use crate::renderer::Camera;
@@ -85,7 +84,7 @@ pub struct WindowBuilder {
 
 impl Duku {
     /// Create Duku with a basic window
-    pub fn windowed(width: u32, height: u32) -> Result<(Duku, Window)> {
+    pub fn windowed(width: u32, height: u32) -> (Duku, Window) {
         Self::builder().build_window(width, height).build()
     }
 }
@@ -441,10 +440,10 @@ impl WindowBuilder {
     }
 
     /// Build duku context and window
-    pub fn build(self) -> Result<(Duku, Window)> {
+    pub fn build(self) -> (Duku, Window) {
         let window = Window::new(&self.title, self.width, self.height, self.resizable);
-        let duku = self.duku.attach_window(window.handle()).build()?;
+        let duku = self.duku.attach_window(window.handle()).build();
 
-        Ok((duku, window))
+        (duku, window)
     }
 }

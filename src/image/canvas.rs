@@ -9,7 +9,6 @@ use super::ImageLayout;
 use crate::buffer::Buffer;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::error::Result;
 use crate::pipeline::RenderPass;
 use crate::pipeline::ShaderConfig;
 use crate::pipeline::Uniforms;
@@ -65,7 +64,7 @@ impl Canvas {
         uniforms: &mut Uniforms,
         config: ShaderConfig,
         swapchain: &Swapchain,
-    ) -> Result<Vec<Self>> {
+    ) -> Vec<Self> {
         let width = swapchain.width();
         let height = swapchain.height();
 
@@ -113,7 +112,7 @@ impl Canvas {
                 let stored_image = stored_image.expect("bad framebuffer");
 
                 let mut shader_image = Image::shader(device, stored_image.format(), width, height);
-                let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
+                let shader_index = uniforms.add_texture(shader_image.add_view(device));
 
                 let layout = if shader_image.format().is_depth() {
                     ImageLayout::ShaderDepth
@@ -125,7 +124,7 @@ impl Canvas {
                 let len = width * height * 4;
                 let query_buffer = Buffer::query(device, len as usize);
 
-                Ok(Self {
+                Self {
                     shader_images: vec![(shader_index, shader_image)],
                     base_layouts: vec![ImageLayout::Present],
                     stored_images: vec![stored_image],
@@ -136,7 +135,7 @@ impl Canvas {
                     framebuffer,
                     width,
                     height,
-                })
+                }
             })
             .collect()
     }
@@ -147,7 +146,7 @@ impl Canvas {
         config: ShaderConfig,
         width: u32,
         height: u32,
-    ) -> Result<Self> {
+    ) -> Self {
         let render_pass = RenderPass::new(device, config, false);
 
         let mut transient_images = vec![];
@@ -190,7 +189,7 @@ impl Canvas {
             };
 
             let mut shader_image = Image::shader(device, image.format(), width, height);
-            let shader_index = uniforms.add_texture(shader_image.add_view(device))?;
+            let shader_index = uniforms.add_texture(shader_image.add_view(device));
 
             shader_image.change_layout(device, ImageLayout::Undefined, ImageLayout::ShaderColor);
 
@@ -201,7 +200,7 @@ impl Canvas {
         let len = width * height * 4;
         let query_buffer = Buffer::query(device, len as usize);
 
-        Ok(Self {
+        Self {
             shader_images,
             query_buffer,
             base_layouts,
@@ -212,7 +211,7 @@ impl Canvas {
             framebuffer,
             width,
             height,
-        })
+        }
     }
 
     pub(crate) fn data(&self, device: &Device) -> Vec<u8> {

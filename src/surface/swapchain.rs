@@ -10,7 +10,7 @@ use super::VSync;
 use crate::device::Device;
 use crate::image::Format;
 use crate::image::ImageUsage;
-use crate::instance::GPUProperties;
+use crate::instance::SurfaceProperties;
 use crate::vk;
 
 pub(crate) struct Swapchain {
@@ -24,13 +24,13 @@ impl Swapchain {
     pub(crate) fn new(
         device: &Device,
         surface: &Surface,
-        gpu_properties: &GPUProperties,
+        properties: SurfaceProperties,
         vsync: VSync,
     ) -> Self {
-        let transform = gpu_properties.capabilities.current_transform;
-        let image_count = gpu_properties.image_count;
-        let extent = gpu_properties.extent;
-        let indices = [gpu_properties.queue_index.expect("bad queue index")];
+        let transform = properties.capabilities.current_transform;
+        let image_count = properties.image_count;
+        let extent = properties.extent;
+        let indices = [device.queue_index()];
 
         let info = vk::SwapchainCreateInfoKHR {
             s_type: vk::STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -56,8 +56,8 @@ impl Swapchain {
         let handle = device.create_swapchain(&info);
 
         Self {
-            width: gpu_properties.extent.width,
-            height: gpu_properties.extent.height,
+            width: extent.width,
+            height: extent.height,
             current_image: 0,
             handle,
         }
@@ -67,15 +67,15 @@ impl Swapchain {
         &mut self,
         device: &Device,
         surface: &Surface,
-        gpu_properties: &GPUProperties,
+        properties: SurfaceProperties,
         vsync: VSync,
     ) {
         device.destroy_swapchain(self);
 
-        let transform = gpu_properties.capabilities.current_transform;
-        let image_count = gpu_properties.image_count;
-        let extent = gpu_properties.extent;
-        let indices = [gpu_properties.queue_index.expect("bad queue index")];
+        let transform = properties.capabilities.current_transform;
+        let image_count = properties.image_count;
+        let extent = properties.extent;
+        let indices = [device.queue_index()];
 
         let info = vk::SwapchainCreateInfoKHR {
             s_type: vk::STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -99,12 +99,13 @@ impl Swapchain {
         };
 
         self.handle = device.create_swapchain(&info);
-        self.width = gpu_properties.extent.width;
-        self.height = gpu_properties.extent.height;
+        self.width = extent.width;
+        self.height = extent.height;
         self.current_image = 0;
     }
 
-    pub(crate) fn next(&mut self, next_image: usize) {
+    pub(crate) fn next(&mut self, device: &Device) {
+        let next_image = device.get_next_swapchain_image(self.handle);
         self.current_image = next_image;
     }
 

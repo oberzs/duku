@@ -2,7 +2,12 @@
 // https://github.com/oberzs/duku
 
 #![macro_use]
-#![allow(non_camel_case_types, unused, improper_ctypes)]
+#![allow(
+    non_camel_case_types,
+    unused,
+    improper_ctypes,
+    clippy::unnecessary_cast
+)]
 
 use std::os::raw::c_char;
 use std::os::raw::c_void;

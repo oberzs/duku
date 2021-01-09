@@ -56,10 +56,12 @@ pub struct Duku {
     instance: Instance,
     device: Device,
     gpu_index: usize,
-    surface: Surface,
-    swapchain: Swapchain,
     uniforms: Uniforms,
+
+    // Window resources
     window_canvases: Vec<Canvas>,
+    swapchain: Option<Swapchain>,
+    surface: Option<Surface>,
 
     // Resources
     resources: Resources,
@@ -68,6 +70,7 @@ pub struct Duku {
 
     // Renderers
     forward_renderer: ForwardRenderer,
+    draw_calls: Vec<DrawCall>,
 
     // Misc
     render_stage: RenderStage,
@@ -96,6 +99,12 @@ enum RenderStage {
     During,
 }
 
+struct DrawCall {
+    target: Target,
+    camera: Option<Camera>,
+    canvas: Option<Handle<Canvas>>,
+}
+
 impl Duku {
     /// Create builder for duku context
     pub const fn builder() -> DukuBuilder {
@@ -106,6 +115,11 @@ impl Duku {
             vsync: VSync::On,
             window: None,
         }
+    }
+
+    /// Create headless duku context
+    pub fn headless() -> Self {
+        Self::builder().build()
     }
 
     /// Draw on the window canvas
@@ -125,21 +139,36 @@ impl Duku {
     ///
     /// # Panics
     ///
-    /// Panics if drawing hasn't begun.
+    /// Panics if drawing hasn't begun or duku is in headless mode or if
+    /// `begin` wasn't called yet.
     pub fn draw(&mut self, camera: Option<&Camera>, draw_fn: impl Fn(&mut Target)) {
         if self.render_stage == RenderStage::Before {
             panic!("cannot draw before calling 'begin'");
+        }
+        if self.swapchain.is_none() {
+            panic!("cannot draw in headless mode");
         }
 
         // let user record draw calls
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
-        let canvas = &self.window_canvases[self.swapchain.current()];
-        let cam = get_camera(camera, canvas.width, canvas.height);
+        //  let canvas = &self.window_canvases[swapchain.current()];
+        // let cam = get_camera(camera, canvas.width, canvas.height);
 
-        // render
+        self.draw_calls.push(DrawCall {
+            camera: camera.cloned(),
+            canvas: None,
+            target,
+        });
         self.forward_renderer
-            .render(&self.device, canvas, &cam, &self.uniforms, target);
+            .require_target(&self.device, &mut self.uniforms);
+
+        // if let Some(swapchain) = &self.swapchain {
+        //     // render
+        //     self.forward_renderer
+        //         .render(&self.device, canvas, &cam, &mut self.uniforms, target);
+        // } else {
+        // }
     }
 
     /// Draw on a specified canvas
@@ -176,12 +205,20 @@ impl Duku {
         let mut target = Target::new(&self.builtins);
         draw_fn(&mut target);
 
-        let cnv = canvas.read();
-        let cam = get_camera(camera, cnv.width, cnv.height);
+        self.draw_calls.push(DrawCall {
+            canvas: Some(canvas.clone()),
+            camera: camera.cloned(),
+            target,
+        });
+        self.forward_renderer
+            .require_target(&self.device, &mut self.uniforms);
+
+        // let cnv = canvas.read();
+        // let cam = get_camera(camera, cnv.width, cnv.height);
 
         // render
-        self.forward_renderer
-            .render(&self.device, &cnv, &cam, &self.uniforms, target);
+        // self.forward_renderer
+        // .render(&self.device, &cnv, &cam, &mut self.uniforms, target);
     }
 
     /// Begin this frame's drawing process
@@ -197,15 +234,10 @@ impl Duku {
             self.render_stage = RenderStage::During;
         }
 
-        self.device.next_frame(&mut self.swapchain);
-        self.resources
-            .clear_unused(&self.device, &mut self.uniforms);
-        self.resources
-            .update_if_needed(&self.device, &mut self.uniforms);
-        self.uniforms.update_if_needed(&self.device);
-        self.device
-            .commands()
-            .bind_descriptor(&self.uniforms, self.uniforms.image_descriptor());
+        self.device.next_frame();
+        if let Some(swapchain) = &mut self.swapchain {
+            swapchain.next(&self.device);
+        }
     }
 
     /// End this frame's drawing process
@@ -221,8 +253,78 @@ impl Duku {
             self.render_stage = RenderStage::Before;
         }
 
-        self.device.submit();
-        let should_resize = self.device.present(&self.swapchain);
+        // ready resources
+        self.device.reset_buffers();
+        self.resources
+            .clear_unused(&self.device, &mut self.uniforms);
+        self.resources
+            .update_if_needed(&self.device, &mut self.uniforms);
+        self.uniforms.update_if_needed(&self.device);
+        self.device
+            .commands()
+            .bind_descriptor(&self.uniforms, self.uniforms.image_descriptor());
+
+        // record draw calls to the command buffer
+        for draw in self.draw_calls.drain(..) {
+            match draw.canvas {
+                Some(c) => {
+                    let canvas = c.read();
+                    let camera = get_camera(draw.camera.as_ref(), canvas.width, canvas.height);
+                    self.forward_renderer.render(
+                        &self.device,
+                        &canvas,
+                        &camera,
+                        &mut self.uniforms,
+                        draw.target,
+                    );
+                }
+                None => {
+                    let canvas = &self.window_canvases
+                        [self.swapchain.as_ref().expect("bad swapchain").current()];
+                    let camera = get_camera(draw.camera.as_ref(), canvas.width, canvas.height);
+                    self.forward_renderer.render(
+                        &self.device,
+                        &canvas,
+                        &camera,
+                        &mut self.uniforms,
+                        draw.target,
+                    );
+                }
+            }
+        }
+
+        // submit render buffers
+        self.device.submit(self.swapchain.is_some());
+        self.forward_renderer.reset();
+
+        // if has swapchain, present to it
+        if let Some(swapchain) = &mut self.swapchain {
+            let should_resize = self.device.present(swapchain);
+
+            // resize if needed
+            if should_resize {
+                let surface = self.surface.as_ref().expect("bad surface");
+                self.device.wait_idle();
+
+                let surface_properties = self
+                    .instance
+                    .surface_properties(surface)
+                    .remove(self.gpu_index);
+                swapchain.recreate(&self.device, surface, surface_properties, self.vsync);
+
+                for canvas in &self.window_canvases {
+                    canvas.destroy(&self.device, &mut self.uniforms);
+                }
+
+                let shader_config = self.builtins.pbr_shader.read().config();
+                self.window_canvases = Canvas::for_swapchain(
+                    &self.device,
+                    &mut self.uniforms,
+                    shader_config,
+                    swapchain,
+                )
+            }
+        }
 
         // update delta time
         let delta_time = self.frame_time.elapsed();
@@ -233,34 +335,14 @@ impl Duku {
         self.frame_count += 1;
         self.fps =
             (self.fps_samples.iter().sum::<u32>() as f32 / FPS_SAMPLE_COUNT as f32).ceil() as u32;
-
-        // resize if needed
-        if should_resize {
-            self.device.wait_idle();
-
-            let gpu_properties = self
-                .instance
-                .gpu_properties(&self.surface)
-                .remove(self.gpu_index);
-            self.swapchain
-                .recreate(&self.device, &self.surface, &gpu_properties, self.vsync);
-
-            for canvas in &self.window_canvases {
-                canvas.destroy(&self.device, &mut self.uniforms);
-            }
-
-            let shader_config = self.builtins.pbr_shader.read().config();
-            self.window_canvases = Canvas::for_swapchain(
-                &self.device,
-                &mut self.uniforms,
-                shader_config,
-                &self.swapchain,
-            )
-            .expect("cannot resize swapchain canvas")
-        }
     }
 
     /// Create a texture from byte data
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit of 100 has
+    /// been reached.
     pub fn create_texture(
         &mut self,
         data: Vec<u8>,
@@ -268,7 +350,7 @@ impl Duku {
         mips: Mips,
         width: u32,
         height: u32,
-    ) -> Result<Handle<Texture>> {
+    ) -> Handle<Texture> {
         let tex = Texture::new(
             &self.device,
             &mut self.uniforms,
@@ -277,19 +359,24 @@ impl Duku {
             height,
             format,
             mips,
-        )?;
-        Ok(self.resources.add_texture(tex))
+        );
+        self.resources.add_texture(tex)
     }
 
     /// Create a cubemap from byte data
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the cubemap limit of 100 has
+    /// been reached.
     pub fn create_cubemap(
         &mut self,
         format: Format,
         size: u32,
         sides: CubemapSides<Vec<u8>>,
-    ) -> Result<Handle<Cubemap>> {
-        let cub = Cubemap::new(&self.device, &mut self.uniforms, size, format, sides)?;
-        Ok(self.resources.add_cubemap(cub))
+    ) -> Handle<Cubemap> {
+        let cub = Cubemap::new(&self.device, &mut self.uniforms, size, format, sides);
+        self.resources.add_cubemap(cub)
     }
 
     /// Create a mesh
@@ -326,14 +413,24 @@ impl Duku {
     }
 
     /// Create a material
-    pub fn create_material(&mut self) -> Result<Handle<Material>> {
-        let mat = Material::new(&self.device, &mut self.uniforms)?;
-        Ok(self.resources.add_material(mat))
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the material limit of 100 has
+    /// been reached.
+    pub fn create_material(&mut self) -> Handle<Material> {
+        let mat = Material::new(&self.device, &mut self.uniforms);
+        self.resources.add_material(mat)
     }
 
     /// Create a material with PBR defaults
-    pub fn create_material_pbr(&mut self) -> Result<Handle<Material>> {
-        let mut mat = Material::new(&self.device, &mut self.uniforms)?;
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the material limit of 100 has
+    /// been reached.
+    pub fn create_material_pbr(&mut self) -> Handle<Material> {
+        let mut mat = Material::new(&self.device, &mut self.uniforms);
 
         mat.albedo_texture(self.builtins.white_texture.clone());
         mat.normal_texture(self.builtins.white_texture.clone());
@@ -346,11 +443,16 @@ impl Duku {
         mat.roughness(0.0);
         mat.update();
 
-        Ok(self.resources.add_material(mat))
+        self.resources.add_material(mat)
     }
 
     /// Create a canvas
-    pub fn create_canvas(&mut self, width: u32, height: u32) -> Result<Handle<Canvas>> {
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the canvas limit of 100 has
+    /// been reached.
+    pub fn create_canvas(&mut self, width: u32, height: u32) -> Handle<Canvas> {
         let shader_config = self.builtins.pbr_shader.read().config();
         let canvas = Canvas::new(
             &self.device,
@@ -358,19 +460,22 @@ impl Duku {
             shader_config,
             width,
             height,
-        )?;
-        self.forward_renderer
-            .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.resources.add_canvas(canvas))
+        );
+        self.resources.add_canvas(canvas)
     }
 
     /// Create a canvas with configuration based on a shader
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the canvas limit of 100 has
+    /// been reached.
     pub fn create_canvas_for_shader(
         &mut self,
         shader: &Handle<Shader>,
         width: u32,
         height: u32,
-    ) -> Result<Handle<Canvas>> {
+    ) -> Handle<Canvas> {
         let shader_config = shader.read().config();
         let canvas = Canvas::new(
             &self.device,
@@ -378,26 +483,40 @@ impl Duku {
             shader_config,
             width,
             height,
-        )?;
-        self.forward_renderer
-            .add_target(&self.device, &mut self.uniforms)?;
-        Ok(self.resources.add_canvas(canvas))
+        );
+        self.resources.add_canvas(canvas)
     }
 
     /// Get color data for window canvas as bytes
+    ///
+    /// # Panics
+    ///
+    /// This function panics if duku was created
+    /// in headless mode.
     pub fn window_canvas_data(&self) -> Vec<u8> {
         self.device.wait_idle();
-        self.window_canvases[self.swapchain.current()].data(&self.device)
+        self.window_canvases[self.swapchain.as_ref().expect("headless context").current()]
+            .data(&self.device)
     }
 
     /// Get width of the window canvas
+    ///
+    /// # Panics
+    ///
+    /// This function panics if duku was created
+    /// in headless mode.
     pub fn window_canvas_width(&self) -> u32 {
-        self.window_canvases[self.swapchain.current()].width
+        self.window_canvases[self.swapchain.as_ref().expect("headless context").current()].width
     }
 
     /// Get height of the window canvas
+    ///
+    /// # Panics
+    ///
+    /// This function panics if duku was created
+    /// in headless mode.
     pub fn window_canvas_height(&self) -> u32 {
-        self.window_canvases[self.swapchain.current()].height
+        self.window_canvases[self.swapchain.as_ref().expect("headless context").current()].height
     }
 
     /// Get color data for specific canvas as bytes
@@ -444,9 +563,14 @@ impl Duku {
     ///
     /// This should be used only if building a
     /// 3rd party font support
-    pub fn create_font(&mut self, data: FontData<'_>) -> Result<Handle<Font>> {
-        let font = Font::new(&self.device, &mut self.uniforms, data)?;
-        Ok(self.resources.add_font(font))
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit of 100 has
+    /// been reached.
+    pub fn create_font(&mut self, data: FontData<'_>) -> Handle<Font> {
+        let font = Font::new(&self.device, &mut self.uniforms, data);
+        self.resources.add_font(font)
     }
 
     /// Get last render's statistics
@@ -475,8 +599,12 @@ impl Drop for Duku {
         }
         self.resources.clear(&self.device, &mut self.uniforms);
         self.uniforms.destroy(&self.device);
-        self.device.destroy_swapchain(&self.swapchain);
-        self.instance.destroy_surface(&self.surface);
+        if let Some(swapchain) = &self.swapchain {
+            self.device.destroy_swapchain(swapchain);
+        }
+        if let Some(surface) = &self.surface {
+            self.instance.destroy_surface(surface);
+        }
 
         self.device.destroy();
         self.instance.destroy();
@@ -527,7 +655,7 @@ impl DukuBuilder {
     }
 
     /// Build context
-    pub fn build(self) -> Result<Duku> {
+    pub fn build(self) -> Duku {
         let Self {
             vsync,
             msaa,
@@ -536,19 +664,25 @@ impl DukuBuilder {
             window,
         } = self;
 
-        let window_handle = match window {
-            Some(w) => w,
-            None => unimplemented!(),
-        };
         let instance = Instance::new();
-        let surface = Surface::new(&instance, window_handle);
+        let surface = window.map(|w| Surface::new(&instance, w));
 
-        // setup device stuff
-        let mut gpu_properties_list = instance.gpu_properties(&surface);
-        let gpu_index = pick_gpu(&gpu_properties_list, vsync, msaa)?;
+        // query properties
+        let mut gpu_properties_list = instance.gpu_properties();
+        let surface_properties_list = surface.as_ref().map(|s| instance.surface_properties(&s));
+
+        // choose GPU
+        let gpu_index = pick_gpu(&gpu_properties_list, &surface_properties_list, vsync, msaa);
+
         let gpu_properties = gpu_properties_list.remove(gpu_index);
-        let device = Device::new(&instance, &gpu_properties, gpu_index);
-        let swapchain = Swapchain::new(&device, &surface, &gpu_properties, vsync);
+        let device = Device::new(&instance, gpu_properties, gpu_index);
+
+        let swapchain = surface.as_ref().map(|s| {
+            let surface_properties = surface_properties_list
+                .expect("bad properties")
+                .remove(gpu_index);
+            Swapchain::new(&device, &s, surface_properties, vsync)
+        });
 
         info!("using anisotropy level {}", anisotropy);
         info!("using msaa level {:?}", msaa);
@@ -559,28 +693,26 @@ impl DukuBuilder {
 
         // setup resources
         let mut resources = Resources::default();
-        let builtins = Builtins::new(&device, &mut resources, &mut uniforms, msaa)?;
+        let builtins = Builtins::new(&device, &mut resources, &mut uniforms, msaa);
 
         // setup canvases
         let shader_config = builtins.pbr_shader.read().config();
-        let window_canvases =
-            Canvas::for_swapchain(&device, &mut uniforms, shader_config, &swapchain)?;
+        let window_canvases = swapchain
+            .as_ref()
+            .map(|s| Canvas::for_swapchain(&device, &mut uniforms, shader_config, &s))
+            .unwrap_or_default();
 
         // setup renderer
-        let forward_renderer = ForwardRenderer::new(
-            &device,
-            &mut uniforms,
-            shadow_map_size,
-            gpu_properties.image_count,
-        )?;
+        let forward_renderer = ForwardRenderer::new(&device, &mut uniforms, shadow_map_size);
 
-        Ok(Duku {
+        Duku {
             fps_samples: [0; FPS_SAMPLE_COUNT],
             render_stage: RenderStage::Before,
             frame_time: Instant::now(),
             fps: 0,
             delta_time: 0.0,
             frame_count: 0,
+            draw_calls: vec![],
             window_canvases,
             forward_renderer,
             builtins,
@@ -593,7 +725,7 @@ impl DukuBuilder {
             device,
             msaa,
             vsync,
-        })
+        }
     }
 }
 

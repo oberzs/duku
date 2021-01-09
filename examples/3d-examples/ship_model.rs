@@ -11,7 +11,7 @@ use duku::Result;
 
 fn main() -> Result<()> {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(500, 500);
 
     // create 3D camera with 90 fov and move it
     let mut camera = Camera::perspective(90);

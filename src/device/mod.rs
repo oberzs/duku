@@ -23,7 +23,7 @@ pub use stats::Stats;
 use crate::buffer::MemoryAccess;
 use crate::error::Error;
 use crate::error::Result;
-use crate::instance::GPUProperties;
+use crate::instance::GpuProperties;
 use crate::instance::Instance;
 use crate::instance::DEVICE_EXTENSIONS;
 use crate::surface::Swapchain;
@@ -33,9 +33,8 @@ pub(crate) const FRAMES_IN_FLIGHT: usize = 2;
 
 pub(crate) struct Device {
     handle: vk::Device,
-
+    properties: GpuProperties,
     queue: (u32, vk::Queue),
-    memory_types: Vec<vk::MemoryType>,
 
     commands: [Commands; FRAMES_IN_FLIGHT],
     sync_acquire: [vk::Semaphore; FRAMES_IN_FLIGHT],
@@ -49,11 +48,7 @@ pub(crate) struct Device {
 }
 
 impl Device {
-    pub(crate) fn new(
-        instance: &Instance,
-        gpu_properties: &GPUProperties,
-        gpu_index: usize,
-    ) -> Self {
+    pub(crate) fn new(instance: &Instance, properties: GpuProperties, gpu_index: usize) -> Self {
         // configure device features
         let mut features: &mut [vk::PhysicalDeviceFeatures] = unsafe { &mut [mem::zeroed()] };
         features[0].sampler_anisotropy = vk::TRUE;
@@ -61,7 +56,7 @@ impl Device {
         features[0].wide_lines = vk::TRUE;
 
         // configure queues
-        let queue_index = gpu_properties.queue_index.expect("bad queue index");
+        let queue_index = properties.queue_index.expect("bad queue index");
         let queue_priorities = [1.0f32];
         let queue_infos = [vk::DeviceQueueCreateInfo {
             s_type: vk::STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -99,8 +94,6 @@ impl Device {
         unsafe {
             vk::get_device_queue(handle, queue_index, 0, &mut queue);
         }
-
-        let memory_types = gpu_properties.memory.memory_types.to_vec();
 
         // create synchronization semaphores
         let mut sync_acquire = [0; FRAMES_IN_FLIGHT];
@@ -176,8 +169,8 @@ impl Device {
             destroyed_images: RefCell::new(destroyed_images),
             queue: (queue_index, queue),
             current_frame: 0,
+            properties,
             commands,
-            memory_types,
             sync_release,
             sync_acquire,
             sync_submit,
@@ -185,14 +178,13 @@ impl Device {
         }
     }
 
-    pub(crate) fn next_frame(&mut self, swapchain: &mut Swapchain) {
-        let current = (self.current_frame + 1) % FRAMES_IN_FLIGHT;
+    pub(crate) fn next_frame(&mut self) {
+        self.current_frame = (self.current_frame + 1) % FRAMES_IN_FLIGHT;
+    }
 
-        let next_image = self.get_next_swapchain_image(swapchain, self.sync_acquire[current]);
-        swapchain.next(next_image);
-
+    pub(crate) fn reset_buffers(&mut self) {
         // wait for queue
-        let wait = self.sync_submit[current];
+        let wait = self.sync_submit[self.current_frame];
         unsafe {
             let fences = [wait];
             vk::check(vk::wait_for_fences(
@@ -206,19 +198,17 @@ impl Device {
         }
 
         // reset command buffer
-        self.commands[current].free(self.handle);
+        self.commands[self.current_frame].free(self.handle);
 
         // cleanup destroyed storage
-        self.cleanup_resources(current);
+        self.cleanup_resources(self.current_frame);
 
         // create new command buffer
-        self.commands[current].recreate(self.handle);
-        self.commands[current].reset_stats();
+        self.commands[self.current_frame].recreate(self.handle);
+        self.commands[self.current_frame].reset_stats();
 
         // begin new command buffer
-        self.commands[current].begin();
-
-        self.current_frame = current;
+        self.commands[self.current_frame].begin();
     }
 
     pub(crate) fn submit_and_wait(&self, buffer: vk::CommandBuffer) {
@@ -236,18 +226,31 @@ impl Device {
         }];
 
         unsafe {
-            vk::check(vk::queue_submit(self.queue.1, 1, infos.as_ptr(), 0));
+            vk::check(vk::queue_submit(
+                self.queue.1,
+                infos.len() as u32,
+                infos.as_ptr(),
+                0,
+            ));
             vk::check(vk::device_wait_idle(self.handle));
         }
     }
 
-    pub(crate) fn submit(&self) {
+    pub(crate) fn submit(&self, for_swapchain: bool) {
         // end command buffer
         self.commands[self.current_frame].end();
 
         // submit
-        let wait = [self.sync_acquire[self.current_frame]];
-        let signal = [self.sync_release[self.current_frame]];
+        let wait = if for_swapchain {
+            vec![self.sync_acquire[self.current_frame]]
+        } else {
+            vec![]
+        };
+        let signal = if for_swapchain {
+            vec![self.sync_release[self.current_frame]]
+        } else {
+            vec![]
+        };
         let done = self.sync_submit[self.current_frame];
         let buffers = [self.commands[self.current_frame].buffer()];
         let stage_mask = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
@@ -255,17 +258,22 @@ impl Device {
         let infos = [vk::SubmitInfo {
             s_type: vk::STRUCTURE_TYPE_SUBMIT_INFO,
             p_next: ptr::null(),
-            wait_semaphore_count: 1,
+            wait_semaphore_count: wait.len() as u32,
             p_wait_semaphores: wait.as_ptr(),
             p_wait_dst_stage_mask: stage_mask.as_ptr(),
-            command_buffer_count: 1,
+            command_buffer_count: buffers.len() as u32,
             p_command_buffers: buffers.as_ptr(),
-            signal_semaphore_count: 1,
+            signal_semaphore_count: signal.len() as u32,
             p_signal_semaphores: signal.as_ptr(),
         }];
 
         unsafe {
-            vk::check(vk::queue_submit(self.queue.1, 1, infos.as_ptr(), done));
+            vk::check(vk::queue_submit(
+                self.queue.1,
+                infos.len() as u32,
+                infos.as_ptr(),
+                done,
+            ));
         }
     }
 
@@ -347,18 +355,14 @@ impl Device {
         }
     }
 
-    pub(crate) fn get_next_swapchain_image(
-        &self,
-        swapchain: &Swapchain,
-        signal: vk::Semaphore,
-    ) -> usize {
+    pub(crate) fn get_next_swapchain_image(&self, swapchain: vk::SwapchainKHR) -> usize {
         let mut index = 0;
         unsafe {
             vk::check(vk::acquire_next_image_khr(
                 self.handle,
-                swapchain.handle(),
+                swapchain,
                 u64::max_value(),
-                signal,
+                self.sync_acquire[self.current_frame],
                 0,
                 &mut index,
             ));
@@ -372,6 +376,10 @@ impl Device {
 
     pub(crate) fn stats(&self) -> Stats {
         self.commands[self.current_frame()].stats()
+    }
+
+    pub(crate) const fn queue_index(&self) -> u32 {
+        self.queue.0
     }
 
     pub(crate) fn allocate_buffer(
@@ -826,7 +834,9 @@ impl Device {
     }
 
     fn find_memory_type(&self, requirements: &vk::MemoryRequirements, access: MemoryAccess) -> u32 {
-        self.memory_types
+        self.properties
+            .memory
+            .memory_types
             .iter()
             .enumerate()
             .find(|(i, mem_type)| {

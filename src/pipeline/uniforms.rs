@@ -10,8 +10,6 @@ use super::Sampler;
 use crate::buffer::Buffer;
 use crate::device::Device;
 use crate::device::FRAMES_IN_FLIGHT;
-use crate::error::Error;
-use crate::error::Result;
 use crate::image::Filter;
 use crate::image::ImageLayout;
 use crate::image::Wrap;
@@ -232,10 +230,10 @@ impl Uniforms {
         }
     }
 
-    pub(crate) fn add_texture(&mut self, image: vk::ImageView) -> Result<u32> {
+    pub(crate) fn add_texture(&mut self, image: vk::ImageView) -> u32 {
         // check if full
         if self.textures.len() == MAX_TEXTURES as usize {
-            return Err(Error::TextureLimit);
+            panic!("reached texture limit");
         }
 
         let next_index = self.textures.len();
@@ -255,7 +253,7 @@ impl Uniforms {
         }
 
         self.should_update_images = true;
-        Ok(index as u32)
+        index as u32
     }
 
     pub(crate) fn remove_texture(&mut self, index: u32) {
@@ -281,10 +279,10 @@ impl Uniforms {
         self.should_update_images = true;
     }
 
-    pub(crate) fn add_cubemap(&mut self, image: vk::ImageView) -> Result<u32> {
+    pub(crate) fn add_cubemap(&mut self, image: vk::ImageView) -> u32 {
         // check if full
         if self.cubemaps.len() == MAX_CUBEMAPS as usize {
-            return Err(Error::CubemapLimit);
+            panic!("cubemap limit reached");
         }
 
         let next_index = self.cubemaps.len();
@@ -304,7 +302,7 @@ impl Uniforms {
         }
 
         self.should_update_images = true;
-        Ok(index as u32)
+        index as u32
     }
 
     pub(crate) fn remove_cubemap(&mut self, index: u32) {
@@ -415,10 +413,10 @@ impl Uniforms {
         &mut self,
         device: &Device,
         buffer: &Buffer<ShaderWorld>,
-    ) -> Result<Descriptor> {
+    ) -> Descriptor {
         // check limits
         if self.world_count == MAX_WORLDS {
-            return Err(Error::CanvasLimit);
+            panic!("canvas limit reached");
         }
         self.world_count += 1;
 
@@ -444,17 +442,17 @@ impl Uniforms {
 
         device.update_descriptor_sets(&write);
 
-        Ok(Descriptor(0, set))
+        Descriptor(0, set)
     }
 
     pub(crate) fn material_set(
         &mut self,
         device: &Device,
         buffer: &Buffer<ShaderMaterial>,
-    ) -> Result<Descriptor> {
+    ) -> Descriptor {
         // check limits
         if self.material_count == MAX_MATERIALS {
-            return Err(Error::MaterialLimit);
+            panic!("material limit reached");
         }
         self.material_count += 1;
 
@@ -480,7 +478,7 @@ impl Uniforms {
 
         device.update_descriptor_sets(&write);
 
-        Ok(Descriptor(1, set))
+        Descriptor(1, set)
     }
 
     pub(crate) fn shadow_map_set(&self, device: &Device, views: [vk::ImageView; 4]) -> Descriptor {

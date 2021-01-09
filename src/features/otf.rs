@@ -35,6 +35,11 @@ pub enum CharSet<'a> {
 
 impl Duku {
     /// Create font from OTF file
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit of 100 has
+    /// been reached.
     pub fn create_font_otf(
         &mut self,
         path: impl AsRef<Path>,
@@ -46,6 +51,11 @@ impl Duku {
     }
 
     /// Create font from OTF bytes
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit of 100 has
+    /// been reached.
     pub fn create_font_otf_bytes(
         &mut self,
         bytes: &[u8],
@@ -155,6 +165,6 @@ impl Duku {
 
         font_data.texture_data = &texture_data;
 
-        self.create_font(font_data)
+        Ok(self.create_font(font_data))
     }
 }

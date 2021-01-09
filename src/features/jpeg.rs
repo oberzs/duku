@@ -29,6 +29,11 @@ impl Duku {
     ///
     /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_texture_jpeg(
         &mut self,
         path: impl AsRef<Path>,
@@ -42,6 +47,11 @@ impl Duku {
     ///
     /// If `options` is `None`, then
     /// sRGB and no mipmaps are used.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the texture limit
+    /// of 100 has been reached.
     pub fn create_texture_jpeg_bytes(
         &mut self,
         bytes: &[u8],
@@ -49,13 +59,13 @@ impl Duku {
     ) -> Result<Handle<Texture>> {
         let (color_space, mips) = options.unwrap_or((ColorSpace::Srgb, Mips::Zero));
         let jpeg_data = load_jpeg(bytes, color_space)?;
-        self.create_texture(
+        Ok(self.create_texture(
             jpeg_data.data,
             jpeg_data.format,
             mips,
             jpeg_data.width,
             jpeg_data.height,
-        )
+        ))
     }
 }
 

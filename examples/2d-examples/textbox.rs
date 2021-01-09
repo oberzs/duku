@@ -16,7 +16,7 @@ use duku::Target;
 
 fn main() -> Result<()> {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(500, 500);
 
     // load font-awesome font for 'x' icon
     let fontawesome = duku.create_font_otf(

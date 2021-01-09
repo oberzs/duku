@@ -9,7 +9,6 @@ use super::Mips;
 use crate::buffer::Buffer;
 use crate::color::Rgb;
 use crate::device::Device;
-use crate::error::Result;
 use crate::pipeline::Uniforms;
 
 /// Image that can be sampled in a shader.
@@ -34,7 +33,7 @@ impl Texture {
         height: u32,
         format: Format,
         mips: Mips,
-    ) -> Result<Self> {
+    ) -> Self {
         // convert 3-byte data to 4-byte data
         let image_data = match format {
             Format::Srgb | Format::Rgb => with_alpha(data),
@@ -66,14 +65,14 @@ impl Texture {
         // destroy staging buffer
         staging_buffer.destroy(device);
 
-        let shader_index = uniforms.add_texture(image.add_view(device))?;
+        let shader_index = uniforms.add_texture(image.add_view(device));
 
-        Ok(Self {
+        Self {
             data: image_data,
             opaque,
             image,
             shader_index,
-        })
+        }
     }
 
     /// Get the width of the texture

@@ -5,29 +5,32 @@ use crate::image::Msaa;
 use crate::surface::VSync;
 use crate::vk;
 
-pub(crate) struct GPUProperties {
+pub(crate) struct GpuProperties {
     pub(crate) properties: vk::PhysicalDeviceProperties,
     pub(crate) features: vk::PhysicalDeviceFeatures,
     pub(crate) memory: vk::PhysicalDeviceMemoryProperties,
-    pub(crate) capabilities: vk::SurfaceCapabilitiesKHR,
-    pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
-    pub(crate) present_modes: Vec<vk::PresentModeKHR>,
-
     pub(crate) queue_index: Option<u32>,
-
-    pub(crate) extent: vk::Extent2D,
-    pub(crate) image_count: u32,
-
     pub(crate) supports_extensions: bool,
 }
 
-impl GPUProperties {
+pub(crate) struct SurfaceProperties {
+    pub(crate) capabilities: vk::SurfaceCapabilitiesKHR,
+    pub(crate) formats: Vec<vk::SurfaceFormatKHR>,
+    pub(crate) present_modes: Vec<vk::PresentModeKHR>,
+    pub(crate) queue_index: Option<u32>,
+    pub(crate) extent: vk::Extent2D,
+    pub(crate) image_count: u32,
+}
+
+impl GpuProperties {
     pub(crate) const fn supports_msaa(&self, msaa: Msaa) -> bool {
         let counts = self.properties.limits.framebuffer_color_sample_counts
             & self.properties.limits.framebuffer_depth_sample_counts;
         (counts & msaa.flag()) != 0
     }
+}
 
+impl SurfaceProperties {
     pub(crate) fn supports_present_mode(&self, vsync: VSync) -> bool {
         self.present_modes.contains(&vsync.flag())
     }

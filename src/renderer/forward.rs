@@ -19,7 +19,6 @@ use crate::buffer::BufferUsage;
 use crate::color::Rgbf;
 use crate::device::Commands;
 use crate::device::Device;
-use crate::error::Result;
 use crate::image::Canvas;
 use crate::math::Mat4;
 use crate::math::Quat;
@@ -35,6 +34,7 @@ pub(crate) struct ForwardRenderer {
     target_resources: Vec<TargetResources>,
     shadow_renderer: ShadowRenderer,
     start_time: Instant,
+    required_targets: usize,
     target_index: usize,
 }
 
@@ -47,31 +47,30 @@ struct TargetResources {
 }
 
 impl ForwardRenderer {
-    pub(crate) fn new(
-        device: &Device,
-        uniforms: &mut Uniforms,
-        shadow_map_size: u32,
-        target_count: u32,
-    ) -> Result<Self> {
-        let shadow_renderer = ShadowRenderer::new(device, uniforms, shadow_map_size, target_count)?;
-        let target_resources: Vec<_> = (0..target_count)
-            .map(|_| TargetResources::new(device, uniforms))
-            .collect::<Result<_>>()?;
+    pub(crate) fn new(device: &Device, uniforms: &mut Uniforms, shadow_map_size: u32) -> Self {
+        let shadow_renderer = ShadowRenderer::new(device, uniforms, shadow_map_size);
 
-        Ok(Self {
+        Self {
             start_time: Instant::now(),
+            target_resources: vec![],
+            required_targets: 0,
             target_index: 0,
-            target_resources,
             shadow_renderer,
-        })
+        }
     }
 
-    pub(crate) fn add_target(&mut self, device: &Device, uniforms: &mut Uniforms) -> Result<()> {
-        self.target_resources
-            .push(TargetResources::new(device, uniforms)?);
-        self.shadow_renderer.add_target(device, uniforms)?;
+    pub(crate) fn reset(&mut self) {
+        self.required_targets = 0;
+        self.target_index = 0;
+    }
 
-        Ok(())
+    pub(crate) fn require_target(&mut self, device: &Device, uniforms: &mut Uniforms) {
+        self.required_targets += 1;
+        if self.required_targets > self.target_resources.len() {
+            self.target_resources
+                .push(TargetResources::new(device, uniforms));
+            self.shadow_renderer.require_target(device, uniforms);
+        }
     }
 
     pub(crate) fn render(
@@ -79,7 +78,7 @@ impl ForwardRenderer {
         device: &Device,
         canvas: &Canvas,
         camera: &Camera,
-        uniforms: &Uniforms,
+        uniforms: &mut Uniforms,
         target: Target,
     ) {
         // check whether should do shadow mapping
@@ -390,20 +389,20 @@ impl ForwardRenderer {
 }
 
 impl TargetResources {
-    fn new(device: &Device, uniforms: &mut Uniforms) -> Result<Self> {
+    fn new(device: &Device, uniforms: &mut Uniforms) -> Self {
         let world_buffer = Buffer::dynamic(device, BufferUsage::Uniform, 1);
-        let world_descriptor = uniforms.world_set(device, &world_buffer)?;
+        let world_descriptor = uniforms.world_set(device, &world_buffer);
         let text_mesh = Mesh::new(device);
         let line_mesh = Mesh::new(device);
         let shape_mesh = Mesh::new(device);
 
-        Ok(Self {
+        Self {
             world_buffer,
             world_descriptor,
             text_mesh,
             line_mesh,
             shape_mesh,
-        })
+        }
     }
 
     fn destroy(&self, device: &Device) {

@@ -49,9 +49,7 @@ impl<C: Mix + Default + Copy> Gradient<C> {
     /// If `p` is not in range 0 to 1, then
     /// returns default color.
     pub fn get(&self, p: f32) -> C {
-        if p < 0.0 || p > 1.0 {
-            C::default()
-        } else {
+        if (0.0..=1.0).contains(&p) {
             let i = (p / self.part).floor();
             let ip = (p - (self.part * i)) * self.values.len() as f32;
 
@@ -59,6 +57,8 @@ impl<C: Mix + Default + Copy> Gradient<C> {
             let c2 = self.values.get(i as usize + 1).copied().unwrap_or(c1);
 
             C::mix(c1, c2, ip)
+        } else {
+            C::default()
         }
     }
 }

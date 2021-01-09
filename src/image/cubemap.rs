@@ -7,7 +7,6 @@ use super::Image;
 use super::ImageLayout;
 use crate::buffer::Buffer;
 use crate::device::Device;
-use crate::error::Result;
 use crate::pipeline::Uniforms;
 
 /// Texture representation of an environment.
@@ -42,7 +41,7 @@ impl Cubemap {
         size: u32,
         format: Format,
         sides: CubemapSides<Vec<u8>>,
-    ) -> Result<Self> {
+    ) -> Self {
         // convert 3-byte data to 4-byte data
         let sides = if matches!(format, Format::Srgb | Format::Rgb) {
             CubemapSides {
@@ -91,12 +90,12 @@ impl Cubemap {
         left_staging_buffer.destroy(device);
         right_staging_buffer.destroy(device);
 
-        let shader_index = uniforms.add_cubemap(image.add_view(device))?;
+        let shader_index = uniforms.add_cubemap(image.add_view(device));
 
-        Ok(Self {
+        Self {
             image,
             shader_index,
-        })
+        }
     }
 
     pub(crate) fn destroy(&self, device: &Device, uniforms: &mut Uniforms) {

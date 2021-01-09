@@ -6,13 +6,12 @@
 
 use duku::Duku;
 use duku::Gradient;
-use duku::Result;
 use duku::Rgbf;
 use std::f32::consts::PI;
 
-fn main() -> Result<()> {
+fn main() {
     // create duku context and window
-    let (mut duku, window) = Duku::windowed(500, 500)?;
+    let (mut duku, window) = Duku::windowed(500, 500);
 
     // create gradient with 4 colors where the start
     // and end colors are the same
@@ -56,6 +55,4 @@ fn main() -> Result<()> {
         });
         duku.end();
     });
-
-    Ok(())
 }
