@@ -242,7 +242,11 @@ impl Canvas {
             src.change_layout_sync(cmd, ImageLayout::TransferSrc, ImageLayout::ShaderColor);
         });
 
-        self.query_buffer.data()
+        let mut data = self.query_buffer.data();
+        for bgra in data.chunks_mut(4) {
+            bgra.swap(0, 2);
+        }
+        data
     }
 
     pub(crate) fn update(&mut self, device: &Device, uniforms: &mut Uniforms) {
