@@ -204,8 +204,10 @@ impl Duku {
     pub fn save_window_canvas(&self, path: impl AsRef<Path>) -> Result<()> {
         let file = File::create(path.as_ref())?;
 
-        let width = self.window_canvas_width();
-        let height = self.window_canvas_height();
+        let (width, height) = {
+            let c = self.window_canvas();
+            (c.width, c.height)
+        };
 
         let mut encoder = Encoder::new(BufWriter::new(file), width, height);
         encoder.set_color(ColorType::RGBA);

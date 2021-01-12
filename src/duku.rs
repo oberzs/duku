@@ -487,6 +487,16 @@ impl Duku {
         self.resources.add_canvas(canvas)
     }
 
+    /// Get a reference to the current window canvas
+    ///
+    /// # Panics
+    ///
+    /// This function panics if duku was created
+    /// in headless mode.
+    pub fn window_canvas(&self) -> &Canvas {
+        &self.window_canvases[self.swapchain.as_ref().expect("headless context").current()]
+    }
+
     /// Get color data for window canvas as bytes
     /// in Rgba format
     ///
@@ -498,26 +508,6 @@ impl Duku {
         self.device.wait_idle();
         self.window_canvases[self.swapchain.as_ref().expect("headless context").current()]
             .export(&self.device)
-    }
-
-    /// Get width of the window canvas
-    ///
-    /// # Panics
-    ///
-    /// This function panics if duku was created
-    /// in headless mode.
-    pub fn window_canvas_width(&self) -> u32 {
-        self.window_canvases[self.swapchain.as_ref().expect("headless context").current()].width
-    }
-
-    /// Get height of the window canvas
-    ///
-    /// # Panics
-    ///
-    /// This function panics if duku was created
-    /// in headless mode.
-    pub fn window_canvas_height(&self) -> u32 {
-        self.window_canvases[self.swapchain.as_ref().expect("headless context").current()].height
     }
 
     /// Get color data for specific canvas as bytes
