@@ -212,7 +212,7 @@ impl Duku {
         encoder.set_depth(BitDepth::Eight);
         let mut writer = encoder.write_header().expect("bad write");
 
-        let data = self.window_canvas_data();
+        let data = self.export_window_canvas();
         writer.write_image_data(&data).expect("bad write");
 
         Ok(())
@@ -230,7 +230,7 @@ impl Duku {
         encoder.set_depth(BitDepth::Eight);
         let mut writer = encoder.write_header().expect("bad write");
 
-        let data = self.canvas_data(canvas);
+        let data = self.export_canvas(canvas);
         writer.write_image_data(&data).expect("bad write");
 
         Ok(())

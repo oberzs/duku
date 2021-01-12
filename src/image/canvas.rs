@@ -214,7 +214,7 @@ impl Canvas {
         }
     }
 
-    pub(crate) fn data(&self, device: &Device) -> Vec<u8> {
+    pub(crate) fn export(&self, device: &Device) -> Vec<u8> {
         let src = &self.shader_images[0].1;
 
         device.do_commands(|cmd| {

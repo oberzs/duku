@@ -488,15 +488,16 @@ impl Duku {
     }
 
     /// Get color data for window canvas as bytes
+    /// in Rgba format
     ///
     /// # Panics
     ///
     /// This function panics if duku was created
     /// in headless mode.
-    pub fn window_canvas_data(&self) -> Vec<u8> {
+    pub fn export_window_canvas(&self) -> Vec<u8> {
         self.device.wait_idle();
         self.window_canvases[self.swapchain.as_ref().expect("headless context").current()]
-            .data(&self.device)
+            .export(&self.device)
     }
 
     /// Get width of the window canvas
@@ -520,9 +521,10 @@ impl Duku {
     }
 
     /// Get color data for specific canvas as bytes
-    pub fn canvas_data(&self, canvas: &Handle<Canvas>) -> Vec<u8> {
+    /// in Rgba format
+    pub fn export_canvas(&self, canvas: &Handle<Canvas>) -> Vec<u8> {
         self.device.wait_idle();
-        canvas.read().data(&self.device)
+        canvas.read().export(&self.device)
     }
 
     /// Create a shader from a SPIR-V file
