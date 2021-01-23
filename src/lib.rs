@@ -150,6 +150,8 @@ pub use surface::VSync;
 pub use surface::WindowHandle;
 
 // optional feature exports
+#[cfg(feature = "gif")]
+pub use features::gif;
 #[cfg(feature = "glsl")]
 pub use features::glsl;
 #[cfg(feature = "gltf")]

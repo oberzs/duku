@@ -88,6 +88,7 @@ duku = "0.3.0"
 - **Shadows** - uses PCF shadow maps
 - **Text** - uses [Fira Mono] or other OTF/TTF fonts
 - **Shaders** - uses custom glsl shaders
+- **Headless** - can render without a window
 
 This crate supports additional features that you can add
 to your dependency in your `Cargo.toml` file.
@@ -107,6 +108,7 @@ The features include:
 | `gltf`   | no      | [gltf]         | adds gltf file loading support        |
 | `glsl`   | no      | [shaderc]      | adds custom glsl file loading support |
 | `otf`    | no      | [ab_glyph]     | adds otf/ttf file loading support     |
+| `gif`    | no      | [gif]          | adds gif recording support            |
 | `log`    | no      | n/a            | adds informational logs               |
 
 ## Documentation
@@ -125,3 +127,4 @@ be found [here](https://github.com/oberzs/duku/tree/release/examples).
 [shaderc]: https://github.com/google/shaderc-rs
 [winit]: https://github.com/rust-windowing/winit
 [ab_glyph]: https://github.com/alexheretic/ab-glyph
+[gif]: https://github.com/image-rs/image-gif

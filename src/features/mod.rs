@@ -1,6 +1,7 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
+pub mod gif;
 pub mod glsl;
 pub mod gltf;
 pub mod otf;

@@ -49,6 +49,10 @@ pub enum Error {
     /// Unsupported character
     #[cfg(feature = "otf")]
     UnsupportedChar(char),
+
+    /// Non matching canvas
+    #[cfg(feature = "gif")]
+    NonMatchingCanvas,
 }
 
 impl error::Error for Error {}

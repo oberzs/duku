@@ -23,6 +23,7 @@ jpeg = ["jpeg_dep"]
 gltf = ["gltf_dep", "png", "jpeg"]
 glsl = ["glsl_dep"]
 otf = ["otf_dep"]
+gif = ["gif_dep"]
 window = ["window_dep"]
 log = []
 
@@ -59,6 +60,11 @@ package = "ab_glyph"
 version = "0.2.6"
 optional = true
 
+[dependencies.gif_dep]
+package = "gif"
+version = "0.11.1"
+optional = true
+
 [[bin]]
 name = "dc"
 path = "src/dc.rs"
@@ -77,7 +83,7 @@ required-features = ["window"]
 [[example]]
 name = "raymarch"
 path = "examples/3d-examples/raymarch.rs"
-required-features = ["window", "glsl"]
+required-features = ["window", "glsl", "gif"]
 
 [[example]]
 name = "ship_model"
