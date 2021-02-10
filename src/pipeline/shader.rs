@@ -245,10 +245,8 @@ impl Shader {
             src_color_blend_factor: vk::BLEND_FACTOR_SRC_ALPHA,
             dst_color_blend_factor: vk::BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
             color_blend_op: vk::BLEND_OP_ADD,
-            src_alpha_blend_factor: vk::BLEND_FACTOR_ONE,
-            dst_alpha_blend_factor: vk::BLEND_FACTOR_ZERO,
-            // src_alpha_blend_factor: vk::BLEND_FACTOR_SRC_ALPHA,
-            // dst_alpha_blend_factor: vk::BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+            src_alpha_blend_factor: vk::BLEND_FACTOR_SRC_ALPHA,
+            dst_alpha_blend_factor: vk::BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
             alpha_blend_op: vk::BLEND_OP_ADD,
             color_write_mask: vk::COLOR_COMPONENT_R_BIT
                 | vk::COLOR_COMPONENT_G_BIT

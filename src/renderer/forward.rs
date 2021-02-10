@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use super::Camera;
 use super::CharOrder;
+use super::Clear;
 use super::LightType;
 use super::LineOrder;
 use super::Pcf;
@@ -145,7 +146,16 @@ impl ForwardRenderer {
         }]);
 
         // do render pass
-        cmd.begin_render_pass(canvas, target.background.into());
+        cmd.begin_render_pass(canvas);
+
+        // clear attachments
+        if matches!(target.clear, Clear::Depth | Clear::ColorDepth) {
+            cmd.clear_depth_attachment(canvas);
+        }
+        if matches!(target.clear, Clear::Color | Clear::ColorDepth) {
+            cmd.clear_color_attachments(canvas, target.background.into());
+        }
+
         cmd.set_view(canvas.width, canvas.height);
         cmd.bind_descriptor(uniforms, target_resources.world_descriptor);
 

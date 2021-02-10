@@ -48,7 +48,6 @@ pub struct Canvas {
     framebuffer: vk::Framebuffer,
     render_pass: RenderPass,
 
-    attachments: Vec<Format>,
     transient_images: Vec<Image>,
     stored_images: Vec<Image>,
 
@@ -84,14 +83,16 @@ impl Canvas {
                 for attachment in render_pass.attachments() {
                     attachments.push(attachment.format());
 
-                    if attachment.is_stored() {
+                    if attachment.is_present() {
                         let mut image =
                             Image::attachment(device, &attachment, width, height, Some(img));
                         views.push(image.add_view(device));
+                        image.change_layout(device, ImageLayout::Undefined, attachment.layout());
                         stored_image = Some(image);
                     } else {
                         let mut image = Image::attachment(device, &attachment, width, height, None);
                         views.push(image.add_view(device));
+                        image.change_layout(device, ImageLayout::Undefined, attachment.layout());
                         transient_images.push(image);
                     };
                 }
@@ -129,7 +130,6 @@ impl Canvas {
                     base_layouts: vec![ImageLayout::Present],
                     stored_images: vec![stored_image],
                     query_buffer,
-                    attachments,
                     transient_images,
                     render_pass,
                     framebuffer,
@@ -159,6 +159,8 @@ impl Canvas {
             views.push(image.add_view(device));
             attachments.push(attachment.format());
 
+            image.change_layout(device, ImageLayout::Undefined, attachment.layout());
+
             if attachment.is_stored() {
                 stored_images.push(image);
             } else {
@@ -184,8 +186,8 @@ impl Canvas {
         let mut base_layouts = vec![];
         for image in &stored_images {
             let base_layout = match image.format() {
-                Format::Depth => ImageLayout::ShaderDepth,
-                _ => ImageLayout::ShaderColor,
+                Format::Depth => ImageLayout::Depth,
+                _ => ImageLayout::Color,
             };
 
             let mut shader_image = Image::shader(device, image.format(), width, height);
@@ -204,7 +206,6 @@ impl Canvas {
             shader_images,
             query_buffer,
             base_layouts,
-            attachments,
             transient_images,
             stored_images,
             render_pass,
@@ -269,6 +270,8 @@ impl Canvas {
         for attachment in self.render_pass.attachments() {
             let mut image = Image::attachment(device, &attachment, self.width, self.height, None);
             views.push(image.add_view(device));
+
+            image.change_layout(device, ImageLayout::Undefined, attachment.layout());
 
             if attachment.is_stored() {
                 stored_images.push(image);
@@ -359,12 +362,12 @@ impl Canvas {
         self.render_pass.handle()
     }
 
-    pub(crate) fn stored_view(&self) -> vk::ImageView {
-        self.stored_images[0].get_view(0)
+    pub(crate) const fn color_attachments(&self) -> u32 {
+        self.render_pass.color_attachments()
     }
 
-    pub(crate) fn attachments(&self) -> impl Iterator<Item = &Format> {
-        self.attachments.iter()
+    pub(crate) fn stored_view(&self) -> vk::ImageView {
+        self.stored_images[0].get_view(0)
     }
 
     /// Get index to be used in shader for sampling

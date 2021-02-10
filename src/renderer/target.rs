@@ -57,6 +57,7 @@ pub struct Target {
     border_mode: BorderMode,
     filter: Filter,
     wrap: Wrap,
+    pub(crate) clear: Clear,
 
     // resources
     shader: Option<Handle<Shader>>,
@@ -109,6 +110,19 @@ pub enum Pcf {
     /// sample shadow map 4 times
     X4,
     /// sample shadow map 1 time
+    Disabled,
+}
+
+/// Canvas clear mode.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Clear {
+    /// Clear only color
+    Color,
+    /// Clear only depth
+    Depth,
+    /// Clear color and depth
+    ColorDepth,
+    /// Do not clear canvas
     Disabled,
 }
 
@@ -174,6 +188,7 @@ struct Cache {
     border_mode: BorderMode,
     filter: Filter,
     wrap: Wrap,
+    clear: Clear,
 }
 
 impl Target {
@@ -201,6 +216,7 @@ impl Target {
             border_mode: BorderMode::Center,
             filter: Filter::Linear,
             wrap: Wrap::Repeat,
+            clear: Clear::ColorDepth,
 
             font: None,
             shader: None,
@@ -215,6 +231,11 @@ impl Target {
 
             cache: vec![],
         }
+    }
+
+    /// Set the clear mode for canvas
+    pub fn clear(&mut self, clear: Clear) {
+        self.clear = clear;
     }
 
     /// Set background color of canvas
@@ -892,6 +913,7 @@ impl Target {
             border_mode: self.border_mode,
             filter: self.filter,
             wrap: self.wrap,
+            clear: self.clear,
         });
     }
 
@@ -916,6 +938,7 @@ impl Target {
             self.border_mode = cache.border_mode;
             self.filter = cache.filter;
             self.wrap = cache.wrap;
+            self.clear = cache.clear;
         }
     }
 

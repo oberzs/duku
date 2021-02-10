@@ -20,6 +20,7 @@ pub use camera::Projection;
 pub use light::Light;
 pub use light::LightType;
 pub use target::BorderMode;
+pub use target::Clear;
 pub use target::Pcf;
 pub use target::ShapeMode;
 pub use target::Target;

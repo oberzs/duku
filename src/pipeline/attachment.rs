@@ -1,7 +1,6 @@
 // Oliver Berzs
 // https://github.com/oberzs/duku
 
-use super::Clear;
 use super::Store;
 use crate::image::Format;
 use crate::image::ImageLayout;
@@ -23,12 +22,10 @@ impl Attachment {
         layout: ImageLayout,
         format: Format,
         msaa: Msaa,
-        clear: Clear,
         store: Store,
     ) -> Self {
         let ref_layout = match layout {
             ImageLayout::Present => ImageLayout::Color,
-            ImageLayout::ShaderColor => ImageLayout::Color,
             ImageLayout::ShaderDepth => ImageLayout::Depth,
             _ => layout,
         };
@@ -39,9 +36,9 @@ impl Attachment {
             samples: msaa.flag(),
             stencil_load_op: vk::ATTACHMENT_LOAD_OP_DONT_CARE,
             stencil_store_op: vk::ATTACHMENT_STORE_OP_DONT_CARE,
-            initial_layout: ImageLayout::Undefined.flag(),
+            initial_layout: layout.flag(),
             final_layout: layout.flag(),
-            load_op: clear.flag(),
+            load_op: vk::ATTACHMENT_LOAD_OP_LOAD,
             store_op: store.flag(),
         };
 
@@ -82,5 +79,9 @@ impl Attachment {
 
     pub(crate) fn is_stored(&self) -> bool {
         self.store == Store::Enabled
+    }
+
+    pub(crate) fn is_present(&self) -> bool {
+        self.layout == ImageLayout::Present
     }
 }

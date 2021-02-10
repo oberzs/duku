@@ -6,7 +6,6 @@
 use std::ptr;
 
 use super::Attachment;
-use super::Clear;
 use super::ShaderConfig;
 use super::Store;
 use crate::device::Device;
@@ -18,6 +17,7 @@ use crate::vk;
 pub(crate) struct RenderPass {
     handle: vk::RenderPass,
     attachments: Vec<Attachment>,
+    color_attachments: u32,
 }
 
 impl RenderPass {
@@ -40,7 +40,6 @@ impl RenderPass {
             layout,
             Format::Depth,
             config.msaa,
-            Clear::Enabled,
             Store::from(only_depth),
         );
 
@@ -56,7 +55,7 @@ impl RenderPass {
             let layout = if present {
                 ImageLayout::Present
             } else {
-                ImageLayout::ShaderColor
+                ImageLayout::Color
             };
 
             let a = Attachment::new(
@@ -64,7 +63,6 @@ impl RenderPass {
                 layout,
                 Format::Bgra,
                 Msaa::Disabled,
-                Clear::from(!multisampled),
                 Store::Enabled,
             );
 
@@ -83,7 +81,6 @@ impl RenderPass {
                     ImageLayout::Color,
                     Format::Bgra,
                     config.msaa,
-                    Clear::Enabled,
                     Store::Disabled,
                 );
 
@@ -181,6 +178,7 @@ impl RenderPass {
         let handle = device.create_render_pass(&info);
 
         Self {
+            color_attachments: color_attachments.len() as u32,
             attachments,
             handle,
         }
@@ -188,6 +186,10 @@ impl RenderPass {
 
     pub(crate) fn destroy(&self, device: &Device) {
         device.destroy_render_pass(self.handle);
+    }
+
+    pub(crate) const fn color_attachments(&self) -> u32 {
+        self.color_attachments
     }
 
     pub(crate) fn attachments(&self) -> impl Iterator<Item = &Attachment> {

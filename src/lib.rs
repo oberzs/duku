@@ -137,6 +137,7 @@ pub use pipeline::Material;
 pub use pipeline::Shader;
 pub use renderer::BorderMode;
 pub use renderer::Camera;
+pub use renderer::Clear;
 pub use renderer::Light;
 pub use renderer::LightType;
 pub use renderer::Pcf;

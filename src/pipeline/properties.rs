@@ -37,12 +37,6 @@ pub(crate) enum Store {
     Disabled,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum Clear {
-    Enabled,
-    Disabled,
-}
-
 impl CullMode {
     pub(crate) const fn flag(&self) -> vk::CullModeFlags {
         match *self {
@@ -98,15 +92,6 @@ impl Store {
     }
 }
 
-impl Clear {
-    pub(crate) const fn flag(&self) -> vk::AttachmentLoadOp {
-        match *self {
-            Self::Enabled => vk::ATTACHMENT_LOAD_OP_CLEAR,
-            Self::Disabled => vk::ATTACHMENT_LOAD_OP_DONT_CARE,
-        }
-    }
-}
-
 impl TryFrom<u8> for CullMode {
     type Error = error::Error;
 
@@ -148,16 +133,6 @@ impl TryFrom<u8> for DepthMode {
 }
 
 impl From<bool> for Store {
-    fn from(b: bool) -> Self {
-        if b {
-            Self::Enabled
-        } else {
-            Self::Disabled
-        }
-    }
-}
-
-impl From<bool> for Clear {
     fn from(b: bool) -> Self {
         if b {
             Self::Enabled

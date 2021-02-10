@@ -13,7 +13,6 @@ readme = "README.md"
 exclude = [
   "examples/screenshots/*",
   ".github/*",
-  "shaders/glsl/*"
 ]
 
 [features]
@@ -98,6 +97,11 @@ required-features = ["window", "png"]
 [[example]]
 name = "gradient"
 path = "examples/2d-examples/gradient.rs"
+required-features = ["window"]
+
+[[example]]
+name = "paint"
+path = "examples/2d-examples/paint.rs"
 required-features = ["window"]
 
 [[example]]

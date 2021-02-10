@@ -138,28 +138,7 @@ impl Commands {
         }
     }
 
-    pub(crate) fn begin_render_pass(&self, canvas: &Canvas, clear: Rgbf) {
-        // create clear values based on canvas image formats
-        let clear_values: Vec<_> = canvas
-            .attachments()
-            .map(|format| {
-                if format.is_depth() {
-                    vk::ClearValue {
-                        depth_stencil: vk::ClearDepthStencilValue {
-                            depth: 1.0,
-                            stencil: 0,
-                        },
-                    }
-                } else {
-                    vk::ClearValue {
-                        color: vk::ClearColorValue {
-                            float32: clear.into(),
-                        },
-                    }
-                }
-            })
-            .collect();
-
+    pub(crate) fn begin_render_pass(&self, canvas: &Canvas) {
         let info = vk::RenderPassBeginInfo {
             s_type: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             p_next: ptr::null(),
@@ -172,12 +151,81 @@ impl Commands {
                     height: canvas.height,
                 },
             },
-            clear_value_count: clear_values.len() as u32,
-            p_clear_values: clear_values.as_ptr(),
+            clear_value_count: 0,
+            p_clear_values: ptr::null(),
         };
 
         unsafe {
             vk::cmd_begin_render_pass(self.buffer.get(), &info, vk::SUBPASS_CONTENTS_INLINE);
+        }
+    }
+
+    pub(crate) fn clear_color_attachments(&self, canvas: &Canvas, color: Rgbf) {
+        let mut attachments = vec![];
+        let mut rects = vec![];
+        for i in 0..canvas.color_attachments() {
+            attachments.push(vk::ClearAttachment {
+                aspect_mask: vk::IMAGE_ASPECT_COLOR_BIT,
+                color_attachment: i,
+                clear_value: vk::ClearValue {
+                    color: vk::ClearColorValue {
+                        float32: color.into(),
+                    },
+                },
+            });
+            rects.push(vk::ClearRect {
+                rect: vk::Rect2D {
+                    offset: vk::Offset2D { x: 0, y: 0 },
+                    extent: vk::Extent2D {
+                        width: canvas.width,
+                        height: canvas.height,
+                    },
+                },
+                base_array_layer: 0,
+                layer_count: 1,
+            });
+        }
+        unsafe {
+            vk::cmd_clear_attachments(
+                self.buffer.get(),
+                attachments.len() as u32,
+                attachments.as_ptr(),
+                rects.len() as u32,
+                rects.as_ptr(),
+            );
+        }
+    }
+
+    pub(crate) fn clear_depth_attachment(&self, canvas: &Canvas) {
+        let attachments = vec![vk::ClearAttachment {
+            aspect_mask: vk::IMAGE_ASPECT_DEPTH_BIT,
+            color_attachment: 0,
+            clear_value: vk::ClearValue {
+                depth_stencil: vk::ClearDepthStencilValue {
+                    depth: 1.0,
+                    stencil: 0,
+                },
+            },
+        }];
+        let rects = vec![vk::ClearRect {
+            rect: vk::Rect2D {
+                offset: vk::Offset2D { x: 0, y: 0 },
+                extent: vk::Extent2D {
+                    width: canvas.width,
+                    height: canvas.height,
+                },
+            },
+            base_array_layer: 0,
+            layer_count: 1,
+        }];
+        unsafe {
+            vk::cmd_clear_attachments(
+                self.buffer.get(),
+                attachments.len() as u32,
+                attachments.as_ptr(),
+                rects.len() as u32,
+                rects.as_ptr(),
+            );
         }
     }
 

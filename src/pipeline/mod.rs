@@ -9,7 +9,6 @@ mod sampler;
 mod shader;
 mod uniforms;
 
-use properties::Clear;
 use properties::CullMode;
 use properties::DepthMode;
 use properties::ShapeMode;
